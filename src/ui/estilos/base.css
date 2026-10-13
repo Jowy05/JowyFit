@@ -1,0 +1,53 @@
+/* Mecánica común: pantallas, barra inferior, hojas, avisos. Adaptado del mockup a pantalla completa. */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+:root{--sb-h:env(safe-area-inset-top,0px);--sa-b:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+#raiz{height:100%}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+input,select,textarea{font:inherit;color:inherit}
+img,svg{display:block}
+[hidden]{display:none!important}
+
+.app{position:fixed;inset:0;overflow:hidden;isolation:isolate;background:var(--bg);color:var(--ink);font-family:var(--font-body,system-ui),system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+.app input,.app textarea{user-select:text;-webkit-user-select:text}
+.app[data-letra=grande]{zoom:1.12}
+.screens{position:absolute;inset:0;overflow:hidden}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);
+  padding-top:var(--sb-h);padding-bottom:calc(var(--tabbar-h) + var(--sa-b) + 28px);scrollbar-width:none;overscroll-behavior:contain;animation:jf-in .22s ease both}
+.screen::-webkit-scrollbar,.sheet::-webkit-scrollbar{display:none}
+.screen[data-full]{padding-bottom:var(--sa-b)}
+.app.session-on:not(.is-full) .screen{padding-bottom:calc(var(--tabbar-h) + var(--sa-b) + 92px)}
+@keyframes jf-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* barra inferior y mini barra */
+.tabbar{position:absolute;left:0;right:0;bottom:0;z-index:30;transition:transform .28s ease}
+.app.is-full .tabbar{transform:translateY(120%)}
+.minibar{position:absolute;left:0;right:0;bottom:calc(var(--tabbar-h) + var(--sa-b));z-index:29;display:none;cursor:pointer;text-align:left}
+.app.session-on:not(.is-full) .minibar{display:flex}
+
+/* hojas inferiores */
+.backdrop{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.48);animation:jf-fade .22s both}
+@keyframes jf-fade{from{opacity:0}to{opacity:1}}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:51;max-height:90%;overflow-y:auto;scrollbar-width:none;
+  background:var(--sheet-bg,var(--surface,var(--bg)));border-radius:var(--sheet-r,26px) var(--sheet-r,26px) 0 0;padding:10px 20px calc(30px + var(--sa-b));
+  animation:jf-up .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes jf-up{from{transform:translateY(104%)}to{transform:none}}
+.sheet.tall{top:calc(var(--sb-h) + 40px);max-height:none}
+.sheet.full{top:0;max-height:none;border-radius:0;padding-top:var(--sb-h)}
+
+/* aviso breve */
+.toast{position:absolute;left:14px;right:14px;bottom:calc(var(--tabbar-h) + var(--sa-b) + 14px);z-index:80;display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-radius:14px;background:var(--toast-bg,#1d1f24);color:var(--toast-fg,#fff);font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:jf-in .2s both}
+.app.is-full .toast{bottom:calc(24px + var(--sa-b))}
+.toast .toast-msg{flex:1}
+.toast .toast-act{font-weight:700;color:var(--toast-act,#7cc4ff)}
+
+:focus-visible{outline:2px solid var(--focus,#3b8cff);outline-offset:2px}
+.tabbar{padding-bottom:calc(12px + var(--sa-b))!important;height:calc(var(--tabbar-h) + var(--sa-b))!important}
+
+/* imágenes reales de ejercicios dentro de las miniaturas del mockup */
+.th>img.rep{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.th.has-img::before{display:none}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

@@ -1,0 +1,106 @@
+// RUT-03 · Generar rutina (también la rutina definitiva tras la calibración)
+import { useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../../../datos/db'
+import type { Rutina } from '../../../datos/tipos'
+import { catalogoCargado, ejercicio } from '../../../catalogo/catalogo'
+import { ES_MAQUINA } from '../../../catalogo/clasificacion'
+import { DIAS_CORTOS, DIAS } from '../../../dominio/fechas'
+import { generarRutina, tiemposReales } from '../../../dominio/generador'
+import { Cab, Ico, Pantalla } from '../../comp'
+import { useNav, type Ruta } from '../../nav'
+import { useAviso } from '../../aviso'
+import { useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos'
+import { filas, minutos } from './comun'
+import { capital } from './comun'
+
+export function Generar({ ruta }: { ruta: Ruta }) {
+  const nav = useNav()
+  const aviso = useAviso()
+  const perfil = usePerfil()
+  const g = useGimnasio()
+  const marcas = useMarcas()
+  const actual = useRutina()
+  const definitiva = !!ruta.d?.definitiva
+  const [variante, setVariante] = useState(0)
+  const [evitar, setEvitar] = useState<Set<string>>(new Set())
+  const calib = useLiveQuery(async () => (definitiva && actual?.id ? (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === actual.id) : []), [definitiva, actual?.id]) ?? []
+  const evitados = [...marcas.values()].filter(m => m.odiado || m.duele)
+
+  const propuesta = useMemo<Omit<Rutina, 'id'> | null>(() => {
+    const c = catalogoCargado()
+    if (!c) return null
+    const tiempos = definitiva ? tiemposReales(calib) : undefined
+    return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: !definitiva && !actual, evitar, tiempos })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length])
+
+  const usar = async () => {
+    if (!propuesta) return
+    await db.transaction('rw', db.rutinas, async () => {
+      await db.rutinas.toCollection().modify({ activa: false })
+      await db.rutinas.add({ ...propuesta, activa: true })
+    })
+    aviso(definitiva ? 'Rutina definitiva guardada' : 'Rutina guardada')
+    nav.raiz('rut')
+  }
+  const otra = () => {
+    if (!propuesta) return
+    setEvitar(new Set(propuesta.dias.flatMap(d => d.bloques.map(b => b.ejercicio))))
+    setVariante(v => (v + 1) % 3)
+    aviso(`Variante ${((variante + 1) % 3) + 1} de 3 lista`)
+  }
+  const enMaquina = propuesta ? propuesta.dias.flatMap(d => d.bloques).filter(b => { const e = ejercicio(b.ejercicio); return e && ES_MAQUINA(e) }).length : 0
+  const total = propuesta ? propuesta.dias.flatMap(d => d.bloques).length : 0
+
+  return (
+    <Pantalla>
+      <Cab atras crumb="Mi plan" titulo={definitiva ? 'Tu rutina definitiva' : 'Generar rutina'} sub={definitiva ? 'Ajustada a tus tiempos reales de la semana de calibración.' : 'Revisa tus datos, mira la propuesta y decide.'} />
+      <div className="pg">
+        <div className="sec">
+          <div className="sec-h"><h2><span className="stepn">1</span>Tus datos</h2><span className="lbl">Toca para cambiar</span></div>
+          <div className="spec-box"><div className="spec ed">
+            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Días fijos</span><b>{perfil.diasFijos.map(d => DIAS_CORTOS[d]).join(' · ') || '—'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Opcionales</span><b>{perfil.diasOpcionales.map(d => capital(DIAS[d]!)).join(' · ') || 'Ninguno'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Tiempo</span><b>{perfil.minutosNormal} · corta {perfil.minutosCorta} min<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('rut-gym')}><span>Gimnasio</span><b>{g ? `${g.nombre} · ${g.material.length}` : 'Sin gimnasio'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Objetivo</span><b>{{ recomposicion: 'Recomposición', perder: 'Perder peso', fuerza: 'Ganar fuerza' }[perfil.objetivo]}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Prioridades</span><b>{perfil.zonasPrioridad.join(' · ') || 'Equilibrado'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'preferencias' })}><span>Gustos</span><b>{{ maquinas: 'Máquinas y poleas', libre: 'Peso libre', mezcla: 'Mezcla' }[perfil.preferencia]}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('rut-ej', { filtro: 'evitados' })}><span>Evitar</span><b>{evitados.length ? `${evitados.length} ejercicio${evitados.length === 1 ? '' : 's'}` : 'Nada'}<Ico n="pencil-simple" className="pen" /></b></p>
+          </div></div>
+        </div>
+
+        {propuesta && (
+          <div className="sec">
+            <div className="sec-h"><h2><span className="stepn">2</span>Propuesta</h2><span className="tag blue">Variante {variante + 1} de 3</span></div>
+            <div className="card prev">
+              {propuesta.dias.map(d => (
+                <div key={d.letra} className="prev-d">
+                  <span className="dl">{d.letra}</span>
+                  <p>
+                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>SS</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>)}
+                    <span className="muted"> · ~{minutos(d)} min</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="why mt12">
+              <p className="lbl">Por qué</p>
+              {propuesta.porque.map(t => <p key={t}><Ico n="check-circle" /><span>{t}</span></p>)}
+              {perfil.preferencia === 'maquinas' && <p><Ico n="check-circle" /><span>Prefieres máquinas → <b>{enMaquina} de {total} en máquina o polea</b></span></p>}
+            </div>
+            <p className="note ok mt16"><Ico n="shield-check" /><span><b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.</span></p>
+          </div>
+        )}
+        <div className="dock col">
+          <button className="btn" onClick={usar}>Usar esta rutina</button>
+          <div className="btns">
+            <button className="btn gry sm" onClick={otra}>Otra variante</button>
+            <button className="btn ln sm" onClick={async () => { await usar(); nav.ir('rut-edit', undefined, 'rut') }}>Ajustar a mano</button>
+          </div>
+        </div>
+      </div>
+    </Pantalla>
+  )
+}

@@ -1,0 +1,29 @@
+/* Piezas que el mockup no necesitaba y la app sí (mismo estilo). */
+.cargando{display:grid;place-items:center;height:100%;color:var(--muted);font:600 14px var(--font-display);letter-spacing:.09em;text-transform:uppercase}
+.vacio-pg{padding:28px 16px}
+.th.img{background:#d9f0fc}
+.ex-img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-it img{width:100%;height:100%;object-fit:contain}
+.gal.has-img{background:#d9f0fc;height:calc(330px + var(--sb-h))}
+.gal.has-img::before{display:none}
+.gal.has-img .gal-it{padding-top:0}
+.mq .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:8%}
+.mus-img{width:44px;height:44px;border-radius:8px;background:#fff;object-fit:contain;flex:none}
+.pill-mus{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--line);border-radius:10px;background:var(--surface);min-width:0}
+.pill-mus b{display:block;font-size:14px;line-height:1.2}
+.pill-mus small{display:block;font-size:11.5px;color:var(--muted)}
+.inp-num{font-family:var(--font-mono);font-weight:600}
+select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 21px,calc(100% - 12px) 21px;background-size:6px 6px;background-repeat:no-repeat;padding-right:32px}
+.btn[disabled],.chip[disabled],.btn.off{opacity:.45;pointer-events:none}
+.photo-real{width:100%;height:100%;object-fit:cover}
+.row.wrap{flex-wrap:wrap}
+.foto-prev{width:100%;max-height:240px;object-fit:cover;border-radius:10px}
+.scanner-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam.live{background:#000}
+.legal{font-size:13px;color:var(--muted);line-height:1.45}
+.legal a{color:var(--blue)}
+.gal-back{top:calc(var(--sb-h) + 8px)}
+.tag.gal-cnt{top:calc(var(--sb-h) + 20px)}
+.gal.has-img .gal-it{top:var(--sb-h)}
+.app .gal-it figcaption{color:#16202B}
+.app .gal-it .dots i{background:rgba(22,32,43,.25)}.app .gal-it .dots i.on{background:#16202B}

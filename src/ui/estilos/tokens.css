@@ -1,0 +1,26 @@
+/* Colores, tipografías y medidas de la app. Cambiar aquí el aspecto. */
+/* ================= TOKENS ================= */
+:root{
+  --bg:#F2F4F7;--surface:#FFFFFF;--raised:#E8ECF1;--line:#D9E0E8;--ink:#16202B;--muted:#566779;
+  --blue:#0A74B9;--go:#EE6A0E;--on-go:#FFFFFF;--ok:#3F8F1E;--warn:#B7790B;--bad:#C93A32;--gold:#A97D12;
+  --blue-t:rgba(10,116,185,.10);--go-t:rgba(238,106,14,.11);--ok-t:rgba(63,143,30,.11);--warn-t:rgba(183,121,11,.13);--bad-t:rgba(201,58,50,.10);--gold-t:rgba(169,125,18,.13);
+  --tab-on:var(--go);--on-blue:#FFFFFF;
+  --hd:linear-gradient(180deg,#D3E5F3 0%,#E6EEF5 55%,var(--bg) 100%);
+  --card-sh:0 1px 2px rgba(22,32,43,.05),0 1px 1px rgba(22,32,43,.03);
+  --pop-sh:0 14px 34px rgba(22,32,43,.22);
+  --font-body:"Barlow",system-ui,sans-serif;--font-display:"Barlow Semi Condensed","Barlow",system-ui,sans-serif;--font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --tabbar-h:72px;
+  --toast-bg:#16202B;--toast-fg:#F2F4F7;--toast-act:#FF9A52;
+  --sheet-bg:var(--surface);--sheet-r:14px;--focus:var(--blue);
+  --gold-g:linear-gradient(145deg,#F4DA8C,#C8952A);
+}
+:root[data-theme=dark]{
+  --bg:#10151C;--surface:#18202A;--raised:#212C3A;--line:#2B394A;--ink:#E7EEF6;--muted:#8DA1B7;
+  --blue:#4FB3F0;--go:#FF7A1A;--on-go:#1A0C02;--ok:#7CC242;--warn:#F2B233;--bad:#E5534B;--gold:#E8C266;
+  --blue-t:rgba(79,179,240,.13);--go-t:rgba(255,122,26,.14);--ok-t:rgba(124,194,66,.14);--warn-t:rgba(242,178,51,.14);--bad-t:rgba(229,83,75,.15);--gold-t:rgba(232,194,102,.13);
+  --tab-on:var(--blue);--on-blue:#08121B;
+  --hd:linear-gradient(180deg,#1E4163 0%,#17304A 42%,var(--bg) 100%);
+  --card-sh:none;
+  --pop-sh:0 16px 36px rgba(0,0,0,.55);
+  --toast-bg:#2A3747;--toast-fg:#E7EEF6;--toast-act:#4FB3F0;
+}

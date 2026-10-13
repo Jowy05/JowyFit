@@ -22,3 +22,14 @@ build/
 *.log
 .env
 .env.*
+
+# Dataset RepDB preparado y cachés de compilación (licencia: no redistribuir)
+public/repdb/
+.cache/
+
+# APK, firma de la app y compilaciones de Android
+apk/
+firmas/
+*.jks
+*.keystore
+android/keystore.properties

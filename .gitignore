@@ -1,0 +1,24 @@
+# Solo el código de la app va al repositorio.
+# Documentación, planificación y datos personales: solo en local.
+docs/
+data/
+*.md
+!README.md
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Dependencias y builds
+node_modules/
+dist/
+build/
+.expo/
+*.apk
+*.aab
+*.log
+.env
+.env.*

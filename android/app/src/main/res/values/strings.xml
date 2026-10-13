@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JowyFit</string>
+    <string name="title_activity_main">JowyFit</string>
+    <string name="package_name">com.jowy05.jowyfit</string>
+    <string name="custom_url_scheme">com.jowy05.jowyfit</string>
+</resources>

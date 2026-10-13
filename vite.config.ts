@@ -1,15 +1,31 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import fs from 'node:fs'
+import path from 'node:path'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // BASE: «/» en Android y en local; «/JowyFit/» al publicar en GitHub Pages.
 const base = process.env.JOWYFIT_BASE ?? '/'
 
+// Los iconos Phosphor traen formatos antiguos (svg, ttf, woff) que ningún móvil actual usa: fuera.
+function quitarFuentesViejas(): Plugin {
+  return {
+    name: 'quitar-fuentes-viejas',
+    apply: 'build',
+    closeBundle() {
+      const dir = path.resolve('dist', 'assets')
+      if (!fs.existsSync(dir)) return
+      for (const f of fs.readdirSync(dir)) if (/^Phosphor.*\.(svg|ttf|woff)$/.test(f)) fs.rmSync(path.join(dir, f))
+    },
+  }
+}
+
 export default defineConfig({
   base,
   plugins: [
     react(),
+    quitarFuentesViejas(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
@@ -34,6 +50,7 @@ export default defineConfig({
       workbox: {
         // Todo dentro de la app: también el catálogo de ejercicios y sus imágenes.
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,json}'],
+        globIgnores: ['**/Phosphor*.svg'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: 'index.html',
       },

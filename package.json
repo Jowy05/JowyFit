@@ -12,7 +12,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "repdb": "node scripts/preparar-repdb.mjs",
+    "iconos": "node scripts/iconos.mjs",
+    "android": "npm run build && npx cap sync android"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

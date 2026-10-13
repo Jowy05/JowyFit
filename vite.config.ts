@@ -49,7 +49,7 @@ export default defineConfig({
       },
       workbox: {
         // Todo dentro de la app: también el catálogo de ejercicios y sus imágenes.
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,json}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,json,wasm}'],
         globIgnores: ['**/Phosphor*.svg'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: 'index.html',

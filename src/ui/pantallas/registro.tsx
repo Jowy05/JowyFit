@@ -25,6 +25,7 @@ import { Escaner } from './comida/Escaner'
 import { Producto } from './comida/Producto'
 import { Plantillas } from './comida/Plantillas'
 import { HojaPlantilla } from './comida/HojaPlantilla'
+import { HojaComida } from './comida/HojaComida'
 import { Guardados } from './comida/Guardados'
 import { Energia } from './comida/Energia'
 import { Semana } from './progreso/Semana'
@@ -87,6 +88,7 @@ export const HOJAS: Record<string, P> = {
   'sheet-nota-serie': HojaNotaSerie,
   'sheet-add': HojaAnadir,
   'sheet-plant': HojaPlantilla,
+  'sheet-comida': HojaComida,
   'sheet-maq': HojaMaquina,
   'sheet-elegir': HojaElegirEjercicio,
   'sheet-meta': HojaMeta,

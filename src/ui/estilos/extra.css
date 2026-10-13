@@ -27,3 +27,15 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .gal.has-img .gal-it{top:var(--sb-h)}
 .app .gal-it figcaption{color:#16202B}
 .app .gal-it .dots i{background:rgba(22,32,43,.25)}.app .gal-it .dots i.on{background:#16202B}
+/* Comida */
+.foto-prev+.inp,.foto-prev{margin-bottom:8px}
+.qa.on{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 30%,transparent)}
+.swipe{touch-action:pan-y}
+.swipe .fe{transition:transform .2s ease;cursor:pointer}
+.swipe+.swipe{margin-top:4px}
+.cam.live>:not(video){position:relative;z-index:1}
+.campo-mini{display:flex;flex-direction:column;gap:4px;min-width:0}
+.campo-mini .inp{min-height:44px}
+.slot .in>.lnk{padding:6px 0}
+/* Móviles estrechos (360 px): que las pestañas superiores quepan sin desplazar */
+@media (max-width:380px){.seg button{padding:0 8px;font-size:15px}.seg button.on::after{left:6px;right:6px}}

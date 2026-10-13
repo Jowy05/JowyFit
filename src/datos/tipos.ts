@@ -234,10 +234,18 @@ export type Producto = {
   imagen?: string
   kcal100: number | null
   proteina100: number | null
+  hidratos100?: number | null
+  grasas100?: number | null
+  /** mg por 100 g */
+  cafeina100?: number | null
   racionG: number | null
   kcalRacion: number | null
   proteinaRacion: number | null
   guardado: string
+  /** Escaneado sin conexión: se busca al volver a tener cobertura. */
+  pendiente?: boolean
+  /** Creado a mano porque no estaba en Open Food Facts. */
+  manual?: boolean
 }
 
 export type PasosDia = { fecha: string; pasos: number; fuente: 'auto' | 'manual'; troteKm?: number }

@@ -38,6 +38,8 @@ export function resumenSemana(o: {
   objetivoPasos: number
   recordsSemana: number
   subidasSemana: number
+  /** Entrenos fijos que ya tocaban hasta hoy (a mitad de semana no se pide la semana entera). */
+  esperados?: number
 }): Resumen {
   const dias = semanaDe(o.hoy)
   const lunes = dias[0]!, domingo = dias[6]!
@@ -69,8 +71,10 @@ export function resumenSemana(o: {
   // Puntuación sencilla
   let puntos = 0
   const bien: string[] = [], mal: string[] = []
-  if (fijasHechas >= o.fijos) { puntos += 2; bien.push(`${fijasHechas}/${o.fijos} entrenos`) }
-  else if (fijasHechas >= o.fijos - 1 && o.fijos > 1) { puntos += 1; mal.push(`${fijasHechas}/${o.fijos} entrenos`) }
+  const meta = Math.min(o.fijos, o.esperados ?? o.fijos)
+  if (meta === 0) puntos += 1.5
+  else if (fijasHechas >= meta) { puntos += 2; bien.push(`${fijasHechas}/${o.fijos} entrenos`) }
+  else if (fijasHechas >= meta - 1 && meta > 1) { puntos += 1; mal.push(`${fijasHechas}/${o.fijos} entrenos`) }
   else mal.push(`${fijasHechas}/${o.fijos} entrenos`)
   if (protMedia == null) puntos += 0.5
   else if (protMedia >= o.objetivoProteina * 0.9) { puntos += 1; bien.push('proteína OK') }

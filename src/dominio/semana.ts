@@ -1,6 +1,6 @@
 // Estado de la semana: qué toca cada día, qué se hizo y qué se perdió.
 import type { DiaRutina, Rutina, Sesion } from '../datos/tipos'
-import { deISO, diaSemana, semanaDe } from './fechas'
+import { aISO, deISO, diaSemana, semanaDe } from './fechas'
 
 export type Recolocada = { fecha: string; letra: string; desde: string }
 
@@ -31,6 +31,8 @@ export function estadoSemana(r: Rutina | null | undefined, sesiones: Sesion[], h
     if (hecha) return { fecha, estado: 'hecho', hoy: esHoy, dia, sesion: hecha }
     if (dia && !opcional) {
       const movida = recolocadas.some(x => x.desde === fecha)
+      // Antes de tener la rutina no se pudo perder nada (alta a mitad de semana).
+      if (fecha < hoy && r && fecha < aISO(new Date(r.creada))) return { fecha, estado: 'descanso', hoy: esHoy }
       if (fecha < hoy) return { fecha, estado: movida ? 'movido' : 'perdido', hoy: esHoy, dia }
       return { fecha, estado: 'plan', hoy: esHoy, dia }
     }

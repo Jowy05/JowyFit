@@ -71,9 +71,12 @@ export async function programar(avisos: Aviso[], borrarIds: number[] = []) {
   if (borrarIds.length) await LocalNotifications.cancel({ notifications: borrarIds.map(id => ({ id })) })
   if (!avisos.length) return
   if (!(await permisoNotificaciones(false))) return
+  // Solo se piden alarmas exactas si el sistema ya las permite: si no, el plugin abriría
+  // la pantalla de «Alarmas y recordatorios» sin avisar. Un recordatorio inexacto llega igual.
+  const exacta = await LocalNotifications.checkExactNotificationSetting().then(s => s.exact_alarm === 'granted').catch(() => false)
   await LocalNotifications.schedule({
     notifications: avisos.map(a => ({
-      id: a.id, title: a.titulo, body: a.texto,
+      id: a.id, title: a.titulo, body: a.texto, isExactNotification: exacta,
       schedule: a.repetirCada ? { on: a.repetirCada === 'day' ? { hour: a.cuando.getHours(), minute: a.cuando.getMinutes() } : { weekday: a.cuando.getDay() + 1, hour: a.cuando.getHours(), minute: a.cuando.getMinutes() }, allowWhileIdle: true } : { at: a.cuando, allowWhileIdle: true },
       smallIcon: 'ic_stat_jowyfit', iconColor: '#FF7A1A',
     })),

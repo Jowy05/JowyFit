@@ -50,7 +50,8 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
   const verDia = (n: number) => setFecha(f => sumarDias(f, n))
   // Redondeado: las raciones P/G dejan decimales y salía «Faltan 112.6 g».
   const faltan = energia ? Math.max(0, Math.round(energia.proteina - tot.proteina)) : 0
-  const conCafeina = tot.cafeina > 0 || perfil.bebidas.length > 0
+  // La cafeína se enseña si hoy hay o si se ha tomado en las últimas semanas.
+  const conCafeina = tot.cafeina > 0 || recientes.some(c => (c.cafeina ?? 0) > 0)
   const caf = avisoCafeina(tot.cafeina, ajustes.cafeinaLimite, ajustes.cafeinaHoraTope, esHoy ? horaActual() : '00:00')
 
   return (

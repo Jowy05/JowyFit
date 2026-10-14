@@ -72,7 +72,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
             <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Opcionales</span><b>{perfil.diasOpcionales.map(d => capital(DIAS[d]!)).join(' · ') || 'Ninguno'}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Tiempo</span><b>{perfil.minutosNormal} · corta {perfil.minutosCorta} min<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('rut-gym')}><span>Gimnasio</span><b>{g ? `${g.nombre} · ${g.material.length}` : 'Sin gimnasio'}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Objetivo</span><b>{{ recomposicion: 'Recomposición', perder: 'Perder peso', fuerza: 'Ganar fuerza' }[perfil.objetivo]}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Objetivo</span><b>{{ recomposicion: 'Perder grasa y ganar músculo', perder: 'Perder peso', fuerza: 'Ganar fuerza' }[perfil.objetivo]}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Prioridades</span><b>{perfil.zonasPrioridad.join(' · ') || 'Equilibrado'}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('per-sec', { s: 'preferencias' })}><span>Gustos</span><b>{{ maquinas: 'Máquinas y poleas', libre: 'Peso libre', mezcla: 'Mezcla' }[perfil.preferencia]}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('rut-ej', { filtro: 'evitados' })}><span>Evitar</span><b>{evitados.length ? `${evitados.length} ejercicio${evitados.length === 1 ? '' : 's'}` : 'Nada'}<Ico n="pencil-simple" className="pen" /></b></p>
@@ -87,7 +87,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
                 <div key={d.letra} className="prev-d">
                   <span className="dl">{d.letra}</span>
                   <p>
-                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>SS</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>)}
+                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>Superserie</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>)}
                     <span className="muted"> · ~{minutos(d)} min</span>
                   </p>
                 </div>

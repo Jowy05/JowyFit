@@ -14,6 +14,8 @@ import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from '../rutin
 
 const TOTAL = 10
 
+const rangoMin = (m: number[]) => { const a = Math.min(...m), b = Math.max(...m); return !m.length ? '' : a === b ? `~${a} min` : `${a}-${b} min` }
+
 export function Alta() {
   const aviso = useAviso()
   const [paso, setPaso] = useState(1)
@@ -59,7 +61,8 @@ export function Alta() {
     await db.rutinas.add(rutina)
     await guardarAjustes({ gimnasioActivo: gymId, inicio: hoy })
     setResumen({
-      estructura: `${rutina.estructura} · ~${p.minutosNormal} min`,
+      // Los minutos reales de los días (antes ponía los del perfil y no cuadraban con los de cada día).
+      estructura: `${rutina.estructura} · ${rangoMin(rutina.dias.filter(d => d.letra !== 'S').map(d => Math.round(duracionDia(d.bloques) / 60)))}`,
       dias: rutina.dias.map(d => `${d.letra === 'S' ? 'Opcional' : d.letra} · ${d.dia != null ? DIAS[d.dia] : ''}|${d.bloques.length} ejercicios · ~${Math.round(duracionDia(d.bloques) / 60)} min`),
     })
   }, [gym, p, cuerpo])
@@ -142,7 +145,7 @@ export function Alta() {
     4: { t: 'Tu objetivo', d: 'Lo puedes cambiar cuando quieras.', c: (
       <>
         <div className="opts mt16">
-          {([['recomposicion', 'Recomposición', 'Menos grasa y más músculo. El peso es lo de menos.', 'Recomendado'], ['perder', 'Perder peso', 'Déficit algo mayor y más proteína.', ''], ['fuerza', 'Ganar fuerza', 'Comer lo justo para subir de peso en los ejercicios.', '']] as const).map(([v, t, d, tag]) => (
+          {([['recomposicion', 'Perder grasa y ganar músculo', 'El peso es lo de menos: menos barriga y más fuerza.', 'Recomendado'], ['perder', 'Perder peso', 'Déficit algo mayor y más proteína.', ''], ['fuerza', 'Ganar fuerza', 'Comer lo justo para subir de peso en los ejercicios.', '']] as const).map(([v, t, d, tag]) => (
             <button key={v} className={cx('opt-c', p.objetivo === v && 'on')} onClick={() => cambia({ objetivo: v })}>
               <span className="rad" /><span className="tx"><b>{t} {tag && <span className="tag ok">{tag}</span>}</b><small>{d}</small></span>
             </button>
@@ -159,7 +162,6 @@ export function Alta() {
         <div className="list">
           <Fila t="Superseries" d="Dos ejercicios seguidos: ahorran tiempo" on={p.superseries} c={v => cambia({ superseries: v })} />
           <Fila t="Abdominales y core" d="Al final de las sesiones" on={p.core} c={v => cambia({ core: v })} />
-          <Fila t="Me gusta ir al fallo" d="Solo donde es seguro (máquinas)" on={p.alFallo} c={v => cambia({ alFallo: v })} />
         </div>
       </div>) },
     6: { t: 'Tus horarios', d: 'Toca un día para marcarlo: fijo → opcional → libre.', c: <Horarios p={p} cambia={cambia} /> },
@@ -286,7 +288,6 @@ export function Horarios({ p, cambia }: { p: Perfil; cambia: (c: Partial<Perfil>
           <span className="tx"><b>Hora de acostarte</b><small>Para avisarte 1 h antes</small></span>
           <input className="inp" type="time" value={p.horaDormir} onChange={e => { if (e.target.value) cambia({ horaDormir: e.target.value }) }} style={{ width: 110 }} aria-label="Hora de acostarte" />
         </div>
-        <div className="it"><span className="ico"><Ico n="coffee" /></span><span className="tx"><b>¿Entrenas en ayunas?</b></span><Interruptor on={p.enAyunas} onCambio={v => cambia({ enAyunas: v })} etiqueta="Entrenas en ayunas" /></div>
         <div className="it"><span className="ico"><Ico n="calendar-x" /></span><span className="tx"><b>Si pierdes una sesión</b><small>{p.sesionPerdida === 'sabado' ? 'Te propongo pasarla al día opcional' : 'Se salta sin más'}</small></span><Interruptor on={p.sesionPerdida === 'sabado'} onCambio={v => cambia({ sesionPerdida: v ? 'sabado' : 'saltar' })} etiqueta="Recolocar sesión perdida" /></div>
       </div>
     </>

@@ -2,7 +2,7 @@
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%}
 :root{--sb-h:env(safe-area-inset-top,0px);--sa-b:env(safe-area-inset-bottom,0px)}
-body{background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{font-family:var(--font-body,system-ui),system-ui,sans-serif;background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 #raiz{height:100%}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 input,select,textarea{font:inherit;color:inherit}
@@ -39,7 +39,9 @@ img,svg{display:block}
 /* aviso breve */
 .toast{position:absolute;left:14px;right:14px;bottom:calc(var(--tabbar-h) + var(--sa-b) + 14px);z-index:80;display:flex;align-items:center;gap:12px;
   padding:14px 16px;border-radius:14px;background:var(--toast-bg,#1d1f24);color:var(--toast-fg,#fff);font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:jf-in .2s both}
-.app.is-full .toast{bottom:calc(24px + var(--sa-b))}
+/* Los avisos salen arriba: abajo tapaban los botones principales (Añadir, Hecho, Ocupado). */
+.toast{bottom:auto;top:calc(var(--sb-h) + 12px)}
+.toast{font-family:var(--font-body,system-ui),system-ui,sans-serif}
 .toast .toast-msg{flex:1}
 .toast .toast-act{font-weight:700;color:var(--toast-act,#7cc4ff)}
 

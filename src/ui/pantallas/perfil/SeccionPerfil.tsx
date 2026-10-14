@@ -12,7 +12,7 @@ import { useAviso } from '../../aviso'
 import { usePerfilCargado } from '../../datos'
 import { reprogramarNotificaciones } from '../../servicios'
 import { Horarios } from '../alta/Alta'
-import { CARDIO_TXT, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
+import { NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
 
 type Props = { p: Perfil; guardar: (c: Partial<Perfil>) => void }
 
@@ -331,12 +331,8 @@ function Preferencias({ p, guardar }: Props) {
       </Grupo>
       <div className="list">
         <Fila t="Superseries" d="Dos ejercicios seguidos: ahorran tiempo" on={p.superseries} c={v => guardar({ superseries: v })} />
-        <Fila t="Ir al fallo" d="Solo donde es seguro (máquinas)" on={p.alFallo} c={v => guardar({ alFallo: v })} />
         <Fila t="Abdominales y core" d="Al final de las sesiones" on={p.core} c={v => guardar({ core: v })} />
       </div>
-      <Grupo t="Cardio">
-        <Elegir eq opciones={(Object.keys(CARDIO_TXT) as Perfil['cardio'][]).map(v => ({ v, t: CARDIO_TXT[v] }))} valor={p.cardio} onCambio={v => guardar({ cardio: v })} />
-      </Grupo>
       <Grupo t="Objetivo de pasos diarios">
         <Stepper valor={p.pasosObjetivo} paso={500} min={2000} max={20000} etiqueta="Objetivo de pasos" onCambio={v => guardar({ pasosObjetivo: v })} />
       </Grupo>
@@ -345,7 +341,6 @@ function Preferencias({ p, guardar }: Props) {
 }
 
 // ---------- PER-09 · Alimentación y suplementos ----------
-const FRANJAS = [{ v: 'mañana', t: 'Mañana' }, { v: 'mediodía', t: 'Mediodía' }, { v: 'tarde', t: 'Tarde' }, { v: 'noche', t: 'Noche' }]
 const SUPLEMENTOS_BASE = ['Creatina', 'Batido de proteína']
 
 function Alimentacion({ p, guardar }: Props) {
@@ -361,12 +356,6 @@ function Alimentacion({ p, guardar }: Props) {
   }
   return (
     <div className="fields mt16">
-      <Grupo t="Comidas al día">
-        <Stepper valor={p.comidasDia} paso={1} min={1} max={8} etiqueta="Comidas al día" onCambio={v => guardar({ comidasDia: v })} />
-      </Grupo>
-      <Grupo t="Cuándo tienes más hambre">
-        <Elegir opciones={FRANJAS} valor={p.franjasHambre} onCambio={f => guardar({ franjasHambre: alternar(p.franjasHambre, f) })} />
-      </Grupo>
       <Grupo t="Suplementos que tomas" ayuda="Salen en Comida para marcarlos cada día. Para quitar uno, desmárcalo.">
         <Elegir opciones={todos.map(s => ({ v: s, t: s }))} valor={p.suplementos} onCambio={s => guardar({ suplementos: alternar(p.suplementos, s) })} />
         <div className="row mt8">
@@ -374,11 +363,7 @@ function Alimentacion({ p, guardar }: Props) {
           <button className="btn sm auto" disabled={!otro.trim()} onClick={anadir}><Ico n="plus" b />Añadir</button>
         </div>
       </Grupo>
-      <label>
-        <span className="lbl fl">Bebidas habituales</span>
-        <Texto valor={p.bebidas.join(', ')} placeholder="Energética, refresco zero, café…" onGuardar={v => guardar({ bebidas: v.split(',').map(x => x.trim()).filter(Boolean) })} />
-        <small className="small muted mt4" style={{ display: 'block' }}>Separadas por comas. Las de un toque se editan en Comida → Plantillas.</small>
-      </label>
+      <p className="small muted">Las comidas y bebidas de un toque se editan en Comida → Plantillas.</p>
     </div>
   )
 }

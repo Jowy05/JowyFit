@@ -100,3 +100,22 @@ describe('tendencia del peso', () => {
     expect(lineaSpark([80, 79.5, 79.7]).split(' ')).toHaveLength(3)
   })
 })
+
+describe('lo de ayer y recientes', () => {
+  const c = (fecha: string, hora: string, nombre: string, x: Partial<Comida> = {}): Comida => ({ fecha, hora, franja: franjaPorHora(hora), nombre, kcal: 300, proteina: 20, racion: 'N', tipo: 'nota', ...x })
+  it('repite la misma franja de ayer, en orden', async () => {
+    const { deAyer } = await import('../src/dominio/comida')
+    const cs = [c('2026-10-13', '08:30', 'Tostadas'), c('2026-10-13', '07:45', 'Café'), c('2026-10-13', '14:00', 'Lentejas'), c('2026-10-12', '08:00', 'Otro')]
+    expect(deAyer(cs, '2026-10-13', 'desayuno').map(x => x.nombre)).toEqual(['Café', 'Tostadas'])
+    expect(deAyer(cs, '2026-10-13', 'cena')).toEqual([])
+  })
+  it('recientes: sin repetir, sin plantillas y el más nuevo primero', async () => {
+    const { recientes } = await import('../src/dominio/comida')
+    const cs = [
+      c('2026-10-10', '14:00', 'Menú del día'), c('2026-10-13', '14:00', 'menú del día '), c('2026-10-12', '21:00', 'Pizza'),
+      c('2026-10-13', '17:00', 'Batido de proteína', { plantillaId: 3 }), c('2026-10-11', '10:00', 'Yogur'),
+    ]
+    expect(recientes(cs, '2026-10-14', [{ nombre: 'Yogur' }]).map(x => x.nombre)).toEqual(['menú del día ', 'Pizza'])
+    expect(recientes(cs, '2026-10-14', [], 1)).toHaveLength(1)
+  })
+})

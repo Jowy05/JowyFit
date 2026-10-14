@@ -81,6 +81,8 @@ export function ajustesPorDefecto(): Ajustes {
     ultimoAjusteEnergia: null,
     recolocadas: [],
     inicio: null,
+    semanaSuave: null,
+    suavePospuesta: null,
   }
 }
 

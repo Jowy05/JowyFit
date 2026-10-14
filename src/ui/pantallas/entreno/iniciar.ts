@@ -1,9 +1,13 @@
 // Crear y guardar un entreno en curso a partir de la rutina activa (o uno libre).
 import { db } from '../../../datos/db'
-import { gimnasioActivo, leerPerfil } from '../../../datos/repos'
+import { gimnasioActivo, leerAjustes, leerPerfil } from '../../../datos/repos'
+import { ejercicio } from '../../../catalogo/catalogo'
+import { tipoRegistro } from '../../../catalogo/clasificacion'
+import { pesoReinicio, seriesSuave } from '../../../dominio/descarga'
+import { pesosPara } from '../../../dominio/pesos'
 import { sugerenciasDia } from '../../../datos/consultas'
 import { anadirCalentamiento, crearSesion } from '../../../dominio/sesion'
-import { hoyISO } from '../../../dominio/fechas'
+import { hoyISO, lunesDe } from '../../../dominio/fechas'
 import type { Sesion } from '../../../datos/tipos'
 import type { useNav } from '../../nav'
 
@@ -37,12 +41,21 @@ export async function iniciarEntreno(o: { letra?: string; version?: 'normal' | '
   if (o.libre || !r) {
     s = { fecha: hoyISO(), rutinaId: r?.id ?? null, letra: 'L', nombre: 'Entreno libre', gimnasioId: g?.id ?? null, inicio: Date.now(), horaLimite, version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
   } else {
-    const dia = r.dias.find(d => d.letra === o.letra) ?? r.dias[0]!
-    const sug = await sugerenciasDia(dia, g)
+    const base = r.dias.find(d => d.letra === o.letra) ?? r.dias[0]!
+    // Semana suave aceptada en Inicio: mismos ejercicios, 1 serie menos y −10 % de peso.
+    const suave = !r.calibracion && (await leerAjustes()).semanaSuave === lunesDe(hoyISO())
+    const dia = suave ? { ...base, bloques: base.bloques.map(b => ({ ...b, series: seriesSuave(b.series) })) } : base
+    const sug = await sugerenciasDia(base, g)
+    const pesoDe = (id: string, peso: number | null) => {
+      if (!suave || peso == null || peso <= 0) return peso
+      const e = ejercicio(id)
+      return pesoReinicio(peso, pesosPara(e?.material ?? null, e ? tipoRegistro(e) : 'peso', g))
+    }
     s = crearSesion(dia, {
       rutinaId: r.id ?? null, gimnasioId: g?.id ?? null, version: o.version ?? 'normal', horaLimite, calibracion: r.calibracion,
-      sugerencias: new Map([...sug].map(([k, v]) => [k, { peso: v.peso, reps: v.reps }])),
+      sugerencias: new Map([...sug].map(([k, v]) => [k, { peso: pesoDe(k, v.peso), reps: v.reps }])),
     })
+    if (suave) s.suave = true
   }
   return (await db.sesiones.add(s)) as number
 }

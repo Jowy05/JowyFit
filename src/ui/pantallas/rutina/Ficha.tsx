@@ -62,7 +62,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
   const reg = tipoRegistro(e)
   const alternativas = [...(enPlan?.b.alternativas ?? []).map(id => ({ id, t: '' })), ...relacionados(e, catalogoCargado()?.ejercicios ?? [], 8).map(x => ({ id: x.id, t: 'Otra' }))]
     .filter((x, i, a) => a.findIndex(y => y.id === x.id) === i).slice(0, 8)
-  const peligro = (e.id === 'bench-press' || e.id === 'squat' || e.id.includes('barbell-bench') || e.id === 'incline-bench-press') && perfil.alFallo !== undefined
+  const peligro = (e.id === 'bench-press' || e.id === 'squat' || e.id.includes('barbell-bench') || e.id === 'incline-bench-press')
 
   const alEntreno = unaVez(async () => {
     if (!sesion?.id) { aviso('Empieza un entreno y podrás añadirlo'); return }
@@ -135,7 +135,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
             {enPlan && <>
               <p><span>En tu plan</span><b>Día {enPlan.d.letra}</b></p>
               <p><span>Objetivo</span><b>{enPlan.b.series} × {enPlan.b.repsMin}-{enPlan.b.repsMax}</b></p>
-              <p><span>Esfuerzo</span><b>{enPlan.b.rpe}</b></p>
+              <p><span>Esfuerzo</span><b>{enPlan.b.rpe}/10</b></p>
               <p><span>Descanso</span><b>{duracion(enPlan.b.descanso)}</b></p>
             </>}
           </div></div>

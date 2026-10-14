@@ -194,6 +194,8 @@ export type Sesion = {
   descansoTotal?: number
   respuestas?: { minutosReales?: number; descansos?: 'cortos' | 'bien' | 'largos'; molestia?: string; ocupado?: string; nota?: string }
   calibracion: boolean
+  /** Semana suave (descarga): 1 serie menos y −10 %. No cuenta para la progresión. */
+  suave?: boolean
 }
 
 export type Franja = 'desayuno' | 'comida' | 'merienda' | 'cena'
@@ -299,4 +301,8 @@ export type Ajustes = {
   recolocadas: { fecha: string; letra: string; desde: string }[]
   /** Fecha de inicio (para «semana N»). */
   inicio: string | null
+  /** Lunes de la última semana suave (descarga) aceptada. */
+  semanaSuave?: string | null
+  /** «Ahora no» a la semana suave: no se vuelve a proponer hasta pasado este lunes. */
+  suavePospuesta?: string | null
 }

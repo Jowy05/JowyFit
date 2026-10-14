@@ -87,4 +87,4 @@ export function Deslizable({ children, onBorrar, onAbrir }: { children: ReactNod
 
 /** kcal y proteína en una línea («600 kcal · 22 g»). */
 export const kp = (kcal: number, prot: number, cafeina?: number) =>
-  cafeina ? `${Math.round(kcal)} kcal · ${Math.round(cafeina)} mg` : `${Math.round(kcal)} kcal · ${Math.round(prot)} g`
+  cafeina ? `${Math.round(kcal)} kcal · ${Math.round(cafeina)} mg cafeína` : `${Math.round(kcal)} kcal · ${Math.round(prot)} g`

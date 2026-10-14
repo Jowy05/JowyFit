@@ -156,7 +156,7 @@ function resumen(s: ClaveSeccion, p: TPerfil, n: Numeros | undefined): string {
     case 'horario':
       return p.diasFijos.length ? `${diasTxt(p.diasFijos)} a las ${p.horaEntreno.replace(/^0/, '')}` : 'Sin días fijos'
     case 'alimentacion':
-      return [`${p.comidasDia} comida${p.comidasDia === 1 ? '' : 's'}`, p.suplementos.length ? p.suplementos.join(' y ').toLowerCase() : 'sin suplementos'].join(' · ')
+      return p.suplementos.length ? `Suplementos: ${p.suplementos.join(' y ').toLowerCase()}` : 'Sin suplementos'
     case 'vida':
       return `Trabajo ${TRABAJO_TXT[p.trabajo].toLowerCase()} · factor ${num(FACTOR_ACTIVIDAD[p.trabajo], 3)}`
     case 'seguimiento': {

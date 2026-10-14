@@ -7,7 +7,8 @@ import { objetivosEnergia, sugerenciasDia, totalesComida } from '../../../datos/
 import type { DiaRutina, Rutina, Sesion } from '../../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../../catalogo/catalogo'
 import { indiceActual } from '../../../dominio/sesion'
-import { DIAS, DIAS_CORTOS, deISO, diaSemana, fechaCorta, formatoHora, hoyISO, numeroSemana, saludo, semanaDe, sumarDias, MESES_CORTOS } from '../../../dominio/fechas'
+import { DIAS, DIAS_CORTOS, deISO, diaSemana, fechaCorta, formatoHora, hoyISO, lunesDe, numeroSemana, saludo, semanaDe, sumarDias, MESES_CORTOS } from '../../../dominio/fechas'
+import { propuestaDescarga } from '../../../dominio/descarga'
 import { duracionDia } from '../../../dominio/generador'
 import { estadoSemana, racha, tarjetaHoy, type EstadoDia } from '../../../dominio/semana'
 import { kg, num } from '../../../dominio/calculos'
@@ -82,6 +83,8 @@ export function Inicio() {
       </Cab>
 
       <div className="pg">
+        <SemanaSuave rutina={rutina ?? null} />
+
         <Seccion titulo="Hoy te toca" accion={tarjeta.tipo === 'hoy' ? 'Ver día' : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('rut-dia', { letra: tarjeta.dia.letra }, 'rut')}>
           <TarjetaHoy t={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre} />
         </Seccion>
@@ -343,6 +346,53 @@ function Pendientes() {
         ))}
       </div>
     </Seccion>
+  )
+}
+
+/** Semana suave (descarga): la propone la app cuando toca; en la semana suave, un recordatorio. */
+function SemanaSuave({ rutina }: { rutina: Rutina | null }) {
+  const ajustes = useAjustes()
+  const aviso = useAviso()
+  const hoy = hoyISO()
+  const lunes = lunesDe(hoy)
+  const enSuave = ajustes.semanaSuave === lunes
+  const prop = useLiveQuery(async () => {
+    if (!rutina || rutina.calibracion || enSuave) return null
+    return propuestaDescarga({
+      hoy, sesiones: await db.sesiones.where('estado').equals('hecha').toArray(),
+      ejerciciosRutina: rutina.dias.flatMap(d => d.bloques.map(b => b.ejercicio)),
+      semanaSuave: ajustes.semanaSuave ?? null, pospuesta: ajustes.suavePospuesta ?? null, nombre: nombreEjercicio,
+    })
+  }, [rutina?.id, ajustes.semanaSuave, ajustes.suavePospuesta, hoy, enSuave])
+  if (enSuave) {
+    return (
+      <div className="sec">
+        <div className="note">
+          <Ico n="feather" />
+          <span><b>Semana suave.</b> Mismos ejercicios, 1 serie menos y −10 % de peso. La semana que viene, vuelta a lo normal.{' '}
+            <button className="lnk" style={{ display: 'inline', padding: 0, margin: 0 }} onClick={async () => { await guardarAjustes({ semanaSuave: null, suavePospuesta: lunes }); aviso('Vuelta a lo normal') }}>Volver a lo normal</button>
+          </span>
+        </div>
+      </div>
+    )
+  }
+  if (!prop) return null
+  return (
+    <div className="sec">
+      <div className="card pd">
+        <div className="row">
+          <span className="ico big okb"><Ico n="feather" /></span>
+          <div className="grow">
+            <h3 className="h3">¿Semana suave?</h3>
+            <p className="small muted">{prop.motivo}. Mismos ejercicios, 1 serie menos y −10 % de peso: el cuerpo asimila y luego subes mejor.</p>
+          </div>
+        </div>
+        <div className="btns mt12">
+          <button className="btn gry sm" onClick={async () => { await guardarAjustes({ suavePospuesta: lunes }); aviso('Vale: lo vemos la semana que viene') }}>Ahora no</button>
+          <button className="btn sm" onClick={async () => { await guardarAjustes({ semanaSuave: lunes, suavePospuesta: null }); aviso('Semana suave: los entrenos de esta semana van más ligeros') }}>Sí, esta semana</button>
+        </div>
+      </div>
+    </div>
   )
 }
 

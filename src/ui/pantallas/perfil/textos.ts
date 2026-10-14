@@ -2,7 +2,7 @@
 import type { Cardio, Dia, Nivel, Perfil, Reps, TipoObjetivo, Trabajo, Zona } from '../../../datos/tipos'
 import { DIAS } from '../../../dominio/fechas'
 
-export const OBJETIVO_TXT: Record<TipoObjetivo, string> = { recomposicion: 'Recomposición', perder: 'Perder peso', fuerza: 'Ganar fuerza' }
+export const OBJETIVO_TXT: Record<TipoObjetivo, string> = { recomposicion: 'Perder grasa y ganar músculo', perder: 'Perder peso', fuerza: 'Ganar fuerza' }
 export const NIVEL_TXT: Record<Nivel, string> = { empiezo: 'Empiezo', vuelvo: 'Vuelvo tras un parón', intermedio: 'Intermedio', avanzado: 'Avanzado' }
 export const PREFERENCIA_TXT: Record<Perfil['preferencia'], string> = { maquinas: 'Máquinas y poleas', libre: 'Peso libre', mezcla: 'Mezcla' }
 export const REPS_TXT: Record<Reps, string> = { pesadas: 'Pocas y pesadas', moderadas: 'Moderadas', mezcla: 'Mezcla' }

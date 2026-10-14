@@ -79,7 +79,7 @@ function Tarjeta({ b, etiqueta, s }: { b: Bloque; etiqueta: string; s?: Sugerenc
       <span className="strip sm">
         <span className="p"><span className="lbl">Series</span><b>{b.series}</b></span>
         <span className="p"><span className="lbl">{b.registro === 'tiempo' ? 'Segundos' : 'Reps'}</span><b>{b.repsMin}-{b.repsMax}</b></span>
-        <span className="p"><span className="lbl">Esfuerzo</span><b>{b.rpe}</b></span>
+        <span className="p"><span className="lbl">Esfuerzo</span><b>{b.rpe}<small>/10</small></b></span>
         <span className="p"><span className="lbl">Desc.</span><b>{duracion(b.descanso)}</b></span>
       </span>
       {b.fueraEnCorta && <span className="small" style={{ display: 'block', marginTop: 8, color: 'var(--warn)' }}><Ico n="scissors" /> Fuera en la versión corta</span>}

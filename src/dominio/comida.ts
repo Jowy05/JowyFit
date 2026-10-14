@@ -165,3 +165,28 @@ export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas:
   const bien = (cinturaDelta ?? 0) < -0.3 || (/^Todo estable\. Sigue/.test(consejo)) || (o.objetivo === 'fuerza' && !/come un poco más/.test(consejo))
   return { consejo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? 'Vas bien' : 'Un ajuste', cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
 }
+
+// ---------- «Lo de ayer» y «Recientes» al añadir ----------
+
+/** Lo que se apuntó ayer en esa franja (para repetirlo de un toque). */
+export function deAyer(comidas: Comida[], ayer: string, franja: Franja): Comida[] {
+  return comidas.filter(c => c.fecha === ayer && c.franja === franja).sort((a, b) => a.hora.localeCompare(b.hora))
+}
+
+/**
+ * Lo último apuntado que no es una plantilla (ya están a un toque), sin repetir nombre:
+ * notas, productos escaneados… del más reciente al más antiguo.
+ */
+export function recientes(comidas: Comida[], antesDe: string, plantillas: { nombre: string }[], n = 5): Comida[] {
+  const yaPlantilla = new Set(plantillas.map(p => p.nombre.trim().toLowerCase()))
+  const vistos = new Set<string>()
+  const out: Comida[] = []
+  for (const c of [...comidas].filter(c => c.fecha < antesDe || c.fecha === antesDe).sort((a, b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora))) {
+    const k = c.nombre.trim().toLowerCase()
+    if (!k || vistos.has(k) || yaPlantilla.has(k) || c.plantillaId != null) continue
+    vistos.add(k)
+    out.push(c)
+    if (out.length >= n) break
+  }
+  return out
+}

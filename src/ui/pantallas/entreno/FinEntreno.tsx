@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { historialEn, sesionesHechas } from '../../../datos/consultas'
-import { ejercicio, nombreEjercicio, nombreMaterial } from '../../../catalogo/catalogo'
+import { ejercicio, nombreEjercicio } from '../../../catalogo/catalogo'
 import { resumen, terminada } from '../../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { estadoSemana } from '../../../dominio/semana'
@@ -26,11 +26,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   const r = useRutina()
   const s = useLiveQuery(() => db.sesiones.get(Number(ruta.d?.id)), [ruta.d?.id])
   const [fin] = useState(Date.now())
-  const [minutos, setMinutos] = useState<'igual' | 'mas' | 'menos'>('igual')
-  const [descansos, setDescansos] = useState<'cortos' | 'bien' | 'largos'>('bien')
   const [molestia, setMolestia] = useState('')
   const [hayMolestia, setHayMolestia] = useState(false)
-  const [ocupado, setOcupado] = useState<string[]>([])
   const [nota, setNota] = useState('')
   const unaVez = useUnaVez()
   const subidas = useLiveQuery(async () => {
@@ -58,14 +55,14 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   const hoy = hoyISO()
   const sem = r ? [...estadoSemana(r, [], hoy, ajustes.recolocadas), ...estadoSemana(r, [], sumarDias(hoy, 7), ajustes.recolocadas)] : []
   const prox = sem.find(d => d.fecha > hoy && d.estado === 'plan')
-  const materiales = [...new Set(s.ejercicios.map(e => ejercicio(e.planificado)?.material).filter((m): m is string => !!m))].slice(0, 6)
 
   // Un doble toque en «Guardar» abría dos veces la rutina definitiva (o volvía dos veces a Inicio).
   const guardar = unaVez(async () => {
     const mins = Math.round(res.segundos / 60)
     await db.sesiones.put({
       ...s, estado: 'hecha', fin, descansoHasta: undefined,
-      respuestas: { minutosReales: minutos === 'igual' ? mins : minutos === 'mas' ? mins + 10 : Math.max(5, mins - 10), descansos, molestia: hayMolestia ? molestia || 'sí' : undefined, ocupado: ocupado.join(', ') || undefined, nota: nota || undefined },
+      // El tiempo, los descansos y lo que estaba ocupado ya los mide la app: solo se pregunta lo que no sabe.
+      respuestas: { minutosReales: mins, molestia: hayMolestia ? molestia || 'sí' : undefined, nota: nota || undefined },
     })
     void cancelar([9001])
     nav.completa(null)
@@ -130,29 +127,14 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
         )}
 
         <div className="sec">
-          <div className="sec-h"><h2>Preguntas rápidas</h2><span className="lbl">10 s</span></div>
+          <div className="sec-h"><h2>Antes de guardar</h2><span className="lbl">opcional</span></div>
           <div className="qq">
-            <p className="lbl">¿Cuánto has tardado de verdad?</p>
-            <div className="chips">
-              <Chip on={minutos === 'igual'} onClick={() => setMinutos('igual')}>{Math.round(res.segundos / 60)} min</Chip>
-              <Chip on={minutos === 'mas'} onClick={() => setMinutos('mas')}>Algo más</Chip>
-              <Chip on={minutos === 'menos'} onClick={() => setMinutos('menos')}>Algo menos</Chip>
-            </div>
-            <p className="lbl">Descansos</p>
-            <div className="chips">
-              {(['cortos', 'bien', 'largos'] as const).map(d => <Chip key={d} on={descansos === d} onClick={() => setDescansos(d)}>{cap(d)}</Chip>)}
-            </div>
             <p className="lbl">¿Alguna molestia?</p>
             <div className="chips">
               <Chip on={!hayMolestia} onClick={() => setHayMolestia(false)}>Ninguna</Chip>
               <Chip on={hayMolestia} onClick={() => setHayMolestia(true)}>Sí, te digo dónde</Chip>
             </div>
             {hayMolestia && <input className="inp" value={molestia} onChange={e => setMolestia(e.target.value)} placeholder="Hombro derecho en el press…" />}
-            <p className="lbl">¿Qué estaba ocupado?</p>
-            <div className="chips">
-              <Chip on={!ocupado.length} onClick={() => setOcupado([])}>Nada</Chip>
-              {materiales.map(m => <Chip key={m} ck on={ocupado.includes(nombreMaterial(m))} onClick={() => setOcupado(o => (o.includes(nombreMaterial(m)) ? o.filter(x => x !== nombreMaterial(m)) : [...o, nombreMaterial(m)]))}>{nombreMaterial(m)}</Chip>)}
-            </div>
             <p className="lbl">Nota</p>
             <textarea className="inp" value={nota} onChange={e => setNota(e.target.value)} placeholder="Algo que quieras recordar" aria-label="Nota del entreno" />
           </div>

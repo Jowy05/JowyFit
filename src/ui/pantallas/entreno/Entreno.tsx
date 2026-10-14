@@ -214,6 +214,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
         </div>
       )}
       {peligroso && <p className="safety"><Ico n="first-aid" b />Entrenas solo: no vayas al fallo, usa las barras de seguridad.</p>}
+      {s.suave && <p className="safety" style={{ background: 'var(--ok-t)', marginTop: 6 }}><Ico n="feather" b className="okc" />Semana suave: 1 serie menos y −10 % de peso.</p>}
       {s.calibracion && <p className="safety" style={{ background: 'var(--blue-t)', marginTop: 6 }}><Ico n="gauge" b className="blue" />Calibración: pesos cómodos (esfuerzo 6-7). Estamos midiendo tus tiempos.</p>}
 
       <div className="exb">
@@ -229,7 +230,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
         <div className="strip">
           <p><span className="lbl">Series</span><b>{trabajo.length}</b></p>
           <p><span className="lbl">{e.registro === 'tiempo' ? 'Segundos' : e.registro === 'cardio' ? 'Minutos' : 'Reps'}</span><b>{e.repsMin}-{e.repsMax}</b></p>
-          <p><span className="lbl">Esfuerzo</span><b>{e.rpe}</b></p>
+          <p><span className="lbl">Esfuerzo</span><b>{e.rpe}<small>/10</small></b></p>
           <p><span className="lbl">Descanso</span><b>{duracion(e.descanso)}</b></p>
         </div>
         <div className="todayw">
@@ -306,7 +307,8 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
   const [peso, setPeso] = useState<number | null>(serie.peso)
   const [reps, setReps] = useState<number>(serie.reps ?? e.repsMin)
   const [seg, setSeg] = useState<number>(serie.segundos ?? e.repsMin)
-  const [rpe, setRpe] = useState<number | null>(serie.calentamiento ? null : e.rpe)
+  // El esfuerzo empieza vacío: solo se guarda si se marca (antes se guardaba el objetivo aunque no se tocara).
+  const [rpe, setRpe] = useState<number | null>(serie.calentamiento ? null : serie.rpe ?? null)
   const [crono, setCrono] = useState<number | null>(null)
   const [ahora, setAhora] = useState(Date.now())
   const pulsado = useRef<number | undefined>(undefined)
@@ -325,7 +327,7 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
   // Los asistidos valen con 0 o negativo (solo falta si está vacío); los corporales no llevan peso.
   const [falta, setFalta] = useState<'peso' | 'reps' | null>(null)
   const comprobar = (d: Pick<Serie, 'peso' | 'reps' | 'segundos'>): boolean => {
-    if (conPeso && d.peso == null) { setFalta('peso'); aviso('Pon el peso que has usado (toca el número)'); return false }
+    if (conPeso && d.peso == null) { setFalta('peso'); aviso('Pon el peso con + o −'); return false }
     if (e.registro === 'tiempo' ? !d.segundos || d.segundos <= 0 : d.reps == null || d.reps <= 0) {
       setFalta('reps'); aviso(e.registro === 'tiempo' ? 'Pon los segundos que has aguantado' : e.registro === 'cardio' ? 'Pon los minutos que has hecho' : 'Pon las repeticiones que has hecho')
       return false
@@ -387,10 +389,10 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
       )}
       {!serie.calentamiento && e.registro !== 'cardio' && (
         <div className="pn-eff">
-          <span className="lbl">Esfuerzo <span className="hint">· mantén pulsado para ayuda</span></span>
+          <span className="lbl">Esfuerzo <span className="hint">· opcional · 6 fácil … 10 no podía más</span></span>
           <div className="effs">
             {[6, 7, 8, 9, 10].map(v => (
-              <button key={v} className={cx('eff', rpe === v && 'on')} onClick={() => setRpe(v)}
+              <button key={v} className={cx('eff', rpe === v && 'on')} aria-pressed={rpe === v} onClick={() => setRpe(r => (r === v ? null : v))}
                 onPointerDown={() => { pulsado.current = window.setTimeout(() => aviso(AYUDA_RPE[v]!), 450) }}
                 onPointerUp={() => clearTimeout(pulsado.current)} onPointerLeave={() => clearTimeout(pulsado.current)}>{v}</button>
             ))}

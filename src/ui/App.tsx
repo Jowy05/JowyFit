@@ -77,7 +77,10 @@ function Marco() {
   const Pant = (PANTALLAS[ruta.p] ?? PANTALLAS.ini) as ComponentType<PropsPantalla>
   const hoja = nav.estado.hoja
   const Hoja = hoja ? (HOJAS[hoja.p] as ComponentType<PropsPantalla> | undefined) : undefined
-  const full = !!nav.estado.completa
+  // El escáner ocupa toda la pantalla: sin barra de pestañas tapando sus botones.
+  const full = !!nav.estado.completa || ruta.p === 'com-scan'
+  // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
+  useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
   const enCurso = !!sesion && !full
 
   return (

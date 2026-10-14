@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import type { Franja, Plantilla, Producto } from '../../../datos/tipos'
-import { FRANJAS, NOMBRE_FRANJA, conRacion, franjaPorHora, ordenarPlantillas, porRacion, type Racion } from '../../../dominio/comida'
-import { horaActual, hoyISO } from '../../../dominio/fechas'
+import type { Comida, Franja, Plantilla, Producto } from '../../../datos/tipos'
+import { FRANJAS, NOMBRE_FRANJA, conRacion, deAyer, franjaPorHora, ordenarPlantillas, porRacion, recientes, type Racion } from '../../../dominio/comida'
+import { horaActual, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
 import { Chip, cx, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
@@ -28,6 +28,9 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const picoteoRef = useRef<HTMLDivElement>(null)
   const plantillas = useLiveQuery(() => db.plantillas.toArray(), []) ?? []
   const productos = useLiveQuery(() => db.productos.toArray(), []) ?? []
+  const ultimas = useLiveQuery(() => db.comidas.where('fecha').between(sumarDias(fecha, -14), fecha, true, true).toArray(), [fecha]) ?? []
+  const ayer = deAyer(ultimas, sumarDias(fecha, -1), franja)
+  const recien = recientes(ultimas, fecha, plantillas)
   const comidas = ordenarPlantillas(plantillas.filter(p => p.tipo === 'comida'))
   const snacks = ordenarPlantillas(plantillas.filter(p => p.tipo !== 'comida'))
 
@@ -50,6 +53,13 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
     const des = await apuntar({ fecha, hora, franja, nombre: p.nombre, kcal: v.kcal, proteina: v.proteina, cafeina: v.cafeina, racion: 'N', tipo: 'producto', codigo: p.codigo })
     listo(p.nombre, des)
   })
+  // Copia de algo ya apuntado (sin la foto, que era de aquel día).
+  const copia = (c: Comida) => apuntar({ fecha, hora, franja, nombre: c.nombre, kcal: c.kcal, proteina: c.proteina, cafeina: c.cafeina, racion: c.racion, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
+  const repetirAyer = unaVez(async () => {
+    const deshacer = await Promise.all(ayer.map(copia))
+    listo(ayer.length === 1 ? ayer[0]!.nombre : `${NOMBRE_FRANJA[franja].toLowerCase()} de ayer (${ayer.length})`, () => deshacer.forEach(d => d()))
+  })
+  const usarReciente = unaVez(async (c: Comida) => { listo(c.nombre, await copia(c)) })
   const guardarNota = unaVez(async () => {
     const nombre = texto.trim() || (foto ? 'Comida (foto)' : 'Comida')
     const des = await apuntar({ fecha, hora, franja, nombre, kcal, proteina: prot, racion: 'N', tipo: foto ? 'foto' : 'nota', foto })
@@ -109,9 +119,35 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
         </div>
       )}
 
+      {ayer.length > 0 && (
+        <button className="card pd row w100 mt12" style={{ textAlign: 'left' }} onClick={() => void repetirAyer()}>
+          <span className="ico okb"><Ico n="arrow-counter-clockwise" /></span>
+          <span className="tx grow">
+            <b>Lo de ayer: {NOMBRE_FRANJA[franja].toLowerCase()}</b>
+            <small>{ayer.map(c => c.nombre).join(' + ')} · <span className="mono">{kp(ayer.reduce((t, c) => t + c.kcal, 0), ayer.reduce((t, c) => t + c.proteina, 0))}</span></small>
+          </span>
+          <Ico n="plus" b className="car" />
+        </button>
+      )}
+
+      {recien.length > 0 && (
+        <>
+          <div className="sec-h mt16"><h2 className="h3">Recientes</h2><span className="lbl">Un toque</span></div>
+          <div className="list">
+            {recien.map(c => (
+              <button key={`${c.fecha}-${c.hora}-${c.nombre}`} className="it" onClick={() => void usarReciente(c)}>
+                <Mini nombre={c.nombre} tipo={c.tipo} />
+                <span className="tx"><b>{c.nombre}</b><small className="mono">{kp(c.kcal, c.proteina, c.cafeina)}</small></span>
+                <Ico n="plus" b className="car" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {comidas.length > 0 && (
         <>
-          <div className="sec-h mt16"><h2 className="h3">Plantillas</h2><span className="lbl">Toca = ración N</span></div>
+          <div className="sec-h mt16"><h2 className="h3">Plantillas</h2><span className="lbl">P pequeña · N normal · G grande</span></div>
           <div className="list">
             {comidas.map(p => (
               <div key={p.id} className="it tpl">
@@ -133,7 +169,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
         {snacks.map(p => (
           <button key={p.id} onClick={() => void usar(p, 'N')}>
             <b>{p.nombre}</b>
-            <small className="mono">{p.cafeina != null ? `${p.kcal < 20 ? '~' : ''}${p.kcal} · ${p.cafeina} mg` : `~${p.kcal} kcal`}</small>
+            <small className="mono">{p.cafeina != null ? `${p.kcal < 20 ? '~' : ''}${p.kcal} kcal · ${p.cafeina} mg caf.` : `~${p.kcal} kcal`}</small>
           </button>
         ))}
       </div>

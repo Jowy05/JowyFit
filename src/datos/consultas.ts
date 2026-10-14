@@ -5,6 +5,7 @@ import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
 import { desdeReferencia, sugerir, type Sugerencia } from '../dominio/progresion'
+import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
 import { edad, hoyISO } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
 
@@ -45,9 +46,20 @@ export function bloqueObjetivo(b: { repsMin: number; repsMax: number; rpe: numbe
 export async function sugerenciaPara(id: string, objetivo: { repsMin: number; repsMax: number; rpe: number }, g?: Gimnasio | null, excluir?: number, sesiones?: Sesion[], referencias?: Record<string, string>): Promise<Sugerencia> {
   const e = ejercicio(id)
   const reg = e ? tipoRegistro(e) : 'peso'
-  const ultimas = historialEn(sesiones ?? (await sesionesHechas()), id, excluir)[0]?.series ?? null
+  // Las semanas suaves no cuentan: si no, tras la descarga se partiría del peso rebajado.
+  const todas = (sesiones ?? (await sesionesHechas())).filter(x => !x.suave)
+  const hist = historialEn(todas, id, excluir)
+  const ultimas = hist[0]?.series ?? null
   const lista = pesosPara(e?.material ?? null, reg, g)
   const s = sugerir(ultimas, objetivo, reg, lista)
+  // 3 sesiones con el mismo peso sin mejorar: se baja un 10 % para volver a subir (sin contar la calibración).
+  if (reg === 'peso' && s.peso != null && s.accion !== 'subir' && s.accion !== 'primera') {
+    const sinCalibrar = historialEn(todas.filter(x => !x.calibracion), id, excluir)
+    if (estancado(sinCalibrar)) {
+      const p = pesoReinicio(s.peso, lista)
+      if (p < s.peso) return { ...s, accion: 'bajar', peso: p, reps: objetivo.repsMin, texto: `Llevas ${SESIONES_ESTANCADO} sesiones sin mejorar: baja a ${String(p).replace('.', ',')} kg y vuelve a subir` }
+    }
+  }
   // Sin historial: si el perfil tiene un peso de referencia para este ejercicio, se parte de él.
   if (s.accion === 'primera' && reg === 'peso') {
     const refs = referencias ?? (await db.perfil.get('yo'))?.referencias

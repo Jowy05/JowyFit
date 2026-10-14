@@ -138,6 +138,11 @@ async function ponerPesoSiFalta() {
 /** Botón de volver de la cabecera (o de la galería de la ficha). */
 const volver = () => js(`const b = [...document.querySelectorAll('button[aria-label]')].filter(b => /^(Volver|Atrás)$/.test(b.getAttribute('aria-label')) && b.getBoundingClientRect().width > 0).pop(); if (!b) throw new Error('No hay botón de volver'); b.click(); await new Promise(r => setTimeout(r, 300))`)
 const seg = async n => { await pulsar(n, '.seg'); await t('listo') }
+/** Lee una tabla entera de la base local de la app. */
+const tabla = nombre => js(`return await new Promise((ok, mal) => { const q = indexedDB.open('jowyfit'); q.onerror = mal; q.onsuccess = () => { const g = q.result.transaction('${nombre}').objectStore('${nombre}').getAll(); g.onsuccess = () => ok(g.result); g.onerror = mal } })`)
+/** Mete filas en una tabla de la base local (para preparar historiales largos sin tocar 6 semanas). */
+const meter = (nombre, filas) => js(`const filas = ${JSON.stringify(filas)}; return await new Promise((ok, mal) => { const q = indexedDB.open('jowyfit'); q.onerror = mal; q.onsuccess = () => { const tx = q.result.transaction('${nombre}', 'readwrite'); for (const f of filas) tx.objectStore('${nombre}').put(f); tx.oncomplete = () => ok(filas.length); tx.onerror = mal } })`)
+
 const pestana = async n => { await pulsar(new RegExp(`^${n}$`, 'i'), '.tabbar'); await t('listo') }
 
 // ---------- escenarios ----------
@@ -208,6 +213,9 @@ escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await ver('Añadido: Batido')
   await pulsar('Añadir', '.dock')
   await pulsar('Bolsa de patatas pequeña', '.sheet')
+  // El aviso no puede tapar el botón principal de abajo.
+  const tapaAviso = await js(`const a = document.querySelector('.toast')?.getBoundingClientRect(); const d = document.querySelector('.dock .btn')?.getBoundingClientRect(); return !!(a && d && a.bottom > d.top && a.top < d.bottom)`)
+  if (tapaAviso) throw new Error('El aviso tapa el botón «Añadir»')
   await pulsar('Añadir', '.dock')
   await pulsar('Nota rápida', '.sheet')
   await t('escribir', '.nota-r input', 'Menú del día')
@@ -234,6 +242,9 @@ escenario('comida: escáner con y sin conexión', async () => {
   await t('escribir', '.cam-panel input', '8480000123458')
   await pulsar('Buscar')
   await ver('Arroz al curry con pollo', 8000)
+  // El escáner ocupa toda la pantalla: la barra de pestañas no puede tapar sus botones.
+  const tapa = await js(`const tb = document.querySelector('.tabbar').getBoundingClientRect(); const b = [...document.querySelectorAll('.cam-panel button')].map(x => x.getBoundingClientRect()); return b.some(r => r.bottom > tb.top + 1 && tb.top < innerHeight)`)
+  if (tapa) throw new Error('La barra de pestañas tapa los botones del escáner')
   await pulsar('Ver producto')
   await ver('Ficha técnica')
   await pulsar('G', '.chips')
@@ -421,6 +432,88 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   await pestana('Comida')
   await ver('Batido de proteína')
   archivoParaElegir = null
+})
+
+escenario('entreno: esfuerzo opcional y final sin preguntas', async () => {
+  await deCero('2026-10-13T05:20:00')
+  await alta()
+  await pulsar('Empezar rutina')
+  await pulsar('Empezar', '.sheet')
+  await ver('Hecho', 8000)
+  await ponerPesoSiFalta()
+  await pulsar(/^Hecho$/) // sin tocar el esfuerzo
+  await ver('Próxima', 5000)
+  await pulsar(/^Saltar$/)
+  await pulsar('8', '.effs') // en la segunda, sí
+  await pulsar(/^Hecho$/)
+  const s = (await tabla('sesiones')).find(x => x.estado === 'curso')
+  const series = s.ejercicios[0].series.filter(x => x.hecha)
+  if (series[0].rpe !== null) throw new Error('El esfuerzo sin tocar se ha guardado: ' + series[0].rpe)
+  if (series[1].rpe !== 8) throw new Error('El esfuerzo marcado no se ha guardado: ' + series[1].rpe)
+  if (series[1].peso !== series[0].peso) throw new Error('La segunda serie no mantiene el peso de la primera')
+  await t('pulsarSel', '[aria-label="Lista de la sesión"]')
+  await pulsar('Terminar entreno', '.sheet')
+  await ver('Entreno terminado')
+  await noVer('¿Cuánto has tardado de verdad?')
+  await noVer('¿Qué estaba ocupado?')
+  await ver('¿Alguna molestia?')
+})
+
+escenario('semana suave tras 6 semanas', async () => {
+  await deCero('2026-10-19T09:00:00') // lunes
+  await alta()
+  // 6 semanas con dos entrenos cada una (como si se hubieran hecho), con los ejercicios del día A.
+  const [rutina] = await tabla('rutinas')
+  const dia = rutina.dias[0]
+  const sesiones = []
+  let id = 1000
+  for (let sem = 6; sem >= 1; sem--) for (const dd of [1, 3]) {
+    const f = new Date(2026, 9, 19 - sem * 7 + dd)
+    const fecha = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`
+    sesiones.push({ id: id++, fecha, rutinaId: rutina.id, letra: dia.letra, nombre: dia.nombre, gimnasioId: null, inicio: f.getTime() + 5.5 * 3600e3, version: 'normal', estado: 'hecha', calibracion: false,
+      ejercicios: dia.bloques.map(b => ({ uid: b.uid, ejercicio: b.ejercicio, planificado: b.ejercicio, estado: 'hecho', repsMin: b.repsMin, repsMax: b.repsMax, rpe: b.rpe, descanso: b.descanso, registro: b.registro,
+        series: Array.from({ length: b.series }, (_, i) => ({ n: i + 1, peso: b.registro === 'peso' ? 20 + (6 - sem) * 2.5 : null, reps: b.repsMin, rpe: 8, calentamiento: false, hecha: true })) })) })
+  }
+  await meter('sesiones', sesiones)
+  await meter('rutinas', [{ ...rutina, calibracion: false }])
+  await recargar()
+  await ver('¿Semana suave?', 8000)
+  await pulsar('Ahora no')
+  await noVer('¿Semana suave?')
+  await irA('2026-10-26T09:00:00') // la semana siguiente vuelve a salir
+  await ver('¿Semana suave?', 8000)
+  await pulsar('Sí, esta semana')
+  await ver('Semana suave.', 5000)
+  await irA('2026-10-27T05:20:00') // martes: día A, más ligero
+  await pulsar('Empezar rutina')
+  await pulsar('Empezar', '.sheet')
+  await ver('Semana suave: 1 serie menos', 8000)
+  const s = (await tabla('sesiones')).find(x => x.estado === 'curso')
+  if (!s.suave) throw new Error('La sesión no está marcada como suave')
+  const b0 = dia.bloques[0]
+  const e0 = s.ejercicios[0]
+  if (e0.series.length !== Math.max(2, b0.series - 1)) throw new Error(`Series: ${e0.series.length} (plan ${b0.series})`)
+  if (b0.registro === 'peso' && !(e0.series[0].peso < 32.5)) throw new Error('El peso no baja en la semana suave: ' + e0.series[0].peso)
+})
+
+escenario('comida: lo de ayer y recientes', async () => {
+  await deCero('2026-10-13T08:10:00')
+  await alta()
+  await pestana('Comida')
+  await pulsar('Añadir', '.dock')
+  await pulsar('Nota rápida', '.sheet')
+  await t('escribir', '.nota-r input', 'Tostadas con tomate')
+  await pulsar(/Añadir nota/, '.sheet')
+  await ver('Tostadas con tomate')
+  await irA('2026-10-14T08:15:00')
+  await pestana('Comida')
+  await pulsar('Añadir', '.dock')
+  await ver('Lo de ayer: desayuno')
+  await ver('Recientes')
+  await pulsar(/Lo de ayer/, '.sheet')
+  await ver('Añadido: Tostadas con tomate')
+  const hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-14')
+  if (hoy.length !== 1 || hoy[0].franja !== 'desayuno') throw new Error('No se ha repetido lo de ayer: ' + JSON.stringify(hoy))
 })
 
 escenario('repaso visual de todas las pestañas', async () => {

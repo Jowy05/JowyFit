@@ -99,7 +99,7 @@ export function MiPlan() {
                 {!d.opcional && (
                   <span className="pl-sum">
                     {filas(d.bloques).map((f, k) => (
-                      <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>SS</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>
+                      <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>Superserie</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>
                     ))}
                   </span>
                 )}

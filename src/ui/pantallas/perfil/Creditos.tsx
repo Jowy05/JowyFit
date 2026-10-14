@@ -41,6 +41,24 @@ export function Creditos() {
           <p><span>Números</span><b>JetBrains Mono · SIL OFL</b></p>
         </div></div>
 
+        <p className="grp-t">Código abierto</p>
+        <p className="legal">
+          JowyFit está hecho con software libre. Gracias a sus autores. Cada pieza conserva su licencia:
+        </p>
+        <div className="spec-box mt8"><div className="spec">
+          <p><span>React, Capacitor, fflate, Workbox</span><b>MIT</b></p>
+          <p><span>Dexie (base de datos local)</span><b>Apache 2.0</b></p>
+          <p><span>Escáner: ML Kit (Android)</span><b>Apache 2.0</b></p>
+          <p><span>Escáner: zxing-wasm, barcode-detector (web)</span><b>MIT</b></p>
+          <p><span>Pasos: @capgo/capacitor-health</span><b>MPL 2.0</b></p>
+          <p><span>Iconos Phosphor</span><b>MIT</b></p>
+          <p><span>Fuentes Barlow y JetBrains Mono</span><b>SIL OFL 1.1</b></p>
+        </div></div>
+        <p className="legal mt8">
+          El código de JowyFit tiene licencia MIT. Los datos de ejercicios (RepDB) y de alimentos (Open Food Facts) no son
+          parte de esa licencia: tienen las suyas, indicadas arriba.
+        </p>
+
         <p className="grp-t">Tus datos</p>
         <p className="legal">
           Todo lo que apuntas se guarda solo en este móvil. La app no tiene cuentas ni servidores propios y no envía tus datos a

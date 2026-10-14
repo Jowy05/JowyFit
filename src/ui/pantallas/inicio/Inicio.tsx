@@ -37,6 +37,7 @@ export function Inicio() {
   const sesiones = useLiveQuery(() => db.sesiones.where('fecha').between(sumarDias(dias[0]!, -7), dias[6]!, true, true).toArray(), [hoy]) ?? []
   const comidas = useLiveQuery(() => db.comidas.where('fecha').equals(hoy).toArray(), [hoy]) ?? []
   const pasos = useLiveQuery(() => db.pasos.get(hoy), [hoy])
+  const yaEntreno = useLiveQuery(async () => !!(await db.sesiones.where('estado').equals('hecha').first()), []) ?? false
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
   const semana = estadoSemana(rutina, sesiones, hoy, ajustes.recolocadas)
   const proxSemana = estadoSemana(rutina, sesiones, sumarDias(dias[6]!, 1), ajustes.recolocadas).find(d => d.estado === 'plan')
@@ -44,6 +45,10 @@ export function Inicio() {
   const tot = totalesComida(comidas)
   const d = deISO(hoy)
   const nSemana = ajustes.inicio ? numeroSemana(ajustes.inicio, hoy) : 1
+  // Mientras se ve la guía «Primeros pasos» no salen «Pendientes de hoy» ni la tarjeta de pasos:
+  // eran dos listas de casillas casi iguales y una meta de pasos que nadie había pedido.
+  const guia = usePrimerosPasos(tarjeta)
+  const conGuia = guia !== null
 
   const describe = (e: EstadoDia) => {
     const nom = `${capital(DIAS[diaSemana(deISO(e.fecha))]!)} ${deISO(e.fecha).getDate()}`
@@ -81,6 +86,7 @@ export function Inicio() {
           <span><Ico n="circle" b className="blue" />Plan</span>
           <span><Ico n="circle-dashed" />Opcional</span>
           <span><Ico n="x" b className="badc" />Perdido</span>
+          <span><Ico n="minus" b />Descanso</span>
         </p>
       </Cab>
 
@@ -91,7 +97,20 @@ export function Inicio() {
           <TarjetaHoy t={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre} />
         </Seccion>
 
-        <PrimerosPasos t={tarjeta} />
+        {/* El domingo, «¿Voy bien?» justo debajo de «Hoy te toca» (antes salía al final y no se llegaba). */}
+        {diaSemana(d) === 6 && <VoyBien rutina={rutina ?? null} />}
+
+        {/* Los accesos rápidos, a mano: antes había que bajar tres pantallas para llegar a «+ Comer o beber». */}
+        <div className="sec">
+          {/* Comida y picoteo abrían la misma hoja: un solo botón (no hay que decidir si un café es comida o picoteo). */}
+          <div className="qa-row ux-qa3">
+            <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy })}><Ico n="fork-knife" /><span>+ Comer o beber</span></button>
+            <button className="qa" onClick={() => nav.ir('com-scan', undefined, 'com')}><Ico n="barcode" /><span>Escanear</span></button>
+            <button className="qa" onClick={() => nav.hoja('sheet-peso')}><Ico n="scales" /><span>+ Peso</span></button>
+          </div>
+        </div>
+
+        {guia && <PrimerosPasos g={guia} />}
 
         <Seccion titulo="Hoy en números" accion="Comida" onAccion={() => nav.pestana('com')}>
           <div className="grid2">
@@ -111,14 +130,16 @@ export function Inicio() {
                 <p className="d">kcal · orientativo</p>
               </div>
             )}
-            <button className={cx('card kpi steps', !ajustes.mostrarKcal && 'span2')} onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>
-              <Anillo v={pasos?.pasos ?? 0} total={perfil.pasosObjetivo} />
-              <div className="grow">
-                <span className="lbl">Pasos</span>
-                <p className="k sm">{num(pasos?.pasos ?? 0, 0)}</p>
-                <p className="d">de {num(perfil.pasosObjetivo, 0)}</p>
-              </div>
-            </button>
+            {(
+              <button className={cx('card kpi steps', !ajustes.mostrarKcal && 'span2')} onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>
+                <Anillo v={pasos?.pasos ?? 0} total={perfil.pasosObjetivo} />
+                <div className="grow">
+                  <span className="lbl">Pasos</span>
+                  <p className="k sm">{num(pasos?.pasos ?? 0, 0)}</p>
+                  <p className="d">de {num(perfil.pasosObjetivo, 0)}</p>
+                </div>
+              </button>
+            )}
             {tot.cafeina > 0 && (
               <div className="card kpi span2 row">
                 <span className="ico"><Ico n="coffee" /></span>
@@ -131,21 +152,12 @@ export function Inicio() {
           </div>
         </Seccion>
 
-        <Pendientes />
-
-        <div className="sec">
-          {/* Comida y picoteo abrían la misma hoja: un solo botón (no hay que decidir si un café es comida o picoteo). */}
-          <div className="qa-row ux-qa3">
-            <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy })}><Ico n="fork-knife" /><span>+ Comer o beber</span></button>
-            <button className="qa" onClick={() => nav.ir('com-scan', undefined, 'com')}><Ico n="barcode" /><span>Escanear</span></button>
-            <button className="qa" onClick={() => nav.hoja('sheet-peso')}><Ico n="scales" /><span>+ Peso</span></button>
-          </div>
-        </div>
+        {!conGuia && <Pendientes />}
 
         <TuProgreso rutina={rutina ?? null} />
 
-        {diaSemana(d) === 6 && <VoyBien rutina={rutina ?? null} />}
-        {ajustes.ultimaCopia == null || Date.now() - new Date(ajustes.ultimaCopia).getTime() > 8 * 86400000 ? (
+        {/* El aviso de copia no sale a quien acaba de llegar: espera a que haya algo que guardar (un entreno). */}
+        {yaEntreno && (ajustes.ultimaCopia == null || Date.now() - new Date(ajustes.ultimaCopia).getTime() > 8 * 86400000) ? (
           <div className="sec">
             <button className="note warn w100" style={{ textAlign: 'left' }} onClick={() => nav.ir('aju', { seccion: 'datos' })}>
               <Ico n="download-simple" />
@@ -162,6 +174,10 @@ function FilasDia({ dia, sug }: { dia: DiaRutina; sug?: Map<string, Sugerencia> 
   const filas: ReactElement[] = []
   const vistos = new Set<string>()
   const bloques = dia.bloques
+  // Sin peso todavía (o con el de partida que propone la app): «nuevo» en gris, en vez de un «—» que parecía un error.
+  // Si todos son nuevos (el primer día), no se pone nada: cuatro «NUEVO» seguidos no dicen nada.
+  const nuevo = (x?: Sugerencia) => !!x && (x.partida === true || (x.accion === 'primera' && x.peso == null))
+  const todosNuevos = !!sug && bloques.every(b => nuevo(sug.get(b.ejercicio)))
   for (const b of bloques) {
     if (vistos.has(b.uid) || filas.length >= 4) continue
     vistos.add(b.uid)
@@ -170,16 +186,14 @@ function FilasDia({ dia, sug }: { dia: DiaRutina; sug?: Map<string, Sugerencia> 
     const e = ejercicio(b.ejercicio)
     const s = sug?.get(b.ejercicio)
     const s2 = comp ? sug?.get(comp.ejercicio) : undefined
-    // Sin peso todavía (o con el de partida que propone la app): «nuevo», en vez de un «—» que parecía un error.
-    const nuevo = (x?: Sugerencia) => !!x && (x.partida === true || (x.accion === 'primera' && x.peso == null))
-    const pesoTxt = (x?: Sugerencia) => (!x ? '' : nuevo(x) ? 'nuevo' : x.peso != null ? kg(x.peso) : x.reps != null ? `${x.reps}${b.registro === 'tiempo' ? ' s' : ' reps'}` : '')
+    const pesoTxt = (x?: Sugerencia) => (!x ? '' : nuevo(x) ? (todosNuevos ? '' : 'nuevo') : x.peso != null ? kg(x.peso) : x.reps != null ? `${x.reps}${b.registro === 'tiempo' ? ' s' : ' reps'}` : '')
     filas.push(
       <div key={b.uid} className={cx('exr', s?.accion === 'subir' && 'hot')}>
         {comp ? <span className="th xs c-br"><Ico n="link" b /></span> : <Th ej={e} size="xs" />}
-        <span className="tx ellip">{comp ? `Superserie: ${e?.nombre.split(' ')[0]} + ${ejercicio(comp.ejercicio)?.nombre.split(' ')[0]}` : e?.nombre}</span>
+        <span className="tx ellip">{comp ? `Dos seguidos: ${e?.nombre.split(' ')[0]} + ${ejercicio(comp.ejercicio)?.nombre.split(' ')[0]}` : e?.nombre}</span>
         <span className="sr">{b.series} × {b.repsMin}-{b.repsMax}</span>
         <b className={cx('kg', (comp ? nuevo(s) && nuevo(s2) : nuevo(s)) && 'ux-nuevo')}>
-          {comp ? (nuevo(s) && nuevo(s2) ? 'nuevo' : `${pesoTxt(s)} · ${pesoTxt(s2)}`) : s && !nuevo(s) && s.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : pesoTxt(s)}
+          {comp ? (nuevo(s) && nuevo(s2) ? (todosNuevos ? '' : 'nuevo') : `${pesoTxt(s)} · ${pesoTxt(s2)}`) : s && !nuevo(s) && s.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : pesoTxt(s)}
         </b>
       </div>,
     )
@@ -230,10 +244,10 @@ function TarjetaHoy({ t, rutina, enCurso, gym }: { t: ReturnType<typeof tarjetaH
     const d = t.dia
     return (
       <div className="card today">
-        {rutina?.calibracion && <div className="calib"><Ico n="gauge" /><span><b>Semana de prueba.</b> Pesos cómodos: así medimos cuánto tardas y ajustamos tu rutina.</span></div>}
+        {/* La explicación de la semana de prueba sale dentro del entreno; aquí basta la etiqueta. Sin «Día A»: la letra no dice nada. */}
         <div className="today-hero">
           <Ico n="barbell" className="today-bg" />
-          <div className="row"><span className="tag go">Día {d.letra}</span><span className="tag">{capital(DIAS[diaSemana(new Date())]!)} · {formatoHora(perfil.horaEntreno)}</span></div>
+          <div className="row">{rutina?.calibracion && <span className="tag blue">Semana de prueba</span>}<span className="tag">{capital(DIAS[diaSemana(new Date())]!)} · {formatoHora(perfil.horaEntreno)}</span></div>
           <h3>{d.nombre}</h3>
           <p className="today-meta">
             <span><Ico n="clock" />~{Math.round(duracionDia(d.bloques) / 60)} min</span>
@@ -504,8 +518,14 @@ function guardarPasos(e: EstadoPasos) {
   try { localStorage.setItem(CLAVE_PASOS, JSON.stringify(e)) } catch { /* sin almacenamiento: vale solo para esta visita */ }
 }
 
-/** 4 pasos que se marcan solos al hacerlos. Desaparece al completarlos o con «Ya lo sé». Solo las primeras semanas. */
-function PrimerosPasos({ t }: { t: ReturnType<typeof tarjetaHoy> }) {
+type Paso = { id: string; titulo: string; hecho: boolean; ir: () => void }
+type Guia = { pasos: Paso[]; n: number; cerrar: () => void }
+
+/**
+ * 4 pasos que se marcan solos al hacerlos. Desaparece al completarlos o con «Ya lo sé». Solo las primeras semanas.
+ * Devuelve null si no se ve, y undefined mientras carga (cuenta como «se ve» para no enseñar y quitar los pendientes).
+ */
+function usePrimerosPasos(t: ReturnType<typeof tarjetaHoy>): Guia | null | undefined {
   const nav = useNav()
   const ajustes = useAjustes()
   const hoy = hoyISO()
@@ -519,18 +539,27 @@ function PrimerosPasos({ t }: { t: ReturnType<typeof tarjetaHoy> }) {
   const cambiar = (e: EstadoPasos) => { guardarPasos(e); setEstado(e) }
   // Solo para quien acaba de llegar: quien ya lleva tiempo con la app no lo ve.
   const reciente = !ajustes.inicio || diasEntre(ajustes.inicio, hoy) <= 28
-  if (!hechos || estado.cerrado || !reciente) return null
+  if (estado.cerrado || !reciente) return null
+  if (!hechos) return undefined
   const dia = t.tipo === 'hoy' || t.tipo === 'opcional' ? t.dia : null
-  const pasos = [
-    { id: 'entreno', titulo: 'Haz tu primer entreno', hecho: hechos.entreno, ir: () => (dia ? nav.hoja('sheet-ses1', { letra: dia.letra, version: 'normal' }) : nav.pestana('rut')) },
+  // Día de descanso: se dice qué día toca («Haz tu primer entreno (martes)») y se abre ese día de la rutina.
+  const prox = t.tipo === 'descanso' && t.proximo?.dia ? t.proximo : null
+  const cuando = dia ? '' : prox ? ` (${DIAS[diaSemana(deISO(prox.fecha))]})` : t.tipo === 'perdida' ? ` (${DIAS[diaSemana(deISO(t.destino))]})` : ''
+  const pasos: Paso[] = [
+    { id: 'entreno', titulo: `Haz tu primer entreno${cuando}`, hecho: hechos.entreno, ir: () => (dia ? nav.hoja('sheet-ses1', { letra: dia.letra, version: 'normal' }) : prox?.dia ? nav.ir('rut-dia', { letra: prox.dia.letra }, 'rut') : nav.pestana('rut')) },
     { id: 'peso', titulo: 'Apunta tu peso', hecho: hechos.peso, ir: () => nav.hoja('sheet-peso') },
     { id: 'comida', titulo: 'Apunta una comida', hecho: hechos.comida, ir: () => nav.hoja('sheet-add', { fecha: hoy }) },
     { id: 'progreso', titulo: 'Mira tu semana en Progreso', hecho: !!estado.progreso, ir: () => { cambiar({ ...estado, progreso: true }); nav.pestana('pro') } },
   ]
   const n = pasos.filter(p => p.hecho).length
   if (n === pasos.length) return null
+  return { pasos, n, cerrar: () => cambiar({ ...estado, cerrado: true }) }
+}
+
+function PrimerosPasos({ g }: { g: Guia }) {
+  const { pasos, n } = g
   return (
-    <Seccion titulo="Primeros pasos" extra={<button className="lnk" onClick={() => cambiar({ ...estado, cerrado: true })}>Ya lo sé</button>}>
+    <Seccion titulo="Primeros pasos" extra={<button className="lnk" onClick={g.cerrar}>Ya lo sé</button>}>
       <div className="list">
         {pasos.map(p => (
           <button key={p.id} className={cx('it todo', p.hecho && 'done')} onClick={p.ir}>

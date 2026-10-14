@@ -1,4 +1,4 @@
-// INI-02 · Apuntar peso: el número se escribe directamente (o con − y + de 0,1 en 0,1); el origen y los datos
+// INI-02 · Apuntar peso: el número se escribe directamente (cualquier decimal) o con − y + de 0,5 en 0,5; el origen y los datos
 // de la báscula, plegados; la tendencia solo cuando ya hay datos.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -51,9 +51,11 @@ export function HojaPeso() {
   const t = tendenciaPeso(mediciones ?? [], hoy)
   const peso = texto == null ? null : leer(texto)
 
+  // − y + van de medio en medio kilo (de 82 a 80 eran 20 toques) y caen en múltiplos de 0,5: 82,3 → + → 82,5.
   const mover = (dir: 1 | -1) => {
     const base = peso ?? 75
-    setTexto(formato(Math.min(MAX, Math.max(MIN, Math.round((base + dir * 0.1) * 10) / 10))))
+    const medios = dir > 0 ? Math.floor(base * 2 + 1e-9) + 1 : Math.ceil(base * 2 - 1e-9) - 1
+    setTexto(formato(Math.min(MAX, Math.max(MIN, medios / 2))))
   }
 
   const guardar = unaVez(async () => {

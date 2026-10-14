@@ -9,7 +9,6 @@ import { ultimoValor, type PuntoFecha } from '../../../dominio/tendencias'
 import { Cab, Chip, cx, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
-import { Medir } from '../alta/Alta'
 import { ORIGENES, PERIMETROS, type Perimetro } from './comun'
 
 type Campo = 'peso' | Perimetro
@@ -38,6 +37,27 @@ const leerNumero = (s: string | undefined) => {
 }
 const signo = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${num(Math.abs(n))}`
 
+/** Dibujo de cómo medir una sola parte (cintura en la pantalla; cuello dentro de «Más medidas»). */
+function DibujoMedir({ parte }: { parte: 'cintura' | 'cuello' }) {
+  const cintura = parte === 'cintura'
+  return (
+    <div className="measure reg-medir mt8">
+      <svg className="sil-fig" viewBox="0 0 120 150" aria-hidden="true">
+        <circle className="sil" cx="60" cy="24" r="15" />
+        <path className="sil" d="M53 38h14v10H53zM36 50Q60 44 84 50L100 58Q106 62 106 72L110 126Q110 134 104 134L98 80 92 82 92 150H28L28 82 22 80 16 134Q10 134 10 126L14 72Q14 62 20 58Z" />
+        {cintura
+          ? <><line className="msr go" x1="20" y1="108" x2="100" y2="108" /><circle className="msr-dot" cx="60" cy="108" r="3" /></>
+          : <line className="msr" x1="34" y1="44" x2="86" y2="44" />}
+      </svg>
+      <div className="measure-key">
+        {cintura
+          ? <p><span className="kdot go" /><b>Cintura</b><small>A la altura del ombligo, sin apretar, después de soltar el aire</small></p>
+          : <p><span className="kdot blue" /><b>Cuello</b><small>Justo bajo la nuez, con la cinta horizontal</small></p>}
+      </div>
+    </div>
+  )
+}
+
 export function Registrar() {
   const nav = useNav()
   const aviso = useAviso()
@@ -57,6 +77,8 @@ export function Registrar() {
   const [origen, setOrigen] = useState<OrigenMedicion | null>(null)
   const [fecha, setFecha] = useState(hoy)
   const [masAbierto, setMasAbierto] = useState(false)
+  // El peso viene puesto (el último apuntado) y se guarda tal cual si no se toca nada más, como en «Apuntar peso».
+  const [sinPeso, setSinPeso] = useState(false)
   const unaVez = useUnaVez()
 
   const tocado = (c: Campo) => tocados.includes(c)
@@ -67,7 +89,11 @@ export function Registrar() {
   }
   const quitar = (c: Campo) => setTocados(t => t.filter(x => x !== c))
   const basculaRellena = CAMPOS_BASCULA.some(c => leerNumero(bas[c.k]) != null)
-  const origenFinal: OrigenMedicion = origen ?? (tocado('peso') || basculaRellena ? 'casa' : 'cinta')
+  const otrosTocados = tocados.some(c => c !== 'peso') || basculaRellena
+  // Peso que se guarda: el tocado o, si no se ha tocado nada más, el propuesto. Si solo se mide la cintura,
+  // el peso viejo no se vuelve a apuntar como de hoy.
+  const pesoAGuardar = sinPeso ? null : tocado('peso') ? valores.peso ?? null : otrosTocados ? null : ultimos?.v.peso?.valor ?? null
+  const origenFinal: OrigenMedicion = origen ?? (pesoAGuardar != null || basculaRellena ? 'casa' : 'cinta')
 
   // Doble toque: dos mediciones iguales y dos «atrás».
   const guardar = unaVez(async () => {
@@ -75,9 +101,9 @@ export function Registrar() {
     for (const p of PERIMETROS) if (tocado(p.k) && valores[p.k] != null) perimetros[p.k] = valores[p.k]
     const bascula: Bascula = {}
     for (const c of CAMPOS_BASCULA) { const n = leerNumero(bas[c.k]); if (n != null) bascula[c.k] = n }
-    const peso = tocado('peso') ? valores.peso : undefined
+    const peso = pesoAGuardar
     if (peso == null && !Object.keys(perimetros).length && !Object.keys(bascula).length) {
-      aviso('Cambia al menos una medida para guardar')
+      aviso('Pon al menos una medida para guardar')
       return
     }
     const m: Medicion = { fecha: `${fecha}T${fecha === hoy ? horaActual() : '08:00'}`, origen: origenFinal }
@@ -99,34 +125,48 @@ export function Registrar() {
         : <small className="small muted">{ultimos?.v[c] ? `la última vez, ${fechaCorta(ultimos.v[c]!.fecha)}` : 'sin datos'}</small>}
     </div>
   )
+  // Bajo el peso: cómo se escribe y qué pasa con él al pulsar «Guardar».
+  const notaPeso = sinPeso
+    ? <p className="small muted mt4 center">El peso no se guarda · <button type="button" className="lnk small" onClick={() => setSinPeso(false)}>Guardarlo</button></p>
+    : (
+      <p className="small muted mt4 center">
+        Toca el número para escribirlo
+        {pesoAGuardar != null && <> · <button type="button" className="lnk small" onClick={() => { quitar('peso'); setSinPeso(true) }}>No guardar el peso</button></>}
+        {pesoAGuardar == null && ultimos?.v.peso && <><br />Si no lo cambias, el peso no se guarda</>}
+      </p>
+    )
   // Sin dato previo se ve «—»; el primer + o − parte de un valor normal (75 kg, 90 cm…), no de 0.
   const paso = (c: Campo, sm: boolean, p: number) => (
-    <div className={cx('reg-campo', tocado(c) && 'tocado')}>
-      <Stepper className={cx(sm && 'sm')} valor={valor(c)} onCambio={n => cambia(c, valor(c) == null && n <= p ? POR_DEFECTO[c] : n)} paso={p} min={0} decimales={1} sufijo={c === 'peso' ? 'kg' : 'cm'}
+    <div className={cx('reg-campo', (tocado(c) || (c === 'peso' && pesoAGuardar != null)) && 'tocado')}>
+      <Stepper className={cx(sm && 'sm')} valor={valor(c)} onCambio={n => { if (c === 'peso') setSinPeso(false); cambia(c, valor(c) == null && n <= p ? POR_DEFECTO[c] : n) }} paso={p} min={0} decimales={1} sufijo={c === 'peso' ? 'kg' : 'cm'}
         etiqueta={c === 'peso' ? 'Peso' : PERIMETROS.find(x => x.k === c)?.t ?? c} />
     </div>
   )
   const otros = PERIMETROS.filter(p => p.k !== 'cintura')
   const cambiadosMas = otros.filter(p => tocado(p.k)).length + (basculaRellena ? 1 : 0)
-  const hayAlgo = tocados.length > 0 || basculaRellena
+  const hayAlgo = pesoAGuardar != null || otrosTocados
+  const hayBasculaAntes = Object.keys(ultimos?.bascula ?? {}).length > 0
 
   return (
     <Pantalla>
       <Cab atras crumb="Cuerpo" titulo="Registrar medidas" sub={fecha === hoy ? 'Hoy' : `Del ${fechaCorta(fecha)}`} />
       <div className="pg">
-        <p className="note plain"><Ico n="hand-pointing" /><span>Cambia con <b>+</b> y <b>−</b> lo que te hayas medido. Lo que no toques no se guarda.</span></p>
+        <p className="note plain"><Ico n="hand-pointing" /><span>Apunta solo lo que te hayas medido hoy.</span></p>
 
         <div className="mt16">{etiqueta('peso', 'Peso')}</div>
         {paso('peso', false, 0.1)}
+        {notaPeso}
 
         <div className="mt16">{etiqueta('cintura', 'Cintura')}</div>
         {paso('cintura', false, 0.5)}
+        <p className="small muted mt4 center">Toca el número para escribirlo</p>
 
-        <Medir />
+        <DibujoMedir parte="cintura" />
 
         <details className="fold mt16" open={masAbierto} onToggle={e => setMasAbierto(e.currentTarget.open)}>
           <summary><Ico n="ruler" className="blue" />Más medidas {cambiadosMas > 0 ? <span className="tag ok">{cambiadosMas} cambiada{cambiadosMas === 1 ? '' : 's'}</span> : <span className="tag">opcional</span>}<Ico n="caret-down" /></summary>
           <div className="in">
+            <p className="small muted">Toca el número para escribirlo, o usa − y +.</p>
             <div className="grid2 mt8">
               {otros.map(p => (
                 <div key={p.k}>
@@ -135,21 +175,27 @@ export function Registrar() {
                 </div>
               ))}
             </div>
+            <DibujoMedir parte="cuello" />
 
-            <p className="lbl fl mt16"><Ico n="scales" className="blue" /> Datos de la báscula</p>
-            <p className="small muted">Rellena solo lo que te dé tu báscula. Lo gris es lo de la última vez.</p>
-            <div className="grid2 mt8">
-              {CAMPOS_BASCULA.map(c => {
-                const ant = ultimos?.bascula[c.k]
-                return (
-                  <label key={c.k} className="fl">
-                    <span className="lbl fl">{c.t}{c.u && <small className="muted"> · {c.u}</small>}</span>
-                    <input className="inp inp-num" inputMode="decimal" value={bas[c.k] ?? ''} placeholder={ant != null ? num(ant) : ''}
-                      onChange={e => setBas(b => ({ ...b, [c.k]: e.target.value }))} />
-                  </label>
-                )
-              })}
-            </div>
+            {/* La báscula, en su propio plegable cerrado: quien solo quiere el brazo no ve 12 casillas. */}
+            <details className="fold mt16">
+              <summary><Ico n="scales" className="blue" />Datos de la báscula {basculaRellena ? <span className="tag ok">rellenos</span> : <span className="tag">opcional</span>}<Ico n="caret-down" /></summary>
+              <div className="in">
+                <p className="small muted">Rellena solo lo que te dé tu báscula.{hayBasculaAntes ? ' Lo gris es lo de la última vez.' : ''}</p>
+                <div className="grid2 mt8">
+                  {CAMPOS_BASCULA.map(c => {
+                    const ant = ultimos?.bascula[c.k]
+                    return (
+                      <label key={c.k} className="fl">
+                        <span className="lbl fl">{c.t}{c.u && <small className="muted"> · {c.u}</small>}</span>
+                        <input className="inp inp-num" inputMode="decimal" value={bas[c.k] ?? ''} placeholder={ant != null ? num(ant) : ''} aria-label={c.t}
+                          onChange={e => setBas(b => ({ ...b, [c.k]: e.target.value }))} />
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            </details>
 
             <p className="lbl fl mt16">Con qué te has medido</p>
             <div className="chips">
@@ -165,7 +211,7 @@ export function Registrar() {
           </div>
         </details>
 
-        {!hayAlgo && <p className="small muted center mt12">Toca + o − en alguna medida para poder guardar.</p>}
+        {!hayAlgo && <p className="small muted center mt12">Pon al menos una medida para poder guardar.</p>}
         <div className="dock"><button className={cx('btn', !hayAlgo && 'off')} onClick={() => void guardar()}>Guardar</button></div>
       </div>
     </Pantalla>

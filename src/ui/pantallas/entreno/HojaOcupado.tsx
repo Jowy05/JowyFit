@@ -1,4 +1,4 @@
-// SES-04 · Máquina ocupada: A → B → C → reordenar
+// SES-04 · Máquina ocupada: la del plan → alternativa → otra → reordenar (solo nombres, sin letras A/B/C)
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
@@ -52,11 +52,11 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
   })
   const siguiente = s.ejercicios.findIndex((x, i) => i !== idx && x.estado === 'pendiente')
   const abc = (
-    <div className="abc">
+    <div className="abc ux-abc">
       {plan.map((id, i) => (
         <span key={id} style={{ display: 'contents' }}>
           {i > 0 && <Ico n="arrow-right" />}
-          <span className={cx(i < paso && 'x', i === paso && 'on')}>{'ABC'[i] ?? '·'} · {corto(id)}</span>
+          <span className={cx(i < paso && 'x', i === paso && 'on')}>{corto(id)}</span>
         </span>
       ))}
     </div>
@@ -70,7 +70,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
         {siguiente >= 0 ? <p className="muted">Haz antes {ejercicio(s.ejercicios[siguiente]!.ejercicio)?.nombre.toLowerCase()} y vuelve luego.</p> : <p className="muted">Espera un poco o salta este ejercicio.</p>}
         {siguiente >= 0 && <button className="btn xl" onClick={async () => { await db.sesiones.put(irA(s, siguiente)); nav.hoja(null); aviso(`Reordenado: ahora ${ejercicio(s.ejercicios[siguiente]!.ejercicio)?.nombre}`) }}>Hacerlo ahora</button>}
         <button className="btn gry sm mt8" onClick={() => { nav.hoja(null); aviso('Vale. Vuelve a probar en un par de minutos') }}>Esperar</button>
-        <button className="btn ln sm mt8" onClick={() => setPaso(actualEn + 1)}>Volver a {'ABC'[actualEn + 1] ?? 'B'}</button>
+        <button className="btn ln sm mt8" onClick={() => setPaso(actualEn + 1)}>Volver a la primera alternativa</button>
       </div>
     </Hoja>
   )
@@ -82,7 +82,6 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
       <div className="altc card">
         <Th ej={x} size="l" />
         <div className="grow">
-          <span className="tag blue">{'ABC'[paso]}</span>
           <b>{x.nombre}</b>
           <div className="spec flat mt4">
             <p><span>Peso sugerido</span><b className="okc">{sug?.peso != null ? `${kg(sug.peso)} kg × ${e.repsMin}-${e.repsMax}` : sug?.accion === 'primera' ? 'Primera vez: cómodo' : `${e.repsMin}-${e.repsMax} reps`}</b></p>
@@ -93,7 +92,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
       </div>
       <button className="btn xl mt12" onClick={() => void hacer()}>Hacer esta</button>
       <button className="btn gry sm mt8" onClick={() => setPaso(p => p + 1)}>También ocupada</button>
-      {paso > actualEn + 1 && <button className="btn ln sm mt8" onClick={() => setPaso(actualEn + 1)}>Volver a {'ABC'[actualEn + 1]}</button>}
+      {paso > actualEn + 1 && <button className="btn ln sm mt8" onClick={() => setPaso(actualEn + 1)}>Volver a {plan[actualEn + 1] ? ejercicio(plan[actualEn + 1]!)?.nombre ?? 'la primera alternativa' : 'la primera alternativa'}</button>}
       <p className="small muted mt12 center">Recordamos qué variante haces cada día.</p>
     </Hoja>
   )

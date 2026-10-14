@@ -8,7 +8,13 @@ let indice: Map<string, Ejercicio> = new Map()
 
 const base = () => import.meta.env.BASE_URL ?? '/'
 
+/** Nombres como se dicen en el gimnasio: «Polea» (no «Cable») y «Barra Z» (no «Barra EZ»), en toda la app. */
+export function nombreComun(nombre: string): string {
+  return nombre.replace(/\b(?:con|en) Cable\b/g, 'en Polea').replace(/\bCable\b/g, 'Polea').replace(/\bBarra EZ\b/g, 'Barra Z')
+}
+
 export function usarCatalogo(c: Catalogo) {
+  for (const e of c.ejercicios) e.nombre = nombreComun(e.nombre)
   cache = c
   indice = new Map(c.ejercicios.map(e => [e.id, e]))
 }

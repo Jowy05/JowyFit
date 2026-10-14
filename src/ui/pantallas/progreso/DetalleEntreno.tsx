@@ -90,7 +90,7 @@ function Ejercicio({ e, primero, companero }: { e: EjercicioSesion; primero: boo
         {e.estado === 'saltado' && !hechas.length && <span className="tag warn">Saltado</span>}
       </div>
       {sustituido && <p className="small muted xd-n">Sustituye a {nombreEjercicio(e.planificado)}{e.motivo === 'ocupado' ? ' · estaba ocupado' : ''}</p>}
-      {companero && <p className="small muted xd-n"><Ico n="link" /> En superserie con {nombreEjercicio(companero.ejercicio)}</p>}
+      {companero && <p className="small muted xd-n"><Ico n="link" /> Dos seguidos, con {nombreEjercicio(companero.ejercicio)}</p>}
       {hechas.length > 0 ? (
         <table className="tbl">
           <thead><tr><th>Serie</th><th>{e.registro === 'tiempo' ? 'Tiempo' : e.registro === 'corporal' ? 'Reps' : 'kg × reps'}</th><th>Esfuerzo</th></tr></thead>

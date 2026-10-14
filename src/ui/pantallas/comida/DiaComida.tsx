@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { objetivosEnergia, totalesComida } from '../../../datos/consultas'
 import type { Comida } from '../../../datos/tipos'
-import { FRANJAS, NOMBRE_RACION, avisoCafeina, datosQuincena, picoteoDeSemana } from '../../../dominio/comida'
+import { FRANJAS, avisoCafeina, datosQuincena, picoteoDeSemana, textoRacion } from '../../../dominio/comida'
 import { DIAS, MESES_CORTOS, deISO, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { Barra, cx, Ico, Pantalla, Seccion } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
@@ -104,7 +104,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
                       <Mini nombre={c.nombre} tipo={c.tipo} foto={c.foto} />
                       <span className="tx">
                         <b>{c.nombre}</b>
-                        <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ración ${NOMBRE_RACION[c.racion].toLowerCase()}` : ''}{c.cafeina ? ` · ${c.cafeina} mg cafeína` : ''}{c.foto ? ' · con foto' : ''}</small>
+                        <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ${textoRacion(c.racion)}` : ''}{c.cafeina ? ` · ${c.cafeina} mg cafeína` : ''}{c.foto ? ' · con foto' : ''}</small>
                       </span>
                       <span className="end ux-com-end"><em>{Math.round(c.proteina)} g</em><small> prot.</small><br /><small>{Math.round(c.kcal)} kcal</small></span>
                     </Deslizable>

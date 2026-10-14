@@ -8,9 +8,17 @@
 .ux-com-pic{width:100%;gap:10px;padding-top:10px;border-top:1px solid var(--line);text-align:left}
 .ux-com-pic .tx b{font-size:15px}
 
+/* Añadir: arriba del todo Escanear · Escribir lo que he comido · Foto; el del centro, más ancho y marcado. */
+.grid3.ux-com-qa3{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)}
+.qa.ux-com-escribir{border-color:var(--go);font-size:14px}
+.qa.ux-com-escribir.on{border-color:var(--blue)}
+/* Búsqueda sin resultados: «Apuntar «lo buscado»». El nombre largo se corta, no se sale. */
+.btn.ux-com-apuntar{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:48px}
+.btn.ux-com-apuntar i{margin-right:6px;vertical-align:-2px}
+
 /* Añadir: «Poco · Normal · Mucho» con palabras (antes P N G). */
 .png.ux-com-png button{width:auto;min-width:46px;padding:0 7px;font:600 12.5px var(--font-display);letter-spacing:.01em}
-/* Nota rápida: «Ligera · Normal · Abundante» con las kcal debajo. */
+/* Escribir lo que he comido y Crear comida: «Poco · Normal · Mucho» con las kcal debajo. */
 .chip.ux-com-tam{min-height:58px;padding:6px 4px}
 .chip.ux-com-tam>span{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.1}
 .chip.ux-com-tam small{font-size:11.5px;color:var(--muted);font-weight:500}
@@ -22,8 +30,10 @@
 .ux-com-afinar>summary .ph-caret-down{transition:transform .2s}
 .ux-com-afinar[open]>summary .ph-caret-down{transform:rotate(180deg)}
 
-/* Mis comidas */
-.ux-com-aviso{font-size:13.5px}
+/* Mis comidas: toda la fila apunta; el lápiz, aparte, edita. */
+.it.ux-com-fila{padding-right:4px}
+.ux-com-fila .tpl-m .car{margin-left:auto;color:var(--go)}
+.ux-com-lapiz{color:var(--muted);border-left:1px solid var(--line);border-radius:0}
 .lnk.ux-com-inl{padding:0;margin:0;font-size:inherit;vertical-align:baseline}
 
 /* Tu objetivo de energía: los dos números, grandes. */

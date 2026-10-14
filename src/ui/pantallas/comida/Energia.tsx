@@ -1,12 +1,10 @@
-// COM-08 · Tu objetivo de energía: arriba solo los dos números y el porqué; la fórmula, plegada. Y el consejo de la quincena.
+// COM-08 · Tu objetivo de energía: arriba solo los dos números y el porqué; la fórmula, plegada.
+// El consejo de la quincena ya no se repite aquí: está en la tarjeta «Cómo vas» del Día.
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../../datos/db'
 import { objetivosEnergia } from '../../../datos/consultas'
 import { guardarAjustes } from '../../../datos/repos'
 import { FACTOR_ACTIVIDAD, num } from '../../../dominio/calculos'
-import { datosQuincena } from '../../../dominio/comida'
-import { hoyISO, sumarDias } from '../../../dominio/fechas'
-import { Cab, cx, Ico, Pantalla, Seccion } from '../../comp'
+import { Cab, Ico, Pantalla } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
@@ -23,15 +21,11 @@ export function Energia() {
   const aviso = useAviso()
   const perfil = usePerfil()
   const ajustes = useAjustes()
-  const hoy = hoyISO()
   const e = useLiveQuery(() => objetivosEnergia(perfil), [perfil, ajustes.kcalManual, ajustes.proteinaManual])
-  const mediciones = useLiveQuery(() => db.mediciones.toArray(), []) ?? []
-  const comidas = useLiveQuery(() => db.comidas.where('fecha').between(sumarDias(hoy, -27), hoy, true, true).toArray(), [hoy]) ?? []
   if (!e) return <Pantalla><div className="cargando">Cargando…</div></Pantalla>
   const factor = FACTOR_ACTIVIDAD[perfil.trabajo]
   const entreno = Math.max(0, Math.round(e.gasto - e.basal * factor))
   const manual = ajustes.kcalManual != null || ajustes.proteinaManual != null
-  const q = datosQuincena({ hoy, mediciones, comidas, objetivoProteina: e.proteina, objetivo: perfil.objetivo })
   const gkg = e.peso ? e.proteina / e.peso : null
 
   return (
@@ -76,25 +70,6 @@ export function Energia() {
             </div>
           </div>
         </details>
-
-        <Seccion titulo="Consejo de la quincena">
-          <div className="card pd">
-            <span className={cx('tag', q.tono === 'ok' ? 'ok' : q.tono === 'warn' ? 'warn' : '')}>{q.tono === 'ok' && <Ico n="check" b />}{q.etiqueta}</span>
-            <b className="d-block mt8">{q.consejo}</b>
-            <p className="small muted mt8">Se mira cómo cambian la cintura y el peso, no las calorías apuntadas.</p>
-          </div>
-          <details className="fold mt8">
-            <summary>Ver los datos de 2 semanas<Ico n="caret-down" /></summary>
-            <div className="in">
-              <div className="spec">
-                <p><span>Cintura (vs las 2 semanas anteriores)</span><b>{q.cinturaDelta == null ? '—' : `${q.cinturaDelta > 0 ? '+' : ''}${num(q.cinturaDelta)} cm`}</b></p>
-                <p><span>Peso (vs las 2 semanas anteriores)</span><b>{q.pesoDelta == null ? '—' : `${q.pesoDelta > 0 ? '+' : ''}${num(q.pesoDelta)} kg`}</b></p>
-                <p><span>Días con picoteo</span><b>{q.picoteoDias} de 14</b></p>
-                <p><span>Proteína media</span><b>{q.proteinaMedia == null ? '—' : `${q.proteinaMedia} g`}</b></p>
-              </div>
-            </div>
-          </details>
-        </Seccion>
 
         {manual
           ? <button className="btn ln sm mt16" onClick={async () => { await guardarAjustes({ kcalManual: null, proteinaManual: null }); aviso('Vuelve a ser automático') }}>Volver a automático</button>

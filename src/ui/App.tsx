@@ -92,7 +92,7 @@ function Marco() {
   const full = !!nav.estado.completa || ruta.p === 'com-scan'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
   useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
-  useEffect(() => { window.dispatchEvent(new Event('jf-cerrar-aviso')) }, [nav.estado.pestana])
+  useEffect(() => { window.dispatchEvent(new Event('jf-cerrar-aviso')) }, [nav.estado.pestana, ruta.p, hoja?.p])
   const enCurso = !!sesion && !full
 
   return (

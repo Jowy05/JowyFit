@@ -131,7 +131,16 @@ async function alta() {
   await pulsar('Hombre')
   await t('escribir', 'input[aria-label="Altura en centímetros"]', '175')
   await t('escribir', 'input[aria-label="Peso en kilos"]', '75')
-  for (let i = 0; i < 12 && !(await t('hay', /Creando tu rutina|Tu rutina está lista/)); i++) { await t('nombreSiHace', 'Joel'); await pulsar('Siguiente') }
+  for (let i = 0; i < 12 && !(await t('hay', /Creando tu rutina|Tu rutina está lista/)); i++) {
+    await t('nombreSiHace', 'Joel')
+    // Tus horarios: no viene nada marcado. Martes, jueves y viernes a las 5:30, con el sábado de extra.
+    if (await js(`return !!document.querySelector('select[aria-label="Hora de entreno"]')`)) {
+      for (const d of ['martes', 'jueves', 'viernes']) await t('pulsarSel', `[aria-label="${d}"]`)
+      await t('elegir', 'select[aria-label="Hora de entreno"]', '05:30')
+      await t('pulsarSel', '[aria-label="Extra el sábado"]')
+    }
+    await pulsar('Siguiente')
+  }
   await ver('Tu rutina está lista', 15000)
   await pulsar('Ir a Inicio')
   await ver('Hoy te toca', 8000).catch(() => ver(/descansas|no entrenaste|Próximo/, 3000))
@@ -167,7 +176,7 @@ escenario('alta y rutina', async () => {
   await noVer('Primeros pasos')
   await pestana('Rutina')
   await ver('Cuerpo completo')
-  await ver(/Semana de (calibración|prueba)/)
+  await ver(/Semana de (calibración|prueba)/i)
 })
 
 escenario('entreno completo', async () => {
@@ -228,13 +237,13 @@ escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   const tapaAviso = await js(`const a = document.querySelector('.toast')?.getBoundingClientRect(); const d = document.querySelector('.dock .btn')?.getBoundingClientRect(); return !!(a && d && a.bottom > d.top && a.top < d.bottom)`)
   if (tapaAviso) throw new Error('El aviso tapa el botón «Añadir»')
   await pulsar('Añadir', '.dock')
-  await pulsar('Nota rápida', '.sheet')
+  await pulsar('Escribir lo que he comido', '.sheet')
   await t('escribir', '.nota-r input', 'Menú del día')
-  await pulsar(/Añadir nota/, '.sheet')
+  await pulsar(/^Apuntar$/, '.sheet')
   await ver('Menú del día')
   await pulsar('Menú del día')
   await ver('Editar', 3000)
-  await pulsar('Grande', '.sheet').catch(() => {})
+  await pulsar('Mucho', '.sheet').catch(() => {})
   await pulsar('Guardar', '.sheet')
   await pulsar('Bolsa de patatas pequeña')
   await pulsar('Borrar', '.sheet')
@@ -258,7 +267,7 @@ escenario('comida: escáner con y sin conexión', async () => {
   if (tapa) throw new Error('La barra de pestañas tapa los botones del escáner')
   await pulsar('Ver producto')
   await ver('Ficha técnica')
-  await pulsar('G', '.chips')
+  await pulsar('Mucho', '.chips')
   await pulsar(/^Añadir$/)
   await ver('Añadido: Arroz al curry con pollo')
   // Código desconocido → a mano
@@ -303,11 +312,13 @@ escenario('metas, pasos y trote', async () => {
   await deCero('2026-10-13T19:00:00')
   await alta()
   await pestana('Progreso')
-  await seg('Objetivos')
+  await seg('Metas')
   await pulsar('Crear una meta')
   await pulsar('Guardar', '.sheet').catch(() => pulsar(/Crear|Guardar/, '.sheet'))
   await ver(/Falta|Ahora/)
   await pestana('Inicio')
+  // Mientras se ve «Primeros pasos», la tarjeta de pasos está oculta: se cierra la guía.
+  if (await t('hay', 'Primeros pasos')) await pulsar('Ya lo sé')
   await pulsar(/pasos/i)
   await ver('Últimos 7 días')
   await pulsar('+ Trote / carrera')
@@ -517,9 +528,9 @@ escenario('comida: lo de ayer y recientes', async () => {
   await alta()
   await pestana('Comida')
   await pulsar('Añadir', '.dock')
-  await pulsar('Nota rápida', '.sheet')
+  await pulsar('Escribir lo que he comido', '.sheet')
   await t('escribir', '.nota-r input', 'Tostadas con tomate')
-  await pulsar(/Añadir nota/, '.sheet')
+  await pulsar(/^Apuntar$/, '.sheet')
   await ver('Tostadas con tomate')
   await irA('2026-10-14T08:15:00')
   await pestana('Comida')

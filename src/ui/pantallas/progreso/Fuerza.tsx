@@ -8,11 +8,14 @@ import { patron } from '../../../catalogo/clasificacion'
 import { kg, num } from '../../../dominio/calculos'
 import { fechaCorta, hoyISO, MESES, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { resumen } from '../../../dominio/sesion'
-import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../../dominio/tendencias'
+import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, nivelSeries, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../../dominio/tendencias'
 import { Barras, Linea } from '../../graficas'
 import { Chip, cx, estilo, Ico, Pantalla, pct, Th, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { CabProgreso, fechaPunto } from './comun'
+
+/** Ejercicios que se ven a la vez en «Por ejercicio»; el resto, con «Ver N más». */
+const MAX_CHIPS = 6
 
 export function Fuerza() {
   const nav = useNav()
@@ -20,6 +23,7 @@ export function Fuerza() {
   const metas = useLiveQuery(() => db.metas.where('tipo').equals('ejercicio').toArray(), []) ?? []
   const [elegido, setElegido] = useState<string | null>(null)
   const [cuantos, setCuantos] = useState(12)
+  const [todosEj, setTodosEj] = useState(false)
   const hoy = hoyISO()
   const cab = <CabProgreso actual="pro-fuerza" crumb="Lo que más motiva" />
 
@@ -129,8 +133,12 @@ export function Fuerza() {
         <div className="sec">
           <div className="sec-h"><h2>Por ejercicio</h2></div>
           <div className="card pd">
-            <div className="chips scroll">
-              {ids.map(x => <Chip key={x} on={x === id} onClick={() => setElegido(x)}>{nombreEjercicio(x)}</Chip>)}
+            {/* En varias filas (en una tira que se salía de la pantalla no se veía que había más). */}
+            <div className="chips fza-chips">
+              {(todosEj ? ids : ids.slice(0, MAX_CHIPS).concat(id && ids.indexOf(id) >= MAX_CHIPS ? [id] : [])).map(x => (
+                <Chip key={x} on={x === id} onClick={() => setElegido(x)}>{nombreEjercicio(x)}</Chip>
+              ))}
+              {!todosEj && ids.length > MAX_CHIPS && <button type="button" className="lnk small" onClick={() => setTodosEj(true)}>Ver {ids.length - MAX_CHIPS} más</button>}
             </div>
             {frase && <p className="fza-frase mt12">{frase}</p>}
             <p className="lbl mt12">Peso máx. <span className="muted">· lo más pesado de cada día</span></p>
@@ -156,18 +164,22 @@ export function Fuerza() {
         <div className="sec">
           <div className="sec-h"><h2>Series por grupo</h2><span className="lbl">esta semana</span></div>
           <div className="card pd">
-            <div className="hbars">
-              {grupos.map(g => (
-                <div key={g.n}>
-                  <span>{g.n}</span>
-                  <span className={cx('bar zone', g.v > g.zona[1] && 'go')} style={estilo({ '--z1': pct(g.zona[0], escala), '--z2': pct(g.zona[1], escala) })}>
-                    <i style={estilo({ '--w': pct(g.v, escala) })} />
-                  </span>
-                  <b>{g.v}</b>
-                </div>
-              ))}
+            <div className="hbars fza-grupos">
+              {grupos.map(g => {
+                const nivel = nivelSeries(g.v, g.zona)
+                return (
+                  <div key={g.n}>
+                    <span>{g.n}</span>
+                    <span className={cx('bar zone', g.v > g.zona[1] && 'go')} style={estilo({ '--z1': pct(g.zona[0], escala), '--z2': pct(g.zona[1], escala) })}>
+                      <i style={estilo({ '--w': pct(g.v, escala) })} />
+                    </span>
+                    <b>{g.v}</b>
+                    {totalSemana ? <span className={cx('tag', nivel === 'bien' && 'ok', nivel === 'mucho' && 'warn')}>{nivel}</span> : <span />}
+                  </div>
+                )
+              })}
             </div>
-            <p className="small muted mt8">{totalSemana ? 'Las rayas marcan la zona recomendada de series a la semana.' : 'Esta semana aún no has entrenado.'}</p>
+            <p className="small muted mt8">{totalSemana ? 'Series hechas esta semana. «Poco» es normal mientras te queden entrenos.' : 'Esta semana aún no has entrenado.'}</p>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, ordenarPlantillas, picoteoDeSemana, porRacion } from '../src/dominio/comida'
+import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
 import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
 import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
 
@@ -131,8 +131,18 @@ describe('nota rápida y Mis comidas', () => {
     expect(notaPorTamano('normal', 'merienda').kcal).toBeLessThan(notaPorTamano('abundante', 'merienda').kcal)
   })
   it('raciones y franjas con palabras', () => {
-    expect(Object.values(NOMBRE_RACION)).toEqual(['Pequeña', 'Normal', 'Grande'])
+    // Las mismas palabras en Añadir, la nota, el producto y Mis comidas.
+    expect(Object.values(NOMBRE_RACION)).toEqual(['Poco', 'Normal', 'Mucho'])
+    expect(TAMANOS_NOTA.map(t => t.t)).toEqual(['Poco', 'Normal', 'Mucho'])
+    expect(textoRacion('N')).toBe('')
+    expect(textoRacion('G')).toBe('mucho')
     expect(FRANJAS.find(f => f.v === 'merienda')!.t).toBe('Merienda')
+  })
+  it('reconoce el tamaño de una comida guardada', () => {
+    expect(tamanoDe(600, 25, 'comida')).toBe('normal')
+    expect(tamanoDe(200, 8, 'desayuno')).toBe('ligera')
+    expect(tamanoDe(900, 35, 'cena')).toBe('abundante')
+    expect(tamanoDe(610, 25, 'comida')).toBeNull()
   })
   it('no repite los escaneados que ya están en Mis comidas', () => {
     const ps = [{ codigo: '1' }, { codigo: '2' }, { codigo: '3' }]

@@ -16,7 +16,7 @@ const PESTANAS: { v: PestanaProgreso; t: string }[] = [
   { v: 'pro-fuerza', t: 'Fuerza' },
   { v: 'pro-cuerpo', t: 'Cuerpo' },
   { v: 'pro-fotos', t: 'Fotos' },
-  { v: 'pro-obj', t: 'Objetivos' },
+  { v: 'pro-obj', t: 'Metas' },
 ]
 
 /** Cabecera común de las cinco pantallas raíz de Progreso, con sus pestañas superiores. */

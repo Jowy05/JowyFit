@@ -103,6 +103,27 @@ export function cambiarSerie(s0: Sesion, idx: number, n: number, cambios: Partia
   return s
 }
 
+/**
+ * Corrige una serie ya hecha (peso, reps o segundos mal apuntados). Las series siguientes sin hacer que
+ * heredaron el peso equivocado pasan al corregido; las que se tocaron a mano se respetan.
+ * Una serie sin hacer o fuera de rango no se toca.
+ */
+export function corregirSerie(s0: Sesion, idx: number, n: number, datos: Pick<Serie, 'peso' | 'reps' | 'segundos'> & { record?: boolean }): Sesion {
+  const s = clon(s0)
+  const e = s.ejercicios[idx]
+  const x = e?.series[n]
+  if (!e || !x || !x.hecha) return s
+  const pesoAntes = x.peso
+  x.peso = datos.peso
+  x.reps = datos.reps
+  x.segundos = datos.segundos
+  if (datos.record !== undefined) x.record = datos.record || undefined
+  if (!x.calentamiento && pesoAntes !== datos.peso) {
+    for (const y of e.series.slice(n + 1)) if (!y.hecha && !y.calentamiento && y.peso === pesoAntes) y.peso = datos.peso
+  }
+  return s
+}
+
 export function anadirSerie(s0: Sesion, idx: number): Sesion {
   const s = clon(s0)
   const e = s.ejercicios[idx]!

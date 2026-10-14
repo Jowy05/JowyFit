@@ -19,46 +19,48 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
   const idx = Number(ruta.d?.idx ?? 0)
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)
-  if (s === undefined) return <Hoja titulo="Herramientas"><p className="muted">Cargando…</p></Hoja>
-  if (!s || !e || !ej) return <Hoja titulo="Herramientas"><p className="muted">No hay entreno en curso.</p></Hoja>
+  if (s === undefined) return <Hoja titulo="Más"><p className="muted">Cargando…</p></Hoja>
+  if (!s || !e || !ej) return <Hoja titulo="Más"><p className="muted">No hay entreno en curso.</p></Hoja>
   const conBarra = !!ej.material && ej.material in BARRAS
-  // Lo que antes eran cuatro iconos sueltos en el panel (nota, calentamiento, +serie, −serie), aquí con texto.
+  // Se abre con el botón «Más»: se titula igual. A la vista, lo de todos los días; lo raro, plegado en «Otras opciones».
   const n = serieActual(e)
   const serie = n >= 0 ? e.series[n] : undefined
   const guardar = (x: Sesion) => db.sesiones.put(x)
   const numSerie = serie && !serie.calentamiento ? e.series.filter(x => !x.calentamiento).indexOf(serie) + 1 : 0
+  const conCalent = e.registro === 'peso' || e.registro === 'mancuerna'
   return (
-    <Hoja titulo="Herramientas" sub={ej.nombre} className="tall">
-      {serie && (
-        <>
-          <p className="lbl fl">{serie.calentamiento ? 'Esta serie · calentamiento' : `Esta serie · la ${numSerie}.ª`}</p>
-          <div className="list">
-            <button className="it" onClick={() => nav.hoja('sheet-nota-serie', { idx, n })}><span className="ico"><Ico n="note-pencil" /></span><span className="tx"><b>Apuntar una nota</b><small>{serie.nota ? serie.nota : 'Una molestia, un mal agarre…'}</small></span><Ico n="caret-right" className="car" /></button>
-            <div className="it">
-              <span className="ico"><Ico n="thermometer-simple" /></span>
-              <span className="tx"><b>Es de calentamiento</b><small>Más ligera; no cuenta para tu progreso</small></span>
-              <Interruptor on={serie.calentamiento} etiqueta="Es de calentamiento" onCambio={async v => { await guardar(cambiarSerie(s, idx, n, { calentamiento: v })); aviso(v ? 'Marcada como calentamiento' : 'Ya no es calentamiento') }} />
-            </div>
-            <button className="it" onClick={async () => { await guardar(anadirSerie(s, idx)); nav.hoja(null); aviso('Serie añadida') }}><span className="ico"><Ico n="plus-square" /></span><span className="tx"><b>Añadir una serie</b></span></button>
-            <button className="it" onClick={async () => {
-              const antes = s
-              const nueva = quitarSerie(s, idx)
-              // Con una sola serie de trabajo no se quita nada.
-              if (nueva.ejercicios[idx]!.series.length === e.series.length) { aviso('Queda una sola serie: no se puede quitar'); return }
-              await guardar(nueva); nav.hoja(null); aviso('Serie quitada', () => void guardar(antes))
-            }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>Quitar una serie</b></span></button>
-          </div>
-        </>
-      )}
-      <p className={cx('lbl fl', serie && 'mt16')}>Este ejercicio</p>
+    <Hoja titulo="Más" sub={ej.nombre} className="tall">
       <div className="list">
         <button className="it" onClick={() => nav.hoja('sheet-instr', { id: ej.id })}><span className="ico"><Ico n="book-open" /></span><span className="tx"><b>Cómo se hace</b><small>Dibujos y pasos</small></span><Ico n="caret-right" className="car" /></button>
-        {(e.registro === 'peso' || e.registro === 'mancuerna') && <button className="it" onClick={() => nav.hoja('sheet-cal', { idx })}><span className="ico"><Ico n="thermometer-simple" /></span><span className="tx"><b>Calentamiento sugerido</b><small>Series ligeras antes de empezar</small></span><Ico n="caret-right" className="car" /></button>}
-        {conBarra && <button className="it" onClick={() => nav.hoja('sheet-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>Calculadora de discos</b><small>Qué discos poner en la barra</small></span><Ico n="caret-right" className="car" /></button>}
-        <button className="it" onClick={() => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>Historial del ejercicio</b><small>Abre la ficha (el entreno sigue)</small></span><Ico n="caret-right" className="car" /></button>
+        {serie && <button className="it" onClick={() => nav.hoja('sheet-nota-serie', { idx, n })}><span className="ico"><Ico n="note-pencil" /></span><span className="tx"><b>Apuntar una nota</b><small>{serie.nota ? serie.nota : `En ${serie.calentamiento ? 'el calentamiento' : `la serie ${numSerie}`}: una molestia, un mal agarre…`}</small></span><Ico n="caret-right" className="car" /></button>}
         <button className="it" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx, id: e.ejercicio })}><span className="ico"><Ico n="swap" /></span><span className="tx"><b>Cambiar ejercicio</b><small>Por otro parecido</small></span><Ico n="caret-right" className="car" /></button>
+        {serie && <button className="it" onClick={async () => { await guardar(anadirSerie(s, idx)); nav.hoja(null); aviso('Serie añadida') }}><span className="ico"><Ico n="plus-square" /></span><span className="tx"><b>Añadir una serie</b></span></button>}
+        {serie && <button className="it" onClick={async () => {
+          const antes = s
+          const nueva = quitarSerie(s, idx)
+          // Con una sola serie de trabajo no se quita nada.
+          if (nueva.ejercicios[idx]!.series.length === e.series.length) { aviso('Queda una sola serie: no se puede quitar'); return }
+          await guardar(nueva); nav.hoja(null); aviso('Serie quitada', () => void guardar(antes))
+        }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>Quitar una serie</b></span></button>}
         <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso('Saltado: lo verás en la lista', () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>Saltarlo</b><small>Puedes recuperarlo desde la lista</small></span></button>
       </div>
+      <details className="fold mt16">
+        <summary><Ico n="dots-three-circle" className="blue" />Otras opciones<Ico n="caret-down" /></summary>
+        <div className="in">
+          <div className="list">
+            {conCalent && <button className="it" onClick={() => nav.hoja('sheet-cal', { idx })}><span className="ico"><Ico n="fire" /></span><span className="tx"><b>Calentamiento sugerido</b><small>Series ligeras antes de empezar</small></span><Ico n="caret-right" className="car" /></button>}
+            {serie && (
+              <div className="it">
+                <span className="ico"><Ico n="thermometer-simple" /></span>
+                <span className="tx"><b>{serie.calentamiento ? 'Esta serie es de calentamiento' : `La serie ${numSerie} es de calentamiento`}</b><small>Más ligera; no cuenta para tu progreso</small></span>
+                <Interruptor on={serie.calentamiento} etiqueta="Es de calentamiento" onCambio={async v => { await guardar(cambiarSerie(s, idx, n, { calentamiento: v })); aviso(v ? 'Marcada como calentamiento' : 'Ya no es calentamiento') }} />
+              </div>
+            )}
+            {conBarra && <button className="it" onClick={() => nav.hoja('sheet-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>Calculadora de discos</b><small>Qué discos poner en la barra</small></span><Ico n="caret-right" className="car" /></button>}
+            <button className="it" onClick={() => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>Historial del ejercicio</b><small>Abre la ficha (el entreno sigue)</small></span><Ico n="caret-right" className="car" /></button>
+          </div>
+        </div>
+      </details>
     </Hoja>
   )
 }

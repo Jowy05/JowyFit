@@ -133,8 +133,13 @@ export const GRUPOS_MUSCULARES: { n: string; patrones: string[]; zona: [number, 
   { n: 'Piernas', patrones: ['rodilla', 'cadera', 'cuadriceps', 'femoral', 'gluteo', 'gemelo'], zona: [10, 20] },
   { n: 'Hombros', patrones: ['empuje-v', 'hombro-lat', 'hombro-post', 'trapecio'], zona: [8, 16] },
   { n: 'Brazos', patrones: ['biceps', 'triceps', 'antebrazo'], zona: [8, 16] },
-  { n: 'Core', patrones: ['core'], zona: [4, 10] },
+  { n: 'Abdomen', patrones: ['core'], zona: [4, 10] },
 ]
+
+/** Palabra para las series de un grupo frente a su zona recomendada: «poco», «bien» o «mucho». */
+export function nivelSeries(v: number, zona: [number, number]): 'poco' | 'bien' | 'mucho' {
+  return v < zona[0] ? 'poco' : v > zona[1] ? 'mucho' : 'bien'
+}
 
 /** Series de trabajo hechas por grupo muscular en esos días. `patronDe` da el patrón de un ejercicio. */
 export function seriesPorGrupo(sesiones: Sesion[], dias: string[], patronDe: (id: string) => string | undefined): { n: string; v: number; zona: [number, number] }[] {

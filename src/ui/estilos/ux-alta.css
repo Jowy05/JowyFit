@@ -30,3 +30,14 @@
 
 /* Fecha con tres desplegables */
 .fecha-facil{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:8px}
+
+/* Altura y peso: el ejemplo («Ej.: 170») en fino y gris claro, que no parezca un número ya escrito. */
+.alta-unid .inp::placeholder{font-weight:400;font-size:15px;color:var(--muted);opacity:.75}
+
+/* Tus horarios: días con tres letras (Lun, Mar, Mié…) en vez de L, M, X. */
+.alta-dias .chip.day{font-size:14.5px;letter-spacing:-.01em}
+
+/* Tus horarios: la hora, un solo desplegable; sin elegir se ve en gris. */
+.alta-hora select.inp{font-size:18px;font-weight:600}
+.alta-hora select.inp[data-vacio]{color:var(--muted);font-weight:400}
+.alta-hora select.inp option{color:var(--ink);font-weight:400}

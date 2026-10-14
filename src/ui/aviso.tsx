@@ -17,7 +17,8 @@ export function ProveedorAviso({ children }: { children: ReactNode }) {
   useEffect(() => () => window.clearTimeout(temporizador.current), [])
   // Al cambiar de pestaña o de pantalla el aviso ya no viene a cuento: se cierra.
   useEffect(() => {
-    const cerrar = () => setAviso(null)
+    // Solo si ya lleva un rato: el aviso que sale justo al volver de una hoja («Añadido…») se queda.
+    const cerrar = () => setAviso(a => (a && Date.now() - a.id > 900 ? null : a))
     window.addEventListener('jf-cerrar-aviso', cerrar)
     return () => window.removeEventListener('jf-cerrar-aviso', cerrar)
   }, [])
@@ -26,7 +27,7 @@ export function ProveedorAviso({ children }: { children: ReactNode }) {
       {children}
       {aviso && (
         <div className="toast" role="status" key={aviso.id}>
-          <span className="toast-msg">{aviso.texto}</span>
+          <span className="toast-msg" onClick={() => setAviso(null)}>{aviso.texto}</span>
           {aviso.deshacer && (
             <button className="toast-act" type="button" onClick={() => { aviso.deshacer?.(); setAviso(null) }}>
               Deshacer

@@ -44,7 +44,7 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
       </div>
       {(c.tipo === 'plantilla' || c.tipo === 'producto') && (
         <>
-          <p className="lbl fl mt16">Tamaño de la ración</p>
+          <p className="lbl fl mt16">¿Cuánto has comido?</p>
           <div className="chips eq">
             {(['P', 'N', 'G'] as const).map(r => <Chip key={r} on={c.racion === r} onClick={() => ponerRacion(r)}>{NOMBRE_RACION[r]}</Chip>)}
           </div>

@@ -66,7 +66,7 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta }) {
         {cuerpo[s]}
         {AFECTAN_RUTINA.includes(s) && (
           <div className="sec">
-            <p className="note plain"><Ico n="arrows-clockwise" /><span>Si cambias días, tiempo o gimnasio, puedes <b>regenerar la rutina</b> para que se ajuste.</span></p>
+            <p className="note plain"><Ico n="arrows-clockwise" /><span>Tu rutina no cambia hasta que pulses <b>«Regenerar la rutina»</b>.</span></p>
             <button className="btn ln sm mt8" onClick={regenerar}><Ico n="magic-wand" b />Regenerar la rutina</button>
           </div>
         )}
@@ -323,17 +323,17 @@ function Experiencia({ p, guardar }: Props) {
 function Preferencias({ p, guardar }: Props) {
   return (
     <div className="fields mt16">
-      <Grupo t="Prefieres">
+      <Grupo t="Prefieres" ayuda="Si no lo sabes, deja «Mezcla».">
         <Elegir eq opciones={(Object.keys(PREFERENCIA_TXT) as Perfil['preferencia'][]).map(v => ({ v, t: v === 'maquinas' ? 'Máquinas' : PREFERENCIA_TXT[v] }))} valor={p.preferencia} onCambio={v => guardar({ preferencia: v })} />
       </Grupo>
-      <Grupo t="Repeticiones" ayuda="Si no lo sabes, deja «Moderadas».">
+      <Grupo t="Repeticiones" ayuda="Si no lo sabes, deja «Mezcla».">
         <Elegir eq opciones={(Object.keys(REPS_TXT) as Perfil['reps'][]).map(v => ({ v, t: REPS_TXT[v] }))} valor={p.reps} onCambio={v => guardar({ reps: v })} />
       </Grupo>
       <div className="list">
-        <Fila t="Superseries" d="Dos ejercicios seguidos, sin descanso entre ellos: ahorran tiempo" on={p.superseries} c={v => guardar({ superseries: v })} />
-        <Fila t="Abdominales y core" d="Al final de las sesiones" on={p.core} c={v => guardar({ core: v })} />
+        <Fila t="Dos seguidos" d="Dos ejercicios sin descanso entre ellos: ahorran tiempo" on={p.superseries} c={v => guardar({ superseries: v })} />
+        <Fila t="Abdominales" d="Unos minutos al final de las sesiones" on={p.core} c={v => guardar({ core: v })} />
       </div>
-      <p className="small muted">El objetivo de pasos se cambia en Progreso → Pasos.</p>
+      <p className="small muted">El objetivo de pasos se cambia tocando «Pasos» en Inicio.</p>
     </div>
   )
 }

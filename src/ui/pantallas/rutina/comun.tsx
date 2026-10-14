@@ -1,7 +1,8 @@
 // Piezas compartidas de la pestaña Rutina.
 import type { ReactNode } from 'react'
 import type { Bloque, DiaRutina, Rutina } from '../../../datos/tipos'
-import { ejercicio, nombreMusculo } from '../../../catalogo/catalogo'
+import { ejercicio, nombreMaterial, nombreMusculo } from '../../../catalogo/catalogo'
+import type { Ejercicio } from '../../../catalogo/tipos'
 import { patron } from '../../../catalogo/clasificacion'
 import { DIAS } from '../../../dominio/fechas'
 import { duracionDia } from '../../../dominio/generador'
@@ -35,8 +36,38 @@ export function listaDias(dias: number[]): string {
   const n = dias.map(x => DIAS[x]!)
   return n.length <= 1 ? (n[0] ?? '') : `${n.slice(0, -1).join(', ')} y ${n[n.length - 1]}`
 }
-/** Explicación corta de «superserie» para la primera vez que sale en una pantalla. */
-export const SS_EXPLICA = 'dos ejercicios seguidos'
+/** Explicación corta de «Dos seguidos» (superserie) para la primera vez que sale en una pantalla. */
+export const SS_EXPLICA = 'sin descanso entre los dos'
+/** Nombre para el usuario de lo que el código llama superserie. */
+export const SS = 'Dos seguidos'
+
+/**
+ * Nombre del ejercicio con el material dicho como en el resto de la app: RepDB llama al material «Polea»
+ * pero algunos nombres dicen «Cable» («Jalón de Tríceps en Cable» al lado de su alternativa «Polea»).
+ */
+export function nombreVisible(nombre: string): string {
+  return nombre.replace(/\b(?:con|en) Cable\b/g, 'en Polea').replace(/\bCable\b/g, 'Polea').replace(/\bBarra EZ\b/g, 'Barra Z')
+}
+export function nombreEj(x: string | Ejercicio | null | undefined): string {
+  const e = typeof x === 'string' ? ejercicio(x) : x
+  return e ? nombreVisible(e.nombre) : ''
+}
+/** Material corto para las alternativas («Barra → Prensa de piernas → Máquina Smith»). */
+export function materialCorto(id: string): string {
+  const e = ejercicio(id)
+  if (!e) return '?'
+  if (!e.material) return 'Peso corporal'
+  if (e.material === 'smith_machine') return 'Máquina Smith'
+  return capital(nombreMaterial(e.material).replace(/^Máquina (de )?/, ''))
+}
+
+/** Duración de la semana en una cifra: «~55 min» o, si los días varían, «48-55 min». */
+export function duracionPlan(r: Pick<Rutina, 'dias'>): string {
+  const ms = r.dias.filter(d => !d.opcional).map(d => minutos(d))
+  if (!ms.length) return '—'
+  const a = Math.min(...ms), z = Math.max(...ms)
+  return a === z ? `~${a} min` : `${a}-${z} min`
+}
 
 /** Nombres de la calle para los músculos del catálogo (el nombre técnico queda para la ficha). */
 const MUSCULO_COMUN: Record<string, string> = {

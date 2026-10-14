@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { catalogoReal, hayCatalogo, perfilEjemplo } from './ayuda'
-import { duracionDia, generarRutina, plantillas } from '../src/dominio/generador'
+import { claveMovimiento, duracionDia, generarRutina, mismoMovimiento, patronGenerador, plantillas } from '../src/dominio/generador'
 import { gimnasioNuevo } from '../src/datos/repos'
-import type { MarcaEjercicio } from '../src/datos/tipos'
+import type { Dia, MarcaEjercicio, Perfil } from '../src/datos/tipos'
 import { ejercicio } from '../src/catalogo/catalogo'
 import { patron } from '../src/catalogo/clasificacion'
 
@@ -57,7 +57,8 @@ describe.skipIf(!hayCatalogo)('generador con el catálogo real', () => {
   it('las alternativas son del mismo patrón y distinto del elegido', () => {
     for (const d of r!.dias) for (const b of d.bloques) {
       expect(b.alternativas).not.toContain(b.ejercicio)
-      for (const a of b.alternativas) expect(patron(ejercicio(a)!)).toBe(patron(ejercicio(b.ejercicio)!))
+      // El patrón con el que coloca el generador (los pesos muertos de «espalda» sin tirón cuentan como cadera).
+      for (const a of b.alternativas) expect(patronGenerador(ejercicio(a)!)).toBe(patronGenerador(ejercicio(b.ejercicio)!))
     }
   })
 
@@ -107,5 +108,78 @@ describe('descansos de Ajustes', () => {
     expect(descansoAjustado(120, { compuesto: 90, aislamiento: 90 })).toBe(75)
     expect(descansoAjustado(60, { compuesto: 150, aislamiento: 45 })).toBe(30)
     expect(descansoAjustado(60, { compuesto: 150, aislamiento: 0 })).toBe(60)
+  })
+})
+
+describe.skipIf(!hayCatalogo)('mismo movimiento: nunca dos variantes del mismo ejercicio el mismo día', () => {
+  const c = hayCatalogo ? catalogoReal() : null
+  const ejercicios = c?.ejercicios ?? []
+  const ej = (id: string) => ejercicios.find(e => e.id === id)!
+
+  it('reconoce las variantes por material y no junta movimientos distintos', () => {
+    expect(claveMovimiento(ej('romanian-deadlift'))).toBe('peso muerto rumano')
+    expect(mismoMovimiento(ej('romanian-deadlift'), ej('dumbbell-romanian-deadlift'))).toBe(true)
+    expect(mismoMovimiento(ej('romanian-deadlift'), ej('smith-machine-rdl'))).toBe(true)
+    expect(mismoMovimiento(ej('squat'), ej('smith-machine-squat'))).toBe(true)
+    expect(mismoMovimiento(ej('bench-press'), ej('db-bench-press'))).toBe(true)
+    expect(mismoMovimiento(ej('bench-press'), ej('close-grip-bench-press'))).toBe(true)
+    expect(mismoMovimiento(ej('lateral-raise'), ej('cable-lateral-raise'))).toBe(true)
+    // Distintos de verdad: un curl de martillo y uno con barra, una sentadilla y una prensa, un remo y un jalón.
+    expect(mismoMovimiento(ej('hammer-curl'), ej('barbell-curl'))).toBe(false)
+    expect(mismoMovimiento(ej('squat'), ej('leg-press'))).toBe(false)
+    expect(mismoMovimiento(ej('seated-cable-row'), ej('lat-pulldown'))).toBe(false)
+    expect(mismoMovimiento(ej('romanian-deadlift'), ej('romanian-deadlift'))).toBe(false)
+  })
+
+  it('el peso muerto rumano con mancuernas es de cadera, no un remo', () => {
+    expect(patronGenerador(ej('dumbbell-romanian-deadlift'))).toBe('cadera')
+    expect(patronGenerador(ej('seated-cable-row'))).toBe('tiron-h')
+    expect(patronGenerador(ej('lat-pulldown'))).toBe('tiron-v')
+  })
+
+  // Perfiles de la revisión («Primer día», «Persona mayor») y otros habituales.
+  const PERFILES: Record<string, Partial<Perfil>> = {
+    'dueño': {},
+    'primer día': { nivel: 'empiezo', superseries: false, zonasPrioridad: [], preferencia: 'mezcla', reps: 'mezcla' },
+    'persona mayor': { nivel: 'empiezo', superseries: false, zonasPrioridad: [], zonasSensibles: ['rodilla', 'lumbar'], preferencia: 'maquinas', minutosNormal: 45, minutosCorta: 30 },
+    'peso libre, 4 días': { diasFijos: [1, 2, 4, 5] as Dia[], preferencia: 'libre' },
+    '5 días': { diasFijos: [0, 1, 2, 3, 4] as Dia[] },
+    '6 días, avanzado': { diasFijos: [0, 1, 2, 3, 4, 5] as Dia[], nivel: 'avanzado', diasOpcionales: [] },
+    'sin core ni superseries, 2 días': { diasFijos: [1, 4] as Dia[], core: false, superseries: false },
+  }
+  const GIMNASIOS: Record<string, string[] | null> = {
+    'completo': gimnasioNuevo().material,
+    'sin gimnasio': null,
+    'sin máquinas': ['dumbbell', 'barbell', 'ez_bar', 'flat_bench', 'pull_up_bar', 'kettlebell'],
+    'máquinas y poleas': ['cable', 'leg_press', 'lat_pulldown_machine', 'seated_row_machine', 'chest_press_machine', 'shoulder_press_machine', 'leg_curl', 'leg_extension', 'pec_deck'],
+    'mancuernas y banco': ['dumbbell', 'flat_bench'],
+  }
+  const sinTildes = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+
+  it('ningún día lleva dos variantes del mismo movimiento (catálogo real, varios perfiles y gimnasios)', () => {
+    let dias = 0
+    for (const [np, cambios] of Object.entries(PERFILES)) for (const [ng, material] of Object.entries(GIMNASIOS)) for (const variante of [0, 1]) {
+      const perfil = perfilEjemplo(cambios)
+      const base = { perfil, gimnasio: material ? { id: 1, material } : null, marcas: new Map<string, MarcaEjercicio>(), ejercicios }
+      // También la «otra variante» (la que evita lo de la anterior), que tira de ejercicios menos habituales.
+      const evitar = variante ? new Set(generarRutina(base).dias.flatMap(d => d.bloques.map(b => b.ejercicio))) : undefined
+      const r = generarRutina({ ...base, evitar })
+      for (const d of r.dias) {
+        const es = d.bloques.map(b => ejercicio(b.ejercicio)!)
+        const et = `${np} · ${ng} · variante ${variante} · ${d.nombre}`
+        for (let i = 0; i < es.length; i++) for (let j = i + 1; j < es.length; j++) {
+          expect(mismoMovimiento(es[i]!, es[j]!), `${et}: «${es[i]!.nombre}» y «${es[j]!.nombre}»`).toBe(false)
+          // Comprobación independiente de la definición: ningún nombre es otro con algo añadido detrás.
+          const [a, b] = [sinTildes(es[i]!.nombre), sinTildes(es[j]!.nombre)]
+          expect(b.startsWith(`${a} `) || a.startsWith(`${b} `), `${et}: «${es[i]!.nombre}» y «${es[j]!.nombre}»`).toBe(false)
+        }
+        // Las alternativas («si está ocupado») tampoco son otro ejercicio del mismo día con otro material.
+        for (const b of d.bloques) for (const a of b.alternativas) for (const o of d.bloques) {
+          if (o !== b) expect(mismoMovimiento(ejercicio(a)!, ejercicio(o.ejercicio)!), `${et}: alternativa ${a} de ${b.ejercicio} repite ${o.ejercicio}`).toBe(false)
+        }
+        dias++
+      }
+    }
+    expect(dias).toBeGreaterThan(100)
   })
 })

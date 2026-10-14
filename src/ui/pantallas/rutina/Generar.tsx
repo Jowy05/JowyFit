@@ -1,4 +1,4 @@
-// RUT-03 · Generar rutina (también la rutina definitiva tras la calibración)
+// RUT-03 · Generar rutina (también la rutina definitiva tras la semana de prueba)
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
@@ -10,7 +10,7 @@ import { Cab, Ico, Pantalla, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos'
-import { abrevDia, capital, filas, listaDias, minutos, SS_EXPLICA } from './comun'
+import { abrevDia, capital, filas, listaDias, minutos, nombreEj, SS, SS_EXPLICA } from './comun'
 
 export function Generar({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -61,7 +61,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
 
   return (
     <Pantalla>
-      <Cab atras crumb="Mi plan" titulo={definitiva ? 'Tu rutina definitiva' : actual ? 'Rutina nueva' : 'Crear tu rutina'} sub={definitiva ? 'Ajustada a tus tiempos reales de la semana de calibración.' : actual ? 'Mírala con calma: tu rutina actual no cambia hasta que pulses «Usar esta rutina».' : 'Revisa tus datos, mira la propuesta y decide.'} />
+      <Cab atras crumb="Mi plan" titulo={definitiva ? 'Tu rutina definitiva' : actual ? 'Rutina nueva' : 'Crear tu rutina'} sub={definitiva ? 'Ajustada a tus tiempos reales de la semana de prueba.' : actual ? 'Mírala con calma: tu rutina actual no cambia hasta que pulses «Usar esta rutina».' : 'Revisa tus datos, mira la propuesta y decide.'} />
       <div className="pg">
         <div className="sec">
           <div className="sec-h"><h2><span className="stepn">1</span>Tus datos</h2><span className="lbl">Toca para cambiar</span></div>
@@ -85,7 +85,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
                 <div key={d.letra} className="prev-d">
                   <span className={d.dia != null ? 'dl ux-rut-dl' : 'dl'}>{abrevDia(d)}</span>
                   <p>
-                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>Superserie</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>)}
+                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>{SS}</em> {nombreEj(f[0].ejercicio)} + {nombreEj(f[1].ejercicio)}</> : nombreEj(f.ejercicio)}</span>)}
                     <span className="muted"> · ~{minutos(d)} min</span>
                   </p>
                 </div>
@@ -96,7 +96,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
               {propuesta.porque.map(t => <p key={t}><Ico n="check-circle" /><span>{t}</span></p>)}
               {perfil.preferencia === 'maquinas' && <p><Ico n="check-circle" /><span>Prefieres máquinas → <b>{enMaquina} de {total} en máquina o polea</b></span></p>}
             </div>
-            {propuesta.dias.some(d => d.bloques.some(b => b.superserie)) && <p className="small muted mt8">Superserie: {SS_EXPLICA}, descansando después del par.</p>}
+            {propuesta.dias.some(d => d.bloques.some(b => b.superserie)) && <p className="small muted mt8">{SS}: haces uno y luego el otro, {SS_EXPLICA}; descansas al acabar los dos.</p>}
             <p className="note ok mt16"><Ico n="shield-check" /><span>{actual && !definitiva ? <>Si pulsas «Usar esta rutina», <b>sustituye a la que tienes ahora</b>. </> : null}<b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.</span></p>
           </div>
         )}

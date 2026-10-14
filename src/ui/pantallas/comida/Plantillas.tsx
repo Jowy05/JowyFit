@@ -1,15 +1,18 @@
 // COM-05 · Mis comidas: lo que comes a menudo (más usado primero) y, debajo, lo escaneado.
 // Antes eran dos pestañas («Plantillas» y «Productos»); para quien lee poco, todo es «cosas que como».
+// Tocar una fila la APUNTA hoy (con «Deshacer»); para cambiarla, el lápiz de la derecha.
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import { NOMBRE_FRANJA, escaneadosSueltos, ordenarPlantillas, porRacion } from '../../../dominio/comida'
-import { Ico, Pantalla, Vacio } from '../../comp'
+import { escaneadosSueltos, ordenarPlantillas, porRacion } from '../../../dominio/comida'
+import { hoyISO } from '../../../dominio/fechas'
+import type { Plantilla } from '../../../datos/tipos'
+import { Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
-import { CabComida, Mini, buscarPendientes, kp } from './comun'
+import { CabComida, Mini, apuntarPlantilla, buscarPendientes, kp } from './comun'
 
-const TIPO = { comida: 'Comida', picoteo: 'Picoteo', bebida: 'Bebida' } as const
+const TIPO = { picoteo: 'Picoteo', bebida: 'Bebida' } as const
 /** Escaneados a la vista; el resto, en la lista completa (con buscador). */
 const MAX_ESCANEADOS = 8
 
@@ -27,28 +30,33 @@ export function Plantillas() {
     if (hayPendientes && navigator.onLine) void buscarPendientes().then(n => { if (n) aviso(n === 1 ? 'Encontrado 1 producto pendiente' : `Encontrados ${n} productos pendientes`) })
   }, [hayPendientes, aviso])
   const nueva = () => nav.hoja('sheet-plant', {})
+  // Un doble toque apuntaba dos veces.
+  const unaVez = useUnaVez()
+  const apuntarHoy = unaVez(async (p: Plantilla) => {
+    const deshacer = await apuntarPlantilla(p, 'N', hoyISO())
+    aviso(`Apuntado hoy: ${p.nombre}`, deshacer)
+  })
 
-  const fila = (p: (typeof lista)[number]) => (
-    <button key={p.id} className="it" onClick={() => nav.hoja('sheet-plant', { id: p.id })}>
-      <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-      <span className="tx">
-        <b>{p.nombre}</b>
-        <small><span className="tag">{p.tipo === 'comida' && p.franja ? NOMBRE_FRANJA[p.franja] : TIPO[p.tipo]}</span><span className="mono">{kp(p.kcal, p.proteina, p.cafeina)}</span></small>
-      </span>
-      <Ico n="pencil-simple" className="car muted" />
-    </button>
+  // Toda la fila apunta; el lápiz (aparte) edita. Sin etiqueta de momento del día: la sección ya dice qué es.
+  const fila = (p: Plantilla) => (
+    <div key={p.id} className="it tpl ux-com-fila">
+      <button className="tpl-m" onClick={() => void apuntarHoy(p)}>
+        <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
+        <span className="tx">
+          <b>{p.nombre}</b>
+          <small>{p.tipo !== 'comida' && <span className="tag">{TIPO[p.tipo]}</span>}<span className="mono">{kp(p.kcal, p.proteina, p.cafeina)}</span></small>
+        </span>
+        <Ico n="plus" b className="car" />
+      </button>
+      <button className="ib ux-com-lapiz" aria-label={`Editar ${p.nombre}`} onClick={() => nav.hoja('sheet-plant', { id: p.id })}><Ico n="pencil-simple" /></button>
+    </div>
   )
 
   return (
     <Pantalla>
-      <CabComida vista="com-plant" crumb="Toca para editar" />
+      <CabComida vista="com-plant" crumb="Toca para apuntar hoy" />
       <div className="pg">
-        <p className="note plain mt12 ux-com-aviso">
-          <Ico n="hand-tap" />
-          <span><b>Toca una para editarla.</b> Para apuntarla, usa el botón «Añadir» del Día: ahí sale con un toque.</span>
-        </p>
-
-        {!comidas.length && <Vacio icono="bowl-food" titulo="Aún no tienes comidas guardadas" texto="Guarda lo que comes a menudo y lo apuntarás con un toque." accion="Guardar una comida" onAccion={nueva} />}
+        {!comidas.length && <Vacio icono="bowl-food" titulo="Aún no tienes comidas guardadas" texto="Crea lo que comes a menudo y lo apuntarás con un toque." accion="Crear comida nueva" onAccion={nueva} />}
         {comidas.length > 0 && (
           <>
             <div className="sec-h mt16"><h2 className="h3">Comidas</h2><span className="lbl">Más usadas primero</span></div>
@@ -90,7 +98,7 @@ export function Plantillas() {
           <button className="lnk mt12" onClick={() => nav.ir('com-guard')}>Ver los {escaneados.length} escaneados y buscar <Ico n="caret-right" /></button>
         )}
 
-        <button className="btn mt20" onClick={nueva}><Ico n="plus" b />Guardar una comida</button>
+        <button className="btn mt20" onClick={nueva}><Ico n="bowl-food" b />Crear comida nueva</button>
         {productos.some(p => !p.manual && !p.pendiente) && <p className="credit">Datos de productos: Open Food Facts · licencia ODbL</p>}
       </div>
     </Pantalla>

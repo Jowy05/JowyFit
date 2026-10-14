@@ -71,12 +71,60 @@ function disponible(e: Ejercicio, material: Set<string> | null): boolean {
   return material ? material.has(e.material) : ['dumbbell', 'barbell', 'cable', 'flat_bench', 'pull_up_bar', 'leg_press', 'smith_machine'].includes(e.material)
 }
 
+// Músculos que de verdad tiran en un remo o un jalón.
+const TIRAN = ['latissimus_dorsi', 'rhomboids', 'trapezius', 'posterior_deltoid', 'teres_major']
+const PIERNA = ['gluteus_maximus', 'hamstrings', 'quadriceps']
+
+/**
+ * Patrón con el que el generador coloca un ejercicio. Igual que `patron` del catálogo, salvo los pesos
+ * muertos que RepDB pone en «espalda» sin ningún músculo de tirón (p. ej. «Peso Muerto Rumano con
+ * Mancuernas»): son de cadera, no un remo. Antes uno de ellos rellenaba el hueco de remo.
+ */
+export function patronGenerador(e: Ejercicio): Patron {
+  const p = patron(e)
+  if ((p === 'tiron-h' || p === 'tiron-v') && !e.principales.some(m => TIRAN.includes(m)) && e.principales.some(m => PIERNA.includes(m))) return 'cadera'
+  return p
+}
+
 // El patrón de cada ejercicio no cambia: se calcula una vez (antes se recalculaba para todo el catálogo en cada hueco).
 const cachePatron = new WeakMap<Ejercicio, Patron>()
 function patronDe(e: Ejercicio): Patron {
   let p = cachePatron.get(e)
-  if (p === undefined) { p = patron(e); cachePatron.set(e, p) }
+  if (p === undefined) { p = patronGenerador(e); cachePatron.set(e, p) }
   return p
+}
+
+// ── Mismo movimiento ──────────────────────────────────────────────────────────
+// Dos ejercicios son «el mismo movimiento» si su nombre, quitando el material y las palabras de relleno,
+// coincide («Peso Muerto Rumano» = «Peso Muerto Rumano con Mancuernas» = «… en Máquina Smith»), o si uno
+// es el otro con algo más detrás y la parte común tiene al menos dos palabras («Peso muerto» y «Peso muerto
+// rumano»; «Press de banca» y «Press de banca con agarre cerrado»). Una sola palabra común («Curl», «Remo»)
+// no basta: un curl de martillo y uno con barra pueden ir el mismo día.
+const MATERIAL_EN_NOMBRE = /\b(?:con|en|sobre)\s+(?:la\s+|el\s+|una\s+|un\s+)?(?:barra\s+(?:z|ez|hexagonal|trap|recta)|barra|(?:doble|dos)\s+mancuernas?|mancuernas?|(?:dos\s+)?pesas?\s+rusas?|kettlebells?|cable|poleas?|bandas?(?:\s+elasticas?)?|trx|landmine|discos?|maquina(?:\s+smith)?(?:\s+de\s+(?:discos|predicador))?|multipower|smith)\b/g
+const LADO = /\b(?:a\s+un\s+brazo|a\s+una\s+mano|unilateral)\b/g
+const RELLENO = new Set(['de', 'del', 'la', 'el', 'en', 'con', 'y', 'a', 'al', 'los', 'las', 'trasera', 'biceps'])
+const cacheClave = new WeakMap<Ejercicio, string>()
+
+/** Nombre del movimiento sin material ni relleno: «peso muerto rumano». */
+export function claveMovimiento(e: Ejercicio): string {
+  let k = cacheClave.get(e)
+  if (k === undefined) {
+    const t = ` ${e.nombre.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()} `
+      .replace(/\(.*?\)/g, ' ').replace(MATERIAL_EN_NOMBRE, ' ').replace(LADO, ' ')
+    k = t.split(/[^a-z0-9]+/).filter(w => w && !RELLENO.has(w)).join(' ')
+    cacheClave.set(e, k)
+  }
+  return k
+}
+
+/** ¿Son dos variantes del mismo movimiento? (No cuenta el mismo ejercicio consigo mismo.) */
+export function mismoMovimiento(a: Ejercicio, b: Ejercicio): boolean {
+  if (a.id === b.id) return false
+  const ka = claveMovimiento(a), kb = claveMovimiento(b)
+  if (!ka || !kb) return false
+  if (ka === kb) return true
+  const [corta, larga] = ka.length <= kb.length ? [ka, kb] : [kb, ka]
+  return corta.includes(' ') && larga.startsWith(`${corta} `)
 }
 
 /** Ejercicios aptos para este perfil y gimnasio, agrupados por patrón (una sola pasada por el catálogo). */
@@ -277,12 +325,21 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejerc
   const huecos = pl.huecos
     .filter(h => !(h.patron === 'core' && !x.perfil.core && !x.perfil.zonasPrioridad.includes('abdomen')))
     .map(h => ({ ...h, par: x.perfil.superseries ? h.par : undefined }))
+  const elegidosDia: Ejercicio[] = []
+  // Libre = no está ya en el día ni es otra variante de un movimiento que ya está («Peso Muerto Rumano»
+  // y «Peso Muerto Rumano con Mancuernas» el mismo día parecía un error).
+  const libresDe = (l: Ejercicio[], mov: boolean) => l.filter(e => !delDia.has(e.id) && !(mov && elegidosDia.some(o => mismoMovimiento(o, e))))
   for (const h of huecos) {
-    let candidatos = aptos.get(h.patron) ?? []
-    let libres = candidatos.filter(e => !delDia.has(e.id))
-    for (const otro of libres.length ? [] : RESPALDO[h.patron] ?? []) {
-      candidatos = aptos.get(otro) ?? []
-      libres = candidatos.filter(e => !delDia.has(e.id))
+    let candidatos: Ejercicio[] = []
+    let libres: Ejercicio[] = []
+    // Primero el patrón propio y sus parecidos sin repetir movimiento; si no queda nada, se permite repetirlo
+    // antes que dejar el hueco vacío (gimnasios con muy poco material).
+    for (const mov of [true, false]) {
+      for (const p of [h.patron, ...(RESPALDO[h.patron] ?? [])]) {
+        candidatos = aptos.get(p) ?? []
+        libres = libresDe(candidatos, mov)
+        if (libres.length) break
+      }
       if (libres.length) break
     }
     if (!libres.length) continue
@@ -293,6 +350,7 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejerc
       if (p > mejor || (p === mejor && e.id.localeCompare(elegido.id) < 0)) { mejor = p; elegido = e }
     }
     delDia.add(elegido.id)
+    elegidosDia.push(elegido)
     usados.add(elegido.id)
     const b: Bloque = {
       uid: uid(),
@@ -315,7 +373,11 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejerc
     bloques.push(b)
   }
   // Alternativas al final, sin proponer ningún ejercicio que ya es principal en este día.
-  for (const { b, h, elegido, candidatos } of pendientesAlt) b.alternativas = alternativas(elegido, h, candidatos.filter(e => !delDia.has(e.id)), x)
+  // Tampoco una variante de OTRO ejercicio del día (sí del propio: «Barra → Mancuernas» es justo lo que se busca).
+  for (const { b, h, elegido, candidatos } of pendientesAlt) {
+    const otros = elegidosDia.filter(o => o.id !== elegido.id)
+    b.alternativas = alternativas(elegido, h, candidatos.filter(e => !delDia.has(e.id) && !otros.some(o => mismoMovimiento(o, e))), x)
+  }
   // Las superseries van juntas: el segundo del par justo detrás del primero.
   const ordenados: Bloque[] = []
   for (const b of bloques) {
@@ -345,12 +407,12 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   const n = fijos.length || 3
   // Domingo y lunes también son seguidos (la semana da la vuelta).
   const seguidos = fijos.some((d, i) => i > 0 && d - fijos[i - 1]! === 1) || (fijos.length > 1 && fijos.includes(0) && fijos.includes(6))
-  if (n <= 3) porque.push(`${n} día${n === 1 ? '' : 's'}${seguidos ? ', dos seguidos' : ''} → cuerpo completo: cada músculo se trabaja ${n} ve${n === 1 ? 'z' : 'ces'} por semana sin acumular cansancio.`)
+  if (n <= 3) porque.push(`${n} día${n === 1 ? '' : 's'}${seguidos ? ', con dos días seguidos' : ''} → cuerpo completo: cada músculo se trabaja ${n} ve${n === 1 ? 'z' : 'ces'} por semana sin acumular cansancio.`)
   else if (n <= 5) porque.push(`${n} días → torso y pierna alternos: cada músculo dos veces por semana.`)
   else porque.push(`${n} días → empuje, tirón y pierna dos veces por semana.`)
   if (x.perfil.zonasPrioridad.length) porque.push(`Prioridad en ${x.perfil.zonasPrioridad.join(', ')} → una serie más en esos ejercicios.`)
-  if (x.perfil.superseries) porque.push('Superseries de brazos y hombros para que quepa todo en el tiempo.')
-  porque.push(`Sesiones de ~${x.perfil.minutosNormal} min, con versión corta de ~${x.perfil.minutosCorta} min.`)
+  if (x.perfil.superseries) porque.push('Brazos y hombros en «dos seguidos» (dos ejercicios sin descanso entre ellos) para que quepa todo en el tiempo.')
+  porque.push(`Sesiones de ${x.perfil.minutosNormal} min como mucho, con versión corta de ~${x.perfil.minutosCorta} min si vas con prisa.`)
   if (x.perfil.zonasSensibles.length) porque.push(`Solo ejercicios que cuidan: ${x.perfil.zonasSensibles.join(', ')}.`)
   const evitados = [...x.marcas.values()].filter(m => m.odiado || m.duele).length
   if (evitados) porque.push(`${evitados} ejercicio${evitados === 1 ? '' : 's'} que no te gusta${evitados === 1 ? '' : 'n'} o te duele${evitados === 1 ? '' : 'n'}, fuera.`)
@@ -390,7 +452,7 @@ export function alternativasDe(id: string, x: EntradaGenerador): string[] {
   const elegido = x.ejercicios.find(e => e.id === id)
   if (!elegido) return []
   const material = x.gimnasio ? new Set(x.gimnasio.material) : null
-  const p = patron(elegido)
+  const p = patronDe(elegido)
   const h: Hueco = { patron: p, papel: elegido.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
   const candidatos = x.ejercicios.filter(e => patronDe(e) === p && apto(e, x, material))
   return alternativas(elegido, h, candidatos, x)
@@ -401,7 +463,7 @@ export function bloqueNuevo(id: string, x: Pick<EntradaGenerador, 'perfil' | 'ej
   const e = x.ejercicios.find(z => z.id === id)
   // Ejercicio que ya no está en el catálogo (o propio): bloque genérico en vez de romper.
   if (!e) return { uid: uid(), ejercicio: id, alternativas: [], series: 3, repsMin: 8, repsMax: 12, rpe: x.calibracion ? 7 : 8, descanso: 90, registro: 'peso' }
-  const h: Hueco = { patron: patron(e), papel: patron(e) === 'core' ? 'core' : e.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
+  const h: Hueco = { patron: patronDe(e), papel: patronDe(e) === 'core' ? 'core' : e.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
   const entrada: EntradaGenerador = { perfil: x.perfil, gimnasio: x.gimnasio ?? null, marcas: x.marcas ?? new Map(), ejercicios: x.ejercicios }
   return { uid: uid(), ejercicio: id, alternativas: alternativasDe(id, entrada), ...seriesYReps(h, entrada, e), registro: tipoRegistro(e) }
 }

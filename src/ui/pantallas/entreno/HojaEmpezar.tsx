@@ -8,7 +8,7 @@ import { duracionDia } from '../../../dominio/generador'
 import { programar } from '../../../plataforma'
 import { cx, Hoja, Ico, Interruptor, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
-import { useGimnasio, usePerfilCargado, useRutina, useSesionEnCurso } from '../../datos'
+import { usePerfilCargado, useRutina, useSesionEnCurso } from '../../datos'
 import { abrirEntreno, iniciarEntreno } from './iniciar'
 
 export function HojaEmpezar({ ruta }: { ruta: Ruta }) {
@@ -37,7 +37,6 @@ export function HojaEmpezar({ ruta }: { ruta: Ruta }) {
 
 function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; perfil: Perfil; corta: boolean }) {
   const nav = useNav()
-  const g = useGimnasio()
   const unaVez = useUnaVez()
   // «Normal» marcada por defecto (antes salía marcada la hora de salida, que parecía un entreno más largo).
   const [modo, setModo] = useState<'normal' | 'corta'>(empezarCorta ? 'corta' : 'normal')
@@ -45,6 +44,8 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
   const horaPerfil = perfil.horaLimite[perfil.transporte]
   const [hora, setHora] = useState(horaPerfil)
   const [calentar, setCalentar] = useState(false)
+  // La hora de salida es una línea de texto («Sales a las 06:45 · cambiar»): no parece una opción más para marcar.
+  const [cambiarHora, setCambiarHora] = useState(false)
   const normal = Math.round(duracionDia(dia.bloques) / 60)
   const corta = Math.round(duracionDia(dia.bloques, true) / 60)
   const series = dia.bloques.reduce((t, b) => t + b.series, 0)
@@ -69,26 +70,23 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
   })
   return (
     <Hoja titulo={dia.nombre} sub={`${dia.bloques.length} ejercicios · ${series} series`}>
-      <span className="lbl" style={{ display: 'block', marginTop: -10, marginBottom: 12 }}>Día {dia.letra}{dia.dia != null ? ` · ${DIAS[dia.dia]}` : ''}</span>
+      {dia.dia != null && <span className="lbl" style={{ display: 'block', marginTop: -10, marginBottom: 12 }}>{DIAS[dia.dia]}</span>}
       <p className="lbl fl">¿Cuánto tiempo tienes?</p>
       <div className="opts">
         <button className={cx('opt-c', modo === 'normal' && 'on')} onClick={() => setModo('normal')}><span className="rad" /><span className="tx"><b>Normal</b><small>Las {series} series</small></span><span className="end">~{normal} min</span></button>
         <button className={cx('opt-c', modo === 'corta' && 'on')} onClick={() => setModo('corta')}><span className="rad" /><span className="tx"><b>Corta</b><small>{quitados ? `Sin ${quitados} ejercicio${quitados === 1 ? '' : 's'} del final` : 'Igual que la normal'}</small></span><span className="end">~{corta} min</span></button>
       </div>
-      <div className="ux-hora mt12">
-        <Ico n="clock" />
-        <span className="tx">
-          <b>Me tengo que ir a las <input className="mono goc ux-hora-in" type="time" value={hora} onChange={e => { if (e.target.value) setHora(e.target.value) }} aria-label="Hora límite" /></b>
-          <small>{disponibles ? `Te quedan ${disponibles} min · te avisamos si vas tarde` : 'Esa hora ya ha pasado: cámbiala si hoy es otra'}</small>
-        </span>
+      <div className="ux-sales mt12">
+        <p>
+          <Ico n="clock" />
+          {cambiarHora
+            ? <>Sales a las <input className="mono ux-hora-in" type="time" autoFocus value={hora} onChange={e => { if (e.target.value) setHora(e.target.value) }} aria-label="Hora límite" /></>
+            : <>Sales a las <b className="mono">{hora}</b><span aria-hidden="true">·</span><button className="lnk" onClick={() => setCambiarHora(true)}>cambiar</button></>}
+        </p>
+        <small>{disponibles ? `Te quedan ${disponibles} min · te avisamos si vas tarde` : 'Esa hora ya ha pasado: cámbiala si hoy es otra'}</small>
       </div>
       {noDa && <p className="note warn mt8"><Ico n="clock-countdown" /><span>Con {disponibles} min no te da para la normal: elige la corta.</span></p>}
       <div className="list mt12">
-        <button className="it" onClick={() => { nav.hoja(null); nav.ir('rut-gym', undefined, 'rut') }}>
-          <span className="ico"><Ico n="map-pin" /></span>
-          <span className="tx"><b>{g?.nombre ?? 'Sin gimnasio'}</b>{g?.notas && <small>{g.notas}</small>}</span>
-          <span className="lnk">Cambiar</span>
-        </button>
         <div className="it">
           <span className="ico"><Ico n="timer" /></span>
           <span className="tx"><b>Calentamiento general</b><small>Temporizador de 5 min · opcional</small></span>

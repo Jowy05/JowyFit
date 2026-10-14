@@ -1,9 +1,10 @@
-// COM-04 · Producto: cuánto (pequeña/normal/grande o unidades) y «Añadir» bien visible; la ficha técnica, plegada.
+// COM-04 · Producto: cuánto («Poco · Normal · Mucho» o unidades) y «Añadir» bien visible; un solo botón grande.
+// La ficha técnica, plegada, y dentro lo raro: guardarlo en Mis comidas (si aún no está) y borrarlo.
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Franja, Producto as TProducto } from '../../../datos/tipos'
-import { FACTOR_RACION, NOMBRE_RACION, aspecto, buscarOFF, porRacion, type Racion } from '../../../dominio/comida'
+import { FACTOR_RACION, NOMBRE_RACION, aspecto, buscarOFF, porRacion, textoRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { num } from '../../../dominio/calculos'
 import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio } from '../../comp'
@@ -20,6 +21,8 @@ export function Producto({ ruta }: { ruta: Ruta }) {
   const fecha = typeof ruta.d?.fecha === 'string' ? ruta.d.fecha : hoyISO()
   const franja = ruta.d?.franja as Franja | undefined
   const p = useLiveQuery(() => db.productos.get(codigo).then(x => x ?? null), [codigo])
+  // Si ya está en Mis comidas, el botón de guardarlo sobra.
+  const enMisComidas = useLiveQuery(() => db.plantillas.filter(t => t.codigo === codigo).count().then(n => n > 0), [codigo]) ?? true
   const [racion, setRacion] = useState<Racion>('N')
   const [unidades, setUnidades] = useState(1)
   const [buscando, setBuscando] = useState(false)
@@ -45,7 +48,7 @@ export function Producto({ ruta }: { ruta: Ruta }) {
   const anadir = unaVez(async () => {
     const des = await apuntar({ fecha, franja, nombre: p.nombre, kcal: total.kcal, proteina: total.proteina, cafeina: total.cafeina, racion, tipo: 'producto', codigo: p.codigo })
     nav.atras()
-    aviso(`Añadido: ${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''}${racion !== 'N' ? ` (ración ${NOMBRE_RACION[racion].toLowerCase()})` : ''}`, des)
+    aviso(`Añadido: ${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''}${racion !== 'N' ? ` (${textoRacion(racion)})` : ''}`, des)
   })
   const comoPlantilla = unaVez(async () => {
     const ya = await db.plantillas.filter(t => t.codigo === p.codigo).first()
@@ -96,7 +99,6 @@ export function Producto({ ruta }: { ruta: Ruta }) {
             </div>
 
             <button className="btn mt16" onClick={() => void anadir()}>Añadir</button>
-            <button className="btn ln sm mt8" onClick={() => void comoPlantilla()}>Guardar en Mis comidas</button>
 
             <details className="fold mt20">
               <summary>Ficha técnica (la etiqueta)<Ico n="caret-down" /></summary>
@@ -114,11 +116,18 @@ export function Producto({ ruta }: { ruta: Ruta }) {
                     </tbody>
                   </table>
                 </div>
+                {!enMisComidas && (
+                  <>
+                    <button className="btn ln sm mt12" onClick={() => void comoPlantilla()}>Guardar en Mis comidas</button>
+                    <p className="small muted mt4">Para tenerlo a un toque en «Añadir», sin buscarlo.</p>
+                  </>
+                )}
+                <button className="lnk mt16" onClick={() => void borrar(p)}><Ico n="trash" /> Borrar producto</button>
               </div>
             </details>
           </>
         )}
-        <button className="lnk mt16" onClick={() => void borrar(p)}><Ico n="trash" /> Borrar producto</button>
+        {p.pendiente && <button className="lnk mt16" onClick={() => void borrar(p)}><Ico n="trash" /> Borrar producto</button>}
         {!p.manual && !p.pendiente && <p className="credit">Fuente: Open Food Facts · licencia ODbL</p>}
         {p.manual && <p className="credit">Apuntado a mano</p>}
       </div>

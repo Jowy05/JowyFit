@@ -35,3 +35,18 @@
 
 /* Ficha: «En tu plan» encima del progreso. */
 .ux-rut-plan{margin-bottom:8px}
+
+/* Editar plan: a la vista solo nombre, repeticiones, series y «Cambiar ejercicio»; lo demás, en «Más opciones». */
+.edr .edr-act{padding:0;gap:20px}
+.edr .edr-act .lnk.ux-rut-masbtn{margin-left:auto;color:var(--muted);font-weight:600}
+/* Las repeticiones como chip con borde y lápiz: se ve que se pueden tocar. */
+.chip.ux-rut-reps{min-height:36px;margin-top:6px;padding:0 10px;gap:6px;font:600 13.5px var(--font-mono);color:var(--blue);border-color:var(--blue)}
+.chip.ux-rut-reps i{font-size:14px}
+.edr .tx small.ux-rut-prisa{display:flex;align-items:center;gap:4px;margin-top:6px;color:var(--warn)}
+/* «series» debajo del número del contador. */
+.stp.ux-rut-ser .v{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.stp.ux-rut-ser .v small{margin:3px 0 0;font-size:11px;letter-spacing:.02em}
+/* Contenido de «Más opciones». */
+.ux-rut-mas{border-top:1px solid var(--line);margin-top:2px;padding:10px 0}
+.ux-rut-mas-acc{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ux-rut-mas-acc .chip{font-size:14px}

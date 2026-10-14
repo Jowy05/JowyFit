@@ -101,20 +101,25 @@ export function Pasos() {
 
         <div className="sec">
           <div className="sec-h"><h2>Últimos 7 días</h2>{media != null && <span className="lbl mono">media {num(media, 0)}</span>}</div>
-          <div className="card pd">
-            <div className="vbars">
-              {dias.map((f, i) => {
-                const v = valores[i]!
-                return (
-                  <div key={f} className={cx(f === hoy ? 'now' : v > 0 && v < objetivo * 0.7 && 'lo')} style={estilo({ '--h': Math.round((v / tope) * 100) })}>
-                    <b>{v ? miles(v) : '—'}</b><i /><span>{DIAS_CORTOS[diaSemana(deISO(f))]}</span>
-                  </div>
-                )
-              })}
-              <span className="vb-goal" style={estilo({ '--g': Math.round((objetivo / tope) * 100) })} />
+          {/* Con menos de 2 días apuntados, una frase: un recuadro casi vacío no dice nada. */}
+          {conDatos.length < 2 ? (
+            <p className="small muted chart-vacia"><Ico n="chart-bar" className="blue" /> Apunta tus pasos unos días y verás aquí las barras.</p>
+          ) : (
+            <div className="card pd">
+              <div className="vbars">
+                {dias.map((f, i) => {
+                  const v = valores[i]!
+                  return (
+                    <div key={f} className={cx(f === hoy ? 'now' : v > 0 && v < objetivo * 0.7 && 'lo')} style={estilo({ '--h': Math.round((v / tope) * 100) })}>
+                      <b>{v ? miles(v) : '—'}</b><i /><span>{DIAS_CORTOS[diaSemana(deISO(f))]}</span>
+                    </div>
+                  )
+                })}
+                <span className="vb-goal" style={estilo({ '--g': Math.round((objetivo / tope) * 100) })} />
+              </div>
+              <p className="small muted mt8"><span className="gkey" />La raya es tu objetivo diario</p>
             </div>
-            <p className="small muted mt8"><span className="gkey" />La raya es tu objetivo diario</p>
-          </div>
+          )}
           {objetivoEditable}
         </div>
 

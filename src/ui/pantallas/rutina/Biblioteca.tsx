@@ -9,7 +9,7 @@ import { kg } from '../../../dominio/calculos'
 import { Chip, Ico, Pantalla, Th } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useGimnasio, useMarcas, useRutina } from '../../datos'
-import { abrevDia, CabRutina, musculoComun, musculosComunes, zonaComun } from './comun'
+import { abrevDia, CabRutina, musculoComun, musculosComunes, nombreVisible, zonaComun } from './comun'
 
 /** Grupos sencillos para el filtro principal (los músculos exactos van en «Más filtros»). */
 const GRUPOS_SIMPLES = ['Pecho', 'Espalda', 'Hombro', 'Brazo', 'Abdomen', 'Glúteo', 'Pierna']
@@ -113,7 +113,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
                 <button key={e.id} className="ad" onClick={() => nav.ir('rut-ficha', { id: e.id })}>
                   <Th ej={e} size="m" />
                   <span className="tx">
-                    <b>{e.nombre}</b>
+                    <b>{nombreVisible(e.nombre)}</b>
                     <small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small>
                     <span className="ad-k">
                       <span className="tag">{zonaComun(e.zona)}</span>

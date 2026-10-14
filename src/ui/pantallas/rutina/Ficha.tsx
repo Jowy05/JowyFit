@@ -17,7 +17,7 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
-import { musculoComun, musculosComunes, tituloDia, zonaComun } from './comun'
+import { musculoComun, musculosComunes, nombreVisible, tituloDia, zonaComun } from './comun'
 
 const REGISTRO_TXT = { peso: 'kg y repeticiones', mancuerna: 'kg de cada mancuerna', asistido: 'kg de ayuda', corporal: 'repeticiones', tiempo: 'segundos', cardio: 'minutos' }
 
@@ -93,7 +93,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
         <span className="gal-cnt tag">RepDB · {pose + 1} / {e.poses.length}</span>
         {e.poses.map((p, i) => (
           <figure key={p} className={cx('gal-it', i === pose && 'on')} onClick={() => setPose((pose + 1) % e.poses.length)}>
-            <img src={imagen(e, p)} alt={p === 'start' ? 'Posición inicial' : p === 'peak' ? 'Posición final' : e.nombre} />
+            <img src={imagen(e, p)} alt={p === 'start' ? 'Posición inicial' : p === 'peak' ? 'Posición final' : nombreVisible(e.nombre)} />
             <figcaption style={{ textShadow: '0 1px 3px rgba(0,0,0,.4)', color: '#16202B' }}>
               {e.poses.length > 1 && <span className="dots">{e.poses.map((_, k) => <i key={k} className={cx(k === i && 'on')} />)}</span>}
               {p === 'start' ? 'Posición inicial' : p === 'peak' ? 'Posición final' : ''}
@@ -103,7 +103,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
       </div>
       <div className="pg">
         <p className="lbl">{zonaComun(e.zona)} · {nombreMaterial(e.material).toLowerCase()}</p>
-        <h1 className="ficha-t">{e.nombre}</h1>
+        <h1 className="ficha-t">{nombreVisible(e.nombre)}</h1>
         {e.descripcion && <p className="muted mt4">{e.descripcion}</p>}
 
         {e.instrucciones.length > 0 && (
@@ -209,8 +209,8 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
                 return (
                   <button key={a.id} className="mini-ad" onClick={() => nav.ir('rut-ficha', { id: a.id })}>
                     <Th ej={x} size="l" />
-                    <span className={cx('tag', deTuPlan && 'blue')}>{deTuPlan ? 'Alternativa' : 'Parecido'}</span>
-                    <b>{x.nombre}</b>
+                    <span className={cx('tag', deTuPlan && 'blue')}>{deTuPlan ? 'Si está ocupado' : 'Parecido'}</span>
+                    <b>{nombreVisible(x.nombre)}</b>
                     <small>{nombreMaterial(x.material)}</small>
                   </button>
                 )
@@ -226,7 +226,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
             <Chip on={!!m?.odiado} onClick={() => void marcar(e.id, { odiado: !m?.odiado })}><Ico n="prohibit" b />No me gusta</Chip>
             <Chip on={!!m?.duele} onClick={() => void marcar(e.id, { duele: !m?.duele })}><Ico n="warning" b />Me duele</Chip>
           </div>
-          {(m?.odiado || m?.duele) && <p className="small muted mt8">No te lo propondremos en la rutina ni como alternativa.</p>}
+          {(m?.odiado || m?.duele) && <p className="small muted mt8">No te lo propondremos en la rutina ni para cuando algo esté ocupado.</p>}
           {alPlan && r ? (
             <>
               <p className="small muted mt12">¿A qué día lo añado?</p>

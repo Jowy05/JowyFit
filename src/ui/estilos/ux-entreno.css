@@ -1,6 +1,6 @@
 /* Ajustes de usabilidad: zona entreno. */
 
-/* Botones de icono con su palabra debajo (Lista, Terminar, Más): nada de iconos solos. */
+/* Botones de icono con su palabra debajo (Lista, Más): nada de iconos solos. */
 .ux-tbtn{flex:none;min-width:46px;height:46px;padding:0 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:8px;color:var(--ink);line-height:1}
 .ux-tbtn i{font-size:21px}
 .ux-tbtn span{font:600 11.5px var(--font-body);color:var(--muted);white-space:nowrap}
@@ -18,8 +18,28 @@
 .safety.ux-aviso>i{margin-top:1px}
 .ux-aviso-x{flex:none;width:32px;height:32px;margin:-6px -8px -6px 0;display:grid;place-items:center;border-radius:6px;color:var(--muted);font-size:15px}
 
-/* Esfuerzo: la escala siempre a la vista, debajo de los números. */
-.ux-eff-esc{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);line-height:1.2}
+/* Reloj de arriba con palabra: «llevas 12 min» (un «0:00» suelto se confundía con el descanso). */
+.ux-ses-p .clock.ux-llevas,.ses-top .clock.ux-llevas{font:600 13px var(--font-body);color:var(--muted);white-space:nowrap;padding:0}
+
+/* Etiquetas del panel de la serie en palabras normales («¿Cuántas has hecho?»), no en mayúsculas de código. */
+.pn-row{align-items:flex-end}
+.lbl.ux-pn-lbl{font:700 13.5px/1.2 var(--font-body);letter-spacing:0;text-transform:none;color:var(--ink)}
+
+/* Esfuerzo: «fácil» bajo el 6 y «no podía más» bajo el 10, en negro y legibles. */
+.ux-eff-esc{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;font:600 13px/1.2 var(--font-body);color:var(--ink)}
+.ux-eff-esc>span{text-align:center}
+.ux-eff-esc>span.fin{justify-self:end;text-align:right;white-space:nowrap}
+
+/* «Igual que la anterior · apunta 20 kg × 8»: se ve qué va a guardar. */
+.tb.same>span{min-width:0}
+.ux-igual-d{font-weight:500;color:var(--muted);font-size:12.5px;white-space:nowrap}
+
+/* Series ya hechas: se tocan para corregirlas. */
+.set.ux-tocable{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.set.ux-tocable .se i{font-size:16px;color:var(--blue)}
+.set.ux-corr{border:2px solid var(--blue);background:var(--blue-t)}
+.ux-corr-t{display:flex;align-items:center;gap:8px;font:700 16px var(--font-body);color:var(--ink)}
+.ux-corr-t i{color:var(--blue)}
 
 /* «Hecho» sin peso o sin reps: el recuadro que falta, bien marcado. */
 .pn-f.ux-falta{border-radius:12px;box-shadow:0 0 0 3px var(--warn);background:var(--warn-t);animation:ux-sacude .35s ease-in-out}
@@ -28,17 +48,13 @@
 @keyframes ux-sacude{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @media (prefers-reduced-motion:reduce){.pn-f.ux-falta{animation:none}}
 
-/* Hoja «Empezar»: la hora de salida, en una línea aparte. */
-.ux-hora{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-.ux-hora>i{font-size:22px;color:var(--muted);flex:none}
-.ux-hora .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
-.ux-hora .tx small{font-size:13px;color:var(--muted)}
+/* Hoja «Empezar»: el campo de la hora de salida (se abre con «cambiar»). */
 .ux-hora-in{border:0;background:transparent;font:inherit;font-family:var(--font-mono);color:var(--go);width:92px;padding:0}
 
 /* Inicio: tres accesos rápidos («+ Comer o beber», Escanear, + Peso). */
 .ux-qa3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-/* Ejercicio que aún no tiene peso: «nuevo» en vez de un guion. */
-.exr .kg.ux-nuevo{font:600 12px var(--font-body);color:var(--blue);text-transform:uppercase;letter-spacing:.04em}
+/* Ejercicio que aún no tiene peso: «nuevo» en gris (en azul parecía un enlace). */
+.exr .kg.ux-nuevo{font:600 12px var(--font-body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 
 /* «¿Voy bien?»: el color del semáforo de verdad. */
 .lamp.ux-warn{background:var(--warn);color:#fff;box-shadow:0 0 0 5px var(--warn-t)}
@@ -52,3 +68,29 @@
 
 /* Inicio: los nombres de los ejercicios de hoy, en dos líneas antes que cortados («Sentadilla Trasera c…»). */
 .exl .exr .tx.ellip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2}
+
+/* Hoja Lista: «Cambiar orden» arriba a la derecha; «Terminar entreno» siempre a la vista abajo,
+   con «Salir sin terminar» y «Descartar» en pequeño debajo. */
+.ux-lista-orden{display:flex;justify-content:flex-end;margin:-4px 0 10px}
+.ux-lista-orden .lnk{margin:0;padding:6px 0}
+.ux-lista-anadir{margin:4px 0 0;padding:14px 0}
+.ux-lista-pie{position:sticky;bottom:0;z-index:2;margin:8px -20px calc(-30px - var(--sa-b, 0px));padding:12px 20px calc(14px + var(--sa-b, 0px));background:var(--sheet-bg,var(--surface,var(--bg)));border-top:1px solid var(--line)}
+.ux-lista-otras{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:6px;color:var(--muted)}
+.ux-lista-otras .lnk{margin:0;padding:10px 2px;font-size:13.5px;font-weight:500;color:var(--muted)}
+.ux-lista-otras .lnk.ux-peligro{color:var(--bad)}
+
+/* Hoja Ocupado: la miga con los nombres en letra normal (sin letras A/B/C). */
+.abc.ux-abc{text-transform:none;letter-spacing:0;font:600 13.5px var(--font-body)}
+
+/* Hoja «Empezar»: la hora de salida como línea de texto («Sales a las 06:45 · cambiar»), sin recuadro. */
+.ux-sales{display:grid;gap:2px;padding:0 2px}
+.ux-sales p{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:15px;color:var(--ink)}
+.ux-sales p>i{font-size:19px;color:var(--muted)}
+.ux-sales p .lnk{margin:0;padding:8px 0;font-size:15px}
+.ux-sales small{font-size:13px;color:var(--muted);padding-left:25px}
+.ux-sales .ux-hora-in{border-bottom:2px solid var(--blue);font-size:15px}
+
+/* Corregir una serie: el mismo aspecto en el panel de abajo y dentro de la hoja Lista. */
+.ux-corr-f{display:grid;gap:10px}
+.ux-lista-series{display:grid;gap:6px;padding:10px 14px 14px;border-top:1px solid var(--line);background:var(--bg)}
+.ux-lista-series .set.ux-tocable{background:var(--surface)}

@@ -1,13 +1,12 @@
 // RUT-01 · Mi plan
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import { ejercicio } from '../../../catalogo/catalogo'
 import { deISO, diaSemana, hoyISO, numeroSemana } from '../../../dominio/fechas'
 import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAjustes, useRutina, useSesionEnCurso } from '../../datos'
 import { useAviso } from '../../aviso'
-import { abrevDia, CabRutina, capital, filas, listaDias, minutos, nombreDia, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
+import { abrevDia, CabRutina, capital, duracionPlan, filas, listaDias, minutos, nombreDia, nombreEj, SS, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
 import { abrirEntreno, iniciarEntreno } from '../entreno/iniciar'
 
 export function MiPlan() {
@@ -23,6 +22,9 @@ export function MiPlan() {
   const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === r.id && s.letra !== 'L').length), [r?.id]) ?? 0
   const unaVez = useUnaVez()
 
+  // Si hoy ya se entrenó, la tarjeta de hoy lo dice (antes seguía con «Empezar rutina» y parecía que no se había guardado).
+  // Va antes de los return: los hooks siempre en el mismo orden.
+  const hechoHoy = useLiveQuery(async () => (await db.sesiones.where('fecha').equals(hoyISO()).toArray()).find(s => s.estado === 'hecha'), [])
   if (r === undefined) return <Pantalla><CabRutina actual="rut" crumb={crumb} /></Pantalla>
   if (r === null) return (
     <Pantalla>
@@ -43,7 +45,7 @@ export function MiPlan() {
   })
   const faltan = Math.max(0, fijos.length - sesiones)
   const conDia = fijos.filter(d => d.dia != null).map(d => d.dia!)
-  // «Superserie» se explica la primera vez que sale en la pantalla.
+  // «Dos seguidos» (superserie) se explica la primera vez que sale en la pantalla.
   let ssVista = false
   const ss = () => { const t = ssVista ? '' : ` · ${SS_EXPLICA}`; ssVista = true; return t }
 
@@ -55,15 +57,16 @@ export function MiPlan() {
           <div className="spec-box">
             <div className="spec-h mt8">
               <h2 className="h3">{r.estructura}</h2>
-              {r.calibracion ? <span className="tag warn"><Ico n="gauge" b />Calibración</span> : <span className="tag ok"><Ico n="check" b />Definitiva</span>}
+              {r.calibracion ? <span className="tag warn"><Ico n="gauge" b />Semana de prueba</span> : <span className="tag ok"><Ico n="check" b />Definitiva</span>}
             </div>
             <div className="spec">
               <p><span>Días</span><b className="ux-rut-wrap">{conDia.length ? capital(listaDias(conDia)) : `${fijos.length} a la semana`}</b></p>
-              {opc[0]?.dia != null && <p><span>Día extra</span><b>{nombreDia(opc[0])}, si te apetece</b></p>}
-              <p><span>Duración</span><b>~{fijos[0] ? Math.max(...fijos.map(d => minutos(d))) : 0} min</b></p>
+              {opc[0]?.dia != null && <p><span>Día extra</span><b className="ux-rut-wrap">{nombreDia(opc[0])}, si te apetece · ~{minutos(opc[0])} min</b></p>}
+              {/* Mismo rango que al crear la rutina («48-55 min»): antes aquí ponía solo el máximo y en Inicio el del día. */}
+              <p><span>Duración</span><b>{duracionPlan(r)}</b></p>
             </div>
           </div>
-          {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>Semana de calibración:</b> pesos cómodos. {faltan > 0 ? <>Después de {faltan} entreno{faltan === 1 ? '' : 's'} más te propongo</> : <>Al guardar el próximo entreno te propongo</>} la rutina definitiva con tus tiempos reales.</span></p>}
+          {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>Esta semana, pesos cómodos.</b> {faltan > 0 ? <>Después de {faltan} entreno{faltan === 1 ? '' : 's'} más te propongo</> : <>Al guardar el próximo entreno te propongo</>} la rutina definitiva con tus tiempos reales.</span></p>}
         </div>
 
         <div className="sec">
@@ -75,18 +78,22 @@ export function MiPlan() {
                 <button className="dayc-h" onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
                   <span className="tx"><b>{tituloDia(d)}</b><small>{d.nombre} · ~{minutos(d)} min · con prisa ~{minutos(d, true)}</small></span>
-                  <span className="tag go">Hoy</span>
+                  {hechoHoy ? <span className="tag ok"><Ico n="check" b />Hecho</span> : <span className="tag go">Hoy</span>}
                 </button>
                 <div className="pl-list">
                   {filas(d.bloques).map(f => Array.isArray(f) ? (
                     <div key={f[0].uid} className="ssb">
-                      <span className="ss-l">Superserie{ss()}</span>
-                      {f.map(b => <p key={b.uid} className={cx('pl', b.fueraEnCorta && 'cut')}><span>{ejercicio(b.ejercicio)?.nombre}</span><b>{seriesTxt(b)}</b></p>)}
+                      <span className="ss-l">{SS}{ss()}</span>
+                      {f.map(b => <p key={b.uid} className={cx('pl', b.fueraEnCorta && 'cut')}><span>{nombreEj(b.ejercicio)}</span><b>{seriesTxt(b)}</b></p>)}
                     </div>
-                  ) : <p key={f.uid} className={cx('pl', f.fueraEnCorta && 'cut')}><span>{ejercicio(f.ejercicio)?.nombre}</span><b>{seriesTxt(f)}</b></p>)}
+                  ) : <p key={f.uid} className={cx('pl', f.fueraEnCorta && 'cut')}><span>{nombreEj(f.ejercicio)}</span><b>{seriesTxt(f)}</b></p>)}
                   <p className="small muted ux-rut-leyenda">«3 × 6-10» = 3 series de 6 a 10 repeticiones.</p>
                 </div>
-                <div className="pd"><button className="btn" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}><Ico n="play" b />Empezar rutina</button></div>
+                <div className="pd">
+                  {hechoHoy
+                    ? <button className="btn gry" onClick={() => nav.ir('pro-entreno', { id: hechoHoy.id }, 'pro')}><Ico n="check" b />Entreno de hoy hecho · verlo</button>
+                    : <button className="btn" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}><Ico n="play" b />Empezar rutina</button>}
+                </div>
               </div>
             )
             return (
@@ -99,7 +106,7 @@ export function MiPlan() {
                 {!d.opcional && (
                   <span className="pl-sum">
                     {filas(d.bloques).map((f, k) => (
-                      <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>Superserie{ss()}</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>
+                      <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>{SS}{ss()}</em> {nombreEj(f[0].ejercicio)} + {nombreEj(f[1].ejercicio)}</> : nombreEj(f.ejercicio)}</span>
                     ))}
                   </span>
                 )}

@@ -25,8 +25,10 @@ export function franjaPorHora(hhmm: string): Franja {
 
 export type Racion = 'P' | 'N' | 'G'
 export const FACTOR_RACION: Record<Racion, number> = { P: 0.7, N: 1, G: 1.4 }
-/** Las raciones con palabras: nada de «P N G» sueltas. */
-export const NOMBRE_RACION: Record<Racion, string> = { P: 'Pequeña', N: 'Normal', G: 'Grande' }
+/** Las raciones con palabras: nada de «P N G» sueltas. Las mismas en Añadir, la nota, el producto y Mis comidas. */
+export const NOMBRE_RACION: Record<Racion, string> = { P: 'Poco', N: 'Normal', G: 'Mucho' }
+/** Coletilla de la ración para avisos y listas: nada si es la normal, «poco» o «mucho» si no. */
+export const textoRacion = (r: Racion) => (r === 'N' ? '' : NOMBRE_RACION[r].toLowerCase())
 
 /** kcal y proteína de una plantilla en la ración elegida (redondeado). */
 export function conRacion(base: { kcal: number; proteina: number; cafeina?: number }, r: Racion) {
@@ -193,12 +195,13 @@ export function recientes(comidas: Comida[], antesDe: string, plantillas: { nomb
   return out
 }
 
-// ---------- nota rápida: «Ligera · Normal · Abundante» ----------
+// ---------- «Escribir lo que he comido» y «Crear comida nueva»: «Poco · Normal · Mucho» ----------
+// Las claves internas siguen siendo ligera/normal/abundante; lo que se ve son las mismas palabras que las raciones.
 export type TamanoNota = 'ligera' | 'normal' | 'abundante'
 export const TAMANOS_NOTA: { v: TamanoNota; t: string }[] = [
-  { v: 'ligera', t: 'Ligera' },
-  { v: 'normal', t: 'Normal' },
-  { v: 'abundante', t: 'Abundante' },
+  { v: 'ligera', t: NOMBRE_RACION.P },
+  { v: 'normal', t: NOMBRE_RACION.N },
+  { v: 'abundante', t: NOMBRE_RACION.G },
 ]
 
 /**
@@ -211,6 +214,11 @@ export function notaPorTamano(t: TamanoNota, franja: Franja): { kcal: number; pr
     ? { ligera: { kcal: 200, proteina: 8 }, normal: { kcal: 350, proteina: 15 }, abundante: { kcal: 550, proteina: 25 } }
     : { ligera: { kcal: 350, proteina: 15 }, normal: { kcal: 600, proteina: 25 }, abundante: { kcal: 900, proteina: 35 } }
   return v[t]
+}
+
+/** Qué tamaño corresponde a unos valores (para marcar el botón al editar una comida guardada); null si se afinaron a mano. */
+export function tamanoDe(kcal: number, proteina: number, franja: Franja): TamanoNota | null {
+  return TAMANOS_NOTA.find(t => { const v = notaPorTamano(t.v, franja); return v.kcal === kcal && v.proteina === proteina })?.v ?? null
 }
 
 /** Productos escaneados que aún no están guardados en «Mis comidas» (para no enseñarlos dos veces). */

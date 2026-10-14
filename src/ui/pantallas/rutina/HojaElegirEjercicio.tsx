@@ -1,10 +1,10 @@
-// Hoja para elegir un ejercicio: cambiar, alternativas B/C o añadir (rutina o entreno en curso).
+// Hoja para elegir un ejercicio: cambiar, «si está ocupado» (alternativas B/C) o añadir (rutina o entreno en curso).
 import { useMemo, useState } from 'react'
 import { db } from '../../../datos/db'
 import { buscar, catalogoCargado, ejercicio, nombreMaterial } from '../../../catalogo/catalogo'
-import { patron, tipoRegistro } from '../../../catalogo/clasificacion'
+import { tipoRegistro } from '../../../catalogo/clasificacion'
 import type { Ejercicio } from '../../../catalogo/tipos'
-import { alternativasDe, bloqueNuevo } from '../../../dominio/generador'
+import { alternativasDe, bloqueNuevo, patronGenerador } from '../../../dominio/generador'
 import { desdeBloque, sustituir } from '../../../dominio/sesion'
 import { sugerenciaPara } from '../../../datos/consultas'
 import { Chip, cx, Hoja, Ico, Th, useUnaVez } from '../../comp'
@@ -12,7 +12,7 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
-import { musculosComunes } from './comun'
+import { musculosComunes, nombreEj } from './comun'
 
 type Modo = 'cambiar' | 'alternativa' | 'anadir' | 'sesion-anadir' | 'sesion-cambiar'
 
@@ -36,7 +36,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
     if (!c) return []
     // Sin gimnasio no se filtra por material (si no, solo saldrían los de peso corporal).
     let l = c.ejercicios.filter(e => (!g || !e.material || material.has(e.material)) && e.categoria !== 'stretching')
-    if (mismoPatron && actual) l = l.filter(e => patron(e) === patron(actual) && e.id !== actual.id)
+    if (mismoPatron && actual) l = l.filter(e => patronGenerador(e) === patronGenerador(actual) && e.id !== actual.id)
     l = l.filter(e => !marcas.get(e.id)?.odiado && !marcas.get(e.id)?.duele)
     return buscar(q, l).sort((a, b) => Number(!!marcas.get(b.id)?.favorito) - Number(!!marcas.get(a.id)?.favorito) || a.nombre.localeCompare(b.nombre)).slice(0, 80)
   }, [q, mismoPatron, actual, material, marcas, g])
@@ -60,7 +60,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
         await db.sesiones.put(sustituir(sesion, idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
       }
       nav.hoja(null)
-      aviso(modo === 'sesion-anadir' ? `Añadido: ${e.nombre}` : `Cambiado por ${e.nombre}`)
+      aviso(modo === 'sesion-anadir' ? `Añadido: ${nombreEj(e)}` : `Cambiado por ${nombreEj(e)}`)
       return
     }
     if (!r) return
@@ -80,12 +80,12 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
     }
     await guardarRutina(nueva)
     nav.hoja(null)
-    aviso(modo === 'anadir' ? `Añadido: ${e.nombre}` : modo === 'cambiar' ? `Cambiado por ${e.nombre}` : `Alternativa añadida: ${e.nombre}`)
+    aviso(modo === 'anadir' ? `Añadido: ${nombreEj(e)}` : modo === 'cambiar' ? `Cambiado por ${nombreEj(e)}` : `Si está ocupado: ${nombreEj(e)}`)
   })
 
-  const titulo = { cambiar: 'Cambiar ejercicio', alternativa: 'Elegir alternativa', anadir: 'Añadir ejercicio', 'sesion-anadir': 'Añadir al entreno', 'sesion-cambiar': 'Cambiar ejercicio' }[modo]
+  const titulo = { cambiar: 'Cambiar ejercicio', alternativa: 'Si está ocupado', anadir: 'Añadir ejercicio', 'sesion-anadir': 'Añadir al entreno', 'sesion-cambiar': 'Cambiar ejercicio' }[modo]
   return (
-    <Hoja titulo={titulo} sub={actual ? `En lugar de: ${actual.nombre}` : g ? 'Solo lo que hay en tu gimnasio' : 'Todo el catálogo (aún no tienes gimnasio)'} className="tall">
+    <Hoja titulo={titulo} sub={actual ? (modo === 'alternativa' ? `Qué hacer si ${nombreEj(actual)} está ocupado` : `En lugar de: ${nombreEj(actual)}`) : g ? 'Solo lo que hay en tu gimnasio' : 'Todo el catálogo (aún no tienes gimnasio)'} className="tall">
       <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" placeholder="Buscar ejercicio o músculo" value={q} onChange={e => setQ(e.target.value)} /></label>
       {actual && (
         <div className="chips mt8">
@@ -97,7 +97,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
         {lista.map(e => (
           <button key={e.id} className="it" onClick={() => void elegir(e)}>
             <Th ej={e} size="s" />
-            <span className="tx"><b>{e.nombre}</b><small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small></span>
+            <span className="tx"><b>{nombreEj(e)}</b><small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small></span>
             {marcas.get(e.id)?.favorito && <Ico n="star" className="goldc" />}
           </button>
         ))}

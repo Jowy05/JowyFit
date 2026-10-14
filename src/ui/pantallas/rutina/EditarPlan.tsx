@@ -2,13 +2,13 @@
 import { useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Bloque, Rutina } from '../../../datos/tipos'
-import { ejercicio, nombreMaterial } from '../../../catalogo/catalogo'
+import { ejercicio } from '../../../catalogo/catalogo'
 import { duracion } from '../../../dominio/fechas'
-import { Cab, Chip, cx, estilo, Ico, Pantalla, Stepper, Th, Vacio } from '../../comp'
+import { Cab, Chip, estilo, Ico, Pantalla, Stepper, Th, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useRutina } from '../../datos'
-import { abrevDia, filas, minutos, seriesPorGrupo, SS_EXPLICA, tituloDia } from './comun'
+import { abrevDia, filas, materialCorto, minutos, nombreEj, seriesPorGrupo, SS, SS_EXPLICA, tituloDia } from './comun'
 
 const RANGOS: [number, number][] = [[5, 8], [6, 10], [8, 12], [10, 15], [12, 20]]
 
@@ -21,6 +21,9 @@ export function EditarPlan({ ruta }: { ruta: Ruta }) {
   const aviso = useAviso()
   const r = useRutina()
   const [letra, setLetra] = useState<string>(String(ruta.d?.letra ?? 'A'))
+  // Ejercicios con «Más opciones» abierto (lo raro va plegado: a la vista solo nombre, series y cambiar).
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
+  const alternar = (uid: string) => setAbiertos(s => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n })
   // undefined = aún cargando: no enseñar «Aún no tienes rutina» durante un instante.
   if (r === undefined) return <Pantalla><Cab atras crumb="Mi plan" titulo="Editar plan" /><div className="cargando">Cargando…</div></Pantalla>
   if (!r) return <Pantalla><Cab atras crumb="Mi plan" titulo="Editar plan" /><div className="pg"><Vacio icono="clipboard-text" titulo="Aún no tienes rutina" accion="Crear mi rutina" onAccion={() => nav.ir('rut-gen')} /></div></Pantalla>
@@ -54,7 +57,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta }) {
   const deshacerSS = async (a: Bloque) => {
     const antes = structuredClone(r)
     await cambiar(bs => bs.map(x => (x.uid === a.uid || x.uid === a.superserie ? { ...x, superserie: undefined } : x)))
-    aviso('Superserie deshecha', () => void guardarRutina(antes))
+    aviso('Ya no van seguidos', () => void guardarRutina(antes))
   }
   const unirSiguiente = (b: Bloque) => cambiar(bs => {
     const i = bs.findIndex(x => x.uid === b.uid)
@@ -66,27 +69,44 @@ export function EditarPlan({ ruta }: { ruta: Ruta }) {
   const fila = (b: Bloque) => {
     const e = ejercicio(b.ejercicio)
     const rango = RANGOS.findIndex(([a, z]) => a === b.repsMin && z === b.repsMax)
+    const i = dia.bloques.findIndex(x => x.uid === b.uid)
+    const sig = dia.bloques[i + 1]
+    // Se puede juntar con el siguiente si ninguno de los dos va ya en pareja.
+    const puedeUnir = !!sig && !b.superserie && !sig.superserie
+    const abierta = abiertos.has(b.uid)
+    const tiempo = b.registro === 'tiempo'
     return (
       <div key={b.uid} className="edr card">
         <div className="row">
-          <span className="grip" style={{ flexDirection: 'column', display: 'flex', gap: 2 }}>
-            <button aria-label="Subir" onClick={() => mover(b.uid, -1)}><Ico n="caret-up" b /></button>
-            <button aria-label="Bajar" onClick={() => mover(b.uid, 1)}><Ico n="caret-down" b /></button>
-          </span>
           <Th ej={e} size="s" />
           <span className="tx">
-            <b>{e?.nombre}</b>
-            <small className="mono" onClick={() => { if (b.registro === 'tiempo') return; const [a, z] = RANGOS[(rango + 1) % RANGOS.length]!; void editar(b.uid, { repsMin: a, repsMax: z }) }}>{b.repsMin}-{b.repsMax} {b.registro === 'tiempo' ? 's' : 'reps'} · esfuerzo {b.rpe}/10 · descanso {duracion(b.descanso)}</small>
+            <b>{nombreEj(e)}</b>
+            {/* Las repeticiones, como chip con borde: se ve que se pueden tocar (cada toque pasa al siguiente rango). */}
+            {tiempo
+              ? <small className="mono">{b.repsMin}-{b.repsMax} s</small>
+              : <button type="button" className="chip ux-rut-reps" aria-label={`Repeticiones: ${b.repsMin} a ${b.repsMax}. Toca para cambiar`} onClick={() => { const [a, z] = RANGOS[(rango + 1) % RANGOS.length]!; void editar(b.uid, { repsMin: a, repsMax: z }) }}>{b.repsMin}-{b.repsMax} reps<Ico n="pencil-simple" /></button>}
+            {b.fueraEnCorta && <small className="ux-rut-prisa"><Ico n="scissors" /> Se quita si vas con prisa</small>}
           </span>
-          <Stepper className="sm mini" valor={b.series} paso={1} min={1} max={8} onCambio={v => editar(b.uid, { series: v })} etiqueta="Series" />
+          <Stepper className="sm mini ux-rut-ser" valor={b.series} paso={1} min={1} max={8} onCambio={v => editar(b.uid, { series: v })} etiqueta="Series" sufijo="series" />
         </div>
         <div className="edr-act">
-          <button className="lnk" onClick={() => nav.hoja('sheet-elegir', { modo: 'cambiar', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="swap" />Cambiar</button>
-          <button className="lnk" onClick={() => nav.hoja('sheet-elegir', { modo: 'alternativa', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="arrows-left-right" />Alternativas</button>
-          <button className="lnk" onClick={() => quitar(b)}><Ico n="trash" />Quitar</button>
-          <button className={cx('cutchip', b.fueraEnCorta && 'on')} onClick={() => editar(b.uid, { fueraEnCorta: !b.fueraEnCorta })}><Ico n="scissors" />Fuera si hay prisa</button>
+          <button className="lnk" onClick={() => nav.hoja('sheet-elegir', { modo: 'cambiar', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="swap" />Cambiar ejercicio</button>
+          <button className="lnk ux-rut-masbtn" aria-expanded={abierta} onClick={() => alternar(b.uid)}>Más opciones<Ico n={abierta ? 'caret-up' : 'caret-down'} /></button>
         </div>
-        {b.alternativas.length > 0 && <p className="small muted" style={{ padding: '0 0 8px 32px' }}>Alternativas: {b.alternativas.map(a => `${ejercicio(a)?.nombre} (${nombreMaterial(ejercicio(a)?.material ?? null).toLowerCase()})`).join(' → ')}</p>}
+        {abierta && (
+          <div className="ux-rut-mas">
+            <p className="small muted">Esfuerzo {b.rpe}/10 · descanso {duracion(b.descanso)}</p>
+            <div className="ux-rut-mas-acc">
+              <button className="chip" onClick={() => nav.hoja('sheet-elegir', { modo: 'alternativa', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="arrows-left-right" />Si está ocupado</button>
+              <Chip on={!!b.fueraEnCorta} ck onClick={() => void editar(b.uid, { fueraEnCorta: !b.fueraEnCorta })}><Ico n="scissors" />Fuera si hay prisa</Chip>
+              {puedeUnir && <button className="chip" onClick={() => void unirSiguiente(b)}><Ico n="link" />Dos seguidos (superserie)</button>}
+              {i > 0 && <button className="chip" onClick={() => void mover(b.uid, -1)}><Ico n="caret-up" />Subir</button>}
+              {i < dia.bloques.length - 1 && <button className="chip" onClick={() => void mover(b.uid, 1)}><Ico n="caret-down" />Bajar</button>}
+              <button className="chip" onClick={() => void quitar(b)}><Ico n="trash" />Quitar</button>
+            </div>
+            {b.alternativas.length > 0 && <p className="small muted mt8">Si está ocupado: {b.alternativas.map(a => `${nombreEj(a)} (${materialCorto(a).toLowerCase()})`).join(' → ')}</p>}
+          </div>
+        )}
       </div>
     )
   }
@@ -100,26 +120,19 @@ export function EditarPlan({ ruta }: { ruta: Ruta }) {
       </Cab>
       <div className="pg">
         <h2 className="h3">{tituloDia(dia)}{dia.opcional ? ' · opcional' : ''}{dia.dia != null && <span className="muted ux-rut-sub">{dia.nombre}</span>}</h2>
-        <p className="small muted mt4">~{minutos(dia)} min · con prisa ~{minutos(dia, true)} min · toca las repeticiones para cambiarlas.</p>
+        <p className="small muted mt4">~{minutos(dia)} min · con prisa ~{minutos(dia, true)} min</p>
         <div className="edl mt8">
           {filas(dia.bloques).map(f => Array.isArray(f) ? (
             <div key={f[0].uid} className="ssg">
-              <p className="ss-head"><Ico n="link" b />Superserie · {SS_EXPLICA}<button className="lnk" onClick={() => deshacerSS(f[0])}>Deshacer</button></p>
+              <p className="ss-head"><Ico n="link" b />{SS} (superserie) · {SS_EXPLICA}<button className="lnk" onClick={() => deshacerSS(f[0])}>Separar</button></p>
               <div className="edl">{fila(f[0])}{fila(f[1])}</div>
             </div>
-          ) : (
-            <div key={f.uid}>
-              {fila(f)}
-              {dia.bloques.indexOf(f) < dia.bloques.length - 1 && !dia.bloques[dia.bloques.indexOf(f) + 1]?.superserie && (
-                <button className="lnk" style={{ margin: '2px 0 0 32px', fontSize: 13 }} onClick={() => unirSiguiente(f)}><Ico n="link" />Hacer seguido del siguiente (superserie)</button>
-              )}
-            </div>
-          ))}
+          ) : fila(f))}
         </div>
         <button className="more" onClick={() => nav.hoja('sheet-elegir', { modo: 'anadir', letra: dia.letra })}><Ico n="plus" b />Añadir ejercicio</button>
         <p className="note mt16"><Ico n="info" /><span>Los cambios se guardan solos. Tu historial no se toca.</span></p>
 
-        {/* Lo raro, plegado. El reparto por músculo no se enseña en la semana de calibración: asusta sin motivo. */}
+        {/* Lo raro, plegado. El reparto por músculo no se enseña en la semana de prueba: asusta sin motivo. */}
         {!r.calibracion && (
           <details className="fold mt16">
             <summary><Ico n="chart-bar" className="blue" />Ver detalle: series por músculo<Ico n="caret-down" /></summary>

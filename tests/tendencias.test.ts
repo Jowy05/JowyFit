@@ -3,7 +3,7 @@ import type { Comida, EjercicioSesion, Medicion, Serie, Sesion, TipoRegistro } f
 import {
   datosQuincena, ejerciciosHechos, esDominadaAsistida, esDominadaEstricta, esDominadaNegativa, evolucion, faltaMeta, grasaPorMedidas,
   hitosDominadas, logros, mediasSemanales, mejor1RM, pasosEquivalentes, pendienteSemanal, pesoMaximo, progresoMeta, puntosSpark,
-  recordsEn, repsMaximas, serieMedida, seriesPorGrupo, subidas, ultimoValor,
+  recordsEn, repsMaximas, serieMedida, seriesPorGrupo, nivelSeries, subidas, ultimoValor,
 } from '../src/dominio/tendencias'
 
 const serie = (peso: number | null, reps: number, extra: Partial<Serie> = {}): Serie => ({ n: 1, peso, reps, rpe: 8, calentamiento: false, hecha: true, ...extra })
@@ -76,6 +76,15 @@ describe('series y ejercicios', () => {
     expect(g.find(x => x.n === 'Pecho')!.v).toBe(2)
     expect(g.find(x => x.n === 'Brazos')!.v).toBe(1)
     expect(g.find(x => x.n === 'Piernas')!.v).toBe(0)
+    expect(g.map(x => x.n)).toContain('Abdomen')
+  })
+
+  it('palabra para las series de un grupo', () => {
+    expect(nivelSeries(0, [8, 16])).toBe('poco')
+    expect(nivelSeries(7, [8, 16])).toBe('poco')
+    expect(nivelSeries(8, [8, 16])).toBe('bien')
+    expect(nivelSeries(16, [8, 16])).toBe('bien')
+    expect(nivelSeries(17, [8, 16])).toBe('mucho')
   })
 })
 

@@ -34,3 +34,13 @@ describe('pesos de referencia del perfil', () => {
     }
   })
 })
+
+describe('nombres como en el gimnasio', () => {
+  it('«Cable» pasa a «Polea» y «Barra EZ» a «Barra Z», sin tocar otras palabras', async () => {
+    const { nombreComun } = await import('../src/catalogo/catalogo')
+    expect(nombreComun('Jalón de Tríceps en Cable')).toBe('Jalón de Tríceps en Polea')
+    expect(nombreComun('Cruce con Cable')).toBe('Cruce en Polea')
+    expect(nombreComun('Curl con Barra EZ')).toBe('Curl con Barra Z')
+    expect(nombreComun('Cables y Cablea')).toBe('Cables y Cablea')
+  })
+})

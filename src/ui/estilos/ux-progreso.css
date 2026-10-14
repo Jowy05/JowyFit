@@ -39,3 +39,17 @@
 
 /* Perfil: el objetivo en la cabecera puede ser largo («Perder grasa y ganar músculo»). */
 .prof .tag{white-space:normal;height:auto;min-height:22px;padding:3px 7px;line-height:1.2}
+
+/* Registrar medidas: dibujo pequeño (solo la parte que se mide), para que «Guardar» no quede tan abajo. */
+.reg-medir{padding:8px 12px;gap:12px}
+.reg-medir .sil-fig{width:52px;height:65px}
+.reg-medir .measure-key p{margin-bottom:0}
+.fold .fold{margin-left:0;margin-right:0}
+
+/* Fuerza → Por ejercicio: los ejercicios en varias filas; un nombre largo parte en dos líneas. */
+.fza-chips{align-items:center}
+.fza-chips .chip{max-width:100%;white-space:normal;text-align:left;line-height:1.2;padding-top:6px;padding-bottom:6px}
+
+/* Fuerza → Series por grupo: número y palabra («poco», «bien», «mucho»). */
+.hbars.fza-grupos>div{grid-template-columns:72px minmax(0,1fr) 22px 58px;gap:8px}
+.fza-grupos .tag{justify-content:center;height:20px;font-size:10.5px}

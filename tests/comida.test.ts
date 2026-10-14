@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, franjaPorHora, leerOFF, ordenarPlantillas, picoteoDeSemana, porRacion } from '../src/dominio/comida'
+import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, ordenarPlantillas, picoteoDeSemana, porRacion } from '../src/dominio/comida'
 import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
 import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
 
@@ -117,5 +117,26 @@ describe('lo de ayer y recientes', () => {
     ]
     expect(recientes(cs, '2026-10-14', [{ nombre: 'Yogur' }]).map(x => x.nombre)).toEqual(['menú del día ', 'Pizza'])
     expect(recientes(cs, '2026-10-14', [], 1)).toHaveLength(1)
+  })
+})
+
+describe('nota rápida y Mis comidas', () => {
+  it('rellena kcal y proteína según el tamaño y la franja', () => {
+    expect(notaPorTamano('normal', 'comida')).toEqual({ kcal: 600, proteina: 25 })
+    expect(notaPorTamano('ligera', 'cena')).toEqual({ kcal: 350, proteina: 15 })
+    expect(notaPorTamano('abundante', 'comida')).toEqual({ kcal: 900, proteina: 35 })
+    // Desayuno y merienda, más pequeños.
+    expect(notaPorTamano('normal', 'desayuno').kcal).toBeLessThan(notaPorTamano('normal', 'comida').kcal)
+    expect(notaPorTamano('ligera', 'merienda').kcal).toBeLessThan(notaPorTamano('normal', 'merienda').kcal)
+    expect(notaPorTamano('normal', 'merienda').kcal).toBeLessThan(notaPorTamano('abundante', 'merienda').kcal)
+  })
+  it('raciones y franjas con palabras', () => {
+    expect(Object.values(NOMBRE_RACION)).toEqual(['Pequeña', 'Normal', 'Grande'])
+    expect(FRANJAS.find(f => f.v === 'merienda')!.t).toBe('Merienda')
+  })
+  it('no repite los escaneados que ya están en Mis comidas', () => {
+    const ps = [{ codigo: '1' }, { codigo: '2' }, { codigo: '3' }]
+    expect(escaneadosSueltos(ps, [{ codigo: '2' }, {}]).map(p => p.codigo)).toEqual(['1', '3'])
+    expect(escaneadosSueltos(ps, [])).toHaveLength(3)
   })
 })

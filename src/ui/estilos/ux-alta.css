@@ -1,0 +1,32 @@
+/* Ajustes de usabilidad: zona alta. */
+
+/* Bienvenida: botón «Aa Letra grande» (activa la letra grande al momento). */
+.btn.alta-letra{font-weight:600}
+.btn.alta-letra .alta-aa{font:700 22px/1 var(--font-display);letter-spacing:-.02em}
+.btn.alta-letra.on{background:var(--blue-t);color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+
+/* Pie de los pasos: aviso de lo que falta encima de «Atrás / Siguiente». */
+.alt-foot.alta-pie{flex-direction:column}
+.alta-botones{display:flex;gap:8px;width:100%}
+.alta-aviso{font-size:15px}
+.alta-aviso>i{color:var(--warn)}
+
+/* Campo que falta o está mal (solo tras pulsar «Siguiente»). */
+.alta-falta>.lbl,.alta-falta .lbl{color:var(--bad)}
+.alta-falta .inp,.alta-falta .chip{border-color:var(--bad)}
+
+/* Altura y peso: número con su unidad al lado. */
+.alta-unid{position:relative;display:block}
+.alta-unid .inp{padding-right:44px;font-size:18px;font-weight:600}
+.alta-unid>span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none}
+
+/* Objetivo: «Zonas a priorizar (opcional)» separado de las tarjetas. */
+.alta-sep{margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+
+/* Rutina lista: el primer entreno, destacado. */
+.alta-primero{font-size:16.5px;line-height:1.35;align-items:center}
+.alta-primero>i{font-size:24px}
+.alta-primero b{font-weight:700}
+
+/* Fecha con tres desplegables */
+.fecha-facil{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:8px}

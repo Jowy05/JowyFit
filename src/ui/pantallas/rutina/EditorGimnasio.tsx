@@ -72,7 +72,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta }) {
           </div>
         )}
         <PesosGimnasio g={g} onCambio={cambia} />
-        <button className="btn ln sm mt20" onClick={async () => { await db.gimnasios.put(g); nav.hoja('sheet-maq', { gym: g.id }) }}><Ico n="plus" b />Máquina propia</button>
+        <button className="btn ln sm mt20" onClick={async () => { await db.gimnasios.put(g); nav.hoja('sheet-maq', { gym: g.id }) }}><Ico n="plus" b />Añadir una máquina que no sale</button>
         {lista.length > 1 && <button className="btn bad sm mt8" onClick={borrar}><Ico n="trash" />Borrar gimnasio</button>}
         <div className="dock">
           <div className="result card">

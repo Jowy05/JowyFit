@@ -1,0 +1,37 @@
+/* Ajustes de usabilidad: zona rutina. */
+
+/* Día de la semana abreviado (Mar, Jue…) en el cuadrado donde antes iba la letra sola. */
+.dl.ux-rut-dl{font-size:13px;letter-spacing:.02em}
+.prev-d .dl.ux-rut-dl{font-size:11.5px}
+
+/* Valores largos en palabras («Martes, jueves y viernes») pueden partirse. */
+.spec b.ux-rut-wrap{white-space:normal;text-align:right}
+
+/* Leyenda «3 × 6-10 = …» bajo la lista del día de hoy. */
+.ux-rut-leyenda{padding:7px 0 4px;border-top:1px solid var(--line)}
+
+/* «Empezar otro día»: los días en palabras, debajo del título y con salto de línea. */
+.it .tx .chips.ux-rut-otro{margin-top:10px;gap:6px}
+.it .tx .chips.ux-rut-otro .chip{padding:0 12px}
+
+/* Editar plan: nombre del entreno junto al día. */
+.ux-rut-sub{font:400 14px var(--font-body);margin-left:4px}
+
+/* «Editar» con texto en la cabecera del detalle del día. */
+.hd-bar .lnk.ux-rut-edit{margin:0 8px 0 0;padding:12px 4px;font-size:15px}
+
+/* Detalle del día: «Descanso» entero en la tira de cuatro datos. */
+.exc .strip .lbl{letter-spacing:.03em}
+
+/* Ficha: qué trabaja, en una frase. */
+.ux-rut-trabaja{font-size:15px;line-height:1.4}
+.ux-rut-trabaja b{font-weight:600}
+
+/* Biblioteca: «Quitar filtros» junto al recuento. */
+.count .lnk{margin:-12px 0}
+
+/* Gimnasios: frase de arriba. */
+.ux-rut-intro{margin-bottom:12px}
+
+/* Ficha: «En tu plan» encima del progreso. */
+.ux-rut-plan{margin-bottom:8px}

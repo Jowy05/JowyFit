@@ -9,7 +9,7 @@ export async function pendientesDeHoy(p: Perfil, hoy: string): Promise<Pendiente
   const out: Pendiente[] = []
   const mediciones = await db.mediciones.toArray()
   if (p.diasPesaje.includes(diaSemana(deISO(hoy))) && !mediciones.some(m => m.fecha.startsWith(hoy) && m.pesoKg != null)) {
-    out.push({ id: 'peso', titulo: 'Toca pesarse', detalle: 'En ayunas y después del baño', icono: 'scales', accion: 'peso' })
+    out.push({ id: 'peso', titulo: 'Toca pesarse', detalle: 'Mejor por la mañana, en ayunas', icono: 'scales', accion: 'peso' })
   }
   const tomados = (await db.suplementos.get(hoy))?.tomados ?? []
   for (const s of p.suplementos) {

@@ -3,14 +3,16 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { guardarAjustes } from '../../../datos/repos'
-import { objetivosEnergia, sugerenciasDia, totalesComida } from '../../../datos/consultas'
+import { objetivosEnergia, sesionesHechas, sugerenciasDia, totalesComida } from '../../../datos/consultas'
 import type { DiaRutina, Rutina, Sesion } from '../../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../../catalogo/catalogo'
 import { indiceActual } from '../../../dominio/sesion'
-import { DIAS, DIAS_CORTOS, deISO, diaSemana, fechaCorta, formatoHora, hoyISO, lunesDe, numeroSemana, saludo, semanaDe, sumarDias, MESES_CORTOS } from '../../../dominio/fechas'
+import { DIAS, DIAS_CORTOS, deISO, diaSemana, diasEntre, fechaCorta, formatoHora, hoyISO, lunesDe, numeroSemana, saludo, semanaDe, sumarDias, MESES_CORTOS } from '../../../dominio/fechas'
 import { propuestaDescarga } from '../../../dominio/descarga'
 import { duracionDia } from '../../../dominio/generador'
 import { estadoSemana, racha, tarjetaHoy, type EstadoDia } from '../../../dominio/semana'
+import { resumenSemana } from '../../../dominio/resumen'
+import { recordsEn, subidas } from '../../../dominio/tendencias'
 import { kg, num } from '../../../dominio/calculos'
 import type { Sugerencia } from '../../../dominio/progresion'
 import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, Th } from '../../comp'
@@ -89,6 +91,8 @@ export function Inicio() {
           <TarjetaHoy t={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre} />
         </Seccion>
 
+        <PrimerosPasos t={tarjeta} />
+
         <Seccion titulo="Hoy en números" accion="Comida" onAccion={() => nav.pestana('com')}>
           <div className="grid2">
             <div className="card kpi span2">
@@ -101,10 +105,10 @@ export function Inicio() {
             </div>
             {ajustes.mostrarKcal && (
               <div className="card kpi">
-                <span className="lbl">Kcal</span>
+                <span className="lbl">Calorías</span>
                 <p className="k">{Math.round(tot.kcal)}<small>/ ~{energia?.kcal ?? '—'}</small></p>
                 <div className="mt8"><Barra v={tot.kcal} total={energia?.kcal ?? 1} /></div>
-                <p className="d">orientativo</p>
+                <p className="d">kcal · orientativo</p>
               </div>
             )}
             <button className={cx('card kpi steps', !ajustes.mostrarKcal && 'span2')} onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>
@@ -130,9 +134,9 @@ export function Inicio() {
         <Pendientes />
 
         <div className="sec">
-          <div className="grid4 qa-row">
-            <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy })}><Ico n="fork-knife" /><span>+ Comida</span></button>
-            <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy, modo: 'picoteo' })}><Ico n="cookie" /><span>+ Picoteo / bebida</span></button>
+          {/* Comida y picoteo abrían la misma hoja: un solo botón (no hay que decidir si un café es comida o picoteo). */}
+          <div className="qa-row ux-qa3">
+            <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy })}><Ico n="fork-knife" /><span>+ Comer o beber</span></button>
             <button className="qa" onClick={() => nav.ir('com-scan', undefined, 'com')}><Ico n="barcode" /><span>Escanear</span></button>
             <button className="qa" onClick={() => nav.hoja('sheet-peso')}><Ico n="scales" /><span>+ Peso</span></button>
           </div>
@@ -140,15 +144,7 @@ export function Inicio() {
 
         <TuProgreso rutina={rutina ?? null} />
 
-        {diaSemana(d) === 6 && (
-          <Seccion titulo="¿Voy bien?" extra={<span className="lbl">Revisión del domingo</span>}>
-            <button className="card pd sem-card" onClick={() => nav.pestana('pro')}>
-              <span className="lamp ok"><Ico n="check" b /></span>
-              <span className="tx"><b>Tu semana, en 10 segundos</b><small>Cintura, fuerza, entrenos y proteína</small></span>
-              <Ico n="caret-right" className="car" />
-            </button>
-          </Seccion>
-        )}
+        {diaSemana(d) === 6 && <VoyBien rutina={rutina ?? null} />}
         {ajustes.ultimaCopia == null || Date.now() - new Date(ajustes.ultimaCopia).getTime() > 8 * 86400000 ? (
           <div className="sec">
             <button className="note warn w100" style={{ textAlign: 'left' }} onClick={() => nav.ir('aju', { seccion: 'datos' })}>
@@ -174,13 +170,17 @@ function FilasDia({ dia, sug }: { dia: DiaRutina; sug?: Map<string, Sugerencia> 
     const e = ejercicio(b.ejercicio)
     const s = sug?.get(b.ejercicio)
     const s2 = comp ? sug?.get(comp.ejercicio) : undefined
-    const pesoTxt = (x?: Sugerencia) => (x?.peso != null ? kg(x.peso) : '—')
+    // Sin peso todavía (o con el de partida que propone la app): «nuevo», en vez de un «—» que parecía un error.
+    const nuevo = (x?: Sugerencia) => !!x && (x.partida === true || (x.accion === 'primera' && x.peso == null))
+    const pesoTxt = (x?: Sugerencia) => (!x ? '' : nuevo(x) ? 'nuevo' : x.peso != null ? kg(x.peso) : x.reps != null ? `${x.reps}${b.registro === 'tiempo' ? ' s' : ' reps'}` : '')
     filas.push(
       <div key={b.uid} className={cx('exr', s?.accion === 'subir' && 'hot')}>
         {comp ? <span className="th xs c-br"><Ico n="link" b /></span> : <Th ej={e} size="xs" />}
         <span className="tx ellip">{comp ? `Superserie: ${e?.nombre.split(' ')[0]} + ${ejercicio(comp.ejercicio)?.nombre.split(' ')[0]}` : e?.nombre}</span>
         <span className="sr">{b.series} × {b.repsMin}-{b.repsMax}</span>
-        <b className="kg">{comp ? `${pesoTxt(s)} · ${pesoTxt(s2)}` : s?.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : '—'}</b>
+        <b className={cx('kg', (comp ? nuevo(s) && nuevo(s2) : nuevo(s)) && 'ux-nuevo')}>
+          {comp ? (nuevo(s) && nuevo(s2) ? 'nuevo' : `${pesoTxt(s)} · ${pesoTxt(s2)}`) : s && !nuevo(s) && s.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : pesoTxt(s)}
+        </b>
       </div>,
     )
   }
@@ -230,20 +230,20 @@ function TarjetaHoy({ t, rutina, enCurso, gym }: { t: ReturnType<typeof tarjetaH
     const d = t.dia
     return (
       <div className="card today">
-        {rutina?.calibracion && <div className="calib"><Ico n="gauge" /><span><b>Semana de calibración.</b> Pesos cómodos: estamos midiendo tus tiempos.</span></div>}
+        {rutina?.calibracion && <div className="calib"><Ico n="gauge" /><span><b>Semana de prueba.</b> Pesos cómodos: así medimos cuánto tardas y ajustamos tu rutina.</span></div>}
         <div className="today-hero">
           <Ico n="barbell" className="today-bg" />
           <div className="row"><span className="tag go">Día {d.letra}</span><span className="tag">{capital(DIAS[diaSemana(new Date())]!)} · {formatoHora(perfil.horaEntreno)}</span></div>
           <h3>{d.nombre}</h3>
           <p className="today-meta">
-            <span><Ico n="clock" />~{Math.round(duracionDia(d.bloques) / 60)} min · corta ~{Math.round(duracionDia(d.bloques, true) / 60)}</span>
+            <span><Ico n="clock" />~{Math.round(duracionDia(d.bloques) / 60)} min</span>
             {gym && <span><Ico n="map-pin" />{gym}</span>}
           </p>
         </div>
         <FilasDia dia={d} sug={sug} />
         <div className="pd today-act">
+          {/* La versión corta se elige en la hoja «Empezar» (antes también estaba aquí: la misma pregunta dos veces). */}
           <button className="btn xl" onClick={() => empezar('normal')}><Ico n="play" b />Empezar rutina</button>
-          <button className="btn gry sm" onClick={() => empezar('corta')}>Versión corta · ~{Math.round(duracionDia(d.bloques, true) / 60)} min</button>
         </div>
       </div>
     )
@@ -306,7 +306,7 @@ function TarjetaHoy({ t, rutina, enCurso, gym }: { t: ReturnType<typeof tarjetaH
       {prox?.dia && (
         <div className="spec mt12">
           <p><span>{capital(DIAS[diaSemana(deISO(prox.fecha))]!)} {fechaCorta(prox.fecha)}</span><b>{prox.dia.nombre}</b></p>
-          <p><span>Duración</span><b>~{Math.round(duracionDia(prox.dia.bloques) / 60)} min · corta ~{Math.round(duracionDia(prox.dia.bloques, true) / 60)}</b></p>
+          <p><span>Duración</span><b>~{Math.round(duracionDia(prox.dia.bloques) / 60)} min</b></p>
         </div>
       )}
       <button className="btn gry sm mt12" onClick={() => nav.pestana('rut')}>Ver mi plan</button>
@@ -442,6 +442,105 @@ function TuProgreso({ rutina }: { rutina: Rutina | null }) {
       <div className="rot">
         <button className="card rot-it on" key={it.k} onClick={it.ir} style={{ textAlign: 'left' }}>{it.el}</button>
       </div>
+    </Seccion>
+  )
+}
+
+/** «¿Voy bien?» del domingo con el semáforo de verdad (antes salía siempre un check verde). */
+function VoyBien({ rutina }: { rutina: Rutina | null }) {
+  const nav = useNav()
+  const perfil = usePerfil()
+  const hoy = hoyISO()
+  const r = useLiveQuery(async () => {
+    const dias = semanaDe(hoy)
+    const domingo = dias[6]!
+    const [sesiones, mediciones, comidas, pasos, energia] = await Promise.all([
+      sesionesHechas(),
+      db.mediciones.toArray(),
+      db.comidas.where('fecha').between(sumarDias(dias[0]!, -21), domingo, true, true).toArray(),
+      db.pasos.where('fecha').between(sumarDias(dias[0]!, -7), domingo, true, true).toArray(),
+      objetivosEnergia(perfil),
+    ])
+    const hayDatos = sesiones.some(s => dias.includes(s.fecha)) || mediciones.some(m => dias.includes(m.fecha.slice(0, 10)))
+      || comidas.some(c => dias.includes(c.fecha)) || pasos.some(p => dias.includes(p.fecha))
+    if (!hayDatos) return null
+    return resumenSemana({
+      hoy, sesiones, mediciones: mediciones.filter(m => m.fecha.slice(0, 10) <= domingo), comidas, pasos,
+      fijos: rutina ? rutina.dias.filter(x => !x.opcional).length : perfil.diasFijos.length,
+      objetivoProteina: energia.proteina, objetivoPasos: perfil.pasosObjetivo,
+      recordsSemana: recordsEn(sesiones, dias),
+      subidasSemana: new Set(subidas(sesiones).filter(x => dias.includes(x.fecha)).map(x => x.ejercicio)).size,
+      esperados: perfil.diasFijos.filter(x => x <= diaSemana(deISO(hoy))).length,
+    })
+  }, [hoy, rutina, perfil])
+  if (r === undefined) return null
+  const tono = !r ? 'ux-nada' : r.semaforo === 'verde' ? 'ok' : r.semaforo === 'ambar' ? 'ux-warn' : 'ux-bad'
+  const icono = !r ? 'chart-line-up' : r.semaforo === 'verde' ? 'check' : r.semaforo === 'ambar' ? 'minus' : 'x'
+  return (
+    <Seccion titulo="¿Voy bien?" extra={<span className="lbl">Revisión del domingo</span>}>
+      <button className="card pd sem-card" onClick={() => nav.pestana('pro')}>
+        <span className={cx('lamp', tono)}><Ico n={icono} b /></span>
+        <span className="tx">
+          <b>{r ? r.titulo : 'Tu semana aún está vacía'}</b>
+          <small>{r ? r.frase : 'Entrena, pésate o apunta comidas y aquí verás si vas bien'}</small>
+        </span>
+        <Ico n="caret-right" className="car" />
+      </button>
+    </Seccion>
+  )
+}
+
+// ---------- Primeros pasos (para quien acaba de llegar; sin tutorial) ----------
+
+const CLAVE_PASOS = 'jf-primeros-pasos'
+type EstadoPasos = { cerrado?: boolean; progreso?: boolean }
+function leerPasos(): EstadoPasos {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE_PASOS) ?? '{}') as unknown
+    return v && typeof v === 'object' ? (v as EstadoPasos) : {}
+  } catch { return {} }
+}
+function guardarPasos(e: EstadoPasos) {
+  try { localStorage.setItem(CLAVE_PASOS, JSON.stringify(e)) } catch { /* sin almacenamiento: vale solo para esta visita */ }
+}
+
+/** 4 pasos que se marcan solos al hacerlos. Desaparece al completarlos o con «Ya lo sé». Solo las primeras semanas. */
+function PrimerosPasos({ t }: { t: ReturnType<typeof tarjetaHoy> }) {
+  const nav = useNav()
+  const ajustes = useAjustes()
+  const hoy = hoyISO()
+  const [estado, setEstado] = useState<EstadoPasos>(leerPasos)
+  const hechos = useLiveQuery(async () => {
+    const [entrenos, mediciones, comidas] = await Promise.all([db.sesiones.where('estado').equals('hecha').count(), db.mediciones.toArray(), db.comidas.count()])
+    // El peso del alta se guarda como «manual»: el paso se marca al apuntarlo otra vez.
+    const pesos = mediciones.filter(m => m.pesoKg != null)
+    return { entreno: entrenos > 0, peso: pesos.length >= 2 || pesos.some(m => m.origen !== 'manual'), comida: comidas > 0 }
+  }, [])
+  const cambiar = (e: EstadoPasos) => { guardarPasos(e); setEstado(e) }
+  // Solo para quien acaba de llegar: quien ya lleva tiempo con la app no lo ve.
+  const reciente = !ajustes.inicio || diasEntre(ajustes.inicio, hoy) <= 28
+  if (!hechos || estado.cerrado || !reciente) return null
+  const dia = t.tipo === 'hoy' || t.tipo === 'opcional' ? t.dia : null
+  const pasos = [
+    { id: 'entreno', titulo: 'Haz tu primer entreno', hecho: hechos.entreno, ir: () => (dia ? nav.hoja('sheet-ses1', { letra: dia.letra, version: 'normal' }) : nav.pestana('rut')) },
+    { id: 'peso', titulo: 'Apunta tu peso', hecho: hechos.peso, ir: () => nav.hoja('sheet-peso') },
+    { id: 'comida', titulo: 'Apunta una comida', hecho: hechos.comida, ir: () => nav.hoja('sheet-add', { fecha: hoy }) },
+    { id: 'progreso', titulo: 'Mira tu semana en Progreso', hecho: !!estado.progreso, ir: () => { cambiar({ ...estado, progreso: true }); nav.pestana('pro') } },
+  ]
+  const n = pasos.filter(p => p.hecho).length
+  if (n === pasos.length) return null
+  return (
+    <Seccion titulo="Primeros pasos" extra={<button className="lnk" onClick={() => cambiar({ ...estado, cerrado: true })}>Ya lo sé</button>}>
+      <div className="list">
+        {pasos.map(p => (
+          <button key={p.id} className={cx('it todo', p.hecho && 'done')} onClick={p.ir}>
+            <span className="box"><Ico n="check" b /></span>
+            <span className="tx"><b>{p.titulo}</b></span>
+            <Ico n="caret-right" className="car" />
+          </button>
+        ))}
+      </div>
+      <p className="small muted mt8">{n} de {pasos.length} hechos</p>
     </Seccion>
   )
 }

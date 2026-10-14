@@ -25,17 +25,18 @@ export const REFERENCIAS: { k: string; t: string }[] = [
 
 export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento'
 
-export const SECCIONES: { s: ClaveSeccion; t: string; ico: string }[] = [
+/** Secciones del perfil. Las `mas: true` salen plegadas en «Más secciones»: se tocan poco. */
+export const SECCIONES: { s: ClaveSeccion; t: string; ico: string; mas?: boolean }[] = [
   { s: 'datos', t: 'Datos personales', ico: 'identification-card' },
-  { s: 'cuerpo', t: 'Cuerpo y composición', ico: 'ruler' },
+  { s: 'cuerpo', t: 'Peso y medidas', ico: 'ruler' },
   { s: 'objetivos', t: 'Objetivos', ico: 'target' },
-  { s: 'salud', t: 'Salud', ico: 'first-aid' },
-  { s: 'experiencia', t: 'Experiencia', ico: 'medal' },
-  { s: 'preferencias', t: 'Preferencias de entreno', ico: 'sliders-horizontal' },
   { s: 'horario', t: 'Horario', ico: 'calendar-blank' },
-  { s: 'alimentacion', t: 'Alimentación y suplementos', ico: 'fork-knife' },
-  { s: 'vida', t: 'Estilo de vida', ico: 'armchair' },
-  { s: 'seguimiento', t: 'Seguimiento', ico: 'chart-line-up' },
+  { s: 'salud', t: 'Salud y molestias', ico: 'first-aid' },
+  { s: 'preferencias', t: 'Preferencias de entreno', ico: 'sliders-horizontal' },
+  { s: 'experiencia', t: 'Tu nivel', ico: 'medal', mas: true },
+  { s: 'seguimiento', t: 'Pesarte y fotos', ico: 'chart-line-up', mas: true },
+  { s: 'alimentacion', t: 'Suplementos', ico: 'fork-knife', mas: true },
+  { s: 'vida', t: 'Tu trabajo', ico: 'armchair', mas: true },
 ]
 
 const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)

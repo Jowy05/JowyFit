@@ -3,10 +3,10 @@ import { useState, type ReactElement } from 'react'
 import { db } from '../../../datos/db'
 import { ejercicio, imagen } from '../../../catalogo/catalogo'
 import { BARRAS, calentamiento, discosPorLado, pesosBarra, pesosPara } from '../../../dominio/pesos'
-import { saltar } from '../../../dominio/sesion'
+import { anadirSerie, cambiarSerie, quitarSerie, saltar, serieActual } from '../../../dominio/sesion'
 import type { Serie, Sesion } from '../../../datos/tipos'
 import { kg, num } from '../../../dominio/calculos'
-import { Chip, cx, Hoja, Ico, Stepper } from '../../comp'
+import { Chip, cx, Hoja, Ico, Interruptor, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useSesionEnCurso } from '../../datos'
@@ -22,15 +22,42 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
   if (s === undefined) return <Hoja titulo="Herramientas"><p className="muted">Cargando…</p></Hoja>
   if (!s || !e || !ej) return <Hoja titulo="Herramientas"><p className="muted">No hay entreno en curso.</p></Hoja>
   const conBarra = !!ej.material && ej.material in BARRAS
+  // Lo que antes eran cuatro iconos sueltos en el panel (nota, calentamiento, +serie, −serie), aquí con texto.
+  const n = serieActual(e)
+  const serie = n >= 0 ? e.series[n] : undefined
+  const guardar = (x: Sesion) => db.sesiones.put(x)
+  const numSerie = serie && !serie.calentamiento ? e.series.filter(x => !x.calentamiento).indexOf(serie) + 1 : 0
   return (
-    <Hoja titulo="Herramientas" sub={ej.nombre}>
+    <Hoja titulo="Herramientas" sub={ej.nombre} className="tall">
+      {serie && (
+        <>
+          <p className="lbl fl">{serie.calentamiento ? 'Esta serie · calentamiento' : `Esta serie · la ${numSerie}.ª`}</p>
+          <div className="list">
+            <button className="it" onClick={() => nav.hoja('sheet-nota-serie', { idx, n })}><span className="ico"><Ico n="note-pencil" /></span><span className="tx"><b>Apuntar una nota</b><small>{serie.nota ? serie.nota : 'Una molestia, un mal agarre…'}</small></span><Ico n="caret-right" className="car" /></button>
+            <div className="it">
+              <span className="ico"><Ico n="thermometer-simple" /></span>
+              <span className="tx"><b>Es de calentamiento</b><small>Más ligera; no cuenta para tu progreso</small></span>
+              <Interruptor on={serie.calentamiento} etiqueta="Es de calentamiento" onCambio={async v => { await guardar(cambiarSerie(s, idx, n, { calentamiento: v })); aviso(v ? 'Marcada como calentamiento' : 'Ya no es calentamiento') }} />
+            </div>
+            <button className="it" onClick={async () => { await guardar(anadirSerie(s, idx)); nav.hoja(null); aviso('Serie añadida') }}><span className="ico"><Ico n="plus-square" /></span><span className="tx"><b>Añadir una serie</b></span></button>
+            <button className="it" onClick={async () => {
+              const antes = s
+              const nueva = quitarSerie(s, idx)
+              // Con una sola serie de trabajo no se quita nada.
+              if (nueva.ejercicios[idx]!.series.length === e.series.length) { aviso('Queda una sola serie: no se puede quitar'); return }
+              await guardar(nueva); nav.hoja(null); aviso('Serie quitada', () => void guardar(antes))
+            }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>Quitar una serie</b></span></button>
+          </div>
+        </>
+      )}
+      <p className={cx('lbl fl', serie && 'mt16')}>Este ejercicio</p>
       <div className="list">
-        {conBarra && <button className="it" onClick={() => nav.hoja('sheet-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>Calculadora de discos</b></span><Ico n="caret-right" className="car" /></button>}
-        {(e.registro === 'peso' || e.registro === 'mancuerna') && <button className="it" onClick={() => nav.hoja('sheet-cal', { idx })}><span className="ico"><Ico n="thermometer-simple" /></span><span className="tx"><b>Calentamiento sugerido</b></span><Ico n="caret-right" className="car" /></button>}
-        <button className="it" onClick={() => nav.hoja('sheet-instr', { id: ej.id })}><span className="ico"><Ico n="book-open" /></span><span className="tx"><b>Instrucciones</b></span><Ico n="caret-right" className="car" /></button>
+        <button className="it" onClick={() => nav.hoja('sheet-instr', { id: ej.id })}><span className="ico"><Ico n="book-open" /></span><span className="tx"><b>Cómo se hace</b><small>Dibujos y pasos</small></span><Ico n="caret-right" className="car" /></button>
+        {(e.registro === 'peso' || e.registro === 'mancuerna') && <button className="it" onClick={() => nav.hoja('sheet-cal', { idx })}><span className="ico"><Ico n="thermometer-simple" /></span><span className="tx"><b>Calentamiento sugerido</b><small>Series ligeras antes de empezar</small></span><Ico n="caret-right" className="car" /></button>}
+        {conBarra && <button className="it" onClick={() => nav.hoja('sheet-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>Calculadora de discos</b><small>Qué discos poner en la barra</small></span><Ico n="caret-right" className="car" /></button>}
         <button className="it" onClick={() => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>Historial del ejercicio</b><small>Abre la ficha (el entreno sigue)</small></span><Ico n="caret-right" className="car" /></button>
-        <button className="it" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx, id: e.ejercicio })}><span className="ico"><Ico n="swap" /></span><span className="tx"><b>Cambiar ejercicio</b></span><Ico n="caret-right" className="car" /></button>
-        <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso('Saltado: lo verás en la lista', () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>Saltarlo</b></span></button>
+        <button className="it" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx, id: e.ejercicio })}><span className="ico"><Ico n="swap" /></span><span className="tx"><b>Cambiar ejercicio</b><small>Por otro parecido</small></span><Ico n="caret-right" className="car" /></button>
+        <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso('Saltado: lo verás en la lista', () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>Saltarlo</b><small>Puedes recuperarlo desde la lista</small></span></button>
       </div>
     </Hoja>
   )

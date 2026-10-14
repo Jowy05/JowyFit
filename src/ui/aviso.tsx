@@ -15,6 +15,12 @@ export function ProveedorAviso({ children }: { children: ReactNode }) {
     temporizador.current = window.setTimeout(() => setAviso(null), deshacer ? 4500 : 2800)
   }, [])
   useEffect(() => () => window.clearTimeout(temporizador.current), [])
+  // Al cambiar de pestaña o de pantalla el aviso ya no viene a cuento: se cierra.
+  useEffect(() => {
+    const cerrar = () => setAviso(null)
+    window.addEventListener('jf-cerrar-aviso', cerrar)
+    return () => window.removeEventListener('jf-cerrar-aviso', cerrar)
+  }, [])
   return (
     <AvisoCtx.Provider value={mostrar}>
       {children}

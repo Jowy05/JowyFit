@@ -27,6 +27,9 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
       case 'borrar-sesion':
         await db.sesiones.delete(Number(d.id))
         nav.hoja(null); nav.atras(); aviso('Entreno borrado'); return
+      case 'terminar-entreno':
+        // Desde «Terminar» de la cabecera del entreno, con ejercicios aún sin hacer: al resumen (lo hecho se guarda allí).
+        nav.hoja(null); nav.completa('ses-fin', { id: Number(d.id) }); return
       case 'cancelar-entreno':
         await db.sesiones.delete(Number(d.id))
         // Si había un descanso en marcha, su notificación (9001) ya no tiene sentido.
@@ -52,7 +55,7 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
       {d.texto ? <p className="muted">{String(d.texto)}</p> : null}
       {d.peligro ? <p className="note bad mt12"><Ico n="warning" /><span>No se puede deshacer.</span></p> : null}
       <div className="btns mt16">
-        <button className="btn gry sm" onClick={() => nav.hoja(null)}>Cancelar</button>
+        <button className="btn gry sm" onClick={() => nav.hoja(null)}>{String(d.no ?? 'Cancelar')}</button>
         <button className={cx('btn sm', d.peligro ? 'badf' : '')} onClick={() => void hacer()}>{String(d.si ?? 'Sí')}</button>
       </div>
     </Hoja>

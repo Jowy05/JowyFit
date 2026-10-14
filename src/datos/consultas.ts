@@ -4,7 +4,7 @@ import type { Comida, DiaRutina, Gimnasio, Medicion, Perfil, Serie, Sesion } fro
 import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
-import { desdeReferencia, sugerir, type Sugerencia } from '../dominio/progresion'
+import { conPartida, desdeReferencia, sugerir, type Sugerencia } from '../dominio/progresion'
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
 import { edad, hoyISO } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
@@ -63,8 +63,12 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
   // Sin historial: si el perfil tiene un peso de referencia para este ejercicio, se parte de él.
   if (s.accion === 'primera' && reg === 'peso') {
     const refs = referencias ?? (await db.perfil.get('yo'))?.referencias
-    return desdeReferencia(id, refs, objetivo, lista) ?? s
+    const r = desdeReferencia(id, refs, objetivo, lista)
+    if (r) return r
   }
+  // Ni historial ni referencia: un peso de partida ligero que exista (barra vacía, mancuerna ligera, ~10 kg en máquina),
+  // para que «Hecho» funcione a la primera. Corporales, tiempo y asistidos siguen igual.
+  if (s.accion === 'primera') return conPartida(s, e?.material ?? null, reg, lista)
   return s
 }
 

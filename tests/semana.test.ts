@@ -23,3 +23,14 @@ describe('semana', () => {
     expect(s[3]!.estado).toBe('perdido')
   })
 })
+
+describe('semáforo de la semana', () => {
+  it('al día con los entrenos y sin nada en contra = verde, aunque falten datos', async () => {
+    const { resumenSemana } = await import('../src/dominio/resumen')
+    const sesion = { id: 1, fecha: '2026-10-13', rutinaId: 1, letra: 'A', nombre: 'A', gimnasioId: null, inicio: 0, version: 'normal', estado: 'hecha', calibracion: false, ejercicios: [] } as never
+    const r = resumenSemana({ hoy: '2026-10-14', sesiones: [sesion], fijos: 3, esperados: 1, mediciones: [], comidas: [], pasos: [], objetivoProteina: 135, objetivoPasos: 8000, recordsSemana: 0, subidasSemana: 0 })
+    expect(r.semaforo).toBe('verde')
+    const mal = resumenSemana({ hoy: '2026-10-16', sesiones: [], fijos: 3, esperados: 3, mediciones: [], comidas: [], pasos: [], objetivoProteina: 135, objetivoPasos: 8000, recordsSemana: 0, subidasSemana: 0 })
+    expect(mal.semaforo).not.toBe('verde')
+  })
+})

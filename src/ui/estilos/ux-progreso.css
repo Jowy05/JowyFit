@@ -1,0 +1,41 @@
+/* Ajustes de usabilidad: zona progreso (Progreso, Pasos, Perfil y Ajustes). */
+
+/* Etiqueta con una frase normal (no en mayúsculas): «Un poco por encima de lo saludable». */
+.tag.frase{text-transform:none;letter-spacing:0;font-size:12.5px;line-height:1.25;height:auto;min-height:22px;padding:3px 8px;white-space:normal;flex:0 1 auto}
+
+/* Semana: estado de cada tarjeta con palabra, no solo un icono. */
+.kpi .tag.est{height:20px;padding:0 6px;font-size:10.5px;letter-spacing:.05em;max-width:62%;overflow:hidden;text-overflow:ellipsis}
+.kpi .row.jb{gap:6px;flex-wrap:wrap}
+.kpi .k.pronto{font:700 20px/1.1 var(--font-display);white-space:normal}
+.sem .sem-d+.sem-d{margin-top:2px}
+
+/* Gráficas con menos de 2 datos: una frase en su lugar. */
+.chart-vacia{display:flex;align-items:center;gap:8px;padding:14px 12px;border:1px dashed var(--line);border-radius:8px;background:var(--raised)}
+.chart-vacia i{font-size:20px;flex:none}
+
+/* Fuerza: la frase que contesta «¿levanto más que al empezar?». */
+.fza-frase{font-weight:600;font-size:15.5px;line-height:1.35}
+
+/* Cuerpo: veredicto junto a cintura/altura. */
+.cuerpo-ver{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+
+/* Registrar medidas: lo tocado se marca con el borde, lo no tocado no se ve apagado. */
+.reg-campo.tocado .stp{box-shadow:0 0 0 2px var(--ok-t)}
+
+/* Pasos: el objetivo diario se toca para cambiarlo. */
+.pasos-obj{align-items:center;text-align:left;color:var(--ink);gap:8px}
+.pasos-obj .tx{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+
+/* Perfil: objetivo grande con kcal y proteína en una línea. */
+.per-obj .k{white-space:normal}
+.per-obj .per-y{font:500 15px var(--font-body);color:var(--muted);margin:0 8px}
+
+/* Ajustes: «Más ajustes» plegado y «Borrar todo» aparte, al final. */
+.aju-mas>summary .tx{display:flex;flex-direction:column;line-height:1.2;padding:8px 0}
+.aju-mas>summary .tx small{font-weight:400;font-size:13px;color:var(--muted)}
+.aju-mas>.in>.grp-t:first-child{margin-top:4px}
+.mt24{margin-top:24px}
+.aju-borrar{margin-top:40px}
+
+/* Perfil: el objetivo en la cabecera puede ser largo («Perder grasa y ganar músculo»). */
+.prof .tag{white-space:normal;height:auto;min-height:22px;padding:3px 7px;line-height:1.2}

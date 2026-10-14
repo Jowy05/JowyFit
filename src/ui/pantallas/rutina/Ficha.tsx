@@ -17,8 +17,9 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
+import { musculoComun, musculosComunes, tituloDia, zonaComun } from './comun'
 
-const REGISTRO_TXT = { peso: 'kg + reps', mancuerna: 'kg por mancuerna + reps', asistido: 'asistencia + reps', corporal: 'reps', tiempo: 'segundos', cardio: 'minutos' }
+const REGISTRO_TXT = { peso: 'kg y repeticiones', mancuerna: 'kg de cada mancuerna', asistido: 'kg de ayuda', corporal: 'repeticiones', tiempo: 'segundos', cardio: 'minutos' }
 
 export function Ficha({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -62,6 +63,8 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
   const reg = tipoRegistro(e)
   const alternativas = [...(enPlan?.b.alternativas ?? []).map(id => ({ id, t: '' })), ...relacionados(e, catalogoCargado()?.ejercicios ?? [], 8).map(x => ({ id: x.id, t: 'Otra' }))]
     .filter((x, i, a) => a.findIndex(y => y.id === x.id) === i).slice(0, 8)
+  const prin = musculosComunes(e.principales)
+  const secu = musculosComunes(e.secundarios).filter(x => !prin.includes(x))
   const peligro = (e.id === 'bench-press' || e.id === 'squat' || e.id.includes('barbell-bench') || e.id === 'incline-bench-press')
 
   const alEntreno = unaVez(async () => {
@@ -80,7 +83,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
     nueva.dias.find(d => d.letra === letra)!.bloques.push(bloqueNuevo(e.id, { perfil, ejercicios: catalogoCargado()?.ejercicios ?? [], gimnasio: g ?? null, marcas }))
     await guardarRutina(nueva)
     setAlPlan(false)
-    aviso(`Añadido al plan: día ${letra}`)
+    aviso(`Añadido a tu plan: ${tituloDia(nueva.dias.find(d => d.letra === letra)!).toLowerCase()}`)
   })
 
   return (
@@ -99,100 +102,86 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
         ))}
       </div>
       <div className="pg">
-        <p className="lbl">{etiqueta('body_part', e.zona)} · {etiqueta('mechanic', e.mecanica).toLowerCase()} · {nombreMaterial(e.material).toLowerCase()}</p>
+        <p className="lbl">{zonaComun(e.zona)} · {nombreMaterial(e.material).toLowerCase()}</p>
         <h1 className="ficha-t">{e.nombre}</h1>
         {e.descripcion && <p className="muted mt4">{e.descripcion}</p>}
-        <div className="chips mt8">
-          {e.principales.map(x => <span key={x} className="tag go">Principal · {nombreMusculo(x)}</span>)}
-          {e.secundarios.slice(0, 4).map(x => <span key={x} className="tag">{nombreMusculo(x)}</span>)}
-        </div>
+
+        {e.instrucciones.length > 0 && (
+          <div className="sec">
+            <div className="sec-h"><h2>Instrucciones</h2></div>
+            <ol className="steps">{e.instrucciones.map((t, i) => <li key={i}>{t}</li>)}</ol>
+            {peligro && <p className="note warn mt8"><Ico n="first-aid" /><span>Si entrenas solo: no llegues a no poder más y usa las barras de seguridad.</span></p>}
+          </div>
+        )}
 
         <div className="sec">
           <div className="sec-h"><h2>Músculos que trabaja</h2></div>
-          <div className="chips">
+          <p className="ux-rut-trabaja">Sobre todo <b>{prin.join(', ').toLowerCase()}</b>{secu.length > 0 ? <>; también {secu.join(', ').toLowerCase()}</> : null}.</p>
+          <div className="chips mt8">
             {[...e.principales.map(x => ({ x, p: true })), ...e.secundarios.map(x => ({ x, p: false }))].map(({ x, p }) => (
               <span key={x} className="pill-mus">
                 {imagenMusculo(x) ? <img className="mus-img" src={imagenMusculo(x)} alt="" loading="lazy" /> : <span className="ico"><Ico n="person-simple" /></span>}
-                <span><b>{nombreMusculo(x)}</b><small>{p ? 'Principal' : 'Secundario'}</small></span>
+                <span><b>{musculoComun(x)}</b><small>{nombreMusculo(x)} · {p ? 'principal' : 'secundario'}</small></span>
               </span>
             ))}
           </div>
-        </div>
-
-        <div className="sec">
-          <div className="sec-h"><h2>Ficha técnica</h2></div>
-          <div className="spec-box"><div className="spec c2">
-            <p><span>Material</span><b>{nombreMaterial(e.material)}</b></p>
-            <p><span>Dificultad</span><b>{etiqueta('difficulty', e.dificultad)}</b></p>
-            <p><span>Tipo</span><b>{etiqueta('mechanic', e.mecanica)}</b></p>
-            <p><span>Fuerza</span><b>{etiqueta('force_type', e.fuerza)}</b></p>
-            <p><span>Categoría</span><b>{etiqueta('category', e.categoria)}</b></p>
-            <p><span>Movimiento</span><b>{NOMBRE_PATRON[patron(e)]}</b></p>
-            <p><span>Registro</span><b>{REGISTRO_TXT[reg]}</b></p>
-            <p><span>Unilateral</span><b>{e.unilateral ? 'Sí' : 'No'}</b></p>
-            {e.met != null && <p><span>MET</span><b>{num(e.met)}</b></p>}
-            {e.objetivos.length > 0 && <p><span>Objetivos</span><b>{e.objetivos.map(o => etiqueta('goals', o)).join(', ')}</b></p>}
-            {enPlan && <>
-              <p><span>En tu plan</span><b>Día {enPlan.d.letra}</b></p>
-              <p><span>Objetivo</span><b>{enPlan.b.series} × {enPlan.b.repsMin}-{enPlan.b.repsMax}</b></p>
-              <p><span>Esfuerzo</span><b>{enPlan.b.rpe}/10</b></p>
-              <p><span>Descanso</span><b>{duracion(enPlan.b.descanso)}</b></p>
-            </>}
-          </div></div>
           {e.material && imagenMaterial(e.material) && (
-            <div className="it card mt8"><span className="mus-img" style={{ background: '#fff' }}><img src={imagenMaterial(e.material)} alt="" style={{ width: 44, height: 44, objectFit: 'contain' }} /></span><span className="tx"><b>{nombreMaterial(e.material)}</b><small>Material necesario</small></span></div>
+            <div className="it card mt8"><span className="mus-img" style={{ background: '#fff' }}><img src={imagenMaterial(e.material)} alt="" style={{ width: 44, height: 44, objectFit: 'contain' }} /></span><span className="tx"><b>{nombreMaterial(e.material)}</b><small>Lo que necesitas</small></span></div>
           )}
-          {e.etiquetas.length > 0 && <div className="chips mt8">{e.etiquetas.map(t => <span key={t} className="tag blue">{ETIQUETAS_ES[t] ?? t}</span>)}</div>}
         </div>
 
         <div className="sec">
-          <div className="sec-h"><h2>Mi progreso</h2><span className="lbl">{hist.length} sesi{hist.length === 1 ? 'ón' : 'ones'}</span></div>
+          <div className="sec-h"><h2>Mi progreso</h2><span className="lbl">{hist.length} {hist.length === 1 ? 'vez' : 'veces'}</span></div>
+          {enPlan && <p className="note ux-rut-plan"><Ico n="calendar-check" /><span><b>En tu plan:</b> {tituloDia(enPlan.d)} · {enPlan.b.series} series de {enPlan.b.repsMin} a {enPlan.b.repsMax}{enPlan.b.registro === 'tiempo' ? ' segundos' : ''} · descanso {duracion(enPlan.b.descanso)}</span></p>}
           {record ? (
             <div className="ach">
               <span className="tro"><Ico n="trophy" b /></span>
-              <span className="tx"><small className="au">Récord</small><b className="mono">{kg(record.peso)} kg × {record.reps}</b><small>1RM estimado {num(record.e1rm, 0)} kg</small></span>
+              <span className="tx"><small className="au">Tu mejor serie</small><b className="mono">{kg(record.peso)} kg × {record.reps}</b><small>Podrías con unos {num(record.e1rm, 0)} kg una sola vez</small></span>
               {primero && record.peso > primero.peso && <span className="end">+{kg(record.peso - primero.peso)} kg<br />desde el inicio</span>}
             </div>
-          ) : <p className="note plain"><Ico n="info" /><span>{reg === 'corporal' || reg === 'tiempo' ? 'Aquí verás tus mejores marcas cuando lo hagas.' : 'Aún no lo has hecho. La primera vez, elige un peso cómodo (esfuerzo 6-7).'}</span></p>}
+          ) : <p className="note plain"><Ico n="info" /><span>{reg === 'corporal' || reg === 'tiempo' ? 'Aquí verás tus mejores marcas cuando lo hagas.' : 'Aún no lo has hecho. La primera vez, elige un peso cómodo: que te sobren 3 o 4 repeticiones.'}</span></p>}
           {puntos.length > 0 && (
             <div className="card pd mt8">
               <div className="chips eq">
-                <Chip on={graf === 'peso'} onClick={() => setGraf('peso')}>Peso máx.</Chip>
-                <Chip on={graf === 'rm'} onClick={() => setGraf('rm')}>1RM est.</Chip>
-                <Chip on={graf === 'vol'} onClick={() => setGraf('vol')}>Volumen</Chip>
+                <Chip on={graf === 'peso'} onClick={() => setGraf('peso')}>Peso</Chip>
+                <Chip on={graf === 'rm'} onClick={() => setGraf('rm')}>Máx. estimado</Chip>
+                <Chip on={graf === 'vol'} onClick={() => setGraf('vol')}>Kilos totales</Chip>
               </div>
               <div className="mt12">
                 {graf === 'vol' ? <Barras puntos={puntos.map(p => ({ x: p.x, y: p.vol }))} /> : <Linea puntos={puntos.map(p => ({ x: p.x, y: graf === 'peso' ? p.peso : p.rm }))} />}
               </div>
-              {sug && sug.peso != null && <p className="nextload"><Ico n="trend-up" b /><span>Próxima carga sugerida: <b className="mono">{kg(sug.peso)} kg × {sug.reps}</b> · {sug.texto.toLowerCase()}</span></p>}
+              {sug && sug.peso != null && <p className="nextload"><Ico n="trend-up" b /><span>La próxima vez: <b className="mono">{kg(sug.peso)} kg × {sug.reps}</b> · {sug.texto.toLowerCase()}</span></p>}
             </div>
           )}
           {hist.length > 0 && (
-            <div className="spec-box mt8">
-              <div className="spec-h mt8"><span className="lbl">Historial por sesión</span><span className="lbl">Esf.</span></div>
-              <div className="spec hist">
-                {hist.slice(0, 8).map(h => {
-                  const tr = h.series.filter(s => !s.calentamiento)
-                  const rpe = Math.max(0, ...tr.map(s => s.rpe ?? 0))
-                  return (
-                    <p key={`${h.sesionId}-${h.inicio}`}>
-                      <span>{h.fecha === hoyISO() ? 'Hoy' : fechaCorta(h.fecha)}</span>
-                      <b>{tr.map(s => (s.peso != null ? `${kg(s.peso)}×${s.reps ?? s.segundos}` : `${s.reps ?? s.segundos}${reg === 'tiempo' ? 's' : ''}`)).join(' · ')} {tr.some(s => s.record) && <Ico n="trophy" b className="goldc" />}</b>
-                      <em>{rpe || '—'}</em>
-                    </p>
-                  )
-                })}
+            <details className="fold mt8">
+              <summary><Ico n="list-numbers" className="blue" />Ver cada día que lo hiciste<Ico n="caret-down" /></summary>
+              <div className="in">
+                <div className="spec-h mt8"><span className="lbl">Día · kg × repeticiones</span><span className="lbl">Esfuerzo</span></div>
+                <div className="spec hist">
+                  {hist.slice(0, 8).map(h => {
+                    const tr = h.series.filter(s => !s.calentamiento)
+                    const rpe = Math.max(0, ...tr.map(s => s.rpe ?? 0))
+                    return (
+                      <p key={`${h.sesionId}-${h.inicio}`}>
+                        <span>{h.fecha === hoyISO() ? 'Hoy' : fechaCorta(h.fecha)}</span>
+                        <b>{tr.map(s => (s.peso != null ? `${kg(s.peso)}×${s.reps ?? s.segundos}` : `${s.reps ?? s.segundos}${reg === 'tiempo' ? 's' : ''}`)).join(' · ')} {tr.some(s => s.record) && <Ico n="trophy" b className="goldc" />}</b>
+                        <em>{rpe || '—'}</em>
+                      </p>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            </details>
           )}
         </div>
 
         <div className="sec">
-          <div className="sec-h"><h2>Mis ajustes y notas</h2><button className="lnk" onClick={() => setEditar(v => !v)}><Ico n="pencil-simple" />{editar ? 'Listo' : 'Editar'}</button></div>
+          <div className="sec-h"><h2>Mis ajustes y notas</h2><button className="lnk" onClick={() => setEditar(v => !v)}><Ico n="pencil-simple" />{editar ? 'Listo' : 'Escribir'}</button></div>
           {editar ? (
             <div className="fields">
               <label><span className="lbl fl">Ajustes de máquina</span><input className="inp" defaultValue={m?.ajustes ?? ''} placeholder="Asiento 4 · respaldo 2 · agarre neutro" onBlur={ev => void marcar(e.id, { ajustes: ev.target.value })} /></label>
-              <label><span className="lbl fl">Notas de técnica</span><textarea className="inp" defaultValue={m?.notas ?? ''} placeholder="Escápulas atrás antes de bajar…" onBlur={ev => void marcar(e.id, { notas: ev.target.value })} /></label>
+              <label><span className="lbl fl">Notas para acordarte</span><textarea className="inp" defaultValue={m?.notas ?? ''} placeholder="Escápulas atrás antes de bajar…" onBlur={ev => void marcar(e.id, { notas: ev.target.value })} /></label>
             </div>
           ) : m?.ajustes || m?.notas ? (
             <div className="spec-box">
@@ -202,13 +191,6 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
           ) : <p className="small muted">Apunta aquí la altura del asiento, el agarre o lo que te sirva.</p>}
         </div>
 
-        {e.instrucciones.length > 0 && (
-          <div className="sec">
-            <div className="sec-h"><h2>Instrucciones</h2></div>
-            <ol className="steps">{e.instrucciones.map((t, i) => <li key={i}>{t}</li>)}</ol>
-            {peligro && <p className="note warn mt8"><Ico n="first-aid" /><span>Si entrenas solo: no vayas al fallo y usa las barras de seguridad.</span></p>}
-          </div>
-        )}
         {e.consejos.length > 0 && (
           <div className="sec">
             <div className="sec-h"><h2>Consejos</h2></div>
@@ -218,16 +200,16 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
 
         {alternativas.length > 0 && (
           <div className="sec">
-            <div className="sec-h"><h2>Alternativas y relacionados</h2><span className="lbl">Mismo músculo</span></div>
+            <div className="sec-h"><h2>Parecidos</h2><span className="lbl">Mismo músculo</span></div>
             <div className="hscroll">
               {alternativas.map((a, i) => {
                 const x = ejercicio(a.id)
                 if (!x) return null
-                const letra = enPlan && i < (enPlan.b.alternativas.length) ? 'BC'[i] : null
+                const deTuPlan = !!enPlan && i < enPlan.b.alternativas.length
                 return (
                   <button key={a.id} className="mini-ad" onClick={() => nav.ir('rut-ficha', { id: a.id })}>
                     <Th ej={x} size="l" />
-                    <span className={cx('tag', letra && 'blue')}>{letra ?? 'Otra'}</span>
+                    <span className={cx('tag', deTuPlan && 'blue')}>{deTuPlan ? 'Alternativa' : 'Parecido'}</span>
                     <b>{x.nombre}</b>
                     <small>{nombreMaterial(x.material)}</small>
                   </button>
@@ -238,6 +220,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
         )}
 
         <div className="sec">
+          <div className="sec-h"><h2>¿Qué te parece?</h2></div>
           <div className="chips eq">
             <Chip on={!!m?.favorito} onClick={() => void marcar(e.id, { favorito: !m?.favorito })}><Ico n="star" b />Favorito</Chip>
             <Chip on={!!m?.odiado} onClick={() => void marcar(e.id, { odiado: !m?.odiado })}><Ico n="prohibit" b />No me gusta</Chip>
@@ -245,14 +228,41 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
           </div>
           {(m?.odiado || m?.duele) && <p className="small muted mt8">No te lo propondremos en la rutina ni como alternativa.</p>}
           {alPlan && r ? (
-            <div className="chips mt8">{r.dias.map(d => <Chip key={d.letra} onClick={() => void anadirAlDia(d.letra)}>Día {d.letra}</Chip>)}<Chip onClick={() => setAlPlan(false)}>Cancelar</Chip></div>
+            <>
+              <p className="small muted mt12">¿A qué día lo añado?</p>
+              <div className="chips mt8">{r.dias.map(d => <Chip key={d.letra} onClick={() => void anadirAlDia(d.letra)}>{tituloDia(d)}</Chip>)}<Chip onClick={() => setAlPlan(false)}>Cancelar</Chip></div>
+            </>
           ) : (
-            <div className="btns mt8">
-              <button className="btn gry sm" onClick={() => (r ? setAlPlan(true) : aviso('Primero crea tu rutina'))}>Al plan</button>
-              <button className="btn sm" onClick={() => void alEntreno()}>Al entreno de hoy</button>
+            <div className="btns mt12">
+              <button className="btn gry sm" onClick={() => (r ? setAlPlan(true) : aviso('Primero crea tu rutina'))}><Ico n="plus" b />Añadir a mi plan</button>
+              {sesion?.id != null && <button className="btn sm" onClick={() => void alEntreno()}>Al entreno de ahora</button>}
             </div>
           )}
         </div>
+
+        {/* Datos raros del catálogo: plegados. */}
+        <details className="fold mt20">
+          <summary><Ico n="info" className="blue" />Ficha técnica<Ico n="caret-down" /></summary>
+          <div className="in">
+            <div className="spec c2">
+              <p><span>Material</span><b>{nombreMaterial(e.material)}</b></p>
+              <p><span>Dificultad</span><b>{etiqueta('difficulty', e.dificultad)}</b></p>
+              <p><span>Tipo</span><b>{etiqueta('mechanic', e.mecanica)}</b></p>
+              <p><span>Fuerza</span><b>{etiqueta('force_type', e.fuerza)}</b></p>
+              <p><span>Categoría</span><b>{etiqueta('category', e.categoria)}</b></p>
+              <p><span>Movimiento</span><b>{NOMBRE_PATRON[patron(e)]}</b></p>
+              <p><span>Se apunta en</span><b>{REGISTRO_TXT[reg]}</b></p>
+              <p><span>Un lado cada vez</span><b>{e.unilateral ? 'Sí' : 'No'}</b></p>
+              {e.met != null && <p><span>MET (gasto)</span><b>{num(e.met)}</b></p>}
+              {e.objetivos.length > 0 && <p><span>Objetivos</span><b>{e.objetivos.map(o => etiqueta('goals', o)).join(', ')}</b></p>}
+              {enPlan && <>
+                <p><span>En tu plan</span><b>Día {enPlan.d.letra}</b></p>
+                <p><span>Esfuerzo</span><b>{enPlan.b.rpe}/10</b></p>
+              </>}
+            </div>
+            {e.etiquetas.length > 0 && <div className="chips mt8">{e.etiquetas.map(t => <span key={t} className="tag blue">{ETIQUETAS_ES[t] ?? t}</span>)}</div>}
+          </div>
+        </details>
         <p className="credit">Exercise data by <a href="https://repdb.co" style={{ color: 'inherit' }}>RepDB (repdb.co)</a></p>
       </div>
     </Pantalla>

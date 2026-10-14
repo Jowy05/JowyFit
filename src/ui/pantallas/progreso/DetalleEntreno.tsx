@@ -44,7 +44,7 @@ export function DetalleEntreno({ ruta }: { ruta: Ruta }) {
           <p><span>Duración</span><b>{resp?.minutosReales ?? Math.round(r.segundos / 60)} min</b></p>
           <p><span>Horario</span><b>{horaDe(s.inicio)}{s.fin ? ` → ${horaDe(s.fin)}` : ''}</b></p>
           <p><span>Series</span><b>{r.series}</b></p>
-          <p><span>Volumen</span><b>{num(r.volumen, 0)} kg</b></p>
+          <p><span>Kilos movidos</span><b>{num(r.volumen, 0)} kg</b></p>
           {s.version === 'corta' && <p><span>Versión</span><b>Corta</b></p>}
           {recs > 0 && <p><span>Récords</span><b className="goldc">{recs}</b></p>}
         </div></div>
@@ -93,13 +93,13 @@ function Ejercicio({ e, primero, companero }: { e: EjercicioSesion; primero: boo
       {companero && <p className="small muted xd-n"><Ico n="link" /> En superserie con {nombreEjercicio(companero.ejercicio)}</p>}
       {hechas.length > 0 ? (
         <table className="tbl">
-          <thead><tr><th>Serie</th><th>{e.registro === 'tiempo' ? 'Tiempo' : e.registro === 'corporal' ? 'Reps' : 'kg × reps'}</th><th>Esf.</th></tr></thead>
+          <thead><tr><th>Serie</th><th>{e.registro === 'tiempo' ? 'Tiempo' : e.registro === 'corporal' ? 'Reps' : 'kg × reps'}</th><th>Esfuerzo</th></tr></thead>
           <tbody>
             {hechas.map((x, k) => {
               if (!x.calentamiento) trabajo++
               return (
                 <tr key={k} className={x.calentamiento ? 'muted' : undefined}>
-                  <td>{x.calentamiento ? 'Cal.' : trabajo}</td>
+                  <td>{x.calentamiento ? 'Calent.' : trabajo}</td>
                   <td>{textoSerie(x, e.registro)}{x.record && <> <Ico n="trophy" b className="goldc" /></>}</td>
                   <td>{x.rpe ?? '—'}</td>
                 </tr>

@@ -1,8 +1,8 @@
-// PRO-08 · Actividad (pasos) y la hoja «Trote o carrera»
+// PRO-08 · Pasos (y la hoja «Trote o carrera»). Lo principal: apuntar los pasos de hoy.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import { guardarAjustes } from '../../../datos/repos'
+import { guardarAjustes, guardarPerfil } from '../../../datos/repos'
 import { num } from '../../../dominio/calculos'
 import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../../dominio/tendencias'
@@ -25,6 +25,7 @@ export function Pasos() {
   const registros = useLiveQuery(() => db.pasos.where('fecha').between(dias[0]!, hoy, true, true).toArray(), [hoy]) ?? []
   const [hc, setHc] = useState(false)
   const [conectando, setConectando] = useState(false)
+  const [editaObjetivo, setEditaObjetivo] = useState(false)
   const iphone = esIPhone()
   useEffect(() => { let vivo = true; void pasosDisponibles().then(v => { if (vivo) setHc(v) }); return () => { vivo = false } }, [])
 
@@ -53,11 +54,29 @@ export function Pasos() {
     try { aviso((await sincronizarPasos()) ? 'Pasos actualizados' : 'No se pudieron leer los pasos') } finally { setConectando(false) }
   }
 
-  const manual = <ApuntarPasos hoy={hoy} destacado={iphone} />
+  const manual = <ApuntarPasos hoy={hoy} />
+
+  // El objetivo diario se cambia aquí mismo (antes estaba escondido en Perfil → Preferencias).
+  const objetivoEditable = (
+    <div className="card pd mt8">
+      <button type="button" className="row jb w100 pasos-obj" onClick={() => setEditaObjetivo(v => !v)} aria-expanded={editaObjetivo}>
+        <span className="tx"><span className="lbl">Objetivo diario</span><b className="mono goc"> {num(objetivo, 0)} pasos</b></span>
+        <span className="lnk">{editaObjetivo ? 'Listo' : <><Ico n="pencil-simple" />Cambiar</>}</span>
+      </button>
+      {editaObjetivo && (
+        <>
+          <Stepper className="mt12" valor={objetivo} paso={500} min={2000} max={20000} decimales={0} sufijo="pasos" etiqueta="Objetivo de pasos"
+            onCambio={v => { void guardarPerfil({ pasosObjetivo: v }) }} />
+          <p className="small muted mt8 center">8000 es un buen objetivo para casi todo el mundo.</p>
+        </>
+      )}
+      <p className="small muted mt8">Días cumplidos esta semana: <b>{cumplidos} de 7</b> · {auto ? 'llegan solos de Health Connect' : 'los apuntas tú'}</p>
+    </div>
+  )
 
   return (
     <Pantalla>
-      <Cab atras crumb="Pasos" titulo="Actividad" />
+      <Cab atras crumb="Actividad" titulo="Pasos" />
       <div className="pg">
         <div className="card pd row">
           <Anillo v={pasosHoy} total={objetivo} grande />
@@ -69,12 +88,16 @@ export function Pasos() {
           </div>
         </div>
 
-        {iphone && (
-          <div className="sec">
-            <p className="note plain"><Ico n="device-mobile" /><span>En iPhone los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.</span></p>
-            <div className="mt8">{manual}</div>
-          </div>
-        )}
+        {iphone && <p className="note plain mt12"><Ico n="device-mobile" /><span>En iPhone los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.</span></p>}
+
+        {hc && auto && <button className={cx('btn mt16', conectando && 'off')} disabled={conectando} onClick={() => void actualizar()}><Ico n="arrows-clockwise" b />Actualizar desde Health Connect</button>}
+
+        {/* Lo que viene a hacer casi todo el mundo: apuntar los pasos de hoy. */}
+        {!auto && <div className="sec">{manual}</div>}
+
+        <div className="btns mt12">
+          <button className="btn gry sm" onClick={() => nav.hoja('sheet-trote')}><Ico n="person-simple-run" b />+ Trote / carrera</button>
+        </div>
 
         <div className="sec">
           <div className="sec-h"><h2>Últimos 7 días</h2>{media != null && <span className="lbl mono">media {num(media, 0)}</span>}</div>
@@ -90,13 +113,9 @@ export function Pasos() {
               })}
               <span className="vb-goal" style={estilo({ '--g': Math.round((objetivo / tope) * 100) })} />
             </div>
-            <p className="small muted mt8"><span className="gkey" />Objetivo diario: <b className="mono">{num(objetivo, 0)}</b></p>
+            <p className="small muted mt8"><span className="gkey" />La raya es tu objetivo diario</p>
           </div>
-          <div className="spec-box mt8"><div className="spec">
-            <p><span>Objetivo diario</span><b className="goc">{num(objetivo, 0)}</b></p>
-            <p><span>Días cumplidos</span><b>{cumplidos} de 7</b></p>
-            <p><span>Fuente</span><b>{auto ? 'Health Connect' : 'A mano'}</b></p>
-          </div></div>
+          {objetivoEditable}
         </div>
 
         {hc && !auto && (
@@ -104,24 +123,26 @@ export function Pasos() {
             <div className="card pd">
               <b>Pasos automáticos</b>
               <p className="small muted mt4">Conecta Health Connect y los pasos llegarán solos cada vez que abras la app.</p>
-              <button className={cx('btn sm mt12', conectando && 'off')} disabled={conectando} onClick={() => void conectar()}><Ico n="heartbeat" b />Conectar Health Connect</button>
+              <button className={cx('btn gry sm mt12', conectando && 'off')} disabled={conectando} onClick={() => void conectar()}><Ico n="heartbeat" b />Conectar Health Connect</button>
             </div>
           </div>
         )}
-        {hc && auto && <button className={cx('btn ln sm mt16', conectando && 'off')} disabled={conectando} onClick={() => void actualizar()}><Ico n="arrows-clockwise" />Actualizar desde Health Connect</button>}
 
-        {!iphone && <div className="sec"><div className="sec-h"><h2>Apuntar a mano</h2></div>{manual}</div>}
-
-        <div className="btns mt16">
-          <button className="btn sm" onClick={() => nav.hoja('sheet-trote')}><Ico n="person-simple-run" b />+ Trote / carrera</button>
-        </div>
-        {auto && <p className="small muted mt8 center">Con Health Connect, al sincronizar se usan sus pasos del día.</p>}
+        {auto && (
+          <details className="fold mt16">
+            <summary><Ico n="pencil-simple" className="blue" />Apuntar a mano <Ico n="caret-down" /></summary>
+            <div className="in">
+              {manual}
+              <p className="small muted mt8 center">Con Health Connect, al sincronizar se usan sus pasos del día.</p>
+            </div>
+          </details>
+        )}
       </div>
     </Pantalla>
   )
 }
 
-function ApuntarPasos({ hoy, destacado }: { hoy: string; destacado: boolean }) {
+function ApuntarPasos({ hoy }: { hoy: string }) {
   const aviso = useAviso()
   const ayer = sumarDias(hoy, -1)
   const [fecha, setFecha] = useState(hoy)
@@ -135,14 +156,15 @@ function ApuntarPasos({ hoy, destacado }: { hoy: string; destacado: boolean }) {
     aviso(`Pasos guardados · ${fecha === hoy ? 'hoy' : 'ayer'}: ${num(valor, 0)}`)
   }
   return (
-    <div className="card pd" style={destacado ? { borderColor: 'var(--go)', boxShadow: '0 0 0 1px var(--go)' } : undefined}>
-      <div className="chips eq">
+    <div className="card pd">
+      <p className="lbl">Apuntar pasos</p>
+      <div className="chips eq mt8">
         <Chip on={fecha === hoy} onClick={() => { setFecha(hoy); setPasos(null) }}>Hoy</Chip>
         <Chip on={fecha === ayer} onClick={() => { setFecha(ayer); setPasos(null) }}>Ayer</Chip>
       </div>
       <Stepper className="mt12" valor={valor} onCambio={setPasos} paso={500} min={0} max={100000} decimales={0} sufijo="pasos" etiqueta="Pasos" />
       <p className="small muted mt8 center">Toca el número para escribirlo exacto</p>
-      <button className="btn gry sm mt12" onClick={() => void guardar()}><Ico n="pencil-simple" />Guardar pasos</button>
+      <button className="btn mt12" onClick={() => void guardar()}><Ico n="check" b />Guardar pasos</button>
     </div>
   )
 }

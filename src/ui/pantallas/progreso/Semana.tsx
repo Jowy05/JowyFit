@@ -7,7 +7,7 @@ import { nombreEjercicio } from '../../../catalogo/catalogo'
 import { num, kg } from '../../../dominio/calculos'
 import { deISO, diaSemana, hoyISO, lunesDe, MESES_CORTOS, numeroSemana, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { consejoQuincenal, resumenSemana } from '../../../dominio/resumen'
-import { datosQuincena, mediasSemanales, pendienteSemanal, puntosSpark, recordsEn, subidas } from '../../../dominio/tendencias'
+import { datosQuincena, estadoEntrenos, estadoPicoteo, lineasSemaforo, mediasSemanales, pendienteSemanal, puntosSpark, recordsEn, subidas, type EstadoTarjeta } from '../../../dominio/tendencias'
 import { cx, estilo, Ico, Pantalla, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAjustes, usePerfil, useRutina } from '../../datos'
@@ -22,13 +22,15 @@ function rango(dias: string[]): string {
 
 const signo = (n: number, d = 1) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${num(Math.abs(n), d)}`
 
-type Estado = 'ok' | 'warn' | 'bad' | 'nada'
-function Icono({ e, trofeo }: { e: Estado; trofeo?: boolean }) {
-  if (trofeo) return <Ico n="trophy" b className="goldc" />
-  if (e === 'ok') return <Ico n="check-circle" b className="okc" />
-  if (e === 'warn') return <Ico n="minus-circle" b className="warnc" />
-  if (e === 'bad') return <Ico n="x-circle" b className="badc" />
-  return <Ico n="circle-dashed" className="muted" />
+type Estado = EstadoTarjeta | 'neutro'
+const PALABRA: Record<EstadoTarjeta, string> = { ok: 'bien', warn: 'casi', bad: 'a mejorar', nada: 'sin datos' }
+/** Estado de cada tarjeta con icono y palabra (un icono solo no se entiende). */
+function Icono({ e, trofeo, texto }: { e: Estado; trofeo?: boolean; texto?: string }) {
+  if (trofeo) return <span className="tag gold est"><Ico n="trophy" b />{texto ?? 'récord'}</span>
+  if (e === 'neutro') return null
+  if (e === 'nada') return <span className="tag est">{texto ?? PALABRA.nada}</span>
+  const ico = e === 'ok' ? 'check-circle' : e === 'warn' ? 'minus-circle' : 'x-circle'
+  return <span className={cx('tag est', e)}><Ico n={ico} b />{texto ?? PALABRA[e]}</span>
 }
 
 const COLOR = { verde: 'ok', ambar: 'warn', rojo: 'bad' } as const
@@ -73,6 +75,8 @@ export function Semana() {
   const { sesiones, mediciones, comidas, pasos, energia } = datos
   const fijos = rutina ? rutina.dias.filter(d => !d.opcional).length : perfil.diasFijos.length
   const subidasSemana = subidas(sesiones).filter(s => dias.includes(s.fecha))
+  const esperados = atras === 0 ? perfil.diasFijos.filter(d => d <= diaSemana(deISO(hoy))).length : undefined
+  const enCurso = atras === 0 && hoy < domingo
   const r = resumenSemana({
     hoy: atras === 0 ? hoy : domingo,
     sesiones, fijos, mediciones, comidas, pasos,
@@ -80,7 +84,7 @@ export function Semana() {
     objetivoPasos: perfil.pasosObjetivo,
     recordsSemana: recordsEn(sesiones, dias),
     subidasSemana: new Set(subidasSemana.map(s => s.ejercicio)).size,
-    esperados: atras === 0 ? perfil.diasFijos.filter(d => d <= diaSemana(deISO(hoy))).length : undefined,
+    esperados,
   })
   const hayDatos = sesiones.some(s => dias.includes(s.fecha)) || mediciones.some(m => dias.includes(m.fecha.slice(0, 10)))
     || comidas.some(c => dias.includes(c.fecha)) || pasos.some(p => dias.includes(p.fecha))
@@ -115,10 +119,18 @@ export function Semana() {
 
   const midio = mediciones.some(m => m.perimetros?.cintura != null && dias.includes(m.fecha.slice(0, 10)))
   const eCintura: Estado = r.cintura.delta == null || !midio ? 'nada' : r.cintura.delta <= 0 ? 'ok' : 'warn'
-  const eEntrenos: Estado = r.entrenos >= r.fijos ? 'ok' : r.entrenos >= r.fijos - 1 ? 'warn' : 'bad'
+  // Mismo criterio que el semáforo: a mitad de semana solo cuentan los entrenos que ya tocaban.
+  const entr = estadoEntrenos(r.entrenos, r.fijos, esperados)
+  const eEntrenos: Estado = entr.estado
   const eProteina: Estado = r.proteina.media == null ? 'nada' : r.proteina.media >= r.proteina.objetivo * 0.9 ? 'ok' : r.proteina.media >= r.proteina.objetivo * 0.75 ? 'warn' : 'bad'
   const ePasos: Estado = r.pasos.media == null ? 'nada' : r.pasos.diasCumplidos >= 5 ? 'ok' : r.pasos.diasCumplidos >= 3 ? 'warn' : 'bad'
-  const ePicoteo: Estado = r.picoteo.dias <= 1 ? 'ok' : r.picoteo.dias <= r.picoteo.anterior ? 'warn' : 'bad'
+  const ePicoteo: Estado = estadoPicoteo(r.picoteo.dias, r.picoteo.anterior, r.proteina.media != null)
+  const lineas = lineasSemaforo({ frase: r.frase, semaforo: r.semaforo, entrenos: r.entrenos, fijos: r.fijos, esperados, enCurso })
+  // Semana 1 sin entrenos anteriores: aún no puede haber récords (llegan al repetir ejercicios).
+  const sinHistorial = !sesiones.some(s => s.estado === 'hecha' && s.fecha < lunes)
+  const entrenoSemana = sesiones.some(s => s.estado === 'hecha' && dias.includes(s.fecha))
+  const fuerzaPronto = sinHistorial && r.records === 0 && r.subidas === 0
+  const eFuerza: Estado = r.records > 0 || r.subidas > 0 ? 'ok' : entrenoSemana ? 'neutro' : 'nada'
 
   return (
     <Pantalla>
@@ -136,32 +148,41 @@ export function Semana() {
             <p className="sem-t" style={r.semaforo === 'verde' ? undefined : { color: `var(--${color})` }}>
               <Ico n={r.semaforo === 'verde' ? 'check-circle' : r.semaforo === 'ambar' ? 'minus-circle' : 'x-circle'} b />{r.titulo}
             </p>
-            <p className="sem-d">{r.frase}</p>
+            {lineas.map((l, i) => <p key={i} className={cx('sem-d', i > 0 && 'mt4')}>{l}.</p>)}
           </div>
         </div>
-        {atras === 0 && hoy < domingo && <p className="small muted mt8"><Ico n="clock" /> Semana en curso: el resumen definitivo, el domingo.</p>}
+        {enCurso && <p className="small muted mt8"><Ico n="clock" /> Semana en curso: el resumen definitivo, el domingo.</p>}
 
         <div className="grid2 mt12">
           <button className="card kpi st" onClick={() => nav.reemplazar('pro-cuerpo')}>
-            <span className="row jb"><span className="lbl">Cintura</span><Icono e={eCintura} /></span>
+            <span className="row jb"><span className="lbl">Cintura</span><Icono e={eCintura} texto={eCintura === 'ok' ? 'bien' : eCintura === 'warn' ? 'sube' : undefined} /></span>
             <p className="k">{r.cintura.actual != null ? num(r.cintura.actual) : '—'}<small>cm</small></p>
             <p className="d">{!midio ? (r.cintura.actual != null ? 'sin medir esta semana' : 'mídete la cintura') : r.cintura.delta != null ? <><b className={cx(r.cintura.delta <= 0 && 'up')}>{signo(r.cintura.delta)}</b> esta semana</> : r.cintura.actual != null ? 'sin cambios medidos' : 'mídete la cintura'}</p>
           </button>
           <button className="card kpi st" onClick={() => nav.reemplazar('pro-fuerza')}>
-            <span className="row jb"><span className="lbl">Fuerza</span><Icono e={r.records > 0 || r.subidas > 0 ? 'ok' : 'nada'} trofeo={r.records > 0} /></span>
-            <p className="k">{r.records}<small>récord{r.records === 1 ? '' : 's'}</small></p>
-            <p className="d">{mejorSubida ? `+${kg(mejorSubida.ahora - mejorSubida.antes)} kg en ${nombreEjercicio(mejorSubida.ejercicio).toLowerCase()}` : r.subidas ? `${r.subidas} subidas` : 'sin subidas de peso'}</p>
+            <span className="row jb"><span className="lbl">Fuerza</span>{!fuerzaPronto && <Icono e={eFuerza} trofeo={r.records > 0} />}</span>
+            {fuerzaPronto ? (
+              <>
+                <p className="k pronto">Aún pronto</p>
+                <p className="d">Los récords llegan cuando repites ejercicios</p>
+              </>
+            ) : (
+              <>
+                <p className="k">{r.records}<small>récord{r.records === 1 ? '' : 's'}</small></p>
+                <p className="d">{mejorSubida ? `+${kg(mejorSubida.ahora - mejorSubida.antes)} kg en ${nombreEjercicio(mejorSubida.ejercicio).toLowerCase()}` : r.subidas ? `${r.subidas} subidas de peso` : 'sin subidas de peso'}</p>
+              </>
+            )}
           </button>
           <div className="card kpi st">
-            <span className="row jb"><span className="lbl">Entrenos</span><Icono e={eEntrenos} /></span>
-            <p className="k">{r.entrenos}/{r.fijos}{r.extra > 0 && <small>+ {r.extra} extra</small>}</p>
+            <span className="row jb"><span className="lbl">Entrenos</span><Icono e={eEntrenos} texto={eEntrenos === 'ok' ? (r.entrenos >= r.fijos ? 'hechos' : enCurso ? 'al día' : undefined) : undefined} /></span>
+            <p className="k">{r.entrenos}<small>de {r.fijos}</small>{r.extra > 0 && <small>+ {r.extra} extra</small>}</p>
             <div className="pips mt8">
               {Array.from({ length: r.fijos }, (_, i) => <i key={i} className={cx(i < r.entrenos && 'on')} />)}
               {Array.from({ length: r.extra }, (_, i) => <i key={`x${i}`} className="ex" />)}
             </div>
           </div>
           <button className="card kpi st" onClick={() => nav.pestana('com')}>
-            <span className="row jb"><span className="lbl">Proteína</span><Icono e={eProteina} /></span>
+            <span className="row jb"><span className="lbl">Proteína</span><Icono e={eProteina} texto={eProteina === 'bad' ? 'baja' : undefined} /></span>
             <p className="k">{r.proteina.media != null ? Math.round(r.proteina.media) : '—'}<small>g/día</small></p>
             <p className="d">{r.proteina.media != null ? `objetivo ${r.proteina.objetivo} g` : 'apunta tus comidas'}</p>
           </button>
@@ -172,8 +193,8 @@ export function Semana() {
           </button>
           <button className="card kpi st" onClick={() => nav.pestana('com')}>
             <span className="row jb"><span className="lbl">Picoteo</span><Icono e={ePicoteo} /></span>
-            <p className="k">{r.picoteo.dias}<small>día{r.picoteo.dias === 1 ? '' : 's'}</small></p>
-            <p className="d">la anterior: {r.picoteo.anterior}</p>
+            <p className="k">{r.proteina.media == null ? '—' : <>{r.picoteo.dias}<small>día{r.picoteo.dias === 1 ? '' : 's'}</small></>}</p>
+            <p className="d">{r.proteina.media == null ? 'apunta tus comidas' : `semana pasada: ${r.picoteo.anterior}`}</p>
           </button>
           <button className="card kpi st span2 row" onClick={() => nav.reemplazar('pro-cuerpo')}>
             <span className="grow">

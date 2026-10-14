@@ -5,14 +5,12 @@ import { db } from '../../../datos/db'
 import type { Rutina } from '../../../datos/tipos'
 import { catalogoCargado, ejercicio } from '../../../catalogo/catalogo'
 import { ES_MAQUINA } from '../../../catalogo/clasificacion'
-import { DIAS_CORTOS, DIAS } from '../../../dominio/fechas'
 import { generarRutina, tiemposReales } from '../../../dominio/generador'
 import { Cab, Ico, Pantalla, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos'
-import { filas, minutos } from './comun'
-import { capital } from './comun'
+import { abrevDia, capital, filas, listaDias, minutos, SS_EXPLICA } from './comun'
 
 export function Generar({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -63,17 +61,17 @@ export function Generar({ ruta }: { ruta: Ruta }) {
 
   return (
     <Pantalla>
-      <Cab atras crumb="Mi plan" titulo={definitiva ? 'Tu rutina definitiva' : 'Generar rutina'} sub={definitiva ? 'Ajustada a tus tiempos reales de la semana de calibración.' : 'Revisa tus datos, mira la propuesta y decide.'} />
+      <Cab atras crumb="Mi plan" titulo={definitiva ? 'Tu rutina definitiva' : actual ? 'Rutina nueva' : 'Crear tu rutina'} sub={definitiva ? 'Ajustada a tus tiempos reales de la semana de calibración.' : actual ? 'Mírala con calma: tu rutina actual no cambia hasta que pulses «Usar esta rutina».' : 'Revisa tus datos, mira la propuesta y decide.'} />
       <div className="pg">
         <div className="sec">
           <div className="sec-h"><h2><span className="stepn">1</span>Tus datos</h2><span className="lbl">Toca para cambiar</span></div>
           <div className="spec-box"><div className="spec ed">
-            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Días fijos</span><b>{perfil.diasFijos.map(d => DIAS_CORTOS[d]).join(' · ') || '—'}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Opcionales</span><b>{perfil.diasOpcionales.map(d => capital(DIAS[d]!)).join(' · ') || 'Ninguno'}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Tiempo</span><b>{perfil.minutosNormal} · corta {perfil.minutosCorta} min<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Días</span><b className="ux-rut-wrap">{capital(listaDias(perfil.diasFijos)) || '—'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Día extra</span><b>{capital(listaDias(perfil.diasOpcionales)) || 'Ninguno'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>Tiempo</span><b>{perfil.minutosNormal} min · con prisa {perfil.minutosCorta}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('rut-gym')}><span>Gimnasio</span><b>{g ? `${g.nombre} · ${g.material.length}` : 'Sin gimnasio'}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Objetivo</span><b>{{ recomposicion: 'Perder grasa y ganar músculo', perder: 'Perder peso', fuerza: 'Ganar fuerza' }[perfil.objetivo]}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Prioridades</span><b>{perfil.zonasPrioridad.join(' · ') || 'Equilibrado'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>Reforzar</span><b>{perfil.zonasPrioridad.join(' · ') || 'Equilibrado'}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('per-sec', { s: 'preferencias' })}><span>Gustos</span><b>{{ maquinas: 'Máquinas y poleas', libre: 'Peso libre', mezcla: 'Mezcla' }[perfil.preferencia]}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('rut-ej', { filtro: 'evitados' })}><span>Evitar</span><b>{evitados.length ? `${evitados.length} ejercicio${evitados.length === 1 ? '' : 's'}` : 'Nada'}<Ico n="pencil-simple" className="pen" /></b></p>
           </div></div>
@@ -85,7 +83,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
             <div className="card prev">
               {propuesta.dias.map(d => (
                 <div key={d.letra} className="prev-d">
-                  <span className="dl">{d.letra}</span>
+                  <span className={d.dia != null ? 'dl ux-rut-dl' : 'dl'}>{abrevDia(d)}</span>
                   <p>
                     {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>Superserie</em> {ejercicio(f[0].ejercicio)?.nombre} + {ejercicio(f[1].ejercicio)?.nombre}</> : ejercicio(f.ejercicio)?.nombre}</span>)}
                     <span className="muted"> · ~{minutos(d)} min</span>
@@ -98,7 +96,8 @@ export function Generar({ ruta }: { ruta: Ruta }) {
               {propuesta.porque.map(t => <p key={t}><Ico n="check-circle" /><span>{t}</span></p>)}
               {perfil.preferencia === 'maquinas' && <p><Ico n="check-circle" /><span>Prefieres máquinas → <b>{enMaquina} de {total} en máquina o polea</b></span></p>}
             </div>
-            <p className="note ok mt16"><Ico n="shield-check" /><span><b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.</span></p>
+            {propuesta.dias.some(d => d.bloques.some(b => b.superserie)) && <p className="small muted mt8">Superserie: {SS_EXPLICA}, descansando después del par.</p>}
+            <p className="note ok mt16"><Ico n="shield-check" /><span>{actual && !definitiva ? <>Si pulsas «Usar esta rutina», <b>sustituye a la que tienes ahora</b>. </> : null}<b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.</span></p>
           </div>
         )}
         <div className="dock col">

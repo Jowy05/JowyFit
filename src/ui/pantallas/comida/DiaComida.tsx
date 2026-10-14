@@ -1,10 +1,10 @@
-// COM-01 · Día: proteína y kcal del día, comidas por franja, picoteo, cafeína y suplementos.
+// COM-01 · Día: la proteína del día (lo principal), kcal orientativas, comidas por momento, cafeína, suplementos y cómo vas.
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { objetivosEnergia, totalesComida } from '../../../datos/consultas'
 import type { Comida } from '../../../datos/tipos'
-import { FRANJAS, avisoCafeina, datosQuincena, picoteoDeSemana } from '../../../dominio/comida'
+import { FRANJAS, NOMBRE_RACION, avisoCafeina, datosQuincena, picoteoDeSemana } from '../../../dominio/comida'
 import { DIAS, MESES_CORTOS, deISO, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { Barra, cx, Ico, Pantalla, Seccion } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
@@ -33,6 +33,8 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
   const d = deISO(fecha)
   const esHoy = fecha === hoy
   const ordenadas = [...comidas].sort((a, b) => a.hora.localeCompare(b.hora))
+  // La ayuda «desliza para borrar» va bajo el primer momento del día que tiene algo.
+  const primera = FRANJAS.find(f => ordenadas.some(c => c.franja === f.v))?.v
   const pic = picoteoDeSemana(deSemanas, semana)
   const picAnt = picoteoDeSemana(deSemanas, semanaAnt)
   const quincena = energia ? datosQuincena({ hoy, mediciones, comidas: recientes, objetivoProteina: energia.proteina, objetivo: perfil.objetivo }) : null
@@ -69,20 +71,19 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
 
         <div className="card pd tot">
           <div className="row jb">
-            <span className="lbl">Proteína</span>
+            <span className="lbl">Proteína {esHoy ? 'de hoy' : 'del día'}</span>
             <span className="small okc">{energia ? faltan ? `Faltan ${faltan} g` : '¡Conseguida!' : ''}</span>
           </div>
           <p className="tot-big mono">{Math.round(tot.proteina)}<small> / {energia?.proteina ?? '—'} g</small></p>
           <div className="mt8"><Barra v={tot.proteina} total={energia?.proteina ?? 1} tono="ok" gruesa /></div>
           {ajustes.mostrarKcal && (
-            <>
-              <div className="hr" />
+            <div className="ux-com-kcal mt12">
               <div className="row jb">
-                <span className="lbl">Kcal · orientativo</span>
-                <span className="mono small">{Math.round(tot.kcal)} / ~{energia?.kcal ?? '—'}</span>
+                <span className="small muted">Calorías (orientativo)</span>
+                <span className="mono small muted">{Math.round(tot.kcal)} / ~{energia?.kcal ?? '—'} kcal</span>
               </div>
-              <div className="mt8"><Barra v={tot.kcal} total={energia?.kcal ?? 1} tono={energia && tot.kcal > energia.kcal * 1.1 ? 'warn' : undefined} /></div>
-            </>
+              <div className="mt4"><Barra v={tot.kcal} total={energia?.kcal ?? 1} tono={energia && tot.kcal > energia.kcal * 1.1 ? 'warn' : undefined} /></div>
+            </div>
           )}
         </div>
 
@@ -94,7 +95,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
               <details key={f.v} className={cx('fold slot', i > 0 && 'mt8')} open>
                 <summary>
                   <Ico n={f.icono} className="blue" />{f.t}
-                  <span className="slot-n mono">{Math.round(t.kcal)} kcal · {Math.round(t.proteina)} g</span>
+                  <span className="slot-n mono">{Math.round(t.proteina)} g prot. · {Math.round(t.kcal)} kcal</span>
                   <Ico n="caret-down" />
                 </summary>
                 <div className="in">
@@ -103,32 +104,24 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
                       <Mini nombre={c.nombre} tipo={c.tipo} foto={c.foto} />
                       <span className="tx">
                         <b>{c.nombre}</b>
-                        <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ración ${c.racion === 'P' ? 'pequeña' : 'grande'}` : ''}{c.cafeina ? ` · ${c.cafeina} mg cafeína` : ''}{c.foto ? ' · con foto' : ''}</small>
+                        <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ración ${NOMBRE_RACION[c.racion].toLowerCase()}` : ''}{c.cafeina ? ` · ${c.cafeina} mg cafeína` : ''}{c.foto ? ' · con foto' : ''}</small>
                       </span>
-                      <span className="end">{Math.round(c.kcal)}<small> kcal</small><br /><em>{Math.round(c.proteina)} g</em></span>
+                      <span className="end ux-com-end"><em>{Math.round(c.proteina)} g</em><small> prot.</small><br /><small>{Math.round(c.kcal)} kcal</small></span>
                     </Deslizable>
                   ))}
                   {!lista.length && (
                     <button className="lnk" onClick={() => nav.hoja('sheet-add', { fecha, franja: f.v })}><Ico n="plus" b /> Añadir</button>
                   )}
-                  {lista.length > 0 && i === 0 && ordenadas.length > 0 && <p className="small muted mt4"><Ico n="hand-swipe-left" /> Desliza para borrar · toca para editar</p>}
+                  {lista.length > 0 && f.v === primera && <p className="small muted mt4"><Ico n="hand-swipe-left" /> Desliza para borrar · toca para editar</p>}
                 </div>
               </details>
             )
           })}
         </div>
 
-        <div className="sec">
-          <div className="card pd row snack">
-            <span className={cx('ico', pic.dias <= picAnt.dias ? 'okb' : 'warnb')}><Ico n={pic.dias <= picAnt.dias ? 'trend-down' : 'trend-up'} /></span>
-            <span className="tx">
-              <span className="lbl">Picoteo y bebidas · esta semana</span>
-              <b>{pic.dias === 0 ? 'Ningún día con picoteo' : pic.dias === 1 ? '1 día con picoteo' : `${pic.dias} días con picoteo`}</b>
-              <small>La anterior: {picAnt.dias}{pic.energeticas ? ` · ${pic.energeticas} energética${pic.energeticas > 1 ? 's' : ''} esta semana` : ''}</small>
-            </span>
-          </div>
-          {conCafeina && (
-            <div className="card pd mt8">
+        {conCafeina && (
+          <div className="sec">
+            <div className="card pd">
               <div className="row jb">
                 <span className="lbl"><Ico n="coffee" /> Cafeína {esHoy ? 'de hoy' : 'del día'}</span>
                 <span className="mono small">{Math.round(tot.cafeina)} / {ajustes.cafeinaLimite} mg</span>
@@ -136,8 +129,8 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
               <div className="mt8"><Barra v={tot.cafeina} total={ajustes.cafeinaLimite} tono={caf.tono === 'ok' ? 'ok' : 'warn'} /></div>
               {esHoy && <p className="small muted mt8"><Ico n="bell-simple" /> {caf.texto}</p>}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {perfil.suplementos.length > 0 && (
           <Seccion titulo={esHoy ? 'Suplementos de hoy' : 'Suplementos'}>
@@ -157,21 +150,28 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
           </Seccion>
         )}
 
-        {quincena && (
-          <div className="sec">
-            <button className="card pd adj" onClick={() => nav.ir('com-energia')}>
-              <span className="row jb">
-                <span className="lbl">Ajuste de la quincena</span>
+        {/* Una sola tarjeta: el consejo de la quincena y el picoteo de la semana (antes eran dos seguidas). */}
+        <div className="sec">
+          <button className="card pd adj" onClick={() => nav.ir('com-energia')}>
+            <span className="row jb">
+              <span className="lbl">Cómo vas · últimas 2 semanas</span>
+              {quincena && (
                 <span className={cx('tag', quincena.tono === 'ok' ? 'ok' : quincena.tono === 'warn' ? 'warn' : '')}>
                   {quincena.tono === 'ok' && <Ico n="check" b />}{quincena.etiqueta}
                 </span>
+              )}
+            </span>
+            {quincena && <b className="adj-t">{quincena.consejo}</b>}
+            <span className="row ux-com-pic mt8">
+              <span className={cx('ico', pic.dias <= picAnt.dias ? 'okb' : 'warnb')}><Ico n={pic.dias <= picAnt.dias ? 'trend-down' : 'trend-up'} /></span>
+              <span className="tx">
+                <b>{pic.dias === 0 ? 'Ningún día con picoteo' : pic.dias === 1 ? '1 día con picoteo' : `${pic.dias} días con picoteo`} esta semana</b>
+                <small>La anterior: {picAnt.dias}{pic.energeticas ? ` · ${pic.energeticas} energética${pic.energeticas > 1 ? 's' : ''} esta semana` : ''}</small>
               </span>
-              <b className="adj-t">{quincena.consejo}</b>
-              {quincena.picoteoDias > 0 && <span className="small muted">Picoteo en {quincena.picoteoDias} de los últimos 14 días.</span>}
-              <span className="lnk mt8">Tu objetivo de energía <Ico n="caret-right" /></span>
-            </button>
-          </div>
-        )}
+            </span>
+            <span className="lnk mt8">Tu objetivo de energía <Ico n="caret-right" /></span>
+          </button>
+        </div>
 
         <div className="dock">
           <button className="btn xl" onClick={() => nav.hoja('sheet-add', { fecha })}><Ico n="plus" b />Añadir</button>

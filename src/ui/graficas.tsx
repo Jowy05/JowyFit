@@ -1,62 +1,72 @@
 // Gráficas SVG con el estilo del mockup (líneas con área, puntos y último valor; barras).
+// Con menos de 2 datos no se dibuja nada: un punto suelto con ejes raros no dice nada.
+// Los ejes van en números redondos (88 · 90 · 92), no en 91,2 / 88,8.
 import { num } from '../dominio/calculos'
+import { ejeRedondo } from '../dominio/tendencias'
 
 export type Punto = { x: string; y: number }
 
 const W = 320, H = 130, X0 = 40, X1 = 300, Y0 = 20, Y1 = 104
+const FRASE_VACIA = 'Con 2 datos verás aquí la línea.'
 
 function escala(ps: Punto[], objetivo?: number) {
-  const ys = ps.map(p => p.y).concat(objetivo != null ? [objetivo] : [])
-  let min = Math.min(...ys), max = Math.max(...ys)
-  if (min === max) { min -= 1; max += 1 }
-  const m = (max - min) * 0.12
-  min -= m; max += m
-  const y = (v: number) => Y1 - ((v - min) / (max - min)) * (Y1 - Y0)
+  const e = ejeRedondo(ps.map(p => p.y).concat(objetivo != null ? [objetivo] : []))
+  const y = (v: number) => Y1 - ((v - e.min) / (e.max - e.min)) * (Y1 - Y0)
   const x = (i: number) => (ps.length === 1 ? (X0 + X1) / 2 : X0 + (i * (X1 - X0)) / (ps.length - 1))
-  return { min, max, x, y }
+  return { ...e, x, y }
 }
 
-export function Linea({ puntos, objetivo, etiquetaObjetivo, decimales = 1, discontinua }: { puntos: Punto[]; objetivo?: number; etiquetaObjetivo?: string; decimales?: number; discontinua?: Punto[] }) {
-  if (!puntos.length) return <p className="small muted">Aún no hay datos para la gráfica.</p>
-  const { min, max, x, y } = escala(discontinua?.length ? [...puntos, ...discontinua] : puntos, objetivo)
+/** Frase en lugar de la gráfica cuando aún no hay línea que dibujar. */
+function SinLinea({ texto }: { texto: string }) {
+  return <p className="small muted chart-vacia"><i className="ph ph-chart-line-up" aria-hidden="true" /> {texto}</p>
+}
+
+export function Linea({ puntos, objetivo, etiquetaObjetivo, decimales = 1, discontinua, vacia = FRASE_VACIA }: {
+  puntos: Punto[]; objetivo?: number; etiquetaObjetivo?: string; decimales?: number; discontinua?: Punto[]
+  /** Frase que sale con menos de 2 datos. */
+  vacia?: string
+}) {
+  if (puntos.length < 2) return <SinLinea texto={vacia} />
+  const { marcas, decimales: decEje, x, y } = escala(discontinua?.length ? [...puntos, ...discontinua] : puntos, objetivo)
   const pts = puntos.map((p, i) => `${x(i).toFixed(1)},${y(p.y).toFixed(1)}`).join(' ')
   const ult = puntos[puntos.length - 1]!
-  const marcas = puntos.length > 6 ? puntos.map((_, i) => i).filter(i => i % Math.ceil(puntos.length / 5) === 0 || i === puntos.length - 1) : puntos.map((_, i) => i)
+  const etiquetasX = puntos.length > 6 ? puntos.map((_, i) => i).filter(i => i % Math.ceil(puntos.length / 5) === 0 || i === puntos.length - 1) : puntos.map((_, i) => i)
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfica de ${puntos.length} punto${puntos.length === 1 ? '' : 's'}, el último ${num(ult.y, decimales)}`}>
-      {[Y0, (Y0 + Y1) / 2, Y1].map(v => <line key={v} className="gl" x1="30" y1={v} x2="312" y2={v} />)}
-      <text className="ax" x="0" y={Y0 + 4}>{num(max, decimales)}</text>
-      <text className="ax" x="0" y={Y1 + 4}>{num(min, decimales)}</text>
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfica de ${puntos.length} puntos, el último ${num(ult.y, decimales)}`}>
+      {marcas.map(v => <line key={`g${v}`} className="gl" x1="30" y1={y(v)} x2="312" y2={y(v)} />)}
+      {marcas.map(v => <text key={`t${v}`} className="ax" x="0" y={y(v) + 4}>{num(v, decEje)}</text>)}
       {objetivo != null && (
         <>
           <line className="tg" x1="30" y1={y(objetivo)} x2="312" y2={y(objetivo)} />
           <text className="tgl" x="312" y={y(objetivo) - 4} textAnchor="end">{etiquetaObjetivo ?? num(objetivo, decimales)}</text>
         </>
       )}
-      {puntos.length > 1 && <polygon className="ar" points={`${X0},${Y1} ${pts} ${x(puntos.length - 1)},${Y1}`} />}
+      <polygon className="ar" points={`${X0},${Y1} ${pts} ${x(puntos.length - 1)},${Y1}`} />
       {discontinua && discontinua.length > 1 && <polyline className="ln2" points={discontinua.map((p, i) => `${x(i)},${y(p.y)}`).join(' ')} />}
-      {puntos.length > 1 && <polyline className="ln" points={pts} />}
+      <polyline className="ln" points={pts} />
       {puntos.map((p, i) => <circle key={i} className={i === puntos.length - 1 ? 'dt last' : 'dt'} cx={x(i)} cy={y(p.y)} r={i === puntos.length - 1 ? 5 : 4} />)}
       <text className="lb" x={Math.min(300, x(puntos.length - 1))} y={y(ult.y) - 10} textAnchor="end">{num(ult.y, decimales)}</text>
-      {marcas.map(i => <text key={i} className="ax" x={x(i)} y="124" textAnchor="middle">{puntos[i]!.x}</text>)}
+      {etiquetasX.map(i => <text key={i} className="ax" x={x(i)} y="124" textAnchor="middle">{puntos[i]!.x}</text>)}
     </svg>
   )
 }
 
-export function Barras({ puntos }: { puntos: Punto[] }) {
-  if (!puntos.length) return <p className="small muted">Aún no hay datos para la gráfica.</p>
-  const max = Math.max(...puntos.map(p => p.y)) || 1
+export function Barras({ puntos, vacia = 'Con 2 días verás aquí las barras.' }: { puntos: Punto[]; vacia?: string }) {
+  if (puntos.length < 2) return <SinLinea texto={vacia} />
+  const { max: tope, marcas, decimales } = ejeRedondo([0, ...puntos.map(p => p.y)])
+  const max = tope || 1
   const ancho = Math.max(2, Math.min(24, (X1 - X0) / puntos.length - 6))
-  const x = (i: number) => (puntos.length === 1 ? (X0 + X1) / 2 : X0 + (i * (X1 - X0)) / (puntos.length - 1))
+  const x = (i: number) => X0 + (i * (X1 - X0)) / (puntos.length - 1)
+  const y = (v: number) => Y1 - (v / max) * (Y1 - Y0)
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfica de barras de ${puntos.length} día${puntos.length === 1 ? '' : 's'}, el último ${num(puntos[puntos.length - 1]!.y, 0)}`}>
-      {[Y0, (Y0 + Y1) / 2, Y1].map(v => <line key={v} className="gl" x1="30" y1={v} x2="312" y2={v} />)}
-      <text className="ax" x="0" y={Y0 + 4}>{num(max, 0)}</text>
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfica de barras de ${puntos.length} días, el último ${num(puntos[puntos.length - 1]!.y, 0)}`}>
+      {marcas.map(v => <line key={`g${v}`} className="gl" x1="30" y1={y(v)} x2="312" y2={y(v)} />)}
+      {marcas.filter(v => v > 0).map(v => <text key={`t${v}`} className="ax" x="0" y={y(v) + 4}>{num(v, decimales)}</text>)}
       {puntos.map((p, i) => {
         const h = Math.max(0, (p.y / max) * (Y1 - Y0))
         return <rect key={i} className={i === puntos.length - 1 ? 'vb last' : 'vb'} x={x(i) - ancho / 2} y={Y1 - h} width={ancho} height={h} rx="3" />
       })}
-      {puntos.map((p, i) => (puntos.length <= 7 || i % 2 === 0 || i === puntos.length - 1) && <text key={`t${i}`} className="ax" x={x(i)} y="124" textAnchor="middle">{p.x}</text>)}
+      {puntos.map((p, i) => (puntos.length <= 7 || i % 2 === 0 || i === puntos.length - 1) && <text key={`x${i}`} className="ax" x={x(i)} y="124" textAnchor="middle">{p.x}</text>)}
     </svg>
   )
 }

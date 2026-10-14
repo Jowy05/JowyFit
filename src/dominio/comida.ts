@@ -7,7 +7,7 @@ import { datosQuincena as numerosQuincena } from './tendencias'
 export const FRANJAS: { v: Franja; t: string; icono: string }[] = [
   { v: 'desayuno', t: 'Desayuno', icono: 'sun-horizon' },
   { v: 'comida', t: 'Comida', icono: 'sun' },
-  { v: 'merienda', t: 'Merienda / picoteo', icono: 'cookie' },
+  { v: 'merienda', t: 'Merienda', icono: 'cookie' },
   { v: 'cena', t: 'Cena', icono: 'moon' },
 ]
 
@@ -25,6 +25,8 @@ export function franjaPorHora(hhmm: string): Franja {
 
 export type Racion = 'P' | 'N' | 'G'
 export const FACTOR_RACION: Record<Racion, number> = { P: 0.7, N: 1, G: 1.4 }
+/** Las raciones con palabras: nada de «P N G» sueltas. */
+export const NOMBRE_RACION: Record<Racion, string> = { P: 'Pequeña', N: 'Normal', G: 'Grande' }
 
 /** kcal y proteína de una plantilla en la ración elegida (redondeado). */
 export function conRacion(base: { kcal: number; proteina: number; cafeina?: number }, r: Racion) {
@@ -189,4 +191,30 @@ export function recientes(comidas: Comida[], antesDe: string, plantillas: { nomb
     if (out.length >= n) break
   }
   return out
+}
+
+// ---------- nota rápida: «Ligera · Normal · Abundante» ----------
+export type TamanoNota = 'ligera' | 'normal' | 'abundante'
+export const TAMANOS_NOTA: { v: TamanoNota; t: string }[] = [
+  { v: 'ligera', t: 'Ligera' },
+  { v: 'normal', t: 'Normal' },
+  { v: 'abundante', t: 'Abundante' },
+]
+
+/**
+ * Valores típicos de una comida según su tamaño, para quien no sabe las kcal de lo que ha comido.
+ * Desayuno y merienda suelen ser más pequeños que la comida y la cena.
+ */
+export function notaPorTamano(t: TamanoNota, franja: Franja): { kcal: number; proteina: number } {
+  const pequena = franja === 'desayuno' || franja === 'merienda'
+  const v = pequena
+    ? { ligera: { kcal: 200, proteina: 8 }, normal: { kcal: 350, proteina: 15 }, abundante: { kcal: 550, proteina: 25 } }
+    : { ligera: { kcal: 350, proteina: 15 }, normal: { kcal: 600, proteina: 25 }, abundante: { kcal: 900, proteina: 35 } }
+  return v[t]
+}
+
+/** Productos escaneados que aún no están guardados en «Mis comidas» (para no enseñarlos dos veces). */
+export function escaneadosSueltos<P extends { codigo: string }>(productos: P[], plantillas: { codigo?: string }[]): P[] {
+  const ya = new Set(plantillas.map(p => p.codigo).filter(Boolean))
+  return productos.filter(p => !ya.has(p.codigo))
 }

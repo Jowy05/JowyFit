@@ -8,24 +8,17 @@ import { patron } from '../../../catalogo/clasificacion'
 import { kg, num } from '../../../dominio/calculos'
 import { fechaCorta, hoyISO, MESES, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { resumen } from '../../../dominio/sesion'
-import { ejerciciosHechos, evolucion, logros, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas, type Medida } from '../../../dominio/tendencias'
+import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../../dominio/tendencias'
 import { Barras, Linea } from '../../graficas'
 import { Chip, cx, estilo, Ico, Pantalla, pct, Th, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { CabProgreso, fechaPunto } from './comun'
-
-const MEDIDAS: { v: Medida; t: string }[] = [
-  { v: 'peso', t: 'Peso máx.' },
-  { v: 'e1rm', t: '1RM est.' },
-  { v: 'volumen', t: 'Volumen' },
-]
 
 export function Fuerza() {
   const nav = useNav()
   const sesiones = useLiveQuery(() => sesionesHechas(), [])
   const metas = useLiveQuery(() => db.metas.where('tipo').equals('ejercicio').toArray(), []) ?? []
   const [elegido, setElegido] = useState<string | null>(null)
-  const [medida, setMedida] = useState<Medida>('peso')
   const [cuantos, setCuantos] = useState(12)
   const hoy = hoyISO()
   const cab = <CabProgreso actual="pro-fuerza" crumb="Lo que más motiva" />
@@ -65,7 +58,19 @@ export function Fuerza() {
 
   const ids = ejerciciosHechos(sesiones).slice(0, 10)
   const id = elegido && ids.includes(elegido) ? elegido : ids[0]
-  const puntos = id ? evolucion(sesiones, id, medida).slice(-12).map(p => ({ x: fechaPunto(p.fecha), y: p.valor })) : []
+  const aPuntos = (ps: { fecha: string; valor: number }[]) => ps.slice(-12).map(p => ({ x: fechaPunto(p.fecha), y: p.valor }))
+  const evoPeso = id ? evolucion(sesiones, id, 'peso') : []
+  const puntos = aPuntos(evoPeso)
+  const puntos1RM = id ? aPuntos(evolucion(sesiones, id, 'e1rm')) : []
+  const puntosVol = id ? aPuntos(evolucion(sesiones, id, 'volumen')) : []
+  const cambio = cambioDesdeInicio(evoPeso)
+  const nombre = id ? nombreEjercicio(id) : ''
+  // Frase que contesta «¿levanto más que al empezar?».
+  const frase = !cambio ? null
+    : evoPeso.length < 2 ? `${nombre}: ${kg(cambio.ahora)} kg la primera vez. Repítelo y verás si subes.`
+      : cambio.delta > 0 ? `${nombre}: ${kg(cambio.ahora)} kg, +${kg(cambio.delta)} kg desde el inicio.`
+        : cambio.delta < 0 ? `${nombre}: ${kg(cambio.ahora)} kg, ${kg(Math.abs(cambio.delta))} kg menos que al inicio.`
+          : `${nombre}: ${kg(cambio.ahora)} kg, igual que al inicio.`
 
   const grupos = seriesPorGrupo(sesiones, semanaDe(hoy), x => { const e = ejercicio(x); return e ? patron(e) : undefined })
   const escala = Math.max(24, ...grupos.map(g => g.v))
@@ -76,9 +81,9 @@ export function Fuerza() {
       {cab}
       <div className="pg">
         <div className="sec">
-          <div className="sec-h"><h2>Récords recientes</h2><span className="lbl mono">{delMes.length} en {MESES[Number(hoy.slice(5, 7)) - 1]}</span></div>
+          <div className="sec-h"><h2>Récords recientes</h2>{delMes.length > 0 && <span className="lbl mono">{delMes.length} en {MESES[Number(hoy.slice(5, 7)) - 1]}</span>}</div>
           {recientes.length === 0 && bloqueadas.length === 0 ? (
-            <p className="note plain"><Ico n="trophy" /><span>Aún no hay récords. Llegan solos cuando subes peso o repeticiones.</span></p>
+            <p className="note plain"><Ico n="trophy" /><span>{sesiones.length < 2 ? 'Aún pronto: los récords llegan cuando repites ejercicios.' : 'Aún no hay récords. Llegan solos cuando subes peso o repeticiones.'}</span></p>
           ) : (
             <div className="achs">
               {recientes.map(l => (
@@ -127,18 +132,23 @@ export function Fuerza() {
             <div className="chips scroll">
               {ids.map(x => <Chip key={x} on={x === id} onClick={() => setElegido(x)}>{nombreEjercicio(x)}</Chip>)}
             </div>
-            <div className="chips eq mt8">
-              {MEDIDAS.map(m => <Chip key={m.v} on={m.v === medida} onClick={() => setMedida(m.v)}>{m.t}</Chip>)}
-            </div>
-            <div className="mt12">
+            {frase && <p className="fza-frase mt12">{frase}</p>}
+            <p className="lbl mt12">Peso máx. <span className="muted">· lo más pesado de cada día</span></p>
+            <div className="mt8">
               {puntos.length === 0
                 ? <p className="small muted">Este ejercicio no lleva peso o aún no tiene series: mira sus repeticiones en el historial.</p>
-                : medida === 'volumen' ? <Barras puntos={puntos} /> : <Linea puntos={puntos} decimales={medida === 'e1rm' ? 1 : 2} />}
+                : <Linea puntos={puntos} decimales={2} vacia="Con 2 entrenos de este ejercicio verás aquí la línea." />}
             </div>
-            {puntos.length > 0 && (
-              <p className="small muted mt4">
-                {medida === 'peso' ? 'Peso máximo de cada día (kg).' : medida === 'e1rm' ? 'Lo que podrías levantar 1 vez, estimado (kg).' : 'Kilos totales movidos cada día (peso × reps).'}
-              </p>
+            {puntos.length > 1 && (
+              <details className="fold mt12">
+                <summary><Ico n="chart-bar" className="blue" />Más gráficas <Ico n="caret-down" /></summary>
+                <div className="in">
+                  <p className="lbl">1RM est. <span className="muted">· lo que podrías levantar 1 vez</span></p>
+                  <div className="mt8"><Linea puntos={puntos1RM} decimales={1} vacia="Aún no hay datos para calcularlo." /></div>
+                  <p className="lbl mt12">Volumen <span className="muted">· kilos movidos en total (peso × repeticiones)</span></p>
+                  <div className="mt8"><Barras puntos={puntosVol} vacia="Aún no hay datos para calcularlo." /></div>
+                </div>
+              </details>
             )}
           </div>
         </div>
@@ -172,7 +182,7 @@ export function Fuerza() {
                   <span className="code">{fechaCorta(s.fecha)}</span>
                   <span className="tx">
                     <b>{s.nombre}</b>
-                    <small className="mono">{Math.round(r.segundos / 60)} min · {r.series} series{r.volumen ? ` · ${num(r.volumen, 0)} kg` : ''}</small>
+                    <small className="mono">{Math.round(r.segundos / 60)} min · {r.series} series{r.volumen ? ` · ${num(r.volumen, 0)} kg movidos` : ''}</small>
                   </span>
                   {recs > 0 && <span className="tag gold"><Ico n="trophy" b />{recs}</span>}
                   <Ico n="caret-right" className="car" />

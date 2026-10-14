@@ -1,8 +1,8 @@
-// Editar algo ya apuntado: nombre, franja, hora, ración, kcal, proteína y cafeína.
+// Editar algo ya apuntado: nombre, cuándo (franja), hora, ración, proteína, kcal y cafeína.
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Comida } from '../../../datos/tipos'
-import { FACTOR_RACION, FRANJAS, NOMBRE_FRANJA, type Racion } from '../../../dominio/comida'
+import { FACTOR_RACION, FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, type Racion } from '../../../dominio/comida'
 import { Chip, Hoja, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
@@ -38,22 +38,22 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
       {fotoUrl && <img className="foto-prev" src={fotoUrl} alt="Foto de la comida" />}
       <span className="lbl fl mt8">Qué es</span>
       <input className="inp" value={c.nombre} onChange={e => cambia({ nombre: e.target.value })} aria-label="Nombre" />
-      <p className="lbl fl mt16">Franja</p>
+      <p className="lbl fl mt16">Cuándo</p>
       <div className="chips eq">
         {FRANJAS.map(f => <Chip key={f.v} on={c.franja === f.v} onClick={() => cambia({ franja: f.v })}>{NOMBRE_FRANJA[f.v]}</Chip>)}
       </div>
       {(c.tipo === 'plantilla' || c.tipo === 'producto') && (
         <>
-          <p className="lbl fl mt16">Ración</p>
+          <p className="lbl fl mt16">Tamaño de la ración</p>
           <div className="chips eq">
-            {(['P', 'N', 'G'] as const).map(r => <Chip key={r} on={c.racion === r} onClick={() => ponerRacion(r)}>{r === 'P' ? 'Pequeña' : r === 'N' ? 'Normal' : 'Grande'}</Chip>)}
+            {(['P', 'N', 'G'] as const).map(r => <Chip key={r} on={c.racion === r} onClick={() => ponerRacion(r)}>{NOMBRE_RACION[r]}</Chip>)}
           </div>
         </>
       )}
-      <p className="lbl fl mt16">Cantidad</p>
+      <p className="lbl fl mt16">Proteína y calorías (aproximado vale)</p>
       <div className="grid2">
-        <Stepper className="sm" valor={c.kcal} onCambio={v => cambia({ kcal: v })} paso={10} min={0} sufijo="kcal" etiqueta="kcal" />
         <Stepper className="sm" valor={c.proteina} onCambio={v => cambia({ proteina: v })} paso={1} min={0} sufijo="g prot." etiqueta="Proteína" />
+        <Stepper className="sm" valor={c.kcal} onCambio={v => cambia({ kcal: v })} paso={10} min={0} sufijo="kcal" etiqueta="kcal" />
       </div>
       {(c.tipo === 'bebida' || (c.cafeina ?? 0) > 0) && (
         <div className="mt8"><Stepper className="sm" valor={c.cafeina ?? 0} onCambio={v => cambia({ cafeina: v })} paso={10} min={0} sufijo="mg cafeína" etiqueta="Cafeína" /></div>

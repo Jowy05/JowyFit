@@ -66,7 +66,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
     })
     void cancelar([9001])
     nav.completa(null)
-    if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso('Semana de calibración completada') }
+    if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso('Semana de prueba terminada') }
     else { nav.raiz('ini'); aviso(`Guardado. ${cap(DIAS[(new Date().getDay() + 6) % 7]!)} ✓`) }
   })
 
@@ -76,14 +76,12 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
         derecha={!terminada(s) ? <button className="ib" aria-label="Volver al entreno" onClick={() => nav.completa('entreno')}><Ico n="x" /></button> : undefined} />
       <div className="pg">
         <div className="spec-box"><div className="spec c2">
+          {/* Solo lo que importa; sustituidos y saltados, solo si los hay (el horario y el volumen están en Progreso). */}
           <p><span>Duración</span><b>{duracion(res.segundos)}</b></p>
-          <p><span>Horario</span><b>{horaDe(s.inicio)} → {horaDe(fin)}</b></p>
-          <p><span>Ejercicios</span><b>{res.ejercicios}</b></p>
-          <p><span>Hechos</span><b className="okc">{res.hechos}</b></p>
-          <p><span>Sustituidos</span><b>{res.sustituidos}</b></p>
-          <p><span>Saltados</span><b>{res.saltados}</b></p>
+          <p><span>Ejercicios hechos</span><b className="okc">{res.hechos < res.ejercicios ? `${res.hechos} de ${res.ejercicios}` : res.hechos}</b></p>
           <p><span>Series</span><b>{res.series}</b></p>
-          <p><span>Volumen</span><b>{res.volumen.toLocaleString('es-ES')} kg</b></p>
+          {res.sustituidos > 0 && <p><span>Cambiados por otro</span><b>{res.sustituidos}</b></p>}
+          {res.saltados > 0 && <p><span>Saltados</span><b>{res.saltados}</b></p>}
         </div></div>
 
         {logros.length > 0 && (
@@ -115,7 +113,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
           </div>
         )}
 
-        {calibCompleta && <p className="note ok mt16"><Ico n="gauge" /><span><b>Semana de calibración completada.</b> Al guardar verás tu rutina definitiva, ajustada a tus tiempos reales.</span></p>}
+        {calibCompleta && <p className="note ok mt16"><Ico n="gauge" /><span><b>Semana de prueba terminada.</b> Al guardar verás tu rutina definitiva, ajustada a lo que tardas de verdad.</span></p>}
 
         {prox?.dia && (
           <div className="sec">

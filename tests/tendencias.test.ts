@@ -186,3 +186,92 @@ describe('pasos y mini gráfica', () => {
     expect(puntosSpark([])).toEqual([])
   })
 })
+
+// ---------- palabras de Progreso y Perfil ----------
+import {
+  cambioDesdeInicio, ejeRedondo, estadoEntrenos, estadoPicoteo, lineasSemaforo, veredictoCinturaAltura, veredictoGrasa, veredictoImc,
+} from '../src/dominio/tendencias'
+
+describe('veredictos en palabras', () => {
+  it('cintura/altura', () => {
+    expect(veredictoCinturaAltura(0.45)).toEqual({ palabra: 'saludable', tono: 'ok' })
+    expect(veredictoCinturaAltura(0.514).palabra).toBe('un poco por encima de lo saludable')
+    expect(veredictoCinturaAltura(0.57).tono).toBe('bad')
+    expect(veredictoCinturaAltura(0.65).palabra).toBe('bastante por encima de lo saludable')
+    expect(veredictoCinturaAltura(0.38).tono).toBe('warn')
+  })
+  it('grasa según el sexo', () => {
+    expect(veredictoGrasa(20.7, 'hombre').palabra).toBe('normal')
+    expect(veredictoGrasa(22, 'mujer').palabra).toBe('en forma')
+    expect(veredictoGrasa(30, 'hombre').tono).toBe('bad')
+    expect(veredictoGrasa(10, 'hombre').palabra).toBe('de deportista')
+  })
+  it('IMC', () => {
+    expect(veredictoImc(24.5).palabra).toBe('normal')
+    expect(veredictoImc(27).palabra).toBe('algo alto')
+    expect(veredictoImc(17).tono).toBe('warn')
+  })
+})
+
+describe('ejeRedondo', () => {
+  it('pone números redondos en vez de 91,2 / 88,8', () => {
+    const e = ejeRedondo([89.5, 90.4])
+    expect(e.marcas.every(m => Number.isInteger(m * 2))).toBe(true)
+    expect(e.min).toBeLessThanOrEqual(89.5)
+    expect(e.max).toBeGreaterThanOrEqual(90.4)
+  })
+  it('un solo valor repetido abre un margen redondo', () => {
+    const e = ejeRedondo([90, 90])
+    expect(e.min).toBe(88)
+    expect(e.max).toBe(92)
+    expect(e.decimales).toBe(0)
+  })
+  it('cintura/altura con dos decimales como mucho', () => {
+    const e = ejeRedondo([0.498, 0.514, 0.5])
+    expect(e.decimales).toBeLessThanOrEqual(2)
+    expect(e.min).toBeLessThanOrEqual(0.498)
+    expect(e.max).toBeGreaterThanOrEqual(0.514)
+  })
+  it('kilos de 20 a 27,5', () => {
+    const e = ejeRedondo([20, 22.5, 27.5])
+    expect(e.paso).toBe(5)
+    expect(e.marcas).toEqual([20, 25, 30])
+  })
+})
+
+describe('cambioDesdeInicio', () => {
+  it('primer y último valor', () => {
+    expect(cambioDesdeInicio([{ fecha: '2026-10-01', valor: 20 }, { fecha: '2026-10-08', valor: 22.5 }, { fecha: '2026-10-15', valor: 27.5 }]))
+      .toEqual({ inicio: 20, ahora: 27.5, delta: 7.5, desde: '2026-10-01' })
+    expect(cambioDesdeInicio([])).toBeNull()
+  })
+})
+
+describe('estado de la semana en curso', () => {
+  it('al día con 1 de 3 si solo tocaba 1', () => {
+    expect(estadoEntrenos(1, 3, 1)).toEqual({ estado: 'ok', alDia: true })
+    expect(estadoEntrenos(0, 3, 0)).toEqual({ estado: 'ok', alDia: true })
+    expect(estadoEntrenos(1, 3, 2).estado).toBe('warn')
+    expect(estadoEntrenos(0, 3, 2).estado).toBe('bad')
+    expect(estadoEntrenos(1, 3).estado).toBe('bad')
+    expect(estadoEntrenos(3, 3).estado).toBe('ok')
+  })
+  it('picoteo nunca en verde si va peor', () => {
+    expect(estadoPicoteo(1, 0, true)).toBe('warn')
+    expect(estadoPicoteo(0, 0, true)).toBe('ok')
+    expect(estadoPicoteo(1, 2, true)).toBe('ok')
+    expect(estadoPicoteo(3, 1, true)).toBe('bad')
+    expect(estadoPicoteo(2, 3, true)).toBe('warn')
+    expect(estadoPicoteo(0, 0, false)).toBe('nada')
+  })
+  it('frase del semáforo en líneas y con palabras', () => {
+    expect(lineasSemaforo({ frase: 'Bien: 1/3 entrenos. A mejorar: proteína baja.', semaforo: 'ambar', entrenos: 1, fijos: 3, esperados: 1, enCurso: true }))
+      .toEqual(['Vas al día: 1 de 3 entrenos', 'A mejorar: proteína baja'])
+    expect(lineasSemaforo({ frase: '3/3 entrenos, proteína OK, cintura estable.', semaforo: 'verde', entrenos: 3, fijos: 3, enCurso: false }))
+      .toEqual(['Entrenos hechos: 3 de 3', 'Bien: proteína, cintura estable'])
+    expect(lineasSemaforo({ frase: 'Bien: proteína OK. A mejorar: 0/3 entrenos.', semaforo: 'rojo', entrenos: 0, fijos: 3, esperados: 2, enCurso: true }))
+      .toEqual(['Vas con retraso: 0 de 3 entrenos', 'Bien: proteína'])
+    expect(lineasSemaforo({ frase: 'A mejorar: 1/3 entrenos, +0,5 cm de cintura.', semaforo: 'rojo', entrenos: 1, fijos: 3, enCurso: false }))
+      .toEqual(['Te faltaron entrenos: 1 de 3 entrenos', 'A mejorar: +0,5 cm de cintura'])
+  })
+})

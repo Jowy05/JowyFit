@@ -31,10 +31,21 @@ export function App() {
   return (
     <ProveedorAviso>
       <ProveedorNav>
-        {perfil?.altaCompleta ? <Marco /> : <div className="app is-full" data-letra={letraGuardada()}><div className="screens"><Alta /></div></div>}
+        {perfil?.altaCompleta ? <Marco /> : <MarcoAlta />}
       </ProveedorNav>
     </ProveedorAviso>
   )
+}
+
+/** Marco del alta: también escucha el cambio de letra (botón «Aa Letra grande» de la bienvenida). */
+function MarcoAlta() {
+  const [letra, setLetra] = useState(letraGuardada())
+  useEffect(() => {
+    const f = () => setLetra(letraGuardada())
+    window.addEventListener('jf-letra', f)
+    return () => window.removeEventListener('jf-letra', f)
+  }, [])
+  return <div className="app is-full" data-letra={letra}><div className="screens"><Alta /></div></div>
 }
 
 const TABS: { t: Pestana; n: string; i: string }[] = [
@@ -81,6 +92,7 @@ function Marco() {
   const full = !!nav.estado.completa || ruta.p === 'com-scan'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
   useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
+  useEffect(() => { window.dispatchEvent(new Event('jf-cerrar-aviso')) }, [nav.estado.pestana])
   const enCurso = !!sesion && !full
 
   return (

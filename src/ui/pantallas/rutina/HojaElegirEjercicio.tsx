@@ -1,8 +1,8 @@
 // Hoja para elegir un ejercicio: cambiar, alternativas B/C o añadir (rutina o entreno en curso).
 import { useMemo, useState } from 'react'
 import { db } from '../../../datos/db'
-import { buscar, catalogoCargado, ejercicio, nombreMaterial, nombreMusculo } from '../../../catalogo/catalogo'
-import { NOMBRE_PATRON, patron, tipoRegistro } from '../../../catalogo/clasificacion'
+import { buscar, catalogoCargado, ejercicio, nombreMaterial } from '../../../catalogo/catalogo'
+import { patron, tipoRegistro } from '../../../catalogo/clasificacion'
 import type { Ejercicio } from '../../../catalogo/tipos'
 import { alternativasDe, bloqueNuevo } from '../../../dominio/generador'
 import { desdeBloque, sustituir } from '../../../dominio/sesion'
@@ -12,6 +12,7 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
+import { musculosComunes } from './comun'
 
 type Modo = 'cambiar' | 'alternativa' | 'anadir' | 'sesion-anadir' | 'sesion-cambiar'
 
@@ -79,7 +80,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
     }
     await guardarRutina(nueva)
     nav.hoja(null)
-    aviso(modo === 'anadir' ? `Añadido: ${e.nombre}` : modo === 'cambiar' ? `Cambiado por ${e.nombre}` : `Alternativa B: ${e.nombre}`)
+    aviso(modo === 'anadir' ? `Añadido: ${e.nombre}` : modo === 'cambiar' ? `Cambiado por ${e.nombre}` : `Alternativa añadida: ${e.nombre}`)
   })
 
   const titulo = { cambiar: 'Cambiar ejercicio', alternativa: 'Elegir alternativa', anadir: 'Añadir ejercicio', 'sesion-anadir': 'Añadir al entreno', 'sesion-cambiar': 'Cambiar ejercicio' }[modo]
@@ -88,7 +89,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
       <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" placeholder="Buscar ejercicio o músculo" value={q} onChange={e => setQ(e.target.value)} /></label>
       {actual && (
         <div className="chips mt8">
-          <Chip on={mismoPatron} onClick={() => setMismoPatron(true)}>Mismo movimiento · {NOMBRE_PATRON[patron(actual)]}</Chip>
+          <Chip on={mismoPatron} onClick={() => setMismoPatron(true)}>Parecidos</Chip>
           <Chip on={!mismoPatron} onClick={() => setMismoPatron(false)}>Todos</Chip>
         </div>
       )}
@@ -96,11 +97,11 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
         {lista.map(e => (
           <button key={e.id} className="it" onClick={() => void elegir(e)}>
             <Th ej={e} size="s" />
-            <span className="tx"><b>{e.nombre}</b><small>{e.principales.slice(0, 2).map(nombreMusculo).join(' · ')} · {nombreMaterial(e.material)}</small></span>
+            <span className="tx"><b>{e.nombre}</b><small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small></span>
             {marcas.get(e.id)?.favorito && <Ico n="star" className="goldc" />}
           </button>
         ))}
-        {!lista.length && <p className={cx('pd', 'muted')}>Nada con ese nombre en tu gimnasio.</p>}
+        {!lista.length && <p className={cx('pd', 'muted')}>{mismoPatron && actual ? 'No hay parecidos con ese nombre: prueba en «Todos».' : 'Nada con ese nombre en tu gimnasio.'}</p>}
       </div>
     </Hoja>
   )

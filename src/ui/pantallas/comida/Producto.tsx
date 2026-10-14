@@ -1,9 +1,9 @@
-// COM-04 · Producto: ficha técnica (por ración y por 100 g), ración P/N/G o unidades, añadir o guardar como plantilla.
+// COM-04 · Producto: cuánto (pequeña/normal/grande o unidades) y «Añadir» bien visible; la ficha técnica, plegada.
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Franja, Producto as TProducto } from '../../../datos/tipos'
-import { FACTOR_RACION, aspecto, buscarOFF, porRacion, type Racion } from '../../../dominio/comida'
+import { FACTOR_RACION, NOMBRE_RACION, aspecto, buscarOFF, porRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { num } from '../../../dominio/calculos'
 import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio } from '../../comp'
@@ -45,13 +45,13 @@ export function Producto({ ruta }: { ruta: Ruta }) {
   const anadir = unaVez(async () => {
     const des = await apuntar({ fecha, franja, nombre: p.nombre, kcal: total.kcal, proteina: total.proteina, cafeina: total.cafeina, racion, tipo: 'producto', codigo: p.codigo })
     nav.atras()
-    aviso(`Añadido: ${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''} (${racion})`, des)
+    aviso(`Añadido: ${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''}${racion !== 'N' ? ` (ración ${NOMBRE_RACION[racion].toLowerCase()})` : ''}`, des)
   })
   const comoPlantilla = unaVez(async () => {
     const ya = await db.plantillas.filter(t => t.codigo === p.codigo).first()
-    if (ya) { aviso('Ya tienes una plantilla de este producto'); return }
+    if (ya) { aviso('Ya está en Mis comidas'); return }
     await db.plantillas.add({ nombre: p.nombre, kcal: base.kcal, proteina: base.proteina, cafeina: base.cafeina, tipo: base.cafeina ? 'bebida' : 'comida', franja, usos: 0, codigo: p.codigo })
-    aviso('Guardado como plantilla')
+    aviso('Guardado en Mis comidas')
   })
   const borrar = unaVez(async (x: TProducto) => {
     await db.productos.delete(x.codigo)
@@ -72,44 +72,50 @@ export function Producto({ ruta }: { ruta: Ruta }) {
 
         {p.pendiente ? (
           <div className="card pd mt12">
-            <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>Pendiente de buscar</b><small>Se escaneó sin conexión.</small></span></p>
+            <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>Pendiente de buscar</b><small>Se escaneó sin conexión. Se busca solo al volver la cobertura.</small></span></p>
             <button className="btn mt12" disabled={buscando} onClick={() => void reintentar()}>{buscando ? 'Buscando…' : 'Buscar ahora'}</button>
           </div>
         ) : (
           <>
-            <div className="sec">
-              <div className="sec-h"><h2>Ficha técnica</h2><span className="lbl">{base.base === 'racion' ? 'Ración N' : 'Por 100 g'}</span></div>
-              <div className="spec-box">
-                <table className="tbl">
-                  <thead><tr><th /><th>Por ración</th><th>Por 100 g</th></tr></thead>
-                  <tbody>
-                    <tr><td>Energía</td><td>{g(p.kcalRacion, 'kcal')}</td><td>{g(p.kcal100, 'kcal')}</td></tr>
-                    <tr><td>Proteína</td><td className="okc">{g(p.proteinaRacion)}</td><td>{g(p.proteina100)}</td></tr>
-                    <tr><td>Hidratos</td><td>{g(porRac(p.hidratos100))}</td><td>{g(p.hidratos100)}</td></tr>
-                    <tr><td>Grasas</td><td>{g(porRac(p.grasas100))}</td><td>{g(p.grasas100)}</td></tr>
-                    {p.cafeina100 ? <tr><td>Cafeína</td><td>{g(porRac(p.cafeina100), 'mg')}</td><td>{g(p.cafeina100, 'mg')}</td></tr> : null}
-                    <tr><td>Ración</td><td>{p.racionG ? g(p.racionG) : '—'}</td><td>—</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <p className="ux-com-prod-res mt8">
+              <b className="mono">{kp(base.kcal, base.proteina, base.cafeina)}</b>
+              <span className="small muted"> {base.base === 'racion' ? `por ración${p.racionG ? ` (${num(p.racionG)} g)` : ''}` : 'por cada 100 g'}</span>
+            </p>
 
             <div className="sec">
-              <span className="lbl fl">Ración</span>
+              <span className="lbl fl">¿Cuánto te has tomado?</span>
               <div className="chips eq">
                 {(['P', 'N', 'G'] as const).map(r => (
-                  <Chip key={r} className="big" on={racion === r} onClick={() => setRacion(r)}>{r} <span className="n">{Math.round(base.kcal * FACTOR_RACION[r])}</span></Chip>
+                  <Chip key={r} className="big" on={racion === r} onClick={() => setRacion(r)}>{NOMBRE_RACION[r]} <span className="n">{Math.round(base.kcal * FACTOR_RACION[r])}</span></Chip>
                 ))}
               </div>
-              <span className="lbl fl mt12">o unidades</span>
+              <p className="small muted mt4">Números: kcal de cada tamaño.</p>
+              <span className="lbl fl mt12">¿Cuántas?</span>
               <Stepper valor={unidades} onCambio={setUnidades} paso={0.5} min={0.5} sufijo={unidades === 1 ? (base.base === 'racion' ? 'ración' : '× 100 g') : (base.base === 'racion' ? 'raciones' : '× 100 g')} etiqueta="Unidades" />
-              <p className="small muted mt8 center mono">Total: {kp(total.kcal, total.proteina, total.cafeina)}{total.cafeina ? ` · ${total.proteina} g prot.` : ''}</p>
+              <p className="small mt8 center"><b>Total: <span className="mono">{kp(total.kcal, total.proteina, total.cafeina)}</span></b>{total.cafeina ? <span className="muted"> · {total.proteina} g proteína</span> : null}</p>
             </div>
 
-            <div className="btns mt20">
-              <button className="btn gry sm" onClick={() => void comoPlantilla()}>Guardar como plantilla</button>
-              <button className="btn sm" onClick={() => void anadir()}>Añadir</button>
-            </div>
+            <button className="btn mt16" onClick={() => void anadir()}>Añadir</button>
+            <button className="btn ln sm mt8" onClick={() => void comoPlantilla()}>Guardar en Mis comidas</button>
+
+            <details className="fold mt20">
+              <summary>Ficha técnica (la etiqueta)<Ico n="caret-down" /></summary>
+              <div className="in">
+                <div className="spec-box">
+                  <table className="tbl">
+                    <thead><tr><th /><th>Por ración</th><th>Por 100 g</th></tr></thead>
+                    <tbody>
+                      <tr><td>Energía</td><td>{g(p.kcalRacion, 'kcal')}</td><td>{g(p.kcal100, 'kcal')}</td></tr>
+                      <tr><td>Proteína</td><td className="okc">{g(p.proteinaRacion)}</td><td>{g(p.proteina100)}</td></tr>
+                      <tr><td>Hidratos</td><td>{g(porRac(p.hidratos100))}</td><td>{g(p.hidratos100)}</td></tr>
+                      <tr><td>Grasas</td><td>{g(porRac(p.grasas100))}</td><td>{g(p.grasas100)}</td></tr>
+                      {p.cafeina100 ? <tr><td>Cafeína</td><td>{g(porRac(p.cafeina100), 'mg')}</td><td>{g(p.cafeina100, 'mg')}</td></tr> : null}
+                      <tr><td>Ración</td><td>{p.racionG ? g(p.racionG) : '—'}</td><td>—</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </details>
           </>
         )}
         <button className="lnk mt16" onClick={() => void borrar(p)}><Ico n="trash" /> Borrar producto</button>

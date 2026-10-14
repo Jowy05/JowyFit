@@ -320,3 +320,110 @@ export function puntosSpark(valores: number[], w = 120, h = 40, margen = 4): { x
     y: Math.round((max === min ? h / 2 : h - margen - ((v - min) / rango) * (h - 2 * margen)) * 10) / 10,
   }))
 }
+
+// ---------- palabras para quien no sabe de números (Progreso y Perfil) ----------
+
+export type Tono = 'ok' | 'warn' | 'bad'
+
+/** Palabra que acompaña a cintura/altura: 0,4-0,5 es lo saludable. */
+export function veredictoCinturaAltura(ratio: number): { palabra: string; tono: Tono } {
+  if (ratio < 0.4) return { palabra: 'por debajo de lo habitual', tono: 'warn' }
+  if (ratio < 0.5) return { palabra: 'saludable', tono: 'ok' }
+  if (ratio < 0.55) return { palabra: 'un poco por encima de lo saludable', tono: 'warn' }
+  if (ratio < 0.6) return { palabra: 'por encima de lo saludable', tono: 'bad' }
+  return { palabra: 'bastante por encima de lo saludable', tono: 'bad' }
+}
+
+/** Palabra para el % de grasa según el sexo (tramos habituales del ACE). */
+export function veredictoGrasa(pct: number, sexo: Perfil['sexo']): { palabra: string; tono: Tono } {
+  const [deportista, forma, normal, alto] = sexo === 'mujer' ? [14, 21, 25, 32] : [6, 14, 18, 25]
+  if (pct < deportista) return { palabra: 'muy bajo', tono: 'warn' }
+  if (pct < forma) return { palabra: 'de deportista', tono: 'ok' }
+  if (pct < normal) return { palabra: 'en forma', tono: 'ok' }
+  if (pct < alto) return { palabra: 'normal', tono: 'ok' }
+  return { palabra: 'alto', tono: 'bad' }
+}
+
+/** Palabra para el IMC (tramos de la OMS). */
+export function veredictoImc(v: number): { palabra: string; tono: Tono } {
+  if (v < 18.5) return { palabra: 'bajo', tono: 'warn' }
+  if (v < 25) return { palabra: 'normal', tono: 'ok' }
+  if (v < 30) return { palabra: 'algo alto', tono: 'warn' }
+  return { palabra: 'alto', tono: 'bad' }
+}
+
+/** Escala de una gráfica con números redondos: marcas cada 1, 2, 2,5 o 5 (× 10ⁿ). */
+export function ejeRedondo(valores: number[], marcasDeseadas = 3): { min: number; max: number; paso: number; marcas: number[]; decimales: number } {
+  const vs = valores.filter(Number.isFinite)
+  let lo = vs.length ? Math.min(...vs) : 0, hi = vs.length ? Math.max(...vs) : 1
+  if (hi === lo) { const m = Math.max(Math.abs(lo) * 0.02, 0.01); lo -= m; hi += m }
+  const bruto = (hi - lo) / Math.max(1, marcasDeseadas - 1)
+  const pot = 10 ** Math.floor(Math.log10(bruto))
+  const paso = ([1, 2, 2.5, 5, 10].map(f => f * pot).find(p => p >= bruto - 1e-12) ?? 10 * pot)
+  const redondo = (x: number) => Math.round(x * 1e9) / 1e9
+  const min = redondo(Math.floor(lo / paso + 1e-9) * paso)
+  let max = redondo(Math.ceil(hi / paso - 1e-9) * paso)
+  if (max <= min) max = redondo(min + paso)
+  const marcas: number[] = []
+  for (let v = min; v <= max + paso / 2; v = redondo(v + paso)) marcas.push(v)
+  let decimales = 0
+  while (decimales < 4 && Math.abs(Math.round(paso * 10 ** decimales) - paso * 10 ** decimales) > 1e-6) decimales++
+  return { min, max, paso, marcas, decimales }
+}
+
+/** Primer y último valor de una evolución y la diferencia («+7,5 kg desde el inicio»). */
+export function cambioDesdeInicio(ps: PuntoFecha[]): { inicio: number; ahora: number; delta: number; desde: string } | null {
+  if (!ps.length) return null
+  const a = ps[0]!, b = ps[ps.length - 1]!
+  return { inicio: a.valor, ahora: b.valor, delta: Math.round((b.valor - a.valor) * 100) / 100, desde: a.fecha }
+}
+
+export type EstadoTarjeta = 'ok' | 'warn' | 'bad' | 'nada'
+
+/**
+ * Estado de los entrenos de la semana con el mismo criterio que el semáforo:
+ * a mitad de semana solo cuentan los que ya tocaban (`esperados`).
+ */
+export function estadoEntrenos(hechos: number, fijos: number, esperados?: number): { estado: EstadoTarjeta; alDia: boolean } {
+  const meta = Math.min(fijos, esperados ?? fijos)
+  if (meta === 0 || hechos >= meta) return { estado: 'ok', alDia: true }
+  if (hechos >= meta - 1 && meta > 1) return { estado: 'warn', alDia: false }
+  return { estado: 'bad', alDia: false }
+}
+
+/** Picoteo: nunca verde si va peor que la semana anterior; sin comidas apuntadas, «sin datos». */
+export function estadoPicoteo(dias: number, anterior: number, hayComidas: boolean): EstadoTarjeta {
+  if (!hayComidas) return 'nada'
+  if (dias > anterior) return dias <= 1 ? 'warn' : 'bad'
+  if (dias <= 1) return 'ok'
+  return 'warn'
+}
+
+/**
+ * Parte la frase del semáforo en líneas cortas y cambia «1/3 entrenos» por palabras:
+ * «Vas al día: 1 de 3 entrenos» (semana en curso), «Entrenos: 3 de 3» o «Te faltan entrenos: 1 de 3».
+ */
+export function lineasSemaforo(o: { frase: string; semaforo: 'verde' | 'ambar' | 'rojo'; entrenos: number; fijos: number; esperados?: number; enCurso: boolean }): string[] {
+  const sinPunto = o.frase.trim().replace(/\.$/, '')
+  let bien: string[] = [], mal: string[] = []
+  const trocear = (s: string | undefined) => (s ? s.split(', ').map(x => x.trim().replace(/ OK$/, '')).filter(Boolean) : [])
+  if (o.semaforo === 'verde') bien = trocear(sinPunto)
+  else {
+    const mB = /Bien: (.*?)(?:\. A mejorar: |$)/.exec(sinPunto)
+    const mM = /A mejorar: (.*)$/.exec(sinPunto)
+    bien = trocear(mB?.[1]); mal = trocear(mM?.[1])
+  }
+  const esEntrenos = (x: string) => /^\d+\/\d+ entrenos$/.test(x)
+  bien = bien.filter(x => !esEntrenos(x)); mal = mal.filter(x => !esEntrenos(x))
+  const lineas: string[] = []
+  if (o.fijos > 0) {
+    const { alDia } = estadoEntrenos(o.entrenos, o.fijos, o.esperados)
+    const de = `${o.entrenos} de ${o.fijos} entrenos`
+    if (o.entrenos >= o.fijos) lineas.push(`Entrenos hechos: ${o.entrenos} de ${o.fijos}`)
+    else if (alDia) lineas.push(o.enCurso ? `Vas al día: ${de}` : `Entrenos: ${de}`)
+    else lineas.push(`${o.enCurso ? 'Vas con retraso' : 'Te faltaron entrenos'}: ${de}`)
+  }
+  if (bien.length) lineas.push(`Bien: ${bien.join(', ')}`)
+  if (mal.length) lineas.push(`A mejorar: ${mal.join(', ')}`)
+  return lineas
+}

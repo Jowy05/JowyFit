@@ -53,7 +53,7 @@ export function HojaLista() {
       </div>
       <div className="list mt12">
         <button className="it" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-anadir' })}><span className="ico"><Ico n="plus" /></span><span className="tx"><b>Añadir ejercicio</b></span></button>
-        <button className="it" onClick={() => { nav.hoja(null); nav.minimizar() }}><span className="ico"><Ico n="sign-out" /></span><span className="tx"><b>Salir sin terminar</b><small>Sigue en la mini barra</small></span></button>
+        <button className="it" onClick={() => { nav.hoja(null); nav.minimizar() }}><span className="ico"><Ico n="sign-out" /></span><span className="tx"><b>Salir sin terminar</b><small>Sigue abierto: vuelves desde la barra de abajo</small></span></button>
         <button className="it danger" onClick={() => nav.hoja('sheet-confirmar', { titulo: '¿Descartar este entreno?', texto: 'Se borra lo apuntado hoy.', si: 'Descartar', peligro: true, accion: 'cancelar-entreno', id: s.id })}><span className="ico"><Ico n="trash" /></span><span className="tx"><b>Descartar entreno</b></span></button>
       </div>
       <button className="btn xl mt16" onClick={() => { nav.hoja(null); nav.completa('ses-fin', { id: s.id }) }}><Ico n="flag-checkered" b />Terminar entreno</button>

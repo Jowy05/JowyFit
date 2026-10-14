@@ -29,7 +29,7 @@ const CAMPOS_BASCULA: { k: keyof Bascula; t: string; u: string }[] = [
   { k: 'edadCorporal', t: 'Edad corporal', u: 'años' },
 ]
 
-/** Punto de partida si nunca se midió (solo se guarda si se toca). */
+/** Punto de partida del primer + o − si nunca se midió (se ve «—» hasta tocarlo). */
 const POR_DEFECTO: Record<Campo, number> = { peso: 75, cintura: 90, cuello: 38, cadera: 100, pecho: 100, brazo: 32, brazoContraido: 34, muslo: 56 }
 
 const leerNumero = (s: string | undefined) => {
@@ -56,10 +56,11 @@ export function Registrar() {
   const [bas, setBas] = useState<Partial<Record<keyof Bascula, string>>>({})
   const [origen, setOrigen] = useState<OrigenMedicion | null>(null)
   const [fecha, setFecha] = useState(hoy)
+  const [masAbierto, setMasAbierto] = useState(false)
   const unaVez = useUnaVez()
 
   const tocado = (c: Campo) => tocados.includes(c)
-  const valor = (c: Campo) => (tocado(c) ? valores[c] ?? null : ultimos?.v[c]?.valor ?? POR_DEFECTO[c])
+  const valor = (c: Campo): number | null => (tocado(c) ? valores[c] ?? null : ultimos?.v[c]?.valor ?? null)
   const cambia = (c: Campo, n: number) => {
     setValores(v => ({ ...v, [c]: n }))
     setTocados(t => (t.includes(c) ? t : [...t, c]))
@@ -95,45 +96,47 @@ export function Registrar() {
       <span className="lbl">{texto}{tocado(c) && <> <Ico n="check-circle" b className="okc" /></>}</span>
       {tocado(c)
         ? <button type="button" className="lnk small" onClick={() => quitar(c)}>Quitar</button>
-        : <small className="small muted">{ultimos?.v[c] ? fechaCorta(ultimos.v[c]!.fecha) : 'sin datos'}</small>}
+        : <small className="small muted">{ultimos?.v[c] ? `la última vez, ${fechaCorta(ultimos.v[c]!.fecha)}` : 'sin datos'}</small>}
     </div>
   )
+  // Sin dato previo se ve «—»; el primer + o − parte de un valor normal (75 kg, 90 cm…), no de 0.
   const paso = (c: Campo, sm: boolean, p: number) => (
-    <div style={{ opacity: tocado(c) ? 1 : 0.55 }}>
-      <Stepper className={cx(sm && 'sm')} valor={valor(c)} onCambio={n => cambia(c, n)} paso={p} min={0} decimales={1} sufijo={c === 'peso' ? 'kg' : 'cm'}
+    <div className={cx('reg-campo', tocado(c) && 'tocado')}>
+      <Stepper className={cx(sm && 'sm')} valor={valor(c)} onCambio={n => cambia(c, valor(c) == null && n <= p ? POR_DEFECTO[c] : n)} paso={p} min={0} decimales={1} sufijo={c === 'peso' ? 'kg' : 'cm'}
         etiqueta={c === 'peso' ? 'Peso' : PERIMETROS.find(x => x.k === c)?.t ?? c} />
     </div>
   )
+  const otros = PERIMETROS.filter(p => p.k !== 'cintura')
+  const cambiadosMas = otros.filter(p => tocado(p.k)).length + (basculaRellena ? 1 : 0)
+  const hayAlgo = tocados.length > 0 || basculaRellena
 
   return (
     <Pantalla>
-      <Cab atras crumb="Cuerpo" titulo="Registrar medidas">
-        <label className="date-row mt8">
-          <input type="date" value={fecha} max={hoy} onChange={e => e.target.value && setFecha(e.target.value)} aria-label="Fecha"
-            style={{ border: 0, background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none' }} />
-          {fecha === hoy && <span>Hoy</span>}
-        </label>
-      </Cab>
+      <Cab atras crumb="Cuerpo" titulo="Registrar medidas" sub={fecha === hoy ? 'Hoy' : `Del ${fechaCorta(fecha)}`} />
       <div className="pg">
-        <p className="note plain"><Ico n="info" /><span>Solo se guarda lo que toques. Para repetir el valor de la última vez, toca el número y confírmalo.</span></p>
+        <p className="note plain"><Ico n="hand-pointing" /><span>Cambia con <b>+</b> y <b>−</b> lo que te hayas medido. Lo que no toques no se guarda.</span></p>
 
-        <div className="mt12">{etiqueta('peso', 'Peso')}</div>
+        <div className="mt16">{etiqueta('peso', 'Peso')}</div>
         {paso('peso', false, 0.1)}
+
+        <div className="mt16">{etiqueta('cintura', 'Cintura')}</div>
+        {paso('cintura', false, 0.5)}
 
         <Medir />
 
-        <div className="grid2 mt12">
-          {PERIMETROS.map(p => (
-            <div key={p.k}>
-              {etiqueta(p.k, p.t)}
-              {paso(p.k, true, 0.5)}
-            </div>
-          ))}
-        </div>
-
-        <details className="fold mt12">
-          <summary><Ico n="scales" className="blue" /> Datos de la báscula <Ico n="caret-down" /></summary>
+        <details className="fold mt16" open={masAbierto} onToggle={e => setMasAbierto(e.currentTarget.open)}>
+          <summary><Ico n="ruler" className="blue" />Más medidas {cambiadosMas > 0 ? <span className="tag ok">{cambiadosMas} cambiada{cambiadosMas === 1 ? '' : 's'}</span> : <span className="tag">opcional</span>}<Ico n="caret-down" /></summary>
           <div className="in">
+            <div className="grid2 mt8">
+              {otros.map(p => (
+                <div key={p.k}>
+                  {etiqueta(p.k, p.t)}
+                  {paso(p.k, true, 0.5)}
+                </div>
+              ))}
+            </div>
+
+            <p className="lbl fl mt16"><Ico n="scales" className="blue" /> Datos de la báscula</p>
             <p className="small muted">Rellena solo lo que te dé tu báscula. Lo gris es lo de la última vez.</p>
             <div className="grid2 mt8">
               {CAMPOS_BASCULA.map(c => {
@@ -147,15 +150,23 @@ export function Registrar() {
                 )
               })}
             </div>
+
+            <p className="lbl fl mt16">Con qué te has medido</p>
+            <div className="chips">
+              {ORIGENES.map(o => <Chip key={o.v} on={origenFinal === o.v} onClick={() => setOrigen(o.v)}><Ico n={o.icono} />{o.t}</Chip>)}
+            </div>
+
+            <p className="lbl fl mt16">Fecha</p>
+            <label className="date-row">
+              <input type="date" value={fecha} max={hoy} onChange={e => e.target.value && setFecha(e.target.value)} aria-label="Fecha"
+                style={{ border: 0, background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none' }} />
+              {fecha === hoy && <span>Hoy</span>}
+            </label>
           </div>
         </details>
 
-        <p className="lbl fl mt16">Origen</p>
-        <div className="chips">
-          {ORIGENES.map(o => <Chip key={o.v} on={origenFinal === o.v} onClick={() => setOrigen(o.v)}><Ico n={o.icono} />{o.t}</Chip>)}
-        </div>
-
-        <div className="dock"><button className={cx('btn', !tocados.length && !basculaRellena && 'off')} onClick={() => void guardar()}>Guardar</button></div>
+        {!hayAlgo && <p className="small muted center mt12">Toca + o − en alguna medida para poder guardar.</p>}
+        <div className="dock"><button className={cx('btn', !hayAlgo && 'off')} onClick={() => void guardar()}>Guardar</button></div>
       </div>
     </Pantalla>
   )

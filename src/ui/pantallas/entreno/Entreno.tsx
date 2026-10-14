@@ -6,11 +6,11 @@ import { marcaDe } from '../../../datos/repos'
 import { historialDe } from '../../../datos/consultas'
 import type { EjercicioSesion, Serie, Sesion } from '../../../datos/tipos'
 import { ejercicio, etiqueta, nombreEjercicio } from '../../../catalogo/catalogo'
-import { patron } from '../../../catalogo/clasificacion'
+import { ES_MAQUINA, patron } from '../../../catalogo/clasificacion'
 import { calentamiento as aproximacion, pesosPara } from '../../../dominio/pesos'
-import { anadirSerie, cambiarSerie, hecha, indiceActual, quitarSerie, quitarUnaSerie, saltar, serieActual, terminada } from '../../../dominio/sesion'
+import { cambiarSerie, hecha, indiceActual, quitarUnaSerie, saltar, serieActual, terminada } from '../../../dominio/sesion'
 import { estadoHora, propuestaRecorte } from '../../../dominio/tiempos'
-import { esRecord } from '../../../dominio/progresion'
+import { esRecord, TEXTO_PARTIDA } from '../../../dominio/progresion'
 import { duracion, formatoHora } from '../../../dominio/fechas'
 import { kg } from '../../../dominio/calculos'
 import { cancelar, pantallaEncendida, pitido, programar, vibrar } from '../../../plataforma'
@@ -53,6 +53,8 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
   const [ahora, setAhora] = useState(Date.now())
   const [logro, setLogro] = useState<{ texto: string; nombre: string; valor: string } | null>(null)
   const [recorteVisto, setRecorteVisto] = useState<number>(0)
+  // Avisos de arriba (semana de prueba, semana suave, entrenas solo) que se han cerrado con la ×.
+  const [avisosCerrados, setAvisosCerrados] = useState<string[]>([])
   const finAvisado = useRef<number | null>(null)
   const tLogro = useRef<number | undefined>(undefined)
   useEffect(() => { const t = setInterval(() => setAhora(Date.now()), 1000); return () => { clearInterval(t); window.clearTimeout(tLogro.current) } }, [])
@@ -89,7 +91,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
   if (!e || !ej) return (
     <Pantalla full>
       <div className="ses-top" style={{ paddingTop: 8 }}>
-        <button className="ib sm" onClick={() => nav.hoja('sheet-lista')} aria-label="Lista de la sesión"><Ico n="list-numbers" /></button>
+        <button className="ux-tbtn" onClick={() => nav.hoja('sheet-lista')} aria-label="Lista de la sesión"><Ico n="list-numbers" /><span>Lista</span></button>
         <div className="grow"><p className="lbl">{s.nombre}</p></div>
         <span className="clock mono">{duracion((ahora - s.inicio) / 1000)}</span>
       </div>
@@ -129,6 +131,23 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
   // Calentamiento sugerido: lo mismo que se enseña es lo que se añade (con la barra como mínimo).
   const sugeridas = calent.length === 0 && ajustes.calentamiento && n === 0 && e.registro === 'peso' && (pesoHoy ?? 0) >= 30
     ? aproximacion(pesoHoy!, lista, ej.material === 'barbell' ? (g?.barraKg ?? 20) : 0) : []
+  // Primera vez con este ejercicio y aún sin ninguna serie hecha: el peso de «Hoy» es uno de partida.
+  const primeraVez = !topUltima && !trabajo.some(x => x.hecha)
+
+  // Un solo aviso corto arriba, y solo al empezar: la semana de prueba o suave al principio del entreno,
+  // «entrenas solo» en la primera serie del ejercicio que lo pide. Se puede cerrar con la ×.
+  const alEmpezar = !s.ejercicios.some(x => x.series.some(y => y.hecha))
+  const partes: { ico: string; tono: string; t: string }[] = []
+  if (alEmpezar && s.calibracion) partes.push({ ico: 'gauge', tono: 'var(--blue-t)', t: 'Semana de prueba: pesos cómodos, que te sobren 3 o 4 repeticiones.' })
+  if (alEmpezar && s.suave) partes.push({ ico: 'feather', tono: 'var(--ok-t)', t: 'Semana suave: 1 serie menos y −10 % de peso.' })
+  if (peligroso && !e.series.some(x => x.hecha)) partes.push({ ico: 'first-aid', tono: 'var(--warn-t)', t: 'Entrenas solo: usa las barras de seguridad y no llegues al límite.' })
+  const textoAviso = partes.map(x => x.t).join(' ')
+  const verAviso = partes.length > 0 && !avisosCerrados.includes(textoAviso)
+  // «Terminar» con ejercicios sin hacer pregunta antes; si ya está todo, va directo al resumen.
+  const quedan = s.ejercicios.filter(x => x.estado === 'pendiente' || x.estado === 'curso').length
+  const terminarEntreno = () => quedan
+    ? nav.hoja('sheet-confirmar', { titulo: '¿Terminar el entreno?', texto: `${quedan === 1 ? 'Te queda 1 ejercicio' : `Te quedan ${quedan} ejercicios`} sin hacer. Lo que has hecho se guarda.`, si: 'Terminar entreno', no: 'Seguir entrenando', accion: 'terminar-entreno', id: s.id })
+    : nav.completa('ses-fin', { id: s.id })
 
   const hecho = async (datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>) => {
     if (!actual) return
@@ -189,19 +208,21 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
         )}
       </div>
       <div className="ses-top" style={{ paddingTop: 6 }}>
-        <button className="ib sm" onClick={() => nav.hoja('sheet-lista')} aria-label="Lista de la sesión"><Ico n="list-numbers" /></button>
+        <button className="ux-tbtn" onClick={() => nav.hoja('sheet-lista')} aria-label="Lista de la sesión"><Ico n="list-numbers" /><span>Lista</span></button>
         <div className="grow">
-          <p className="lbl">Ejercicio {idx + 1} de {s.ejercicios.length}</p>
-          <div className="sprog">{s.ejercicios.map((x, i) => <i key={x.uid} className={cx(i === idx ? 'cur' : (x.estado === 'hecho' || x.estado === 'saltado') && 'on')} />)}</div>
+          <p className="lbl ux-ses-lbl">Ejercicio {idx + 1} de {s.ejercicios.length}</p>
+          <div className="ux-ses-p">
+            <div className="sprog">{s.ejercicios.map((x, i) => <i key={x.uid} className={cx(i === idx ? 'cur' : (x.estado === 'hecho' || x.estado === 'saltado') && 'on')} />)}</div>
+            <span className="clock mono">{duracion((ahora - s.inicio) / 1000)}</span>
+          </div>
         </div>
-        <span className="clock mono">{duracion((ahora - s.inicio) / 1000)}</span>
         {s.horaLimite && hora && (
           <button className="leave" style={hora.aTiempo ? undefined : { background: 'var(--warn-t)' }} onClick={() => setRecorteVisto(0)} aria-label={`Te vas a las ${formatoHora(s.horaLimite)}`}>
             <small>Te vas a las {formatoHora(s.horaLimite)}</small>
             <b style={hora.aTiempo ? undefined : { color: 'var(--warn)' }}><Ico n={hora.aTiempo ? 'check' : 'clock-countdown'} b />{hora.aTiempo ? 'a tiempo' : `${hora.minutosTarde} min tarde`}</b>
           </button>
         )}
-        <button className="ib sm" onClick={() => nav.hoja('sheet-lista')} aria-label="Menú"><Ico n="dots-three-vertical" b /></button>
+        <button className="ux-tbtn" onClick={terminarEntreno}><Ico n="flag-checkered" /><span>Terminar</span></button>
       </div>
 
       {verRecorte && recorte && (
@@ -213,19 +234,24 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
           </div>
         </div>
       )}
-      {peligroso && <p className="safety"><Ico n="first-aid" b />Entrenas solo: no vayas al fallo, usa las barras de seguridad.</p>}
-      {s.suave && <p className="safety" style={{ background: 'var(--ok-t)', marginTop: 6 }}><Ico n="feather" b className="okc" />Semana suave: 1 serie menos y −10 % de peso.</p>}
-      {s.calibracion && <p className="safety" style={{ background: 'var(--blue-t)', marginTop: 6 }}><Ico n="gauge" b className="blue" />Calibración: pesos cómodos (esfuerzo 6-7). Estamos midiendo tus tiempos.</p>}
+      {verAviso && (
+        <div className="safety ux-aviso" style={{ background: partes.length === 1 ? partes[0]!.tono : undefined }}>
+          <Ico n={partes[0]!.ico} b />
+          <span className="grow">{textoAviso}</span>
+          <button className="ux-aviso-x" aria-label="Cerrar aviso" onClick={() => setAvisosCerrados(c => [...c, textoAviso])}><Ico n="x" b /></button>
+        </div>
+      )}
 
       <div className="exb">
         <div className="exb-h">
-          <button onClick={verFicha} aria-label="Ver ficha" style={{ display: 'contents' }}><Th ej={ej} size="l" grande /></button>
+          {/* Tocar el dibujo enseña cómo se hace sin salir del entreno. */}
+          <button onClick={() => nav.hoja('sheet-instr', { id: ej.id })} aria-label="Ver cómo se hace" style={{ display: 'contents' }}><Th ej={ej} size="l" grande /></button>
           <div className="grow">
             <p className="lbl">{etiqueta('body_part', ej.zona)} · {diaTxt}{companero ? ' · superserie' : ''}</p>
             <h1 className="exname">{ej.nombre}</h1>
-            {marca?.ajustes ? <p className="setting"><Ico n="sliders-horizontal" />{marca.ajustes}</p> : <button className="setting" onClick={verFicha}><Ico n="sliders-horizontal" />Añadir ajustes de máquina</button>}
+            {marca?.ajustes ? <p className="setting"><Ico n="sliders-horizontal" />{marca.ajustes}</p> : ES_MAQUINA(ej) && <button className="setting" onClick={verFicha}><Ico n="sliders-horizontal" />Añadir ajustes de máquina</button>}
           </div>
-          <button className="ib" onClick={() => nav.hoja('sheet-tools', { idx })} aria-label="Herramientas"><Ico n="dots-three" b /></button>
+          <button className="ux-tbtn" onClick={() => nav.hoja('sheet-tools', { idx })} aria-label="Herramientas"><Ico n="dots-three" b /><span>Más</span></button>
         </div>
         <div className="strip">
           <p><span className="lbl">Series</span><b>{trabajo.length}</b></p>
@@ -239,7 +265,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
             {topUltima ? <>
               <p className="mono"><b>{topUltima.peso != null ? `${kg(topUltima.peso)} kg × ${topUltima.reps}` : `${topUltima.reps ?? topUltima.segundos}${e.registro === 'tiempo' ? ' s' : ' reps'}`}</b></p>
               <p className="small muted">{topUltima.rpe ? `esfuerzo ${topUltima.rpe}` : ''}</p>
-            </> : <p className="small muted mt4">Primera vez: elige un peso cómodo (esfuerzo 6-7)</p>}
+            </> : <p className="small muted mt4">Primera vez con este ejercicio</p>}
           </div>
           <div className="hoyw">
             <p className="lbl">Hoy</p>
@@ -247,9 +273,10 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
               <>
                 <p className="hoy-v mono">{kg(pesoHoy)}<small>kg</small>{topUltima?.peso != null && pesoHoy > topUltima.peso && <Ico n="arrow-up" b />}</p>
                 {topUltima?.peso != null && pesoHoy !== topUltima.peso && <p className={cx('small', pesoHoy > topUltima.peso ? 'okc' : 'muted')}>{pesoHoy > topUltima.peso ? '+' : ''}{kg(pesoHoy - topUltima.peso)} kg</p>}
+                {primeraVez && <p className="small muted">{TEXTO_PARTIDA}</p>}
               </>
             ) : e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
-              ? <><p className="hoy-v mono">?<small>kg</small></p><p className="small muted">elige uno cómodo</p></>
+              ? <><p className="hoy-v mono">?<small>kg</small></p><p className="small muted">Pon el peso abajo con + o −</p></>
               : <p className="hoy-v mono">{trabajo.find(x => !x.hecha)?.reps ?? trabajo.find(x => !x.hecha)?.segundos ?? e.repsMin}<small>{e.registro === 'tiempo' ? 's' : 'reps'}</small></p>}
           </div>
         </div>
@@ -275,7 +302,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
             <p key={x.n} className={cx('set', x.hecha && 'done', x.record && 'rec', cur && 'cur')}>
               <span className="sn">{k + 1}</span>
               <span className="sv">{textoSerie(x, e, cur)}</span>
-              <span className="se">{cur ? 'ahora' : x.hecha ? (x.rpe ? `esf. ${x.rpe}` : '') : `esf. ${e.rpe}`}</span>
+              <span className="se">{cur ? 'ahora' : x.hecha && x.rpe ? `esfuerzo ${x.rpe}` : ''}</span>
               {x.record ? <Ico n="trophy" b /> : x.hecha ? <Ico n="check" b /> : cur ? <Ico n="caret-down" b /> : <Ico n="circle" />}
             </p>
           )
@@ -284,7 +311,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
 
       {/* La clave cambia con el ejercicio hecho de verdad (sustituido por «ocupado» o «cambiar») y con la serie:
           así el panel arranca con el peso y las reps de la serie que toca, no con los de la anterior. */}
-      {actual && <Panel key={`${e.uid}-${e.ejercicio}-${n}-${actual.n}`} s={s} idx={idx} e={e} n={n} serie={actual} lista={lista} ultimaHecha={[...e.series].reverse().find(x => x.hecha && !x.calentamiento)} onHecho={hecho}
+      {actual && <Panel key={`${e.uid}-${e.ejercicio}-${n}-${actual.n}`} s={s} idx={idx} e={e} serie={actual} lista={lista} ultimaHecha={[...e.series].reverse().find(x => x.hecha && !x.calentamiento)} onHecho={hecho}
         resto={resto} total={s.descansoTotal ?? e.descanso} onSaltar={saltarDescanso} onMas={masTiempo} />}
     </Pantalla>
   )
@@ -297,8 +324,8 @@ function textoSerie(x: Serie, e: EjercicioSesion, cur: boolean): string {
   return x.hecha ? `${p} × ${x.reps}` : `${p} × ${cur ? `${e.repsMin}-${e.repsMax}` : `${e.repsMin}-${e.repsMax}`}`
 }
 
-function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total, onSaltar, onMas }: {
-  s: Sesion; idx: number; e: EjercicioSesion; n: number; serie: Serie; lista: number[]; ultimaHecha?: Serie
+function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, total, onSaltar, onMas }: {
+  s: Sesion; idx: number; e: EjercicioSesion; serie: Serie; lista: number[]; ultimaHecha?: Serie
   onHecho: (d: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>) => Promise<void>
   resto: number; total: number; onSaltar: () => void; onMas: () => void
 }) {
@@ -334,7 +361,6 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
     }
     return true
   }
-  const resaltado = { boxShadow: '0 0 0 2px var(--warn)', borderRadius: 14 }
   const proxima = s.ejercicios[indiceActual(s)]
   const numTrabajo = e.series.filter(x => !x.calentamiento).indexOf(serie) + 1
 
@@ -349,7 +375,7 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
             <p className="lbl">Próxima</p>
             <p className="rest-n">{proxima && proxima.uid !== e.uid ? nombreEjercicio(proxima.ejercicio) : serie.calentamiento ? 'Calentamiento' : `Serie ${numTrabajo}`}</p>
             <p className="mono rest-w">{conPeso && serie.peso != null ? `${kg(e.registro === 'asistido' ? Math.abs(serie.peso) : serie.peso)} kg × ${e.repsMin}-${e.repsMax}` : `${e.repsMin}-${e.repsMax} ${e.registro === 'tiempo' ? 's' : 'reps'}`}</p>
-            <p className="small muted mt8">Mientras, puedes mirar el ejercicio o apuntar una nota.</p>
+            <p className="small muted mt8">Mientras, en «Más» puedes ver cómo se hace o apuntar una nota.</p>
           </div>
         </div>
         <div className="rest-btns mt12">
@@ -366,7 +392,7 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
     <div className="panel">
       {e.registro === 'tiempo' ? (
         <div className="pn-row">
-          <div className="pn-f w" style={falta === 'reps' ? resaltado : undefined}><span className="lbl">Segundos</span><Stepper className="tall" valor={crono != null ? segundosCrono : seg} paso={5} min={5} onCambio={v => { setSeg(v); setFalta(null) }} etiqueta="Segundos" /></div>
+          <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}><span className="lbl">{falta === 'reps' ? 'Pon aquí los segundos' : 'Segundos'}</span><Stepper className="tall" valor={crono != null ? segundosCrono : seg} paso={5} min={5} onCambio={v => { setSeg(v); setFalta(null) }} etiqueta="Segundos" /></div>
           <div className="pn-f"><span className="lbl">Cronómetro</span>
             <button className={cx('btn', crono != null ? 'badf' : 'gry')} style={{ minHeight: 60 }} onClick={() => { if (crono == null) { setCrono(Date.now()); setAhora(Date.now()) } else { setSeg(segundosCrono); setCrono(null) } }}>
               <Ico n={crono != null ? 'pause' : 'play'} b />{crono != null ? 'Parar' : 'Empezar'}
@@ -376,20 +402,20 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
       ) : (
         <div className="pn-row">
           {conPeso && (
-            <div className="pn-f w" style={falta === 'peso' ? resaltado : undefined}>
-              <span className="lbl">{e.registro === 'asistido' ? 'Asistencia · kg' : e.registro === 'mancuerna' ? 'Kg por mancuerna' : 'Peso · kg'}</span>
+            <div className={cx('pn-f w', falta === 'peso' && 'ux-falta')}>
+              <span className="lbl">{falta === 'peso' ? 'Pon aquí los kg' : e.registro === 'asistido' ? 'Asistencia · kg' : e.registro === 'mancuerna' ? 'Kg por mancuerna' : 'Peso · kg'}</span>
               <Stepper className="tall" valor={peso} lista={lista} paso={2.5} onCambio={v => { setPeso(v); setFalta(null) }} etiqueta="Peso" />
             </div>
           )}
-          <div className={cx('pn-f', !conPeso && 'w')} style={falta === 'reps' ? resaltado : undefined}>
-            <span className="lbl">{e.registro === 'cardio' ? 'Minutos' : 'Reps'}</span>
+          <div className={cx('pn-f', !conPeso && 'w', falta === 'reps' && 'ux-falta')}>
+            <span className="lbl">{falta === 'reps' ? (e.registro === 'cardio' ? 'Pon los minutos' : 'Pon las reps') : e.registro === 'cardio' ? 'Minutos' : 'Reps'}</span>
             <Stepper className="tall" valor={reps} paso={1} min={1} onCambio={v => { setReps(v); setFalta(null) }} etiqueta={e.registro === 'cardio' ? 'Minutos' : 'Repeticiones'} />
           </div>
         </div>
       )}
       {!serie.calentamiento && e.registro !== 'cardio' && (
         <div className="pn-eff">
-          <span className="lbl">Esfuerzo <span className="hint">· opcional · 6 fácil … 10 no podía más</span></span>
+          <span className="lbl">¿Cuánto te ha costado? <span className="hint">· opcional</span></span>
           <div className="effs">
             {[6, 7, 8, 9, 10].map(v => (
               <button key={v} className={cx('eff', rpe === v && 'on')} aria-pressed={rpe === v} onClick={() => setRpe(r => (r === v ? null : v))}
@@ -397,20 +423,11 @@ function Panel({ s, idx, e, n, serie, lista, ultimaHecha, onHecho, resto, total,
                 onPointerUp={() => clearTimeout(pulsado.current)} onPointerLeave={() => clearTimeout(pulsado.current)}>{v}</button>
             ))}
           </div>
+          <p className="ux-eff-esc"><span>6 fácil</span><span>10 no podía más</span></p>
         </div>
       )}
+      {/* Nota, calentamiento y añadir o quitar series están en «Más», junto al nombre del ejercicio. */}
       <div className="pn-tools">
-        <button className="tb" aria-label="Nota" onClick={() => nav.hoja('sheet-nota-serie', { idx, n })}><Ico n="note-pencil" /></button>
-        <button className={cx('tb', serie.calentamiento && 'on')} aria-label={serie.calentamiento ? 'Quitar marca de calentamiento' : 'Marcar calentamiento'} aria-pressed={serie.calentamiento} style={serie.calentamiento ? { color: 'var(--warn)' } : undefined}
-          onClick={async () => { await guardar(cambiarSerie(s, idx, n, { calentamiento: !serie.calentamiento })); aviso(serie.calentamiento ? 'Ya no es calentamiento' : 'Marcada como calentamiento') }}><Ico n="thermometer-simple" /></button>
-        <button className="tb" aria-label="Añadir serie" onClick={async () => { await guardar(anadirSerie(s, idx)); aviso('Serie añadida') }}><Ico n="plus-square" /></button>
-        <button className="tb" aria-label="Quitar serie" onClick={async () => {
-          const antes = s
-          const nueva = quitarSerie(s, idx)
-          // Con una sola serie de trabajo no se quita nada: no hay que decir que sí.
-          if (nueva.ejercicios[idx]!.series.length === e.series.length) { aviso('Queda una sola serie: no se puede quitar'); return }
-          await guardar(nueva); aviso('Serie quitada', () => void guardar(antes))
-        }}><Ico n="minus-square" /></button>
         <button className="tb same" disabled={!ultimaHecha} onClick={() => ultimaHecha && enviar({ peso: ultimaHecha.peso, reps: ultimaHecha.reps, segundos: ultimaHecha.segundos ?? null, rpe: serie.calentamiento ? null : ultimaHecha.rpe })}><Ico n="copy" />Igual que la anterior</button>
       </div>
       <div className="pn-main">

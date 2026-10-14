@@ -2,18 +2,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { db } from '../../../datos/db'
 import type { Comida, Plantilla } from '../../../datos/tipos'
-import { aspecto, conRacion, franjaPorHora, type Racion } from '../../../dominio/comida'
+import { aspecto, buscarOFF, conRacion, franjaPorHora, type Racion } from '../../../dominio/comida'
 import { horaActual } from '../../../dominio/fechas'
 import { Cab, cx, Ico, Seg } from '../../comp'
 import { useNav } from '../../nav'
 
-type Vista = 'com' | 'com-plant' | 'com-guard'
+type Vista = 'com' | 'com-plant'
 
+/** Solo dos pestañas: el día y «Mis comidas» (que ya incluye los productos escaneados). */
 export function CabComida({ vista, crumb }: { vista: Vista; crumb: string }) {
   const nav = useNav()
   return (
     <Cab crumb={crumb} titulo="Comida" derecha={<button className="ib" aria-label="Escanear" onClick={() => nav.ir('com-scan')}><Ico n="barcode" /></button>}>
-      <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: 'Día' }, { v: 'com-plant', t: 'Plantillas' }, { v: 'com-guard', t: 'Productos' }]} />
+      <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: 'Día' }, { v: 'com-plant', t: 'Mis comidas' }]} />
     </Cab>
   )
 }
@@ -85,6 +86,20 @@ export function Deslizable({ children, onBorrar, onAbrir }: { children: ReactNod
   )
 }
 
-/** kcal y proteína en una línea («600 kcal · 22 g»). */
+/** kcal y proteína en una línea («600 kcal · 22 g proteína»), siempre con la unidad. */
 export const kp = (kcal: number, prot: number, cafeina?: number) =>
-  cafeina ? `${Math.round(kcal)} kcal · ${Math.round(cafeina)} mg cafeína` : `${Math.round(kcal)} kcal · ${Math.round(prot)} g`
+  cafeina ? `${Math.round(kcal)} kcal · ${Math.round(cafeina)} mg cafeína` : `${Math.round(kcal)} kcal · ${Math.round(prot)} g proteína`
+
+/** Busca en Open Food Facts los códigos escaneados sin conexión. Devuelve cuántos encontró. */
+export async function buscarPendientes(): Promise<number> {
+  const pend = await db.productos.filter(p => !!p.pendiente).toArray()
+  let n = 0
+  for (const [i, p] of pend.entries()) {
+    // Open Food Facts permite unas 15 consultas por minuto: una cada 4,5 s.
+    if (i) await new Promise(r => setTimeout(r, 4500))
+    const r = await buscarOFF(p.codigo)
+    if (r.estado === 'offline') break
+    if (r.estado === 'encontrado') { await db.productos.put(r.producto); n++ }
+  }
+  return n
+}

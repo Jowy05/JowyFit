@@ -1,31 +1,155 @@
-// ALT · Alta de usuario (primera vez). Pasos cortos; casi todo se puede saltar y cambiar después.
+// ALT · Alta de usuario (primera vez). Pocos pasos y pocas preguntas: lo que no se sabe contestar
+// sin saber de gimnasio se queda con un valor por defecto y se cambia después en Perfil.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { db } from '../../../datos/db'
 import { gimnasioNuevo, guardarAjustes, guardarPerfil, perfilPorDefecto } from '../../../datos/repos'
 import { importar } from '../../../datos/copias'
-import type { Dia, Gimnasio, Medicion, Perfil, Zona } from '../../../datos/tipos'
+import type { Dia, Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../../datos/tipos'
 import { catalogoCargado } from '../../../catalogo/catalogo'
+import { TODAS_LAS_CLAVES } from '../../../catalogo/clasificacion'
 import { generarRutina, duracionDia } from '../../../dominio/generador'
-import { DIAS, DIAS_CORTOS, hoyISO } from '../../../dominio/fechas'
+import { estadoSemana } from '../../../dominio/semana'
+import { DIAS, DIAS_CORTOS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../../dominio/fechas'
 import { elegirArchivo } from '../../../plataforma'
 import { cx, Elegir, Ico, Interruptor, Stepper } from '../../comp'
 import { useAviso } from '../../aviso'
+import { guardarLetra, letraGuardada, type Letra } from '../../tema'
 import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from '../rutina/CatalogoMaterial'
 
-const TOTAL = 10
+// Pasos del alta (antes eran 10: «Tu cuerpo hoy» va dentro de «Sobre ti» y «Comida y actividad»
+// salió del alta; sus datos tienen valores por defecto y se cambian en Perfil).
+const PASO = { bienvenida: 1, sobreTi: 2, objetivo: 3, entrenar: 4, horarios: 5, salud: 6, gimnasio: 7, lista: 8 } as const
+const TOTAL = 8
 
 const rangoMin = (m: number[]) => { const a = Math.min(...m), b = Math.max(...m); return !m.length ? '' : a === b ? `~${a} min` : `${a}-${b} min` }
+const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const numero = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) ? n : null }
+/** «a», «a y b», «a, b y c». */
+const enLista = (xs: string[]) => xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`
+const DIAS_TRES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as const
+const ZONA_TXT: Record<string, string> = { brazos: 'brazos', pecho: 'pecho', espalda: 'espalda', hombros: 'hombros', piernas: 'piernas', gluteo: 'glúteo', abdomen: 'abdomen' }
+
+type Datos = { nacimiento: string; sexo: Sexo | null; altura: string; peso: string }
+const PERIMETROS = [['cintura', 'Cintura'], ['cuello', 'Cuello'], ['cadera', 'Cadera'], ['pecho', 'Pecho'], ['brazo', 'Brazo relajado'], ['brazoContraido', 'Brazo contraído'], ['muslo', 'Muslo']] as const
+type ClaveMedida = typeof PERIMETROS[number][0]
+type Medidas = Record<ClaveMedida, string>
+type Fallo = { msg: string; campos: string[] }
+const SIN_MEDIDAS: Medidas = { cintura: '', cuello: '', cadera: '', pecho: '', brazo: '', brazoContraido: '', muslo: '' }
+/** Las medidas escritas, solo las que tienen un número válido. */
+const medidasEnCm = (m: Medidas) => Object.fromEntries(PERIMETROS.map(([k]) => [k, numero(m[k]) ?? 0]).filter(([, v]) => (v as number) > 0)) as Partial<Record<ClaveMedida, number>>
+const firma = (peso: number | null, m: Medidas) => JSON.stringify([peso, medidasEnCm(m)])
+const aTexto = (n: number | null | undefined) => (n != null && n > 0 ? String(n).replace('.', ',') : '')
+
+/** Qué falta o está mal en «Sobre ti». Null si se puede seguir. */
+function falloSobreTi(d: Datos): Fallo | null {
+  const falta: string[] = [], campos: string[] = []
+  if (!d.nacimiento) { falta.push('tu fecha de nacimiento'); campos.push('nacimiento') }
+  if (!d.sexo) { falta.push('si eres hombre o mujer'); campos.push('sexo') }
+  if (!d.altura.trim()) { falta.push('tu altura'); campos.push('altura') }
+  if (!d.peso.trim()) { falta.push('tu peso'); campos.push('peso') }
+  if (falta.length) return { msg: `Para seguir falta ${enLista(falta)}.`, campos }
+  const años = /^\d{4}-\d{2}-\d{2}$/.test(d.nacimiento) ? edad(d.nacimiento) : NaN
+  if (!(años >= 12 && años <= 100)) return { msg: 'Revisa la fecha de nacimiento.', campos: ['nacimiento'] }
+  const alt = numero(d.altura)
+  if (alt == null || alt < 120 || alt > 230) return { msg: 'La altura va en centímetros: por ejemplo, 170.', campos: ['altura'] }
+  const kg = numero(d.peso)
+  if (kg == null || kg < 30 || kg > 250) return { msg: 'El peso va en kilos: por ejemplo, 72.', campos: ['peso'] }
+  return null
+}
+
+/** Hora a la que irse del gimnasio: la de entrenar + los minutos + 15 de margen. */
+function limites(hora: string, minutos: number): Perfil['horaLimite'] {
+  const t = (minutosDe(hora) + minutos + 15) % 1440
+  const hhmm = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+  return { coche: hhmm, andando: hhmm }
+}
+
+/** «Tu primer entreno: martes a las 5:30 · Cuerpo completo A», con la rutina recién hecha. */
+function primerEntreno(r: Omit<Rutina, 'id'>, hora: string, hoy: string): { cuando: string; nombre: string } | null {
+  const rut = r as Rutina
+  const sem = [...estadoSemana(rut, [], hoy), ...estadoSemana(rut, [], sumarDias(hoy, 7))]
+  const d = sem.find(x => x.fecha >= hoy && x.estado === 'plan' && x.dia)
+  if (!d?.dia) return null
+  const h = formatoHora(hora)
+  const cuando = d.fecha === hoy
+    ? (minutosDe(horaActual()) <= minutosDe(hora) ? `hoy a las ${h}` : 'hoy mismo, cuando puedas')
+    : d.fecha === sumarDias(hoy, 1) ? `mañana a las ${h}` : `${DIAS[diaSemana(deISO(d.fecha))]} a las ${h}`
+  return { cuando, nombre: d.dia.nombre }
+}
+
+const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * Fecha de nacimiento con tres desplegables (día, mes, año). El calendario del móvil empieza en el año
+ * actual y llegar a 1960 cuesta muchos toques; así se elige el año de una lista.
+ */
+function FechaFacil({ valor, onCambio }: { valor: string; onCambio: (v: string) => void }) {
+  const [a0, m0, d0] = /^\d{4}-\d{2}-\d{2}$/.test(valor) ? valor.split('-').map(Number) : [0, 0, 0]
+  const [dia, setDia] = useState(d0 || 0)
+  const [mes, setMes] = useState(m0 || 0)
+  const [anio, setAnio] = useState(a0 || 0)
+  const ultimo = new Date().getFullYear() - 10
+  const anios = Array.from({ length: ultimo - 1920 + 1 }, (_, i) => ultimo - i)
+  const poner = (d: number, m: number, a: number) => {
+    setDia(d); setMes(m); setAnio(a)
+    if (d && m && a) {
+      const dd = Math.min(d, new Date(a, m, 0).getDate())
+      onCambio(`${a}-${String(m).padStart(2, '0')}-${String(dd).padStart(2, '0')}`)
+    } else onCambio('')
+  }
+  return (
+    <div className="fecha-facil" role="group" aria-label="Fecha de nacimiento">
+      <select className="inp" aria-label="Día de nacimiento" value={dia || ''} onChange={e => poner(Number(e.target.value), mes, anio)}>
+        <option value="">Día</option>
+        {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+      </select>
+      <select className="inp" aria-label="Mes de nacimiento" value={mes || ''} onChange={e => poner(dia, Number(e.target.value), anio)}>
+        <option value="">Mes</option>
+        {MESES_LARGOS.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
+      </select>
+      <select className="inp" aria-label="Año de nacimiento" value={anio || ''} onChange={e => poner(dia, mes, Number(e.target.value))}>
+        <option value="">Año</option>
+        {anios.map(a => <option key={a} value={a}>{a}</option>)}
+      </select>
+    </div>
+  )
+}
 
 export function Alta() {
   const aviso = useAviso()
-  const [paso, setPaso] = useState(1)
+  const [paso, setPaso] = useState<number>(PASO.bienvenida)
   const [p, setP] = useState<Perfil>(perfilPorDefecto())
-  const [cuerpo, setCuerpo] = useState({ peso: 75, cintura: 90, cuello: 38, cadera: 0, pecho: 0, brazo: 0, brazoContraido: 0, muslo: 0 })
+  // Fecha, sexo, altura y peso empiezan vacíos: antes venían rellenos (01/01/2000, hombre, 175 cm, 75 kg)
+  // y quien no lee los dejaba falsos, con lo que salían mal las calorías y la proteína.
+  const [datos, setDatos] = useState<Datos>({ nacimiento: '', sexo: null, altura: '', peso: '' })
+  const [medidas, setMedidas] = useState<Medidas>(SIN_MEDIDAS)
+  const [importado, setImportado] = useState<string | null>(null)
   const [gym, setGym] = useState<Gimnasio>(gimnasioNuevo())
-  const [resumen, setResumen] = useState<{ estructura: string; dias: string[] } | null>(null)
+  const [gymModo, setGymModo] = useState<'completo' | 'yo'>('completo')
+  const [intento, setIntento] = useState(false)
+  const [letra, setLetra] = useState<Letra>(letraGuardada())
+  const [resumen, setResumen] = useState<{ estructura: string; dias: { t: string; d: string }[]; primero: { cuando: string; nombre: string } | null } | null>(null)
   const cambia = (c: Partial<Perfil>) => setP(x => ({ ...x, ...c }))
-  const sig = () => setPaso(n => Math.min(TOTAL, n + 1))
-  const atras = () => setPaso(n => Math.max(1, n - 1))
+  const dato = (c: Partial<Datos>) => setDatos(x => ({ ...x, ...c }))
+  const material = gymModo === 'completo' ? [...TODAS_LAS_CLAVES] : gym.material
+
+  // La letra grande se nota al momento: el marco del alta no escucha el evento, así que se le cambia aquí.
+  useEffect(() => { document.querySelector('.app')?.setAttribute('data-letra', letra) }, [letra])
+  const cambiarLetra = () => {
+    const l: Letra = letra === 'grande' ? 'normal' : 'grande'
+    guardarLetra(l)
+    setLetra(l)
+    window.dispatchEvent(new Event('jf-letra'))
+  }
+
+  const fallo = (n: number): Fallo | null => {
+    if (n === PASO.sobreTi) return falloSobreTi(datos)
+    if (n === PASO.horarios && !p.diasFijos.length) return { msg: 'Marca al menos un día para entrenar.', campos: ['dias'] }
+    return null
+  }
+  const ir = (n: number) => { setIntento(false); setPaso(n); window.scrollTo?.(0, 0) }
+  const sig = () => { if (fallo(paso)) { setIntento(true); return } ir(Math.min(TOTAL, paso + 1)) }
+  const atras = () => ir(Math.max(1, paso - 1))
 
   const importarCopia = async () => {
     const f = await elegirArchivo()
@@ -34,13 +158,19 @@ export function Alta() {
       const tipo = await importar(f.bytes)
       if (tipo === 'copia') { aviso('Copia restaurada'); return } // la app se recarga sola al ver el perfil
       const guardado = await db.perfil.get('yo')
-      if (guardado) setP({ ...guardado, altaCompleta: false })
+      if (guardado) {
+        setP({ ...guardado, altaCompleta: false })
+        dato({ nacimiento: guardado.nacimiento, sexo: guardado.sexo, altura: String(guardado.alturaCm) })
+      }
       const ult = (await db.mediciones.toArray()).sort((a, b) => b.fecha.localeCompare(a.fecha))
-      const peso = ult.find(m => m.pesoKg != null)?.pesoKg
+      const peso = ult.find(m => m.pesoKg != null)?.pesoKg ?? null
       const per = ult.find(m => m.perimetros?.cintura)?.perimetros
-      setCuerpo(c => ({ ...c, peso: peso ?? c.peso, cintura: per?.cintura ?? c.cintura, cuello: per?.cuello ?? c.cuello, cadera: per?.cadera ?? 0, pecho: per?.pecho ?? 0, brazo: per?.brazo ?? 0, brazoContraido: per?.brazoContraido ?? 0, muslo: per?.muslo ?? 0 }))
+      const m = Object.fromEntries(PERIMETROS.map(([k]) => [k, aTexto(per?.[k])])) as Medidas
+      setMedidas(m)
+      if (peso != null) dato({ peso: aTexto(peso) })
+      setImportado(firma(peso, m))
       aviso('Datos importados: revísalos y sigue')
-      setPaso(2)
+      ir(PASO.sobreTi)
     } catch (e) {
       aviso(`No se pudo importar: ${String((e as Error).message ?? e)}`)
     }
@@ -48,28 +178,39 @@ export function Alta() {
 
   const terminar = useCallback(async () => {
     const hoy = hoyISO()
-    const gymId = await db.gimnasios.add({ ...gym, creado: new Date().toISOString() })
-    const perfil = await guardarPerfil({ ...p, altaCompleta: false })
+    const gimnasio: Gimnasio = { ...gym, material: gymModo === 'completo' ? [...TODAS_LAS_CLAVES] : gym.material, creado: new Date().toISOString() }
+    const gymId = await db.gimnasios.add(gimnasio)
+    const perfil = await guardarPerfil({ ...p, nacimiento: datos.nacimiento, sexo: datos.sexo ?? p.sexo, alturaCm: Math.round(numero(datos.altura) ?? p.alturaCm), altaCompleta: false })
+    const peso = numero(datos.peso)
     const yaHay = (await db.mediciones.count()) > 0
-    if (!yaHay) {
-      const per = Object.fromEntries(Object.entries({ cintura: cuerpo.cintura, cuello: cuerpo.cuello, cadera: cuerpo.cadera, pecho: cuerpo.pecho, brazo: cuerpo.brazo, brazoContraido: cuerpo.brazoContraido, muslo: cuerpo.muslo }).filter(([, v]) => v > 0))
-      const m: Medicion = { fecha: `${hoy}T${new Date().toTimeString().slice(0, 5)}`, origen: 'manual', pesoKg: cuerpo.peso, perimetros: per }
+    // Con datos importados solo se apunta una medición nueva si se ha cambiado algo.
+    if (!yaHay || firma(peso, medidas) !== importado) {
+      const per = medidasEnCm(medidas)
+      const m: Medicion = { fecha: `${hoy}T${new Date().toTimeString().slice(0, 5)}`, origen: 'manual' }
+      if (peso != null) m.pesoKg = peso
+      if (Object.keys(per).length) m.perimetros = per
       await db.mediciones.add(m)
     }
     const c = catalogoCargado()
-    const rutina = generarRutina({ perfil, gimnasio: { ...gym, id: gymId }, marcas: new Map(), ejercicios: c?.ejercicios ?? [], calibracion: true })
+    const rutina = generarRutina({ perfil, gimnasio: { ...gimnasio, id: gymId }, marcas: new Map(), ejercicios: c?.ejercicios ?? [], calibracion: true })
     await db.rutinas.add(rutina)
     await guardarAjustes({ gimnasioActivo: gymId, inicio: hoy })
+    const dias = [...rutina.dias].sort((a, b) => Number(a.opcional) - Number(b.opcional) || (a.dia ?? 9) - (b.dia ?? 9))
     setResumen({
       // Los minutos reales de los días (antes ponía los del perfil y no cuadraban con los de cada día).
-      estructura: `${rutina.estructura} · ${rangoMin(rutina.dias.filter(d => d.letra !== 'S').map(d => Math.round(duracionDia(d.bloques) / 60)))}`,
-      dias: rutina.dias.map(d => `${d.letra === 'S' ? 'Opcional' : d.letra} · ${d.dia != null ? DIAS[d.dia] : ''}|${d.bloques.length} ejercicios · ~${Math.round(duracionDia(d.bloques) / 60)} min`),
+      estructura: `${rutina.estructura} · ${rangoMin(rutina.dias.filter(d => !d.opcional).map(d => Math.round(duracionDia(d.bloques) / 60)))}`,
+      // El nombre del día de la semana en vez de las letras A, B, C, que no dicen nada.
+      dias: dias.map(d => ({
+        t: `${d.dia != null ? mayuscula(DIAS[d.dia]) : 'Cuando puedas'}${d.opcional ? ' (si puedes)' : ''}`,
+        d: `${d.bloques.length} ejercicios · ~${Math.round(duracionDia(d.bloques) / 60)} min`,
+      })),
+      primero: primerEntreno(rutina, perfil.horaEntreno, hoy),
     })
-  }, [gym, p, cuerpo])
+  }, [gym, gymModo, p, datos, medidas, importado])
 
   const fin = async () => { await guardarPerfil({ altaCompleta: true }) }
 
-  if (paso === 1) return (
+  if (paso === PASO.bienvenida) return (
     <section className="screen" data-full="">
       <div className="alt">
         <div className="alt-hero">
@@ -88,113 +229,142 @@ export function Alta() {
         </div>
         <div className="alt-foot col">
           <button className="btn xl" onClick={sig}>Empezar <Ico n="arrow-right" b /></button>
+          <button className={cx('btn gry sm alta-letra', letra === 'grande' && 'on')} aria-pressed={letra === 'grande'} onClick={cambiarLetra}>
+            <span className="alta-aa" aria-hidden="true">Aa</span>Letra grande{letra === 'grande' && <Ico n="check" b />}
+          </button>
           <button className="btn ln sm" onClick={importarCopia}>Tengo una copia: importar</button>
         </div>
       </div>
     </section>
   )
 
-  if (paso === TOTAL) return (
+  if (paso === PASO.lista) return (
     <Paso n={TOTAL} titulo={resumen ? 'Tu rutina está lista' : 'Creando tu rutina…'} sinAtras pie={resumen ? <button className="btn xl" onClick={fin}>Ir a Inicio <Ico n="arrow-right" b /></button> : null}>
       {!resumen ? <Generando onListo={terminar} p={p} /> : (
         <>
           <div className="bar thick go mt12"><i style={{ width: '100%' }} /></div>
-          <div className="card ready mt16" style={{ animation: 'none' }}>
+          {resumen.primero && (
+            <p className="note ok mt16 alta-primero"><Ico n="calendar-check" /><span>Tu primer entreno: <b>{resumen.primero.cuando}</b> · {resumen.primero.nombre}</span></p>
+          )}
+          <div className="card ready mt12" style={{ animation: 'none' }}>
             <div className="ready-h">
               <span className="tag ok"><Ico n="check" b />Lista</span>
               <h2>Tu rutina</h2>
               <p className="mono big-sum">{resumen.estructura}</p>
             </div>
             <div className="pd"><div className="spec flat">
-              {resumen.dias.map(d => { const [a, b] = d.split('|'); return <p key={d}><span>{a}</span><b>{b}</b></p> })}
+              {resumen.dias.map(d => <p key={d.t}><span>{d.t}</span><b>{d.d}</b></p>)}
             </div></div>
           </div>
-          <p className="note mt12"><Ico n="info" /><span>La primera semana es <b>de calibración</b>: pesos cómodos mientras medimos tus tiempos.</span></p>
+          <p className="note mt12"><Ico n="info" /><span>La primera semana es <b>de calibración</b> (de prueba): pesos cómodos mientras vemos por dónde empiezas.</span></p>
         </>
       )}
     </Paso>
   )
 
-  const contenido: Record<number, { t: string; d?: string; saltar?: boolean; c: ReactNode }> = {
-    2: { t: 'Sobre ti', d: 'Para calcular tu gasto y tus objetivos.', c: (
-      <div className="fields mt16">
-        <label><span className="lbl fl">Nombre (opcional)</span><input className="inp" value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="¿Cómo te llamamos?" /></label>
-        <label><span className="lbl fl">Fecha de nacimiento</span><input className="inp" type="date" value={p.nacimiento} onChange={e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) cambia({ nacimiento: e.target.value }) }} /></label>
-        <div><span className="lbl fl">Sexo (para las fórmulas)</span><Elegir eq opciones={[{ v: 'hombre', t: 'Hombre' }, { v: 'mujer', t: 'Mujer' }]} valor={p.sexo} onCambio={v => cambia({ sexo: v })} /></div>
-        <div><span className="lbl fl">Altura</span><Stepper valor={p.alturaCm} paso={1} min={120} max={230} sufijo="cm" onCambio={v => cambia({ alturaCm: v })} /></div>
-      </div>) },
-    3: { t: 'Tu cuerpo hoy', d: 'Con esto medimos tu punto de partida. Puedes cambiarlo después en Perfil.', saltar: true, c: (
+  const f = intento ? fallo(paso) : null
+  const mal = (campo: string) => !!f?.campos.includes(campo) && 'alta-falta'
+  const contenido: Record<number, { t: string; d?: string; c: ReactNode }> = {
+    [PASO.sobreTi]: { t: 'Sobre ti', d: 'Para calcular cuánto comer. Lo puedes cambiar luego en Perfil.', c: (
       <>
-        <Medir />
         <div className="fields mt16">
-          <div><span className="lbl fl">Peso</span><Stepper valor={cuerpo.peso} paso={0.1} decimales={1} min={30} sufijo="kg" onCambio={v => setCuerpo(c => ({ ...c, peso: v }))} /></div>
-          <div className="grid2">
-            <div><span className="lbl fl">Cintura</span><Stepper className="sm" valor={cuerpo.cintura} paso={0.5} sufijo="cm" onCambio={v => setCuerpo(c => ({ ...c, cintura: v }))} /></div>
-            <div><span className="lbl fl">Cuello</span><Stepper className="sm" valor={cuerpo.cuello} paso={0.5} sufijo="cm" onCambio={v => setCuerpo(c => ({ ...c, cuello: v }))} /></div>
+          <label className={cx(mal('nacimiento'))}><span className="lbl fl">Fecha de nacimiento</span>
+            <FechaFacil valor={datos.nacimiento} onCambio={v => dato({ nacimiento: v })} />
+          </label>
+          <div className={cx(mal('sexo'))}><span className="lbl fl">Sexo <span className="hint">(para calcular las calorías)</span></span>
+            <Elegir eq opciones={[{ v: 'hombre' as Sexo, t: 'Hombre' }, { v: 'mujer' as Sexo, t: 'Mujer' }]} valor={(datos.sexo ?? '') as Sexo} onCambio={v => dato({ sexo: v })} />
           </div>
+          <div className="grid2">
+            <label className={cx(mal('altura'))}><span className="lbl fl">Altura</span>
+              <span className="alta-unid"><input className="inp" inputMode="numeric" aria-label="Altura en centímetros" placeholder="170" value={datos.altura} onChange={e => dato({ altura: e.target.value.replace(/[^\d]/g, '').slice(0, 3) })} /><span>cm</span></span>
+            </label>
+            <label className={cx(mal('peso'))}><span className="lbl fl">Peso</span>
+              <span className="alta-unid"><input className="inp" inputMode="decimal" aria-label="Peso en kilos" placeholder="72" value={datos.peso} onChange={e => dato({ peso: e.target.value.replace(/[^\d.,]/g, '').slice(0, 5) })} /><span>kg</span></span>
+            </label>
+          </div>
+          <div><span className="lbl fl">Tu día a día</span>
+            <Elegir eq opciones={[{ v: 'sentado', t: 'Sentado' }, { v: 'depie', t: 'De pie' }, { v: 'fisico', t: 'Físico' }]} valor={p.trabajo} onCambio={v => cambia({ trabajo: v })} />
+            <p className="small muted mt4">Sentado: oficina, coche · De pie: tienda, bar · Físico: obra, almacén</p>
+          </div>
+          <label><span className="lbl fl">Nombre <span className="hint">(opcional)</span></span><input className="inp" aria-label="Nombre" value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="¿Cómo te llamamos?" /></label>
         </div>
-        <details className="fold mt12">
+        <details className="fold mt16">
           <summary><Ico n="ruler" className="blue" />Más medidas <span className="tag">opcional</span><Ico n="caret-down" /></summary>
-          <div className="in"><div className="grid2">
-            {([['cadera', 'Cadera'], ['pecho', 'Pecho'], ['brazo', 'Brazo relajado'], ['brazoContraido', 'Brazo contraído'], ['muslo', 'Muslo']] as const).map(([k, t]) => (
-              <div key={k}><span className="lbl fl">{t}</span><Stepper className="sm" valor={cuerpo[k] || null} paso={0.5} sufijo="cm" onCambio={v => setCuerpo(c => ({ ...c, [k]: v }))} /></div>
-            ))}
-          </div></div>
+          <div className="in">
+            <p className="small muted">Si tienes una cinta métrica a mano. Si no, déjalo: lo puedes apuntar otro día en Progreso.</p>
+            <Medir />
+            <div className="grid2 mt12">
+              {PERIMETROS.map(([k, t]) => (
+                <label key={k}><span className="lbl fl">{t}</span>
+                  <span className="alta-unid"><input className="inp" inputMode="decimal" aria-label={`${t} en centímetros`} value={medidas[k]} onChange={e => { const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 5); setMedidas(c => ({ ...c, [k]: v })) }} /><span>cm</span></span>
+                </label>
+              ))}
+            </div>
+          </div>
         </details>
       </>) },
-    4: { t: 'Tu objetivo', d: 'Lo puedes cambiar cuando quieras.', c: (
+    [PASO.objetivo]: { t: 'Tu objetivo', d: 'Lo puedes cambiar cuando quieras.', c: (
       <>
         <div className="opts mt16">
           {([['recomposicion', 'Perder grasa y ganar músculo', 'El peso es lo de menos: menos barriga y más fuerza.', 'Recomendado'], ['perder', 'Perder peso', 'Déficit algo mayor y más proteína.', ''], ['fuerza', 'Ganar fuerza', 'Comer lo justo para subir de peso en los ejercicios.', '']] as const).map(([v, t, d, tag]) => (
-            <button key={v} className={cx('opt-c', p.objetivo === v && 'on')} onClick={() => cambia({ objetivo: v })}>
+            <button key={v} className={cx('opt-c', p.objetivo === v && 'on')} aria-pressed={p.objetivo === v} onClick={() => cambia({ objetivo: v })}>
               <span className="rad" /><span className="tx"><b>{t} {tag && <span className="tag ok">{tag}</span>}</b><small>{d}</small></span>
             </button>
           ))}
         </div>
-        <p className="lbl fl mt16">Zonas a priorizar</p>
-        <Elegir opciones={['brazos', 'pecho', 'espalda', 'hombros', 'piernas', 'gluteo', 'abdomen'].map(z => ({ v: z, t: z === 'gluteo' ? 'Glúteo' : z[0]!.toUpperCase() + z.slice(1) }))} valor={p.zonasPrioridad} onCambio={z => cambia({ zonasPrioridad: p.zonasPrioridad.includes(z) ? p.zonasPrioridad.filter(x => x !== z) : [...p.zonasPrioridad, z] })} />
+        <div className="alta-sep">
+          <p className="lbl fl">Zonas a priorizar <span className="hint">(opcional)</span></p>
+          <p className="small muted" style={{ marginBottom: 8 }}>Si no eliges ninguna, se trabaja todo el cuerpo por igual.</p>
+          <Elegir opciones={Object.keys(ZONA_TXT).map(z => ({ v: z, t: mayuscula(ZONA_TXT[z]!) }))} valor={p.zonasPrioridad} onCambio={z => cambia({ zonasPrioridad: p.zonasPrioridad.includes(z) ? p.zonasPrioridad.filter(x => x !== z) : [...p.zonasPrioridad, z] })} />
+        </div>
       </>) },
-    5: { t: 'Cómo te gusta entrenar', c: (
+    [PASO.entrenar]: { t: 'Cómo te gusta entrenar', c: (
       <div className="fields mt16">
-        <div><span className="lbl fl">Tu nivel</span><Elegir opciones={[{ v: 'empiezo', t: 'Empiezo' }, { v: 'vuelvo', t: 'Vuelvo tras un parón' }, { v: 'intermedio', t: 'Intermedio' }, { v: 'avanzado', t: 'Avanzado' }]} valor={p.nivel} onCambio={v => cambia({ nivel: v })} /></div>
-        <div><span className="lbl fl">Prefieres</span><Elegir eq opciones={[{ v: 'maquinas', t: 'Máquinas' }, { v: 'libre', t: 'Peso libre' }, { v: 'mezcla', t: 'Mezcla' }]} valor={p.preferencia} onCambio={v => cambia({ preferencia: v })} /></div>
-        <div><span className="lbl fl">Repeticiones</span><Elegir eq opciones={[{ v: 'pesadas', t: 'Pocas y pesadas' }, { v: 'moderadas', t: 'Moderadas' }, { v: 'mezcla', t: 'Mezcla' }]} valor={p.reps} onCambio={v => cambia({ reps: v })} /></div>
+        {/* Con «Empiezo» no se pregunta por superseries: se dejan puestas. */}
+        <div><span className="lbl fl">Tu nivel</span><Elegir opciones={[{ v: 'empiezo', t: 'Empiezo' }, { v: 'vuelvo', t: 'Vuelvo tras un parón' }, { v: 'intermedio', t: 'Intermedio' }, { v: 'avanzado', t: 'Avanzado' }]} valor={p.nivel} onCambio={v => cambia(v === 'empiezo' ? { nivel: v, superseries: true } : { nivel: v })} /></div>
+        <div><span className="lbl fl">Prefieres</span><Elegir eq opciones={[{ v: 'maquinas', t: 'Máquinas' }, { v: 'libre', t: 'Peso libre' }, { v: 'mezcla', t: 'Mezcla' }]} valor={p.preferencia} onCambio={v => cambia({ preferencia: v })} />
+          <p className="small muted mt4">Peso libre: barras y mancuernas. Si dudas, deja «Mezcla».</p>
+        </div>
         <div className="list">
-          <Fila t="Superseries" d="Dos ejercicios seguidos: ahorran tiempo" on={p.superseries} c={v => cambia({ superseries: v })} />
-          <Fila t="Abdominales y core" d="Al final de las sesiones" on={p.core} c={v => cambia({ core: v })} />
+          {p.nivel !== 'empiezo' && <Fila t="Superseries" d="Dos ejercicios seguidos, sin descanso entre ellos: acabas antes" on={p.superseries} c={v => cambia({ superseries: v })} />}
+          <Fila t="Abdominales" d="Unos minutos al final de cada sesión" on={p.core} c={v => cambia({ core: v })} />
         </div>
       </div>) },
-    6: { t: 'Tus horarios', d: 'Toca un día para marcarlo: fijo → opcional → libre.', c: <Horarios p={p} cambia={cambia} /> },
-    7: { t: 'Salud', d: 'Para no proponerte ejercicios que no te convienen.', saltar: true, c: (
+    [PASO.horarios]: { t: 'Tus horarios', d: 'Qué días y a qué hora vas al gimnasio.', c: <HorariosAlta p={p} cambia={cambia} falta={!!mal('dias')} /> },
+    [PASO.salud]: { t: 'Salud', d: 'Para no proponerte ejercicios que no te convienen. Si no te molesta nada, sigue.', c: (
       <div className="fields mt16">
-        <div><span className="lbl fl">Zonas sensibles</span><Elegir opciones={[{ v: 'rodilla', t: 'Rodilla' }, { v: 'lumbar', t: 'Lumbar' }, { v: 'hombro', t: 'Hombro' }, { v: 'muneca', t: 'Muñeca' }, { v: 'codo', t: 'Codo' }] as { v: Zona; t: string }[]} valor={p.zonasSensibles} onCambio={z => cambia({ zonasSensibles: p.zonasSensibles.includes(z) ? p.zonasSensibles.filter(x => x !== z) : [...p.zonasSensibles, z] })} /></div>
-        <label><span className="lbl fl">Lesiones o molestias (opcional)</span><textarea className="inp" value={p.lesiones} onChange={e => cambia({ lesiones: e.target.value })} placeholder="Por ejemplo: me duele la extensión de cuádriceps" /></label>
-        <p className="note plain"><Ico n="first-aid" /><span>Los ejercicios que te duelan o no te gusten los puedes marcar en <b>Rutina → Ejercicios</b> y no volverán a salir. <b>Esto no es consejo médico.</b></span></p>
+        <div><span className="lbl fl">¿Te molesta alguna zona? <span className="hint">(opcional)</span></span><Elegir opciones={[{ v: 'rodilla', t: 'Rodilla' }, { v: 'lumbar', t: 'Lumbar (espalda baja)' }, { v: 'hombro', t: 'Hombro' }, { v: 'muneca', t: 'Muñeca' }, { v: 'codo', t: 'Codo' }] as { v: Zona; t: string }[]} valor={p.zonasSensibles} onCambio={z => cambia({ zonasSensibles: p.zonasSensibles.includes(z) ? p.zonasSensibles.filter(x => x !== z) : [...p.zonasSensibles, z] })} /></div>
+        <label><span className="lbl fl">Lesiones o molestias <span className="hint">(opcional)</span></span><textarea className="inp" value={p.lesiones} onChange={e => cambia({ lesiones: e.target.value })} placeholder="Por ejemplo: me duele la rodilla al bajar escaleras" /></label>
+        <p className="note plain"><Ico n="first-aid" /><span>Si un ejercicio te duele, márcalo con «Me duele» en su ficha y no volverá a salir. <b>Esto no es consejo médico.</b></span></p>
       </div>) },
-    8: { t: 'Tu gimnasio', d: 'Marca lo que tiene. Si te cambias, creas otro.', saltar: true, c: (
+    [PASO.gimnasio]: { t: 'Tu gimnasio', d: '¿Qué tiene tu gimnasio? Si no lo sabes, deja «Gimnasio completo».', c: (
       <>
-        <label className="mt16" style={{ display: 'block' }}><span className="lbl fl">Nombre</span><input className="inp" value={gym.nombre} onChange={e => setGym(g => ({ ...g, nombre: e.target.value }))} /></label>
-        <div className="sec"><div className="sec-h"><h2>Máquinas y material</h2><span className="lbl">{gym.material.length} marcadas</span></div>
-          <CatalogoMaterial material={gym.material} onCambio={m => setGym(g => ({ ...g, material: m }))} />
+        <div className="opts mt16">
+          <button className={cx('opt-c', gymModo === 'completo' && 'on')} aria-pressed={gymModo === 'completo'} onClick={() => setGymModo('completo')}>
+            <span className="rad" /><span className="tx"><b>Gimnasio completo (lo normal)</b><small>Máquinas, poleas, barras y mancuernas.</small></span>
+          </button>
+          <button className={cx('opt-c', gymModo === 'yo' && 'on')} aria-pressed={gymModo === 'yo'} onClick={() => setGymModo('yo')}>
+            <span className="rad" /><span className="tx"><b>Lo marco yo</b><small>Eliges en una lista lo que tiene.</small></span>
+          </button>
         </div>
-        <details className="fold mt12"><summary><Ico n="barbell" className="blue" />Mancuernas y discos <Ico n="caret-down" /></summary><div className="in">
-          <PesosGimnasio g={gym} onCambio={c => setGym(g => ({ ...g, ...c }))} />
-        </div></details>
-        <p className="result card mt16" style={{ boxShadow: 'none' }}><Ico n="check-circle" b className="okc" />Con este gimnasio tienes <b className="mono">{ejerciciosDisponibles(gym.material)}</b> ejercicios disponibles</p>
+        {gymModo === 'yo' && (
+          <>
+            <label className="mt16" style={{ display: 'block' }}><span className="lbl fl">Nombre del gimnasio</span><input className="inp" aria-label="Nombre del gimnasio" value={gym.nombre} onChange={e => setGym(g => ({ ...g, nombre: e.target.value }))} /></label>
+            <div className="sec"><div className="sec-h"><h2>Máquinas y material</h2><span className="lbl">{gym.material.length} marcadas</span></div>
+              <CatalogoMaterial material={gym.material} onCambio={m => setGym(g => ({ ...g, material: m }))} />
+            </div>
+            <details className="fold mt12"><summary><Ico n="barbell" className="blue" />Mancuernas y discos <Ico n="caret-down" /></summary><div className="in">
+              <PesosGimnasio g={gym} onCambio={c => setGym(g => ({ ...g, ...c }))} />
+            </div></details>
+          </>
+        )}
+        <p className="result card mt16" style={{ boxShadow: 'none' }}><Ico n="check-circle" b className="okc" />Con este gimnasio tienes <b className="mono">{ejerciciosDisponibles(material)}</b> ejercicios disponibles</p>
+        <p className="small muted mt8">Si cambias de gimnasio, lo añades en Rutina → Gimnasios.</p>
       </>) },
-    9: { t: 'Comida y actividad', d: 'Lo justo para tus recordatorios y objetivos.', c: (
-      <div className="fields mt16">
-        <div><span className="lbl fl">Suplementos que tomas</span><Elegir opciones={['Creatina', 'Batido de proteína'].map(s => ({ v: s, t: s }))} valor={p.suplementos} onCambio={s => cambia({ suplementos: p.suplementos.includes(s) ? p.suplementos.filter(x => x !== s) : [...p.suplementos, s] })} /></div>
-        <div><span className="lbl fl">Tu trabajo</span><Elegir eq opciones={[{ v: 'sentado', t: 'Sentado' }, { v: 'depie', t: 'De pie' }, { v: 'fisico', t: 'Físico' }]} valor={p.trabajo} onCambio={v => cambia({ trabajo: v })} /></div>
-        <div><span className="lbl fl">Objetivo de pasos diarios</span><Stepper valor={p.pasosObjetivo} paso={1000} min={2000} max={20000} onCambio={v => cambia({ pasosObjetivo: v })} /></div>
-        <div><span className="lbl fl">Días de pesarte</span>
-          <div className="days">{DIAS_CORTOS.map((d, i) => <button key={d} className={cx('chip day', p.diasPesaje.includes(i as Dia) && 'on')} onClick={() => cambia({ diasPesaje: p.diasPesaje.includes(i as Dia) ? p.diasPesaje.filter(x => x !== i) : [...p.diasPesaje, i as Dia].sort() })}>{d}</button>)}</div>
-        </div>
-      </div>) },
   }
   const c = contenido[paso]!
   return (
-    <Paso n={paso} titulo={c.t} desc={c.d} onAtras={atras} onSaltar={c.saltar ? sig : undefined} pie={
+    <Paso n={paso} titulo={c.t} desc={c.d} onAtras={atras} aviso={f?.msg} pie={
       <>
         <button className="btn gry auto" onClick={atras} aria-label="Atrás"><Ico n="caret-left" b /></button>
         <button className="btn" onClick={sig}>Siguiente <Ico n="arrow-right" b /></button>
@@ -203,14 +373,14 @@ export function Alta() {
   )
 }
 
-function Paso({ n, titulo, desc, children, pie, onAtras, onSaltar, sinAtras }: { n: number; titulo: string; desc?: string; children: ReactNode; pie: ReactNode; onAtras?: () => void; onSaltar?: () => void; sinAtras?: boolean }) {
+function Paso({ n, titulo, desc, children, pie, onAtras, sinAtras, aviso }: { n: number; titulo: string; desc?: string; children: ReactNode; pie: ReactNode; onAtras?: () => void; sinAtras?: boolean; aviso?: string | null }) {
   return (
     <section className="screen" data-full="" key={n}>
       <div className="alt">
         <div className="alt-top">
           {sinAtras || !onAtras ? <span className="skip-gap" /> : <button className="ib" onClick={onAtras} aria-label="Atrás"><Ico n="caret-left" /></button>}
           <div className="prog" aria-label={`Paso ${n} de ${TOTAL}`}>{Array.from({ length: TOTAL }, (_, i) => <i key={i} className={cx(i < n && 'on')} />)}</div>
-          {onSaltar ? <button className="skipb" onClick={onSaltar}>Saltar</button> : <span className="skip-gap" />}
+          <span className="skip-gap" />
         </div>
         <div className="alt-body">
           <p className="lbl">Paso {n} de {TOTAL}</p>
@@ -218,7 +388,13 @@ function Paso({ n, titulo, desc, children, pie, onAtras, onSaltar, sinAtras }: {
           {desc && <p className="muted mt4">{desc}</p>}
           {children}
         </div>
-        {pie && <div className="alt-foot">{pie}</div>}
+        {pie && (
+          <div className="alt-foot alta-pie">
+            {/* Lo que falta para seguir, justo encima de «Siguiente» (es donde se mira al pulsarlo). */}
+            {aviso && <p className="note warn alta-aviso" role="alert"><Ico n="warning-circle" /><span>{aviso}</span></p>}
+            <div className="alta-botones">{pie}</div>
+          </div>
+        )}
       </div>
     </section>
   )
@@ -247,6 +423,55 @@ export function Medir() {
   )
 }
 
+/**
+ * Horario sencillo del alta: días (un toque = entrenas o no), un día extra opcional aparte,
+ * la hora y los minutos. Coche/andando, hora de salida, hora de acostarse y «si pierdes una sesión»
+ * se quedan con su valor por defecto y se cambian en Perfil → Horario (que usa `Horarios`, abajo).
+ */
+function HorariosAlta({ p, cambia, falta }: { p: Perfil; cambia: (c: Partial<Perfil>) => void; falta: boolean }) {
+  const conmutar = (d: Dia) => {
+    if (p.diasFijos.includes(d)) cambia({ diasFijos: p.diasFijos.filter(x => x !== d) })
+    else cambia({ diasFijos: [...p.diasFijos, d].sort((a, b) => a - b), diasOpcionales: p.diasOpcionales.filter(x => x !== d) })
+  }
+  const extra = p.diasOpcionales.find(d => !p.diasFijos.includes(d)) ?? null
+  const libres = ([0, 1, 2, 3, 4, 5, 6] as Dia[]).filter(d => !p.diasFijos.includes(d))
+  const n = p.diasFijos.length
+  const horas = ['05:30', '06:00', '07:00', '09:00', '18:00', '19:00', '20:00']
+  // La hora de irse del gimnasio (para la versión corta) se recalcula con la hora y los minutos elegidos.
+  const ponHora = (h: string) => cambia({ horaEntreno: h, horaLimite: limites(h, p.minutosNormal) })
+  const ponMinutos = (v: number) => cambia({ minutosNormal: v, minutosCorta: Math.min(perfilPorDefecto().minutosCorta, v - 5), horaLimite: limites(p.horaEntreno, v) })
+  return (
+    <>
+      <div className={cx(falta && 'alta-falta')}>
+        <p className="lbl fl mt16">¿Qué días vas a entrenar?</p>
+        <div className="days">
+          {DIAS_CORTOS.map((d, i) => (
+            <button key={d} className={cx('chip day', p.diasFijos.includes(i as Dia) && 'fix on')} aria-pressed={p.diasFijos.includes(i as Dia)} aria-label={DIAS[i]} onClick={() => conmutar(i as Dia)}>{d}</button>
+          ))}
+        </div>
+        <p className="small muted mt8">Toca un día para marcarlo o quitarlo · {n === 1 ? '1 día' : `${n} días`} a la semana{n === 3 ? ' (va muy bien)' : ''}</p>
+      </div>
+      <p className="lbl fl mt16">Día extra si puedes <span className="hint">(opcional)</span></p>
+      <div className="chips">
+        <button className={cx('chip', extra == null && 'on')} aria-pressed={extra == null} onClick={() => cambia({ diasOpcionales: [] })}>Ninguno</button>
+        {libres.map(d => <button key={d} className={cx('chip', extra === d && 'on')} aria-pressed={extra === d} aria-label={`Extra el ${DIAS[d]}`} onClick={() => cambia({ diasOpcionales: [d] })}>{DIAS_TRES[d]}</button>)}
+      </div>
+      <p className="small muted mt4">Una sesión corta de brazos y hombros, solo si te apetece.</p>
+      <p className="lbl fl mt16">¿A qué hora entrenas?</p>
+      <div className="chips">
+        {horas.map(h => <button key={h} className={cx('chip', p.horaEntreno === h && 'on')} onClick={() => ponHora(h)}>{formatoHora(h)}</button>)}
+        {/* Al borrar un campo de hora llega '' y luego salía «NaN:undefined»: solo se guarda una hora válida. */}
+        <input className="inp" type="time" value={p.horaEntreno} onChange={e => { if (e.target.value) ponHora(e.target.value) }} style={{ width: 120, minHeight: 40 }} aria-label="Otra hora" />
+      </div>
+      <p className="lbl fl mt16">¿Cuánto tiempo tienes cada día?</p>
+      <Stepper valor={p.minutosNormal} paso={5} min={30} max={120} sufijo="min" etiqueta="Minutos por sesión" onCambio={ponMinutos} />
+      <p className="small muted mt4">Si un día vas con prisa, la app te ofrece una versión más corta.</p>
+      <p className="note plain mt16"><Ico n="gear" /><span>Coche o andando, hora de salir y hora de acostarte: en <b>Perfil → Horario</b>.</span></p>
+    </>
+  )
+}
+
+/** Horario completo (Perfil → Horario). */
 export function Horarios({ p, cambia }: { p: Perfil; cambia: (c: Partial<Perfil>) => void }) {
   const ciclo = (d: Dia) => {
     if (p.diasFijos.includes(d)) cambia({ diasFijos: p.diasFijos.filter(x => x !== d), diasOpcionales: [...p.diasOpcionales, d].sort() })
@@ -304,10 +529,10 @@ function Generando({ onListo, p }: { onListo: () => Promise<void>; p: Perfil }) 
     <>
       <div className="bar thick go mt12 build"><i /></div>
       <ul className="steps-done mt12">
-        <li><Ico n="check" b />{fijos} día{fijos === 1 ? '' : 's'} fijo{fijos === 1 ? '' : 's'}{p.diasOpcionales.length ? ' y uno opcional' : ''}</li>
-        <li><Ico n="check" b />Sesiones de ~{p.minutosNormal} min (corta ~{p.minutosCorta})</li>
+        <li><Ico n="check" b />{fijos} día{fijos === 1 ? '' : 's'} a la semana{p.diasOpcionales.some(d => !p.diasFijos.includes(d)) ? ' y uno extra si puedes' : ''}</li>
+        <li><Ico n="check" b />Sesiones de ~{p.minutosNormal} min</li>
         <li><Ico n="check" b />{p.preferencia === 'maquinas' ? 'Máquinas y poleas por delante' : p.preferencia === 'libre' ? 'Peso libre por delante' : 'Máquinas y peso libre'}</li>
-        <li><Ico n="check" b />{p.zonasPrioridad.length ? `Prioridad: ${p.zonasPrioridad.join(', ')}` : 'Todo el cuerpo equilibrado'}</li>
+        <li><Ico n="check" b />{p.zonasPrioridad.length ? `Más trabajo en: ${p.zonasPrioridad.map(z => ZONA_TXT[z] ?? z).join(', ')}` : 'Todo el cuerpo por igual'}</li>
       </ul>
     </>
   )

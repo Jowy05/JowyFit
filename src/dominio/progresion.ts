@@ -1,7 +1,7 @@
 // Doble progresión con esfuerzo (RPE) y récords.
 import type { Serie, TipoRegistro } from '../datos/tipos'
 import { epley } from './calculos'
-import { siguiente } from './pesos'
+import { BARRAS, siguiente } from './pesos'
 
 export type Sugerencia = {
   accion: 'primera' | 'subir' | 'mantener' | 'bajar'
@@ -9,6 +9,8 @@ export type Sugerencia = {
   reps: number | null // reps objetivo (para peso corporal y tiempo)
   ultima: { peso: number | null; reps: number | null; rpe: number | null } | null
   texto: string
+  /** Primera vez sin historial ni referencia: el peso es uno de partida, ligero, que propone la app. */
+  partida?: boolean
 }
 
 const finito = (v: number | null | undefined): v is number => v != null && Number.isFinite(v)
@@ -130,4 +132,40 @@ export function desdeReferencia(id: string, referencias: Record<string, string> 
   const peso = Math.max(0, enLista)
   if (!peso) return null
   return { accion: 'primera', peso, reps: objetivo.repsMin, ultima: null, texto: `Por tu referencia (${referencias![m.ref]}): empieza con ${String(peso).replace('.', ',')} kg y ajusta` }
+}
+
+// ---------- primera vez sin historial ni referencia: peso de partida ----------
+
+export const TEXTO_PARTIDA = 'Empieza con este y súbelo si va fácil'
+
+/** Mínimo «razonable» para empezar según el material (antes de buscarlo en la lista de pesos reales). */
+function minimoPartida(material: string | null | undefined, registro: TipoRegistro, lista: number[]): number {
+  if (material && material in BARRAS) {
+    // Barra vacía: con gimnasio, la lista de barra empieza en la propia barra; sin él (lista 0…300), la barra típica.
+    return lista.length && lista[0]! > 0 ? lista[0]! : BARRAS[material]!
+  }
+  if (registro === 'mancuerna') return 4
+  if (material === 'plates' || material === 'loop_band' || material === 'resistance_band') return 5
+  return 10 // máquinas, poleas y lo demás: ~10 kg (la lista suele empezar en 0)
+}
+
+/**
+ * Peso con el que empezar la primera vez que se hace un ejercicio, si no hay historial ni referencia:
+ * la barra vacía, la mancuerna más ligera razonable o ~10 kg en máquina. Siempre un peso que existe
+ * en el gimnasio y nunca 0. Null para peso corporal, tiempo, cardio y asistidos (no cambian).
+ */
+export function pesoPartida(material: string | null | undefined, registro: TipoRegistro, lista: number[]): number | null {
+  if (registro !== 'peso' && registro !== 'mancuerna') return null
+  const positivos = lista.filter(v => Number.isFinite(v) && v > 0)
+  const minimo = minimoPartida(material, registro, lista)
+  if (!positivos.length) return minimo > 0 ? minimo : null
+  // El primero que llega al mínimo; si todos son más ligeros, el más pesado que haya.
+  return positivos.find(v => v >= minimo - 1e-9) ?? positivos[positivos.length - 1]!
+}
+
+/** Aplica el peso de partida a una sugerencia de «primera vez» que aún no tiene peso. */
+export function conPartida(s: Sugerencia, material: string | null | undefined, registro: TipoRegistro, lista: number[]): Sugerencia {
+  if (s.accion !== 'primera' || s.peso != null) return s
+  const peso = pesoPartida(material, registro, lista)
+  return peso == null ? s : { ...s, peso, partida: true, texto: TEXTO_PARTIDA }
 }

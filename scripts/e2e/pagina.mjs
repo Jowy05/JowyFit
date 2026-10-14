@@ -92,6 +92,15 @@ export const AYUDANTE = `(() => {
       el.dispatchEvent(new Event('change', { bubbles: true }))
       await dormir(150)
     },
+    /** Elige una opción en un desplegable (<select>). */
+    async elegir(sel, valor) {
+      let el = null
+      for (let i = 0; i < 40 && !el; i++) { el = [...document.querySelectorAll(sel)].filter(visible).pop(); if (!el) await dormir(120) }
+      if (!el) throw new Error('No encuentro el desplegable ' + sel)
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, String(valor))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+      await dormir(120)
+    },
     async nombreSiHace(nombre) {
       const el = [...document.querySelectorAll('input')].find(i => visible(i) && /nombre/i.test((i.getAttribute('aria-label') || '') + (i.placeholder || '')) && !i.value)
       if (el) await this.escribir('input[aria-label="' + el.getAttribute('aria-label') + '"]', nombre)

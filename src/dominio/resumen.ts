@@ -87,7 +87,8 @@ export function resumenSemana(o: {
   if (pasosSem.length) { if (cumplidos >= 4) { puntos += 0.5; bien.push('pasos OK') } }
   else puntos += 0.25
 
-  const semaforo = puntos >= 3.5 ? 'verde' : puntos >= 2 ? 'ambar' : 'rojo'
+  // Al día con los entrenos y nada en contra: verde aunque falten datos de comida, cintura o pasos.
+  const semaforo = puntos >= 3.5 || (!mal.length && meta > 0 && fijasHechas >= meta) ? 'verde' : puntos >= 2 ? 'ambar' : 'rojo'
   const titulo = semaforo === 'verde' ? 'Vas bien' : semaforo === 'ambar' ? 'Casi' : 'Semana floja'
   const frase = semaforo === 'verde'
     ? bien.join(', ') + '.'

@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { guardarPerfil } from '../../../datos/repos'
 import type { Bascula, Dia, Medicion, Perfil, Zona } from '../../../datos/tipos'
-import { FACTOR_ACTIVIDAD, kg, num } from '../../../dominio/calculos'
+import { kg, num } from '../../../dominio/calculos'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
@@ -168,7 +168,7 @@ function Cuerpo() {
   return (
     <>
       <div className="sec">
-        <div className="sec-h"><h2>Peso y medidas</h2><span className="lbl">lo último</span></div>
+        <div className="sec-h"><h2>Lo último que apuntaste</h2></div>
         <div className="spec-box"><div className="spec">
           <p><span>Peso</span><b>{datos.peso ? `${kg(datos.peso.pesoKg)} kg · ${fechaCorta(datos.peso.fecha)}` : '—'}</b></p>
           {datos.per.map(x => <p key={x.k}><span>{x.t}</span><b>{num(x.v)} cm{x.fecha ? ` · ${fechaCorta(x.fecha)}` : ''}</b></p>)}
@@ -326,16 +326,14 @@ function Preferencias({ p, guardar }: Props) {
       <Grupo t="Prefieres">
         <Elegir eq opciones={(Object.keys(PREFERENCIA_TXT) as Perfil['preferencia'][]).map(v => ({ v, t: v === 'maquinas' ? 'Máquinas' : PREFERENCIA_TXT[v] }))} valor={p.preferencia} onCambio={v => guardar({ preferencia: v })} />
       </Grupo>
-      <Grupo t="Repeticiones">
+      <Grupo t="Repeticiones" ayuda="Si no lo sabes, deja «Moderadas».">
         <Elegir eq opciones={(Object.keys(REPS_TXT) as Perfil['reps'][]).map(v => ({ v, t: REPS_TXT[v] }))} valor={p.reps} onCambio={v => guardar({ reps: v })} />
       </Grupo>
       <div className="list">
-        <Fila t="Superseries" d="Dos ejercicios seguidos: ahorran tiempo" on={p.superseries} c={v => guardar({ superseries: v })} />
+        <Fila t="Superseries" d="Dos ejercicios seguidos, sin descanso entre ellos: ahorran tiempo" on={p.superseries} c={v => guardar({ superseries: v })} />
         <Fila t="Abdominales y core" d="Al final de las sesiones" on={p.core} c={v => guardar({ core: v })} />
       </div>
-      <Grupo t="Objetivo de pasos diarios">
-        <Stepper valor={p.pasosObjetivo} paso={500} min={2000} max={20000} etiqueta="Objetivo de pasos" onCambio={v => guardar({ pasosObjetivo: v })} />
-      </Grupo>
+      <p className="small muted">El objetivo de pasos se cambia en Progreso → Pasos.</p>
     </div>
   )
 }
@@ -363,7 +361,7 @@ function Alimentacion({ p, guardar }: Props) {
           <button className="btn sm auto" disabled={!otro.trim()} onClick={anadir}><Ico n="plus" b />Añadir</button>
         </div>
       </Grupo>
-      <p className="small muted">Las comidas y bebidas de un toque se editan en Comida → Plantillas.</p>
+      <p className="small muted">Las comidas y bebidas de un toque se editan en Comida → Mis comidas.</p>
     </div>
   )
 }
@@ -378,11 +376,10 @@ function Vida({ p, guardar }: Props) {
         {(Object.keys(TRABAJO_TXT) as Perfil['trabajo'][]).map(v => (
           <button key={v} className={cx('opt-c', p.trabajo === v && 'on')} aria-pressed={p.trabajo === v} onClick={() => guardar({ trabajo: v })}>
             <span className="rad" /><span className="tx"><b>{TRABAJO_TXT[v]}</b><small>{detalle[v]}</small></span>
-            <span className="end">×{num(FACTOR_ACTIVIDAD[v], 3)}</span>
           </button>
         ))}
       </div>
-      <p className="note plain mt12"><Ico n="info" /><span>Tu gasto diario es tu basal <b>× el factor de actividad</b>. El entreno se suma aparte.</span></p>
+      <p className="note plain mt12"><Ico n="info" /><span>Sirve para calcular <b>cuánto gastas al día</b> y cuánto comer. El entreno se suma aparte.</span></p>
     </>
   )
 }

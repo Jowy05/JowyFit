@@ -1,29 +1,17 @@
-// COM-07 · Productos guardados: todo lo escaneado, con búsqueda. Los pendientes se buscan al volver la conexión.
+// COM-07 · Todos los escaneados, con búsqueda. Ya no es una pestaña: se llega desde «Mis comidas» cuando hay muchos.
+// Los pendientes se buscan al volver la conexión.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import { buscarOFF, porRacion } from '../../../dominio/comida'
+import { porRacion } from '../../../dominio/comida'
 import { fechaCorta } from '../../../dominio/fechas'
-import { num } from '../../../dominio/calculos'
 import { normalizar } from '../../../catalogo/catalogo'
-import { Ico, Pantalla, Vacio } from '../../comp'
+import { Cab, Ico, Pantalla, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
-import { CabComida, Mini, kp } from './comun'
+import { Mini, buscarPendientes, kp } from './comun'
 
-/** Busca en Open Food Facts los códigos escaneados sin conexión. Devuelve cuántos encontró. */
-export async function buscarPendientes(): Promise<number> {
-  const pend = await db.productos.filter(p => !!p.pendiente).toArray()
-  let n = 0
-  for (const [i, p] of pend.entries()) {
-    // Open Food Facts permite unas 15 consultas por minuto: una cada 4,5 s.
-    if (i) await new Promise(r => setTimeout(r, 4500))
-    const r = await buscarOFF(p.codigo)
-    if (r.estado === 'offline') break
-    if (r.estado === 'encontrado') { await db.productos.put(r.producto); n++ }
-  }
-  return n
-}
+export { buscarPendientes }
 
 export function Guardados() {
   const nav = useNav()
@@ -39,14 +27,15 @@ export function Guardados() {
 
   return (
     <Pantalla>
-      <CabComida vista="com-guard" crumb="Todo lo escaneado" />
+      <Cab atras crumb="Mis comidas" titulo="Escaneados" sub="Todo lo que has escaneado. Toca uno para ver su ficha y apuntarlo." />
       <div className="pg">
         <label className="search">
           <Ico n="magnifying-glass" />
-          <input className="inp" type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en tus productos" aria-label="Buscar en tus productos" />
+          <input className="inp" type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en lo escaneado" aria-label="Buscar en lo escaneado" />
         </label>
         <div className="count"><p><b className="mono">{productos.length}</b> productos guardados en el móvil</p></div>
         {!productos.length && <Vacio icono="barcode" titulo="Aún no has escaneado nada" texto="Escanea el código de barras y se guarda aquí: la próxima vez sale al instante, también sin conexión." accion="Escanear" onAccion={() => nav.ir('com-scan')} />}
+        {q && productos.length > 0 && !lista.length && <p className="small muted">Nada con ese nombre.</p>}
         <div className="list">
           {lista.map(p => {
             const v = porRacion(p)
@@ -55,7 +44,7 @@ export function Guardados() {
                 <Mini nombre={p.nombre} imagen={p.imagen} />
                 <span className="tx">
                   <b>{p.nombre}</b>
-                  <small>{p.pendiente ? <span className="tag warn">Pendiente de buscar</span> : <>{p.marca ? `${p.marca} · ` : ''}<span className="mono">{p.kcal100 != null ? `${num(p.kcal100, 0)} kcal/100 g`: kp(v.kcal, v.proteina, v.cafeina)}</span></>}</small>
+                  <small>{p.pendiente ? <span className="tag warn">Pendiente de buscar</span> : <>{p.marca ? `${p.marca} · ` : ''}<span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span>{v.base === '100g' ? ' (100 g)' : ''}</>}</small>
                 </span>
                 <span className="end muted small">{fechaCorta(p.guardado.slice(0, 10))}</span>
               </button>

@@ -124,6 +124,13 @@ async function hacerEntreno({ ocupado = false } = {}) {
 }
 async function alta() {
   await pulsar('Empezar')
+  // Sobre ti: fecha, sexo, altura y peso son obligatorios (antes venían rellenos con valores inventados).
+  await t('elegir', 'select[aria-label="Día de nacimiento"]', 20)
+  await t('elegir', 'select[aria-label="Mes de nacimiento"]', 5)
+  await t('elegir', 'select[aria-label="Año de nacimiento"]', 1990)
+  await pulsar('Hombre')
+  await t('escribir', 'input[aria-label="Altura en centímetros"]', '175')
+  await t('escribir', 'input[aria-label="Peso en kilos"]', '75')
   for (let i = 0; i < 12 && !(await t('hay', /Creando tu rutina|Tu rutina está lista/)); i++) { await t('nombreSiHace', 'Joel'); await pulsar('Siguiente') }
   await ver('Tu rutina está lista', 15000)
   await pulsar('Ir a Inicio')
@@ -154,9 +161,13 @@ escenario('alta y rutina', async () => {
   await ver('Tu fuerza y tu comida')
   await alta()
   await ver('Empezar rutina')
+  // Guía para quien llega nuevo: se ve y se puede quitar.
+  await ver('Primeros pasos')
+  await pulsar('Ya lo sé')
+  await noVer('Primeros pasos')
   await pestana('Rutina')
   await ver('Cuerpo completo')
-  await ver('Semana de calibración')
+  await ver(/Semana de (calibración|prueba)/)
 })
 
 escenario('entreno completo', async () => {
@@ -268,7 +279,7 @@ escenario('comida: escáner con y sin conexión', async () => {
   await ver('Sin conexión', 8000)
   await pulsar('Vale')
   sinConexion = false
-  await seg('Productos')
+  await seg('Mis comidas')
   await ver(/Coca-Cola|Pendiente de buscar/, 10000)
 })
 
@@ -372,9 +383,12 @@ escenario('rutina: regenerar, biblioteca y gimnasio', async () => {
   await deCero('2026-10-14T18:00:00')
   await alta()
   await pestana('Rutina')
-  await pulsar(/Generar rutina|Otra variante|Regenerar/).catch(() => pulsar('Editar plan'))
-  await ver(/Propuesta|Usar esta rutina|Editar/i)
-  if (await t('hay', 'Usar esta rutina')) { await pulsar('Usar esta rutina'); await ver('Cuerpo completo', 6000) }
+  // Rehacer la rutina está dentro de «Editar plan», con confirmación.
+  await pulsar('Editar plan')
+  await pulsar('Rehacer la rutina desde cero')
+  await pulsar('Ver la rutina nueva', '.sheet')
+  await pulsar('Usar esta rutina')
+  await ver('Cuerpo completo', 6000)
   await pestana('Rutina')
   await seg('Ejercicios')
   await t('escribir', 'input[type=search]', 'press banca')
@@ -440,7 +454,9 @@ escenario('entreno: esfuerzo opcional y final sin preguntas', async () => {
   await pulsar('Empezar rutina')
   await pulsar('Empezar', '.sheet')
   await ver('Hecho', 8000)
-  await ponerPesoSiFalta()
+  // La primera vez ya viene un peso de partida: «Hecho» funciona sin tocar nada.
+  const pesoInicial = await js(`return [...document.querySelectorAll('.stp')][0]?.querySelector('.val, input')?.textContent || [...document.querySelectorAll('.stp')][0]?.querySelector('input')?.value || ''`)
+  if (!/\d/.test(pesoInicial)) throw new Error('No hay peso de partida: «' + pesoInicial + '»')
   await pulsar(/^Hecho$/) // sin tocar el esfuerzo
   await ver('Próxima', 5000)
   await pulsar(/^Saltar$/)

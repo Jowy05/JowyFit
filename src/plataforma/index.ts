@@ -217,7 +217,9 @@ export async function leerCopiaGuardada(nombre: string): Promise<Uint8Array> {
 export function elegirArchivo(aceptar = '.jowyfit,.json,application/json,application/zip'): Promise<{ nombre: string; bytes: Uint8Array } | null> {
   return new Promise(resolve => {
     const i = document.createElement('input')
-    i.type = 'file'; i.accept = aceptar
+    // En Android el selector filtra por tipo de archivo y no conoce «.jowyfit»: la copia salía en gris
+    // y no se podía elegir. Allí se deja elegir cualquier archivo; al importar se comprueba que sea una copia.
+    i.type = 'file'; i.accept = esNativo() ? '' : aceptar
     i.onchange = async () => {
       const f = i.files?.[0]
       resolve(f ? { nombre: f.name, bytes: new Uint8Array(await f.arrayBuffer()) } : null)

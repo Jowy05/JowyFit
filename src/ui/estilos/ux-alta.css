@@ -41,3 +41,7 @@
 .alta-hora select.inp{font-size:18px;font-weight:600}
 .alta-hora select.inp[data-vacio]{color:var(--muted);font-weight:400}
 .alta-hora select.inp option{color:var(--ink);font-weight:400}
+
+/* Bienvenida: «Letra grande» y «Tengo una copia» en una fila */
+.alta-fila{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.alta-fila .btn{min-width:0;padding-inline:8px}

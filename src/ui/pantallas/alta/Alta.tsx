@@ -242,10 +242,13 @@ export function Alta() {
         </div>
         <div className="alt-foot col">
           <button className="btn xl" onClick={sig}>Empezar <Ico n="arrow-right" b /></button>
-          <button className={cx('btn gry sm alta-letra', letra === 'grande' && 'on')} aria-pressed={letra === 'grande'} onClick={cambiarLetra}>
-            <span className="alta-aa" aria-hidden="true">Aa</span>Letra grande{letra === 'grande' && <Ico n="check" b />}
-          </button>
-          <button className="btn ln sm" onClick={importarCopia}>Tengo una copia: importar</button>
+          {/* Lo secundario en una fila: con tres botones apilados el pie tapaba el texto en móviles bajos. */}
+          <div className="alta-fila">
+            <button className={cx('btn gry sm alta-letra', letra === 'grande' && 'on')} aria-pressed={letra === 'grande'} onClick={cambiarLetra}>
+              <span className="alta-aa" aria-hidden="true">Aa</span>Letra grande{letra === 'grande' && <Ico n="check" b />}
+            </button>
+            <button className="btn ln sm" onClick={importarCopia}>Tengo una copia</button>
+          </div>
         </div>
       </div>
     </section>

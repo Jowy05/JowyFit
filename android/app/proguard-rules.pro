@@ -19,3 +19,14 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Capacitor y sus plugins se usan por reflexión (anotaciones de permisos, métodos de plugin):
+# se conservan enteros. R8 solo recorta el resto de librerías.
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeVisibleParameterAnnotations
+-keep @interface com.getcapacitor.** { *; }
+-keep class com.getcapacitor.** { *; }
+-keep class com.capacitorjs.plugins.** { *; }
+-keep class io.capawesome.** { *; }
+-keep class app.capgo.** { *; }
+-keep class com.getcapacitor.community.** { *; }
+-keep class com.jowy05.jowyfit.** { *; }

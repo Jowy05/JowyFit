@@ -6,7 +6,7 @@ import type { Bascula, OrigenMedicion } from '../../../datos/tipos'
 import { horaActual, hoyISO } from '../../../dominio/fechas'
 import { num } from '../../../dominio/calculos'
 import { lineaSpark, tendenciaPeso } from '../../../dominio/peso'
-import { Chip, Hoja, Ico, Stepper } from '../../comp'
+import { Chip, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 
@@ -30,7 +30,9 @@ export function HojaPeso() {
   const mediciones = useLiveQuery(() => db.mediciones.toArray(), [])
   const [peso, setPeso] = useState<number | null>(null)
   const [origen, setOrigen] = useState<OrigenMedicion>('casa')
-  const [bascula, setBascula] = useState<Bascula>({})
+  // Se guarda el texto tal cual: si se convirtiera a número en cada tecla, no se podría escribir «72,5» (la coma desaparece).
+  const [bascula, setBascula] = useState<Partial<Record<keyof Bascula, string>>>({})
+  const unaVez = useUnaVez()
   useEffect(() => {
     if (peso != null || !mediciones) return
     const ultima = [...mediciones].filter(m => m.pesoKg != null).sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
@@ -39,14 +41,18 @@ export function HojaPeso() {
   }, [mediciones, peso])
   const t = tendenciaPeso(mediciones ?? [], hoy)
 
-  const guardar = async () => {
+  const guardar = unaVez(async () => {
     if (peso == null || peso < 25 || peso > 300) { aviso('Revisa el peso'); return }
-    const datos = Object.fromEntries(Object.entries(bascula).filter(([, v]) => v != null && !Number.isNaN(v))) as Bascula
+    const datos: Bascula = {}
+    for (const c of CAMPOS) {
+      const v = parseFloat((bascula[c.k] ?? '').replace(',', '.'))
+      if (Number.isFinite(v)) datos[c.k] = v
+    }
     const id = await db.mediciones.add({ fecha: `${hoy}T${hora}`, origen, pesoKg: Math.round(peso * 10) / 10, bascula: Object.keys(datos).length ? datos : undefined })
     const nueva = tendenciaPeso([...(mediciones ?? []), { fecha: `${hoy}T${hora}`, origen, pesoKg: peso }], hoy)
     nav.hoja(null)
     aviso(`Guardado: ${num(peso)} kg. ${nueva.kgSemana == null ? 'Sigue apuntándolo para ver la tendencia' : `Tendencia: ${textoTendencia(nueva.kgSemana).toLowerCase()}`}`, () => { void db.mediciones.delete(id) })
-  }
+  })
 
   return (
     <Hoja titulo="Apuntar peso" sub={`Hoy · ${hora.replace(/^0/, '')} · en ayunas y después del baño`}>
@@ -68,7 +74,7 @@ export function HojaPeso() {
                 <input
                   className="inp inp-num" inputMode="decimal" placeholder="—" aria-label={c.t}
                   value={bascula[c.k] ?? ''}
-                  onChange={e => { const v = parseFloat(e.target.value.replace(',', '.')); setBascula(b => ({ ...b, [c.k]: Number.isNaN(v) ? undefined : v })) }}
+                  onChange={e => { const v = e.target.value; setBascula(b => ({ ...b, [c.k]: v })) }}
                 />
               </label>
             ))}

@@ -5,17 +5,19 @@ import { db } from '../../../datos/db'
 import { guardarAjustes } from '../../../datos/repos'
 import { objetivosEnergia, sugerenciasDia, totalesComida } from '../../../datos/consultas'
 import type { DiaRutina, Rutina, Sesion } from '../../../datos/tipos'
-import { ejercicio } from '../../../catalogo/catalogo'
+import { ejercicio, nombreEjercicio } from '../../../catalogo/catalogo'
+import { indiceActual } from '../../../dominio/sesion'
 import { DIAS, DIAS_CORTOS, deISO, diaSemana, fechaCorta, formatoHora, hoyISO, numeroSemana, saludo, semanaDe, sumarDias, MESES_CORTOS } from '../../../dominio/fechas'
 import { duracionDia } from '../../../dominio/generador'
 import { estadoSemana, racha, tarjetaHoy, type EstadoDia } from '../../../dominio/semana'
-import { kg } from '../../../dominio/calculos'
+import { kg, num } from '../../../dominio/calculos'
 import type { Sugerencia } from '../../../dominio/progresion'
 import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, Th } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { pendientesDeHoy } from './pendientes'
+import { abrirEntreno } from '../entreno/iniciar'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -106,8 +108,8 @@ export function Inicio() {
               <Anillo v={pasos?.pasos ?? 0} total={perfil.pasosObjetivo} />
               <div className="grow">
                 <span className="lbl">Pasos</span>
-                <p className="k sm">{pasos?.pasos ?? 0}</p>
-                <p className="d">de {perfil.pasosObjetivo}</p>
+                <p className="k sm">{num(pasos?.pasos ?? 0, 0)}</p>
+                <p className="d">de {num(perfil.pasosObjetivo, 0)}</p>
               </div>
             </button>
             {tot.cafeina > 0 && (
@@ -198,15 +200,16 @@ function TarjetaHoy({ t, rutina, enCurso, gym }: { t: ReturnType<typeof tarjetaH
   const empezar = (version: 'normal' | 'corta') => dia && nav.hoja('sheet-ses1', { letra: dia.letra, version })
 
   if (t.tipo === 'curso' && enCurso) {
-    const idx = enCurso.ejercicios.findIndex(e => e.estado === 'curso')
+    const idx = indiceActual(enCurso)
     return (
       <div className="card today">
         <div className="today-hero live">
           <div className="row"><span className="tag go"><Ico n="record" b />En curso</span></div>
           <h3>{enCurso.nombre}</h3>
-          <p className="today-meta"><span>Ejercicio {idx + 1} de {enCurso.ejercicios.length} · {ejercicio(enCurso.ejercicios[idx]?.ejercicio)?.nombre ?? ''}</span></p>
+          <p className="today-meta"><span>{idx >= 0 ? `Ejercicio ${idx + 1} de ${enCurso.ejercicios.length} · ${nombreEjercicio(enCurso.ejercicios[idx]?.ejercicio)}` : enCurso.ejercicios.length ? 'Todo hecho: falta terminarlo' : 'Aún sin ejercicios'}</span></p>
         </div>
-        <div className="pd"><button className="btn xl" onClick={() => nav.restaurar()}><Ico n="play" b />Continuar</button></div>
+        {/* «Restaurar» no hace nada si la app se cerró a mitad del entreno: abrirEntreno lo abre igualmente. */}
+        <div className="pd"><button className="btn xl" onClick={() => abrirEntreno(nav)}><Ico n="play" b />Continuar</button></div>
       </div>
     )
   }

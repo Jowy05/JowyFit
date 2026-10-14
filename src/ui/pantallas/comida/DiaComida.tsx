@@ -48,7 +48,8 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
     await db.suplementos.put({ fecha, tomados: [...t] })
   }
   const verDia = (n: number) => setFecha(f => sumarDias(f, n))
-  const faltan = energia ? Math.max(0, energia.proteina - tot.proteina) : 0
+  // Redondeado: las raciones P/G dejan decimales y salía «Faltan 112.6 g».
+  const faltan = energia ? Math.max(0, Math.round(energia.proteina - tot.proteina)) : 0
   const conCafeina = tot.cafeina > 0 || perfil.bebidas.length > 0
   const caf = avisoCafeina(tot.cafeina, ajustes.cafeinaLimite, ajustes.cafeinaHoraTope, esHoy ? horaActual() : '00:00')
 
@@ -68,7 +69,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
         <div className="card pd tot">
           <div className="row jb">
             <span className="lbl">Proteína</span>
-            <span className={cx('small', faltan ? 'okc' : 'okc')}>{energia ? faltan ? `Faltan ${faltan} g` : '¡Conseguida!' : ''}</span>
+            <span className="small okc">{energia ? faltan ? `Faltan ${faltan} g` : '¡Conseguida!' : ''}</span>
           </div>
           <p className="tot-big mono">{Math.round(tot.proteina)}<small> / {energia?.proteina ?? '—'} g</small></p>
           <div className="mt8"><Barra v={tot.proteina} total={energia?.proteina ?? 1} tono="ok" gruesa /></div>

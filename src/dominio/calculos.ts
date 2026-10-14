@@ -2,6 +2,8 @@
 import type { Perfil, TipoObjetivo, Trabajo } from '../datos/tipos'
 
 export function imc(pesoKg: number, alturaCm: number): number {
+  // Perfil a medias (altura 0): NaN en vez de Infinity, que se pintaba como «∞».
+  if (!(alturaCm > 0) || !(pesoKg > 0)) return Number.NaN
   const m = alturaCm / 100
   return pesoKg / (m * m)
 }
@@ -14,6 +16,8 @@ export function basalMifflin(pesoKg: number, alturaCm: number, edad: number, sex
 /** % de grasa por el método de la Marina de EE. UU. (cm). Null si faltan medidas o no cuadran. */
 export function grasaMarina(sexo: Perfil['sexo'], alturaCm: number, cinturaCm?: number, cuelloCm?: number, caderaCm?: number): number | null {
   if (!cinturaCm || !cuelloCm) return null
+  // Sin altura válida log10(0) = −∞ y salía un −450 %.
+  if (!(alturaCm > 0) || !Number.isFinite(alturaCm)) return null
   if (sexo === 'hombre') {
     if (cinturaCm <= cuelloCm) return null
     return 495 / (1.0324 - 0.19077 * Math.log10(cinturaCm - cuelloCm) + 0.15456 * Math.log10(alturaCm)) - 450
@@ -26,7 +30,7 @@ export const cinturaAltura = (cinturaCm: number, alturaCm: number) => cinturaCm 
 
 /** 1RM estimado (Epley). */
 export function epley(peso: number, reps: number): number {
-  if (reps <= 0) return 0
+  if (!Number.isFinite(peso) || !Number.isFinite(reps) || reps <= 0) return 0
   if (reps === 1) return peso
   return peso * (1 + reps / 30)
 }
@@ -59,8 +63,11 @@ export function objetivos(p: { pesoKg: number; alturaCm: number; edad: number; s
 
 /** Redondea a 1 decimal en formato español. */
 export function num(n: number | null | undefined, decimales = 1): string {
-  if (n == null || Number.isNaN(n)) return '—'
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: decimales })
+  if (n == null || !Number.isFinite(n)) return '—'
+  // Redondeo propio y sin «-0» (−0,04 con un decimal se veía como «-0»; la asistencia 0 como «-0 kg»).
+  const f = 10 ** decimales
+  const r = Math.round(n * f) / f
+  return (r === 0 ? 0 : r).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: decimales })
 }
 
 /** Peso con coma y sin decimales sobrantes: 47,5 · 40 */

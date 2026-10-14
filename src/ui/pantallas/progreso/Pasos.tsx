@@ -8,7 +8,7 @@ import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../../domin
 import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../../dominio/tendencias'
 import { esIPhone, pasosDisponibles, pedirPermisoPasos } from '../../../plataforma'
 import { sincronizarPasos } from '../../servicios'
-import { Anillo, Cab, Chip, cx, estilo, Hoja, Ico, Pantalla, Stepper } from '../../comp'
+import { Anillo, Cab, Chip, cx, estilo, Hoja, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
@@ -104,11 +104,11 @@ export function Pasos() {
             <div className="card pd">
               <b>Pasos automáticos</b>
               <p className="small muted mt4">Conecta Health Connect y los pasos llegarán solos cada vez que abras la app.</p>
-              <button className={cx('btn sm mt12', conectando && 'off')} onClick={() => void conectar()}><Ico n="heartbeat" b />Conectar Health Connect</button>
+              <button className={cx('btn sm mt12', conectando && 'off')} disabled={conectando} onClick={() => void conectar()}><Ico n="heartbeat" b />Conectar Health Connect</button>
             </div>
           </div>
         )}
-        {hc && auto && <button className={cx('btn ln sm mt16', conectando && 'off')} onClick={() => void actualizar()}><Ico n="arrows-clockwise" />Actualizar desde Health Connect</button>}
+        {hc && auto && <button className={cx('btn ln sm mt16', conectando && 'off')} disabled={conectando} onClick={() => void actualizar()}><Ico n="arrows-clockwise" />Actualizar desde Health Connect</button>}
 
         {!iphone && <div className="sec"><div className="sec-h"><h2>Apuntar a mano</h2></div>{manual}</div>}
 
@@ -155,10 +155,12 @@ export function HojaTrote() {
   const [modo, setModo] = useState<'km' | 'min'>('km')
   const [km, setKm] = useState(3)
   const [min, setMin] = useState(20)
+  const unaVez = useUnaVez()
   const valor = modo === 'km' ? km : min
   const equivalen = pasosEquivalentes(valor, modo)
 
-  const anadir = async () => {
+  // Doble toque: el trote se sumaba dos veces a los pasos del día.
+  const anadir = unaVez(async () => {
     if (equivalen <= 0) { aviso('Pon cuántos kilómetros o minutos'); return }
     const hoy = hoyISO()
     const prev = await db.pasos.get(hoy)
@@ -171,7 +173,7 @@ export function HojaTrote() {
         else await db.pasos.delete(hoy)
       })()
     })
-  }
+  })
 
   return (
     <Hoja titulo="Trote o carrera" sub="Lo pasamos a pasos equivalentes">
@@ -184,7 +186,7 @@ export function HojaTrote() {
         : <Stepper className="big mt12" valor={min} onCambio={setMin} paso={5} min={0} max={300} decimales={0} sufijo="min" etiqueta="Minutos" />}
       <div className="spec-box mt12"><div className="spec">
         <p><span>Equivale a</span><b className="goc">≈ {num(equivalen, 0)} pasos</b></p>
-        <p><span>Cálculo</span><b>{modo === 'km' ? `1 km ≈ ${PASOS_POR_KM} pasos` : `1 min ≈ ${PASOS_POR_MINUTO} pasos`}</b></p>
+        <p><span>Cálculo</span><b>{modo === 'km' ? `1 km ≈ ${num(PASOS_POR_KM, 0)} pasos` : `1 min ≈ ${num(PASOS_POR_MINUTO, 0)} pasos`}</b></p>
       </div></div>
       <button className="btn mt16" onClick={() => void anadir()}>Añadir</button>
     </Hoja>

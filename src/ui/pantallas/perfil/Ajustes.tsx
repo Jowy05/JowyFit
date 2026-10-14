@@ -37,6 +37,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const catalogo = useCatalogo()
   const nativo = esNativo()
   const refDatos = useRef<HTMLParagraphElement>(null)
+  const refComida = useRef<HTMLParagraphElement>(null)
 
   const [tema, setTema] = useState<PreferenciaTema>(temaGuardado())
   const [letra, setLetra] = useState<Letra>(letraGuardada())
@@ -60,10 +61,12 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
     refrescarCopias()
   }, [refrescarCopias])
 
-  // Desde el aviso de Inicio («haz una copia») se abre directamente en «Datos y copias».
+  // Desde el aviso de Inicio («haz una copia») se abre directamente en «Datos y copias»;
+  // desde «Tu objetivo de energía» («cambiar a objetivo manual»), en «Comida».
   useEffect(() => {
-    if (ruta.d?.seccion !== 'datos') return
-    const t = window.setTimeout(() => refDatos.current?.scrollIntoView({ block: 'start' }), 80)
+    const destino = ruta.d?.seccion === 'datos' ? refDatos : ruta.d?.seccion === 'comida' ? refComida : null
+    if (!destino) return
+    const t = window.setTimeout(() => destino.current?.scrollIntoView({ block: 'start' }), 80)
     return () => window.clearTimeout(t)
   }, [ruta.d?.seccion])
 
@@ -177,7 +180,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
         <p className="grp-t">Entreno</p>
         <div className="list">
           <div className="it col">
-            <span className="tx"><b>Descanso por defecto</b><small>Compuestos {duracion(a.descansoCompuesto)} · aislamiento {duracion(a.descansoAislamiento)}</small></span>
+            <span className="tx"><b>Descanso por defecto</b><small>Compuestos {duracion(a.descansoCompuesto)} · aislamiento {duracion(a.descansoAislamiento)} · se aplica al generar la rutina</small></span>
             <div className="grid2">
               <div><span className="lbl fl">Compuestos</span><Stepper className="sm" valor={a.descansoCompuesto} paso={15} min={30} max={600} sufijo="s" etiqueta="Descanso de compuestos" onCambio={v => guardar({ descansoCompuesto: v })} /></div>
               <div><span className="lbl fl">Aislamiento</span><Stepper className="sm" valor={a.descansoAislamiento} paso={15} min={15} max={600} sufijo="s" etiqueta="Descanso de aislamiento" onCambio={v => guardar({ descansoAislamiento: v })} /></div>
@@ -191,7 +194,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
         </div>
 
         {/* ---------- Comida ---------- */}
-        <p className="grp-t">Comida</p>
+        <p className="grp-t" ref={refComida}>Comida</p>
         <div className="list">
           <Fila t="Mostrar kcal" d="La proteína se ve siempre" on={a.mostrarKcal} c={v => guardar({ mostrarKcal: v })} />
           <div className="it col">

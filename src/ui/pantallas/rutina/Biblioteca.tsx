@@ -82,7 +82,8 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
             <span className="empty-ic"><Ico n="magnifying-glass" /></span>
             <h3 className="h3">Nada por aquí</h3>
             <p className="muted">{enGym ? 'Ningún ejercicio con este filtro en tu gimnasio.' : 'Prueba con otra búsqueda.'}</p>
-            {enGym && <button className="btn gry sm mt12" onClick={() => nav.ir('rut-gym-edit', { id: g?.id })}>Añadir máquinas</button>}
+            {/* Sin gimnasio no hay editor que abrir: se va a la lista, donde se crea. */}
+            {enGym && <button className="btn gry sm mt12" onClick={() => (g?.id != null ? nav.ir('rut-gym-edit', { id: g.id }) : nav.reemplazar('rut-gym'))}>{g ? 'Añadir máquinas' : 'Crear mi gimnasio'}</button>}
           </div>
         ) : (
           <div className="ads">

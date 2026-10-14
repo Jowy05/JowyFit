@@ -23,7 +23,13 @@ export async function abrirCamara(video: HTMLVideoElement, alLeer: (codigo: stri
   video.setAttribute('playsinline', '')
   video.muted = true
   await video.play().catch(() => {})
-  const det = await crearDetector()
+  let det: Detector
+  try { det = await crearDetector() } catch (e) {
+    // Sin lector no se deja la cámara encendida.
+    flujo.getTracks().forEach(t => t.stop())
+    video.srcObject = null
+    throw e
+  }
   let vivo = true
   let ultimo = ''
   let repes = 0

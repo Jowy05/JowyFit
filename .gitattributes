@@ -1,0 +1,7 @@
+# Saltos de línea LF en todo el repositorio (también al editar desde Windows).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.jks binary
+*.wasm binary

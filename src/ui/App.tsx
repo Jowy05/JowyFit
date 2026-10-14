@@ -1,5 +1,5 @@
 // Armazón de la app: carga inicial, alta de usuario, pestañas, hojas y mini barra de entreno.
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cargarCatalogo } from '../catalogo/catalogo'
 import { db, pedirPersistencia } from '../datos/db'
@@ -10,7 +10,7 @@ import { cx, Ico } from './comp'
 import { letraGuardada } from './tema'
 import { ProveedorNav, puedeVolver, useNav, type Pestana, type Ruta } from './nav'
 import { useSesionEnCurso } from './datos'
-import { HOJAS, PANTALLAS } from './pantallas/registro'
+import { HOJAS, PANTALLAS, precargarPantallas } from './pantallas/registro'
 import { Alta } from './pantallas/alta/Alta'
 import { MiniBarra } from './pantallas/entreno/MiniBarra'
 import { arrancarServicios } from './servicios'
@@ -70,6 +70,8 @@ function Marco() {
   }, [])
 
   useEffect(() => arrancarServicios(), [])
+  // Con Inicio ya pintado, se trae el código del resto de pantallas sin estorbar.
+  useEffect(() => { const t = window.setTimeout(precargarPantallas, 1200); return () => window.clearTimeout(t) }, [])
 
   const ruta = nav.actual
   const Pant = (PANTALLAS[ruta.p] ?? PANTALLAS.ini) as ComponentType<PropsPantalla>
@@ -81,7 +83,9 @@ function Marco() {
   return (
     <div className={cx('app', full && 'is-full', enCurso && 'session-on')} data-letra={letra}>
       <div className="screens">
-        <Pant key={`${ruta.p}:${JSON.stringify(ruta.d ?? {})}`} ruta={ruta} />
+        <Suspense fallback={<div className="cargando" />}>
+          <Pant key={`${ruta.p}:${JSON.stringify(ruta.d ?? {})}`} ruta={ruta} />
+        </Suspense>
       </div>
       {enCurso && <MiniBarra sesion={sesion} />}
       <nav className="tabbar" aria-label="Pestañas">
@@ -94,7 +98,9 @@ function Marco() {
       {hoja && Hoja && (
         <>
           <div className="backdrop" onClick={() => nav.hoja(null)} />
-          <Hoja key={hoja.p} ruta={hoja} />
+          <Suspense fallback={null}>
+            <Hoja key={`${hoja.p}:${JSON.stringify(hoja.d ?? {})}`} ruta={hoja} />
+          </Suspense>
         </>
       )}
     </div>

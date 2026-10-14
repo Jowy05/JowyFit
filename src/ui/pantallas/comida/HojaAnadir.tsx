@@ -7,7 +7,7 @@ import { FRANJAS, NOMBRE_FRANJA, conRacion, franjaPorHora, ordenarPlantillas, po
 import { horaActual, hoyISO } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
-import { Chip, cx, Hoja, Ico, Stepper } from '../../comp'
+import { Chip, cx, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { Mini, apuntar, apuntarPlantilla, kp, useUrlBlob } from './comun'
@@ -37,22 +37,24 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
 
   const hora = esHoy ? horaActual() : franja === 'desayuno' ? '08:00' : franja === 'comida' ? '14:00' : franja === 'merienda' ? '17:30' : '21:00'
   const listo = (txt: string, deshacer: () => void) => { nav.hoja(null); aviso(`Añadido: ${txt}`, deshacer) }
+  // Los botones de un toque (picoteo, bebida, plantillas) apuntaban dos veces con un doble toque.
+  const unaVez = useUnaVez()
 
-  const usar = async (p: Plantilla, r: Racion) => {
+  const usar = unaVez(async (p: Plantilla, r: Racion) => {
     const des = await apuntarPlantilla(p, r, fecha, p.tipo === 'comida' ? franja : esHoy ? franjaPorHora(hora) : franja)
     const v = conRacion(p, r)
     listo(p.tipo === 'comida' ? `${p.nombre} (${r})` : `${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
-  }
-  const usarProducto = async (p: Producto) => {
+  })
+  const usarProducto = unaVez(async (p: Producto) => {
     const v = porRacion(p)
     const des = await apuntar({ fecha, hora, franja, nombre: p.nombre, kcal: v.kcal, proteina: v.proteina, cafeina: v.cafeina, racion: 'N', tipo: 'producto', codigo: p.codigo })
     listo(p.nombre, des)
-  }
-  const guardarNota = async () => {
+  })
+  const guardarNota = unaVez(async () => {
     const nombre = texto.trim() || (foto ? 'Comida (foto)' : 'Comida')
     const des = await apuntar({ fecha, hora, franja, nombre, kcal, proteina: prot, racion: 'N', tipo: foto ? 'foto' : 'nota', foto })
     listo(`${nombre} (~${kcal} kcal)`, des)
-  }
+  })
   const sacarFoto = async () => {
     const f = await hacerFoto(900)
     if (!f) return

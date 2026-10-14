@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Recursos que se piden por nombre en tiempo de ejecución (icono de las notificaciones): que no los quite shrinkResources. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_jowyfit,@drawable/splash,@mipmap/ic_launcher*" />

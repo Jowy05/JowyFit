@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { buscarOFF, porRacion } from '../../../dominio/comida'
 import { fechaCorta } from '../../../dominio/fechas'
+import { num } from '../../../dominio/calculos'
 import { normalizar } from '../../../catalogo/catalogo'
 import { Ico, Pantalla, Vacio } from '../../comp'
 import { useNav } from '../../nav'
@@ -14,7 +15,9 @@ import { CabComida, Mini, kp } from './comun'
 export async function buscarPendientes(): Promise<number> {
   const pend = await db.productos.filter(p => !!p.pendiente).toArray()
   let n = 0
-  for (const p of pend) {
+  for (const [i, p] of pend.entries()) {
+    // Open Food Facts permite unas 15 consultas por minuto: una cada 4,5 s.
+    if (i) await new Promise(r => setTimeout(r, 4500))
     const r = await buscarOFF(p.codigo)
     if (r.estado === 'offline') break
     if (r.estado === 'encontrado') { await db.productos.put(r.producto); n++ }
@@ -52,7 +55,7 @@ export function Guardados() {
                 <Mini nombre={p.nombre} imagen={p.imagen} />
                 <span className="tx">
                   <b>{p.nombre}</b>
-                  <small>{p.pendiente ? <span className="tag warn">Pendiente de buscar</span> : <>{p.marca ? `${p.marca} · ` : ''}<span className="mono">{p.kcal100 != null ? `${p.kcal100} kcal/100 g` : kp(v.kcal, v.proteina, v.cafeina)}</span></>}</small>
+                  <small>{p.pendiente ? <span className="tag warn">Pendiente de buscar</span> : <>{p.marca ? `${p.marca} · ` : ''}<span className="mono">{p.kcal100 != null ? `${num(p.kcal100, 0)} kcal/100 g`: kp(v.kcal, v.proteina, v.cafeina)}</span></>}</small>
                 </span>
                 <span className="end muted small">{fechaCorta(p.guardado.slice(0, 10))}</span>
               </button>

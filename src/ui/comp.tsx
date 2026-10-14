@@ -1,13 +1,26 @@
 // Componentes comunes con el aspecto del mockup «4 · Ficha».
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Ejercicio } from '../catalogo/tipos'
 import { imagen, miniatura } from '../catalogo/catalogo'
-import { ajustarA, siguiente } from '../dominio/pesos'
+import { siguiente } from '../dominio/pesos'
 import { useNav } from './nav'
 
 export const cx = (...c: (string | number | false | null | undefined)[]) => c.filter(x => typeof x === 'string' && x).join(' ')
 export const estilo = (o: Record<string, string | number>) => o as CSSProperties
 export const pct = (v: number, total: number) => `${Math.max(0, Math.min(100, total > 0 ? (v / total) * 100 : 0)).toFixed(0)}%`
+
+/**
+ * Evita que un doble toque lance dos veces la misma acción (dos comidas, dos entrenos, dos «atrás»…).
+ * Mientras la acción está en marcha (y un momento después, hasta que la pantalla cambia), los toques siguientes se ignoran.
+ */
+export function useUnaVez() {
+  const ocupado = useRef(false)
+  return useCallback(<A extends unknown[]>(f: (...a: A) => unknown) => async (...a: A) => {
+    if (ocupado.current) return
+    ocupado.current = true
+    try { await f(...a) } finally { window.setTimeout(() => { ocupado.current = false }, 400) }
+  }, [])
+}
 
 export function Pantalla({ children, full, className, id }: { children: ReactNode; full?: boolean; className?: string; id?: string }) {
   return <section className={cx('screen', className)} data-full={full ? '' : undefined} id={id}>{children}</section>
@@ -82,7 +95,12 @@ export function Stepper({ valor, onCambio, lista, paso = 1, min, max, className,
           <input
             className="val inp-num" autoFocus inputMode="decimal" defaultValue={valor ?? ''}
             style={{ width: '5ch', background: 'transparent', border: 0, textAlign: 'center', outline: 'none', padding: 0 }}
-            onBlur={e => { const n = parseFloat(e.target.value.replace(',', '.')); if (!Number.isNaN(n)) onCambio(lista?.length ? ajustarA(lista, n) : n); setEditando(false) }}
+            onBlur={e => {
+              // Lo que se escribe a mano se respeta (p. ej. 46 kg con discos de 1 kg), dentro de los límites.
+              let n = parseFloat(e.target.value.replace(',', '.'))
+              if (!Number.isNaN(n)) { if (min != null) n = Math.max(min, n); if (max != null) n = Math.min(max, n); onCambio(Math.round(n * 100) / 100) }
+              setEditando(false)
+            }}
             onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
           />
         ) : <span className="val" key={texto}>{texto}</span>}

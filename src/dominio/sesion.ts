@@ -67,13 +67,16 @@ const clon = (s: Sesion): Sesion => structuredClone(s)
 /** Marca la serie como hecha y decide qué viene después (superserie, siguiente serie o ejercicio). */
 export function hecha(s0: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>, ahora = Date.now()): { sesion: Sesion; descanso: number } {
   const s = clon(s0)
-  const e = s.ejercicios[idx]!
+  const e = s.ejercicios[idx]
+  if (!e) return { sesion: s, descanso: 0 }
   const i = serieActual(e)
   if (i < 0) return { sesion: s, descanso: 0 }
   e.inicio ??= ahora
+  const eraCalentamiento = e.series[i]!.calentamiento
   Object.assign(e.series[i]!, datos, { hecha: true, ts: ahora })
-  // Las siguientes series heredan peso y reps si aún no se tocaron.
-  for (const x of e.series.slice(i + 1)) if (!x.hecha && !x.calentamiento) { x.peso = datos.peso; if (e.registro !== 'tiempo') x.reps ??= datos.reps }
+  // Las siguientes series heredan peso y reps si aún no se tocaron. Una serie de calentamiento
+  // no hereda nada: antes, al marcar «20 kg × 10» de aproximación, todas las series de trabajo pasaban a 20 kg.
+  if (!eraCalentamiento) for (const x of e.series.slice(i + 1)) if (!x.hecha && !x.calentamiento) { x.peso = datos.peso; if (e.registro !== 'tiempo') x.reps ??= datos.reps }
   const companero = e.superserie ? s.ejercicios.find(o => o.uid === e.superserie) : undefined
   const terminado = serieActual(e) < 0
   if (terminado) { e.estado = 'hecho'; e.fin = ahora }
@@ -111,8 +114,10 @@ export function anadirSerie(s0: Sesion, idx: number): Sesion {
 
 export function quitarSerie(s0: Sesion, idx: number): Sesion {
   const s = clon(s0)
-  const e = s.ejercicios[idx]!
-  const j = e.series.map(x => !x.hecha).lastIndexOf(true)
+  const e = s.ejercicios[idx]
+  if (!e) return s
+  // La última serie de trabajo sin hacer (antes podía borrar una de calentamiento pendiente).
+  const j = e.series.map(x => !x.hecha && !x.calentamiento).lastIndexOf(true)
   if (j >= 0 && e.series.filter(x => !x.calentamiento).length > 1) e.series.splice(j, 1)
   e.series.forEach((x, k) => (x.n = k + 1))
   if (serieActual(e) < 0 && e.estado === 'curso') { e.estado = 'hecho'; const sig = s.ejercicios.findIndex(o => o.estado === 'pendiente'); if (sig >= 0) s.ejercicios[sig]!.estado = 'curso' }
@@ -131,11 +136,23 @@ export function anadirCalentamiento(s0: Sesion, idx: number, series: { peso: num
 /** Sustituye el ejercicio (máquina ocupada o cambio) manteniendo series y objetivo. */
 export function sustituir(s0: Sesion, idx: number, nuevo: string, motivo: 'ocupado' | 'cambio', sug?: { peso: number | null; reps: number | null }, registro?: TipoRegistro): Sesion {
   const s = clon(s0)
-  const e = s.ejercicios[idx]!
+  const e = s.ejercicios[idx]
+  if (!e) return s
   e.ejercicio = nuevo
   e.motivo = motivo
   if (registro) e.registro = registro
-  for (const x of e.series) if (!x.hecha) { x.peso = sug?.peso ?? null; if (sug?.reps != null) x.reps = sug.reps }
+  const r = e.registro
+  for (const x of e.series) if (!x.hecha) {
+    // Al cambiar a un ejercicio por tiempo o de peso corporal, las series pendientes se adaptan
+    // (antes una plancha heredaba «8 reps» y ningún segundo).
+    x.peso = r === 'corporal' || r === 'tiempo' || r === 'cardio' ? null : sug?.peso ?? null
+    if (r === 'tiempo') { x.segundos = sug?.reps ?? x.segundos ?? 30; x.reps = null }
+    else {
+      if (sug?.reps != null) x.reps = sug.reps
+      else x.reps ??= e.repsMin
+      x.segundos = null
+    }
+  }
   return s
 }
 
@@ -151,14 +168,17 @@ export function irA(s0: Sesion, idx: number): Sesion {
 /** Mueve un ejercicio a otra posición (los no hechos). */
 export function mover(s0: Sesion, desde: number, hasta: number): Sesion {
   const s = clon(s0)
+  // Índices fuera de rango: antes metía un «undefined» en la lista y rompía la sesión.
+  if (desde < 0 || desde >= s.ejercicios.length || !Number.isInteger(desde) || !Number.isInteger(hasta)) return s
   const [e] = s.ejercicios.splice(desde, 1)
-  s.ejercicios.splice(hasta, 0, e!)
+  s.ejercicios.splice(Math.max(0, Math.min(hasta, s.ejercicios.length)), 0, e!)
   return s
 }
 
 export function saltar(s0: Sesion, idx: number): Sesion {
   const s = clon(s0)
-  const e = s.ejercicios[idx]!
+  const e = s.ejercicios[idx]
+  if (!e) return s
   e.estado = 'saltado'
   const sig = s.ejercicios.findIndex(o => o.estado === 'pendiente')
   if (sig >= 0 && !s.ejercicios.some(o => o.estado === 'curso')) s.ejercicios[sig]!.estado = 'curso'

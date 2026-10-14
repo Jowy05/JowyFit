@@ -6,7 +6,7 @@ import type { Franja, Producto as TProducto } from '../../../datos/tipos'
 import { FACTOR_RACION, aspecto, buscarOFF, porRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { num } from '../../../dominio/calculos'
-import { Chip, cx, Ico, Pantalla, Stepper, Vacio } from '../../comp'
+import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { apuntar, kp } from './comun'
@@ -23,6 +23,8 @@ export function Producto({ ruta }: { ruta: Ruta }) {
   const [racion, setRacion] = useState<Racion>('N')
   const [unidades, setUnidades] = useState(1)
   const [buscando, setBuscando] = useState(false)
+  // Doble toque: dos comidas apuntadas, dos plantillas o dos «atrás».
+  const unaVez = useUnaVez()
 
   if (p === undefined) return <Pantalla><div className="cargando">Cargando…</div></Pantalla>
   if (p === null) return <Pantalla><div className="pg vacio-pg"><Vacio icono="barcode" titulo="Producto no guardado" accion="Volver" onAccion={() => nav.atras()} /></div></Pantalla>
@@ -40,22 +42,22 @@ export function Producto({ ruta }: { ruta: Ruta }) {
     if (r.estado === 'encontrado') { await db.productos.put(r.producto); aviso('Encontrado') }
     else aviso(r.estado === 'no' ? 'No está en Open Food Facts: apúntalo a mano' : 'Sigue sin haber conexión')
   }
-  const anadir = async () => {
+  const anadir = unaVez(async () => {
     const des = await apuntar({ fecha, franja, nombre: p.nombre, kcal: total.kcal, proteina: total.proteina, cafeina: total.cafeina, racion, tipo: 'producto', codigo: p.codigo })
     nav.atras()
     aviso(`Añadido: ${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''} (${racion})`, des)
-  }
-  const comoPlantilla = async () => {
+  })
+  const comoPlantilla = unaVez(async () => {
     const ya = await db.plantillas.filter(t => t.codigo === p.codigo).first()
     if (ya) { aviso('Ya tienes una plantilla de este producto'); return }
     await db.plantillas.add({ nombre: p.nombre, kcal: base.kcal, proteina: base.proteina, cafeina: base.cafeina, tipo: base.cafeina ? 'bebida' : 'comida', franja, usos: 0, codigo: p.codigo })
     aviso('Guardado como plantilla')
-  }
-  const borrar = async (x: TProducto) => {
+  })
+  const borrar = unaVez(async (x: TProducto) => {
     await db.productos.delete(x.codigo)
     nav.atras()
     aviso(`Borrado: ${x.nombre}`, () => { void db.productos.put(x) })
-  }
+  })
 
   return (
     <Pantalla>
@@ -81,12 +83,12 @@ export function Producto({ ruta }: { ruta: Ruta }) {
                 <table className="tbl">
                   <thead><tr><th /><th>Por ración</th><th>Por 100 g</th></tr></thead>
                   <tbody>
-                    <tr><td>Energía</td><td>{p.kcalRacion != null ? `${p.kcalRacion} kcal` : '—'}</td><td>{p.kcal100 != null ? `${p.kcal100} kcal` : '—'}</td></tr>
+                    <tr><td>Energía</td><td>{g(p.kcalRacion, 'kcal')}</td><td>{g(p.kcal100, 'kcal')}</td></tr>
                     <tr><td>Proteína</td><td className="okc">{g(p.proteinaRacion)}</td><td>{g(p.proteina100)}</td></tr>
                     <tr><td>Hidratos</td><td>{g(porRac(p.hidratos100))}</td><td>{g(p.hidratos100)}</td></tr>
                     <tr><td>Grasas</td><td>{g(porRac(p.grasas100))}</td><td>{g(p.grasas100)}</td></tr>
                     {p.cafeina100 ? <tr><td>Cafeína</td><td>{g(porRac(p.cafeina100), 'mg')}</td><td>{g(p.cafeina100, 'mg')}</td></tr> : null}
-                    <tr><td>Ración</td><td>{p.racionG ? `${p.racionG} g` : '—'}</td><td>—</td></tr>
+                    <tr><td>Ración</td><td>{p.racionG ? g(p.racionG) : '—'}</td><td>—</td></tr>
                   </tbody>
                 </table>
               </div>

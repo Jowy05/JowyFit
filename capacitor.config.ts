@@ -7,6 +7,8 @@ const config: CapacitorConfig = {
   android: {
     // La app web se sirve desde el propio APK: funciona sin conexión.
     allowMixedContent: false,
+    // Open Food Facts pide que las apps se identifiquen.
+    appendUserAgent: 'JowyFit (+https://github.com/Jowy05/JowyFit)',
   },
   plugins: {
     LocalNotifications: {

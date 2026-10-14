@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "repdb": "node scripts/preparar-repdb.mjs",
     "iconos": "node scripts/iconos.mjs",
-    "android": "npm run build && npx cap sync android"
+    "android": "npm run build && npx cap sync android",
+    "e2e": "node scripts/e2e/correr.mjs --build",
+    "e2e:dev": "node scripts/e2e/correr.mjs"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

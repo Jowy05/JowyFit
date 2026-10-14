@@ -116,7 +116,7 @@ export function Alta() {
     2: { t: 'Sobre ti', d: 'Para calcular tu gasto y tus objetivos.', c: (
       <div className="fields mt16">
         <label><span className="lbl fl">Nombre (opcional)</span><input className="inp" value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="¿Cómo te llamamos?" /></label>
-        <label><span className="lbl fl">Fecha de nacimiento</span><input className="inp" type="date" value={p.nacimiento} onChange={e => cambia({ nacimiento: e.target.value })} /></label>
+        <label><span className="lbl fl">Fecha de nacimiento</span><input className="inp" type="date" value={p.nacimiento} onChange={e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) cambia({ nacimiento: e.target.value }) }} /></label>
         <div><span className="lbl fl">Sexo (para las fórmulas)</span><Elegir eq opciones={[{ v: 'hombre', t: 'Hombre' }, { v: 'mujer', t: 'Mujer' }]} valor={p.sexo} onCambio={v => cambia({ sexo: v })} /></div>
         <div><span className="lbl fl">Altura</span><Stepper valor={p.alturaCm} paso={1} min={120} max={230} sufijo="cm" onCambio={v => cambia({ alturaCm: v })} /></div>
       </div>) },
@@ -263,7 +263,8 @@ export function Horarios({ p, cambia }: { p: Perfil; cambia: (c: Partial<Perfil>
       <p className="lbl fl mt16">¿A qué hora entrenas?</p>
       <div className="chips">
         {horas.map(h => <button key={h} className={cx('chip', p.horaEntreno === h && 'on')} onClick={() => cambia({ horaEntreno: h })}>{h.replace(/^0/, '')}</button>)}
-        <input className="inp" type="time" value={p.horaEntreno} onChange={e => cambia({ horaEntreno: e.target.value })} style={{ width: 120, minHeight: 40 }} aria-label="Otra hora" />
+        {/* Al borrar un campo de hora llega '' y luego salía «NaN:undefined»: solo se guarda una hora válida. */}
+        <input className="inp" type="time" value={p.horaEntreno} onChange={e => { if (e.target.value) cambia({ horaEntreno: e.target.value }) }} style={{ width: 120, minHeight: 40 }} aria-label="Otra hora" />
       </div>
       <p className="lbl fl mt16">¿Cómo vas al gimnasio?</p>
       <div className="chips eq">
@@ -271,8 +272,8 @@ export function Horarios({ p, cambia }: { p: Perfil; cambia: (c: Partial<Perfil>
         <button className={cx('chip big', p.transporte === 'andando' && 'on')} onClick={() => cambia({ transporte: 'andando' })}><Ico n="person-simple-walk" />Andando</button>
       </div>
       <div className="grid2 mt16">
-        <label><span className="lbl fl">Me voy (coche)</span><input className="inp" type="time" value={p.horaLimite.coche} onChange={e => cambia({ horaLimite: { ...p.horaLimite, coche: e.target.value } })} /></label>
-        <label><span className="lbl fl">Me voy (andando)</span><input className="inp" type="time" value={p.horaLimite.andando} onChange={e => cambia({ horaLimite: { ...p.horaLimite, andando: e.target.value } })} /></label>
+        <label><span className="lbl fl">Me voy (coche)</span><input className="inp" type="time" value={p.horaLimite.coche} onChange={e => { if (e.target.value) cambia({ horaLimite: { ...p.horaLimite, coche: e.target.value } }) }} /></label>
+        <label><span className="lbl fl">Me voy (andando)</span><input className="inp" type="time" value={p.horaLimite.andando} onChange={e => { if (e.target.value) cambia({ horaLimite: { ...p.horaLimite, andando: e.target.value } }) }} /></label>
       </div>
       <p className="lbl fl mt16">Tiempo por sesión</p>
       <div className="grid2">
@@ -283,7 +284,7 @@ export function Horarios({ p, cambia }: { p: Perfil; cambia: (c: Partial<Perfil>
         <div className="it">
           <span className="ico"><Ico n="moon" /></span>
           <span className="tx"><b>Hora de acostarte</b><small>Para avisarte 1 h antes</small></span>
-          <input className="inp" type="time" value={p.horaDormir} onChange={e => cambia({ horaDormir: e.target.value })} style={{ width: 110 }} aria-label="Hora de acostarte" />
+          <input className="inp" type="time" value={p.horaDormir} onChange={e => { if (e.target.value) cambia({ horaDormir: e.target.value }) }} style={{ width: 110 }} aria-label="Hora de acostarte" />
         </div>
         <div className="it"><span className="ico"><Ico n="coffee" /></span><span className="tx"><b>¿Entrenas en ayunas?</b></span><Interruptor on={p.enAyunas} onCambio={v => cambia({ enAyunas: v })} etiqueta="Entrenas en ayunas" /></div>
         <div className="it"><span className="ico"><Ico n="calendar-x" /></span><span className="tx"><b>Si pierdes una sesión</b><small>{p.sesionPerdida === 'sabado' ? 'Te propongo pasarla al día opcional' : 'Se salta sin más'}</small></span><Interruptor on={p.sesionPerdida === 'sabado'} onCambio={v => cambia({ sesionPerdida: v ? 'sabado' : 'saltar' })} etiqueta="Recolocar sesión perdida" /></div>

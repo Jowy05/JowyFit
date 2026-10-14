@@ -1,7 +1,8 @@
 // Comida: franjas por hora, raciones P/N/G, lectura de Open Food Facts, picoteo y cafeína.
 import type { Comida, Franja, Medicion, Plantilla, Producto } from '../datos/tipos'
-import { minutosDe, sumarDias } from './fechas'
+import { minutosDe } from './fechas'
 import { consejoQuincenal } from './resumen'
+import { datosQuincena as numerosQuincena } from './tendencias'
 
 export const FRANJAS: { v: Franja; t: string; icono: string }[] = [
   { v: 'desayuno', t: 'Desayuno', icono: 'sun-horizon' },
@@ -91,7 +92,7 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
 }
 
 export const URL_OFF = (codigo: string) =>
-  `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(codigo)}.json?fields=product_name,product_name_es,generic_name_es,brands,nutriments,serving_quantity,image_front_small_url,image_front_url&lc=es`
+  `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(codigo)}.json?fields=product_name,product_name_es,generic_name_es,brands,nutriments,serving_quantity,image_front_small_url,image_front_url&lc=es&app_name=JowyFit`
 
 export type Busqueda = { estado: 'encontrado'; producto: Producto } | { estado: 'no' } | { estado: 'offline' }
 
@@ -148,26 +149,17 @@ export function ordenarPlantillas(ps: Plantilla[]): Plantilla[] {
 }
 
 // ---------- ajuste quincenal ----------
-const mediaDe = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null)
-
 export type Quincena = { consejo: string; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
 
 /** Compara los últimos 14 días con los 14 anteriores y da un consejo por tendencias. */
+/** Consejo quincenal con tono y etiqueta. Los números salen de `tendencias.datosQuincena`, la misma cuenta que usa Progreso. */
 export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas: Comida[]; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }): Quincena {
-  const desde = sumarDias(o.hoy, -13), antes = sumarDias(o.hoy, -27)
-  const en = (f: string, a: string, b: string) => f >= a && f <= b
-  const delta = (f: (m: Medicion) => number | undefined) => {
-    const ahora = mediaDe(o.mediciones.filter(m => en(m.fecha.slice(0, 10), desde, o.hoy) && f(m) != null).map(m => f(m)!))
-    const prev = mediaDe(o.mediciones.filter(m => en(m.fecha.slice(0, 10), antes, sumarDias(desde, -1)) && f(m) != null).map(m => f(m)!))
-    return ahora != null && prev != null ? Math.round((ahora - prev) * 10) / 10 : null
-  }
-  const cinturaDelta = delta(m => m.perimetros?.cintura)
-  const pesoDelta = delta(m => m.pesoKg)
-  const recientes = o.comidas.filter(c => en(c.fecha, desde, o.hoy))
-  const picoteoDias = new Set(recientes.filter(c => c.tipo === 'picoteo').map(c => c.fecha)).size
-  const porDia = new Map<string, number>()
-  for (const c of recientes) porDia.set(c.fecha, (porDia.get(c.fecha) ?? 0) + c.proteina)
-  const proteinaMedia = porDia.size >= 3 ? Math.round(mediaDe([...porDia.values()])!) : null
+  const base = numerosQuincena({ domingo: o.hoy, mediciones: o.mediciones, comidas: o.comidas })
+  const r1 = (v: number | null) => (v == null ? null : Math.round(v * 10) / 10)
+  const cinturaDelta = r1(base.cinturaDelta)
+  const pesoDelta = r1(base.pesoDelta)
+  const picoteoDias = base.picoteoDias
+  const proteinaMedia = base.proteinaMedia == null ? null : Math.round(base.proteinaMedia)
   const consejo = consejoQuincenal({ cinturaDelta, pesoDelta, picoteoDias, proteinaMedia, objetivoProteina: o.objetivoProteina, objetivo: o.objetivo })
   if (cinturaDelta == null && pesoDelta == null) return { consejo, tono: 'neutral', etiqueta: 'Faltan datos', cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
   const bien = (cinturaDelta ?? 0) < -0.3 || (/^Todo estable\. Sigue/.test(consejo)) || (o.objetivo === 'fuerza' && !/come un poco más/.test(consejo))

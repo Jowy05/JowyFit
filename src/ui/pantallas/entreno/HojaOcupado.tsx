@@ -9,7 +9,7 @@ import { tipoRegistro } from '../../../catalogo/clasificacion'
 import { alternativasDe } from '../../../dominio/generador'
 import { irA, sustituir } from '../../../dominio/sesion'
 import { kg } from '../../../dominio/calculos'
-import { cx, Hoja, Ico, Th } from '../../comp'
+import { cx, Hoja, Ico, Th, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useSesionEnCurso } from '../../datos'
@@ -31,22 +31,25 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
     const b = r?.dias.flatMap(d => d.bloques).find(x => x.uid === e.uid)
     const base = b?.alternativas.length ? b.alternativas : alternativasDe(e.planificado, { perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] })
     return [e.planificado, ...base].filter((x, i, a) => a.indexOf(x) === i)
-  }, [s?.id, e?.uid]) ?? []
+    // El perfil, el gimnasio y las marcas llegan un instante después: hay que recalcular cuando llegan.
+  }, [s?.id, e?.uid, perfil, g?.id, marcas]) ?? []
   const actualEn = Math.max(0, plan.indexOf(e?.ejercicio ?? ''))
   const [paso, setPaso] = useState(actualEn + 1)
   useEffect(() => { setPaso(actualEn + 1) }, [plan.length, actualEn])
   const alt = plan[paso]
-  const sug = useLiveQuery(() => (alt && e ? sugerenciaPara(alt, e, g, s?.id) : Promise.resolve(undefined)), [alt, e?.uid])
+  const sug = useLiveQuery(() => (alt && e ? sugerenciaPara(alt, e, g, s?.id) : Promise.resolve(undefined)), [alt, e?.uid, g?.id])
   const ajuste = useLiveQuery(() => (alt ? marcaDe(alt) : Promise.resolve(undefined)), [alt])
+  const unaVez = useUnaVez()
+  if (s === undefined) return <Hoja titulo="Ocupado"><p className="muted">Cargando…</p></Hoja>
   if (!s || !e) return <Hoja titulo="Ocupado"><p className="muted">No hay entreno en curso.</p></Hoja>
 
-  const hacer = async () => {
+  const hacer = unaVez(async () => {
     if (!alt) return
     const x = ejercicio(alt)!
     await db.sesiones.put(sustituir(s, idx, alt, 'ocupado', { peso: sug?.peso ?? null, reps: sug?.reps ?? null }, tipoRegistro(x)))
     nav.hoja(null)
     aviso(`Cambiado a ${x.nombre}${sug?.peso != null ? ` · ${kg(sug.peso)} kg` : ''}`)
-  }
+  })
   const siguiente = s.ejercicios.findIndex((x, i) => i !== idx && x.estado === 'pendiente')
   const abc = (
     <div className="abc">

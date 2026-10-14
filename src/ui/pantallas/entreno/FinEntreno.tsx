@@ -2,14 +2,14 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import { historialDe } from '../../../datos/consultas'
-import { ejercicio, nombreMaterial } from '../../../catalogo/catalogo'
+import { historialEn, sesionesHechas } from '../../../datos/consultas'
+import { ejercicio, nombreEjercicio, nombreMaterial } from '../../../catalogo/catalogo'
 import { resumen, terminada } from '../../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { estadoSemana } from '../../../dominio/semana'
 import { kg } from '../../../dominio/calculos'
 import { cancelar } from '../../../plataforma'
-import { Cab, Chip, Ico, Pantalla, Th } from '../../comp'
+import { Cab, Chip, Ico, Pantalla, Th, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina } from '../../datos'
@@ -32,13 +32,15 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   const [hayMolestia, setHayMolestia] = useState(false)
   const [ocupado, setOcupado] = useState<string[]>([])
   const [nota, setNota] = useState('')
+  const unaVez = useUnaVez()
   const subidas = useLiveQuery(async () => {
     if (!s) return []
     const out: { id: string; antes: number; ahora: number }[] = []
+    const todas = await sesionesHechas() // una sola lectura para todos los ejercicios
     for (const e of s.ejercicios) {
       const hoy = Math.max(0, ...e.series.filter(x => x.hecha && !x.calentamiento && x.peso != null).map(x => x.peso!))
       if (!hoy) continue
-      const prev = (await historialDe(e.ejercicio, s.id))[0]
+      const prev = historialEn(todas, e.ejercicio, s.id)[0]
       const antes = prev ? Math.max(0, ...prev.series.filter(x => !x.calentamiento && x.peso != null).map(x => x.peso!)) : 0
       if (antes && hoy > antes) out.push({ id: e.ejercicio, antes, ahora: hoy })
     }
@@ -58,7 +60,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   const prox = sem.find(d => d.fecha > hoy && d.estado === 'plan')
   const materiales = [...new Set(s.ejercicios.map(e => ejercicio(e.planificado)?.material).filter((m): m is string => !!m))].slice(0, 6)
 
-  const guardar = async () => {
+  // Un doble toque en «Guardar» abría dos veces la rutina definitiva (o volvía dos veces a Inicio).
+  const guardar = unaVez(async () => {
     const mins = Math.round(res.segundos / 60)
     await db.sesiones.put({
       ...s, estado: 'hecha', fin, descansoHasta: undefined,
@@ -68,7 +71,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
     nav.completa(null)
     if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso('Semana de calibración completada') }
     else { nav.raiz('ini'); aviso(`Guardado. ${cap(DIAS[(new Date().getDay() + 6) % 7]!)} ✓`) }
-  }
+  })
 
   return (
     <Pantalla full>
@@ -93,7 +96,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
               {logros.map(({ e, x }, i) => (
                 <div key={i} className="ach">
                   <span className="tro"><Ico n={i === 0 ? 'trophy' : 'medal'} b /></span>
-                  <span className="tx"><small className="au">Desbloqueado{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>Récord en {ejercicio(e.ejercicio)?.nombre.toLowerCase()}</b><small className="mono">{kg(x.peso)} kg × {x.reps}</small></span>
+                  <span className="tx"><small className="au">Desbloqueado{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>Récord en {nombreEjercicio(e.ejercicio).toLowerCase()}</b><small className="mono">{kg(x.peso)} kg × {x.reps}</small></span>
                 </div>
               ))}
             </div>
@@ -107,7 +110,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
               {subidas.map(u => (
                 <div key={u.id} className="it">
                   <Th ej={ejercicio(u.id)} size="s" />
-                  <span className="tx"><b>{ejercicio(u.id)?.nombre}</b><small className="mono">{kg(u.antes)} → {kg(u.ahora)} kg</small></span>
+                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{kg(u.antes)} → {kg(u.ahora)} kg</small></span>
                   <span className="end up">+{kg(u.ahora - u.antes)} kg</span>
                 </div>
               ))}
@@ -154,7 +157,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
             <textarea className="inp" value={nota} onChange={e => setNota(e.target.value)} placeholder="Algo que quieras recordar" aria-label="Nota del entreno" />
           </div>
         </div>
-        <div className="dock"><button className="btn xl" onClick={() => void guardar()}>Guardar</button></div>
+        {/* Hasta saber si se completa la calibración no se guarda: si no, no se abriría la rutina definitiva. */}
+        <div className="dock"><button className="btn xl" disabled={calibCompleta === undefined} onClick={() => void guardar()}>Guardar</button></div>
       </div>
     </Pantalla>
   )

@@ -2,9 +2,29 @@
 import { db } from '../../../datos/db'
 import { gimnasioActivo, leerPerfil } from '../../../datos/repos'
 import { sugerenciasDia } from '../../../datos/consultas'
-import { crearSesion } from '../../../dominio/sesion'
+import { anadirCalentamiento, crearSesion } from '../../../dominio/sesion'
 import { hoyISO } from '../../../dominio/fechas'
 import type { Sesion } from '../../../datos/tipos'
+import type { useNav } from '../../nav'
+
+/**
+ * Vuelve a la pantalla del entreno en curso. «Restaurar» solo sirve si se minimizó en esta visita;
+ * si la app se cerró a mitad (o se salió desde el resumen), hay que abrirla de nuevo.
+ */
+/**
+ * Añade las series de calentamiento y vuelve a numerar todas las series del ejercicio (1, 2, 3…).
+ * `anadirCalentamiento` las mete con n = 0, y la pantalla usa `n` para notas y para marcar calentamiento.
+ */
+export function conCalentamiento(s: Sesion, idx: number, series: { peso: number; reps: number }[]): Sesion {
+  const nueva = anadirCalentamiento(s, idx, series)
+  nueva.ejercicios[idx]?.series.forEach((x, k) => { x.n = k + 1 })
+  return nueva
+}
+
+export function abrirEntreno(nav: ReturnType<typeof useNav>) {
+  if (nav.estado.minimizada) nav.restaurar()
+  else nav.completa('entreno')
+}
 
 export async function iniciarEntreno(o: { letra?: string; version?: 'normal' | 'corta'; horaLimite?: string; libre?: boolean }): Promise<number> {
   const ya = await db.sesiones.where('estado').equals('curso').first()

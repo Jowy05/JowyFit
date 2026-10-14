@@ -6,7 +6,7 @@ import { buscarOFF, codigoValido, porRacion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { escanearNativo, esAndroid, vibrar } from '../../../plataforma'
 import type { Camara } from '../../../plataforma/escanerWeb'
-import { cx, Ico, Pantalla, Stepper } from '../../comp'
+import { cx, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { Mini, apuntar, kp } from './comun'
@@ -72,17 +72,26 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
   }, [ronda, escribir])
 
   const otraVez = () => { setEscribir(false); setEstado({ e: 'camara' }); setRonda(r => r + 1) }
-  const anadir = async (p: Producto) => {
+  // Doble toque en «Añadir»: apuntaba dos veces y hacía «atrás» dos veces (salía también de la pantalla anterior).
+  const unaVez = useUnaVez()
+  const apuntarProducto = async (p: Producto) => {
     const v = porRacion(p)
     const des = await apuntar({ fecha, franja, nombre: p.nombre, kcal: v.kcal, proteina: v.proteina, cafeina: v.cafeina, racion: 'N', tipo: 'producto', codigo: p.codigo })
     nav.atras()
     aviso(`Añadido: ${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
   }
-  const anadirAMano = async (codigo: string) => {
+  const anadir = unaVez(apuntarProducto)
+  const anadirAMano = unaVez(async (codigo: string) => {
     const p: Producto = { codigo, nombre: nombre.trim() || `Producto ${codigo}`, marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: kcal, proteinaRacion: prot, guardado: new Date().toISOString(), manual: true }
     await db.productos.put(p)
-    await anadir(p)
-  }
+    await apuntarProducto(p)
+  })
+  const salirPendiente = unaVez(async (codigo: string, comoNota: boolean) => {
+    await guardarPendiente(codigo)
+    nav.atras()
+    if (comoNota) nav.hoja('sheet-add', { fecha, franja, nota: true })
+    else aviso('Guardado para buscarlo luego')
+  })
   const guardarPendiente = async (codigo: string) => {
     await db.productos.put({ codigo, nombre: `Código ${codigo}`, marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: null, proteinaRacion: null, guardado: new Date().toISOString(), pendiente: true })
   }
@@ -172,8 +181,8 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
           <div className="cam-panel">
             <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>Sin conexión</b><small>Lo buscaremos al volver a tener cobertura (Comida → Productos).</small></span></p>
             <div className="btns mt12">
-              <button className="btn gry sm" onClick={async () => { await guardarPendiente(estado.codigo); nav.atras(); aviso('Guardado para buscarlo luego') }}>Vale</button>
-              <button className="btn sm" onClick={async () => { await guardarPendiente(estado.codigo); nav.atras(); nav.hoja('sheet-add', { fecha, franja, nota: true }) }}>Apuntar como nota</button>
+              <button className="btn gry sm" onClick={() => void salirPendiente(estado.codigo, false)}>Vale</button>
+              <button className="btn sm" onClick={() => void salirPendiente(estado.codigo, true)}>Apuntar como nota</button>
             </div>
           </div>
         )}

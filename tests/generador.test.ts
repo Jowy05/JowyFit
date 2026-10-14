@@ -80,3 +80,32 @@ describe.skipIf(!hayCatalogo)('generador con el catálogo real', () => {
     expect(texto.length).toBeGreaterThan(0)
   })
 })
+
+describe('zonas sensibles sin etiqueta en RepDB', () => {
+  it('con el codo o la muñeca sensibles no propone los ejercicios que más los cargan', async () => {
+    const { generarRutina } = await import('../src/dominio/generador')
+    const { ZONA_EVITAR } = await import('../src/catalogo/clasificacion')
+    const { catalogoReal, perfilEjemplo } = await import('./ayuda')
+    const cat = catalogoReal()
+    if (!cat) return
+    for (const z of ['codo', 'muneca'] as const) {
+      const r = generarRutina({ perfil: { ...perfilEjemplo(), zonasSensibles: [z] }, gimnasio: null, marcas: new Map(), ejercicios: cat.ejercicios })
+      const ids = r.dias.flatMap(d => d.bloques.flatMap(b => [b.ejercicio, ...b.alternativas]))
+      expect(ids.length).toBeGreaterThan(10)
+      expect(ids.filter(id => ZONA_EVITAR[z]!.test(id))).toEqual([])
+    }
+  })
+})
+
+describe('descansos de Ajustes', () => {
+  it('escalan los descansos y con los valores por defecto no cambian nada', async () => {
+    const { descansoAjustado } = await import('../src/dominio/generador')
+    expect(descansoAjustado(150)).toBe(150)
+    expect(descansoAjustado(150, { compuesto: 150, aislamiento: 90 })).toBe(150)
+    expect(descansoAjustado(75, { compuesto: 150, aislamiento: 90 })).toBe(75)
+    expect(descansoAjustado(150, { compuesto: 180, aislamiento: 90 })).toBe(180)
+    expect(descansoAjustado(120, { compuesto: 90, aislamiento: 90 })).toBe(75)
+    expect(descansoAjustado(60, { compuesto: 150, aislamiento: 45 })).toBe(30)
+    expect(descansoAjustado(60, { compuesto: 150, aislamiento: 0 })).toBe(60)
+  })
+})

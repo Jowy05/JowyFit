@@ -9,7 +9,7 @@ import { DIAS_CORTOS, edad, fechaCorta } from '../../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
-import { usePerfil } from '../../datos'
+import { usePerfilCargado } from '../../datos'
 import { reprogramarNotificaciones } from '../../servicios'
 import { Horarios } from '../alta/Alta'
 import { CARDIO_TXT, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
@@ -23,10 +23,14 @@ const alternar = <T,>(lista: T[], v: T): T[] => (lista.includes(v) ? lista.filte
 
 export function SeccionPerfil({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
-  const p = usePerfil()
+  const cargado = usePerfilCargado()
   const s = String(ruta.d?.s ?? '') as ClaveSeccion
   const sec = SECCIONES.find(x => x.s === s)
   const guardar = (c: Partial<Perfil>) => { void guardarPerfil(c) }
+  // Hasta tener el perfil guardado no se enseñan los campos: con el de por defecto, un toque rápido
+  // guardaba listas (días, zonas, suplementos…) calculadas sobre valores que no son los tuyos.
+  if (sec && !cargado) return <Pantalla><Cab atras crumb="Perfil" titulo={sec.t} /><div className="cargando">Cargando…</div></Pantalla>
+  const p = cargado!
 
   if (!sec) return (
     <Pantalla>
@@ -373,7 +377,7 @@ function Alimentacion({ p, guardar }: Props) {
       <label>
         <span className="lbl fl">Bebidas habituales</span>
         <Texto valor={p.bebidas.join(', ')} placeholder="Energética, refresco zero, café…" onGuardar={v => guardar({ bebidas: v.split(',').map(x => x.trim()).filter(Boolean) })} />
-        <small className="small muted mt4" style={{ display: 'block' }}>Separadas por comas. Las de un toque se editan en Comida → Botones.</small>
+        <small className="small muted mt4" style={{ display: 'block' }}>Separadas por comas. Las de un toque se editan en Comida → Plantillas.</small>
       </label>
     </div>
   )

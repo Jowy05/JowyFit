@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Gimnasio } from '../../../datos/tipos'
-import { Cab, Ico, Pantalla } from '../../comp'
+import { Cab, Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasios } from '../../datos'
@@ -13,18 +13,37 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta }) {
   const aviso = useAviso()
   const lista = useGimnasios()
   const id = Number(ruta.d?.id ?? lista[0]?.id)
-  const [g, setG] = useState<Gimnasio | null>(null)
-  useEffect(() => { void db.gimnasios.get(id).then(x => setG(x ?? null)) }, [id])
+  // undefined = cargando · null = no existe (o no hay ningún gimnasio todavía).
+  const [g, setG] = useState<Gimnasio | null | undefined>(undefined)
+  useEffect(() => {
+    // Sin id válido (p. ej. sin gimnasios) Dexie rechaza la consulta y la pantalla se quedaba en blanco.
+    if (!Number.isFinite(id)) return
+    void db.gimnasios.get(id).then(x => setG(x ?? null), () => setG(null))
+  }, [id])
   // Las máquinas propias se editan en una hoja y se guardan directamente: se recargan al volver.
+  // La hoja también marca en la base el material al que se parece la máquina: hay que traerlo,
+  // o al pulsar «Guardar» aquí se perdía.
   const propias = lista.find(x => x.id === id)?.propias
-  useEffect(() => { if (propias) setG(x => (x ? { ...x, propias } : x)) }, [propias])
-  if (!g) return <Pantalla><Cab atras crumb="Gimnasios" titulo="Editor de gimnasio" /></Pantalla>
+  useEffect(() => {
+    if (!propias) return
+    const parecidas = propias.map(p => p.parecida).filter((m): m is string => !!m)
+    setG(x => (x ? { ...x, propias, material: [...new Set([...x.material, ...parecidas])] } : x))
+  }, [propias])
+  const unaVez = useUnaVez()
+  if (g === undefined && (Number.isFinite(id) || lista.length)) return <Pantalla><Cab atras crumb="Gimnasios" titulo="Editor de gimnasio" /></Pantalla>
+  if (!g) return (
+    <Pantalla>
+      <Cab atras crumb="Gimnasios" titulo="Editor de gimnasio" />
+      <div className="pg"><Vacio icono="map-pin" titulo="Este gimnasio no existe" texto="Crea uno en Gimnasios." accion="Ir a Gimnasios" onAccion={() => nav.reemplazar('rut-gym')} /></div>
+    </Pantalla>
+  )
   const cambia = (c: Partial<Gimnasio>) => setG(x => (x ? { ...x, ...c } : x))
-  const guardar = async () => {
+  // Doble toque: dos «atrás».
+  const guardar = unaVez(async () => {
     await db.gimnasios.put(g)
     aviso('Gimnasio guardado')
     nav.atras()
-  }
+  })
   const borrar = () => nav.hoja('sheet-confirmar', { titulo: `¿Borrar «${g.nombre}»?`, texto: 'Se borra el gimnasio y su material. Tus entrenos no se tocan.', si: 'Borrar', peligro: true, accion: 'borrar-gimnasio', id: g.id })
   return (
     <Pantalla>
@@ -58,7 +77,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta }) {
         <div className="dock">
           <div className="result card">
             <p><Ico n="check-circle" b className="okc" />Con este gimnasio tienes <b className="mono">{ejerciciosDisponibles(g.material)}</b> ejercicios disponibles</p>
-            <button className="btn sm" onClick={guardar}>Guardar</button>
+            <button className="btn sm" onClick={() => void guardar()}>Guardar</button>
           </div>
         </div>
       </div>

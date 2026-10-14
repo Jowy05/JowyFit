@@ -87,27 +87,33 @@ export type Logro = { ejercicio: string; fecha: string; sesionId?: number; peso:
 
 /** Récords (series marcadas como récord), uno por ejercicio y sesión, más recientes primero. */
 export function logros(sesiones: Sesion[]): Logro[] {
-  const historial = new Map<string, Serie[]>()
+  // Resumen acumulado por ejercicio (peso máximo y reps máximas por peso). Antes se copiaba y se
+  // recorría todo el historial en cada sesión (cuadrático: ~55 ms con 3 años de entrenos en cada render).
+  const historial = new Map<string, { maxPeso: number; repsPorPeso: Map<number, number> }>()
   const out: Logro[] = []
   for (const s of hechasAsc(sesiones)) {
     for (const id of new Set(s.ejercicios.map(e => e.ejercicio))) {
-      const series = seriesDe(s, id)
-      const prev = trabajo(historial.get(id) ?? []).filter(x => x.peso != null && x.reps != null)
-      const recs = trabajo(series).filter(x => x.record && x.peso != null && x.reps != null)
+      const validas = trabajo(seriesDe(s, id)).filter(x => x.peso != null && x.reps != null)
+      const prev = historial.get(id)
+      const recs = validas.filter(x => x.record)
       if (recs.length) {
         const mejor = recs.reduce((a, b) => (epley(b.peso!, b.reps!) > epley(a.peso!, a.reps!) ? b : a))
         const base = { ejercicio: id, fecha: s.fecha, sesionId: s.id, peso: mejor.peso!, reps: mejor.reps! }
-        if (!prev.length) out.push({ ...base, tipo: 'primero', mejora: 0 })
+        if (!prev) out.push({ ...base, tipo: 'primero', mejora: 0 })
+        else if (mejor.peso! > prev.maxPeso) out.push({ ...base, tipo: 'peso', mejora: mejor.peso! - prev.maxPeso })
         else {
-          const maxPeso = Math.max(...prev.map(x => x.peso!))
-          if (mejor.peso! > maxPeso) out.push({ ...base, tipo: 'peso', mejora: mejor.peso! - maxPeso })
-          else {
-            const mismas = prev.filter(x => x.peso === mejor.peso).map(x => x.reps!)
-            out.push({ ...base, tipo: 'reps', mejora: mismas.length ? Math.max(1, mejor.reps! - Math.max(...mismas)) : 1 })
-          }
+          const mismas = prev.repsPorPeso.get(mejor.peso!)
+          out.push({ ...base, tipo: 'reps', mejora: mismas != null ? Math.max(1, mejor.reps! - mismas) : 1 })
         }
       }
-      historial.set(id, [...(historial.get(id) ?? []), ...series])
+      if (validas.length) {
+        const h = prev ?? { maxPeso: -Infinity, repsPorPeso: new Map<number, number>() }
+        for (const x of validas) {
+          h.maxPeso = Math.max(h.maxPeso, x.peso!)
+          h.repsPorPeso.set(x.peso!, Math.max(h.repsPorPeso.get(x.peso!) ?? -Infinity, x.reps!))
+        }
+        historial.set(id, h)
+      }
     }
   }
   return out.reverse()
@@ -175,7 +181,9 @@ export function mediasSemanales(ms: Medicion[], f: Lector): PuntoFecha[] {
     const v = f(m)
     if (v == null) continue
     const l = lunesDe(m.fecha.slice(0, 10))
-    sem.set(l, [...(sem.get(l) ?? []), v])
+    const lista = sem.get(l)
+    if (lista) lista.push(v)
+    else sem.set(l, [v])
   }
   return [...sem.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([fecha, vs]) => ({ fecha, valor: media(vs)! }))
 }

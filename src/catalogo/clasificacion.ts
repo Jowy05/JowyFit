@@ -102,3 +102,9 @@ export const ETIQUETAS_ES: Record<string, string> = {
 
 /** Zona sensible del perfil → etiqueta de RepDB que debe tener el ejercicio para proponerlo. */
 export const ZONA_SEGURA: Record<string, string> = { rodilla: 'knee_safe', lumbar: 'lower_back_safe', hombro: 'shoulder_safe' }
+
+/** Zonas sin etiqueta en RepDB: se apartan los ejercicios que más las cargan (por id). */
+export const ZONA_EVITAR: Record<string, RegExp> = {
+  codo: /skull|triceps-extension|overhead-triceps|french-press|close-grip-(?:[a-z-]*bench|[a-z-]*press|push)|(?:^|-)dips?(?:$|-)|dip-machine/,
+  muneca: /push-?ups?(?:$|-)|front-squat|wrist-curl|(?:^|-)clean(?:$|-)|snatch|handstand|(?:^|-)barbell-curl|straight-bar|(?:^|-)dips?(?:$|-)/,
+}

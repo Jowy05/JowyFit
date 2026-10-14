@@ -36,8 +36,10 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Quita el código de las librerías que no se usa (APK más pequeño y rápido de abrir).
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
@@ -45,6 +47,14 @@ android {
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+// El escáner usa el de Google Play (no hace falta el modelo de códigos dentro del APK: ~20 MB menos).
+// Misma API, pero el modelo lo pone Google Play Services.
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('com.google.mlkit:barcode-scanning') using module('com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1')
     }
 }
 

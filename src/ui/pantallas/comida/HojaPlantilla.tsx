@@ -4,7 +4,7 @@ import { db } from '../../../datos/db'
 import type { Plantilla } from '../../../datos/tipos'
 import { FRANJAS, NOMBRE_FRANJA, aspecto } from '../../../dominio/comida'
 import { hacerFoto } from '../../../plataforma'
-import { Chip, cx, Hoja, Ico, Stepper } from '../../comp'
+import { Chip, cx, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useUrlBlob } from './comun'
@@ -17,18 +17,20 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
   const id = typeof ruta.d?.id === 'number' ? ruta.d.id : undefined
   const [p, setP] = useState<Plantilla | null>(id == null ? nueva() : null)
   const fotoUrl = useUrlBlob(p?.foto)
+  // Una plantilla nueva no tiene id: con un doble toque en «Guardar» se creaban dos.
+  const unaVez = useUnaVez()
   useEffect(() => { if (id != null) void db.plantillas.get(id).then(x => setP(x ?? nueva())) }, [id])
   if (!p) return <Hoja titulo="Plantilla"><p className="muted">Cargando…</p></Hoja>
   const cambia = (c: Partial<Plantilla>) => setP({ ...p, ...c })
   const a = aspecto(p.nombre || 'comida', p.tipo)
 
-  const guardar = async () => {
+  const guardar = unaVez(async () => {
     if (!p.nombre.trim()) { aviso('Ponle un nombre'); return }
     const limpia: Plantilla = { ...p, nombre: p.nombre.trim(), cafeina: p.tipo === 'bebida' ? p.cafeina ?? 0 : p.cafeina || undefined }
     await db.plantillas.put(limpia)
     nav.hoja(null)
     aviso(id == null ? 'Plantilla creada' : 'Plantilla guardada')
-  }
+  })
   const borrar = async () => {
     if (p.id == null) return
     const copia = p

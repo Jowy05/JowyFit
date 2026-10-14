@@ -11,7 +11,7 @@ import { duracion, fechaCorta, hoyISO } from '../../../dominio/fechas'
 import { bloqueNuevo } from '../../../dominio/generador'
 import { desdeBloque } from '../../../dominio/sesion'
 import { mejorMarca, volumen } from '../../../dominio/progresion'
-import { Cab, Chip, cx, Ico, Pantalla, Th } from '../../comp'
+import { Cab, Chip, cx, Ico, Pantalla, Th, useUnaVez } from '../../comp'
 import { Barras, Linea } from '../../graficas'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
@@ -38,6 +38,8 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
   const hist = useLiveQuery(() => (e ? historialDe(e.id) : Promise.resolve([])), [e?.id]) ?? []
   const obj = enPlan?.b ?? { repsMin: 8, repsMax: 12, rpe: 8 }
   const sug = useLiveQuery(() => (e ? sugerenciaPara(e.id, obj, g) : Promise.resolve(undefined)), [e?.id, g, enPlan?.b.uid])
+  // Doble toque en «Al entreno de hoy» o en un día del plan: el ejercicio se añadía dos veces.
+  const unaVez = useUnaVez()
 
   useEffect(() => {
     if (!e || e.poses.length < 2) return
@@ -62,7 +64,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
     .filter((x, i, a) => a.findIndex(y => y.id === x.id) === i).slice(0, 8)
   const peligro = (e.id === 'bench-press' || e.id === 'squat' || e.id.includes('barbell-bench') || e.id === 'incline-bench-press') && perfil.alFallo !== undefined
 
-  const alEntreno = async () => {
+  const alEntreno = unaVez(async () => {
     if (!sesion?.id) { aviso('Empieza un entreno y podrás añadirlo'); return }
     const b = bloqueNuevo(e.id, { perfil, ejercicios: catalogoCargado()?.ejercicios ?? [], gimnasio: g ?? null, marcas })
     const s = structuredClone(sesion)
@@ -71,15 +73,15 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
     s.ejercicios.push(ej)
     await db.sesiones.put(s)
     aviso('Añadido al entreno de hoy')
-  }
-  const anadirAlDia = async (letra: string) => {
+  })
+  const anadirAlDia = unaVez(async (letra: string) => {
     if (!r) return
     const nueva = structuredClone(r)
     nueva.dias.find(d => d.letra === letra)!.bloques.push(bloqueNuevo(e.id, { perfil, ejercicios: catalogoCargado()?.ejercicios ?? [], gimnasio: g ?? null, marcas }))
     await guardarRutina(nueva)
     setAlPlan(false)
     aviso(`Añadido al plan: día ${letra}`)
-  }
+  })
 
   return (
     <Pantalla>
@@ -247,7 +249,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
           ) : (
             <div className="btns mt8">
               <button className="btn gry sm" onClick={() => (r ? setAlPlan(true) : aviso('Primero crea tu rutina'))}>Al plan</button>
-              <button className="btn sm" onClick={alEntreno}>Al entreno de hoy</button>
+              <button className="btn sm" onClick={() => void alEntreno()}>Al entreno de hoy</button>
             </div>
           )}
         </div>

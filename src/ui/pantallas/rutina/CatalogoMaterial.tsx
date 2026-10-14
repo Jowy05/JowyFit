@@ -87,9 +87,9 @@ export function PesosGimnasio({ g, onCambio }: { g: Pick<Gimnasio, 'mancuernas' 
           <div key={i} className="card pd mt8">
             <div className="row jb"><span className="lbl">Tramo {i + 1}</span>{g.mancuernas.length > 1 && <button className="lnk" onClick={() => onCambio({ mancuernas: g.mancuernas.filter((_, j) => j !== i) })}>Quitar</button>}</div>
             <div className="grid3 mt8">
-              <div><span className="lbl fl">De</span><Stepper className="sm" valor={t.desde} paso={1} min={0.5} onCambio={v => tramo(i, { desde: v })} /></div>
-              <div><span className="lbl fl">A</span><Stepper className="sm" valor={t.hasta} paso={2} min={t.desde} onCambio={v => tramo(i, { hasta: v })} /></div>
-              <div><span className="lbl fl">Salto</span><Stepper className="sm" valor={t.paso} lista={[0.5, 1, 1.25, 2, 2.5, 5]} onCambio={v => tramo(i, { paso: v })} /></div>
+              <div><span className="lbl fl">De</span><Stepper className="sm" valor={t.desde} paso={1} min={0.5} etiqueta={`Tramo ${i + 1}: desde`} onCambio={v => tramo(i, { desde: v })} /></div>
+              <div><span className="lbl fl">A</span><Stepper className="sm" valor={t.hasta} paso={2} min={t.desde} etiqueta={`Tramo ${i + 1}: hasta`} onCambio={v => tramo(i, { hasta: v })} /></div>
+              <div><span className="lbl fl">Salto</span><Stepper className="sm" valor={t.paso} lista={[0.5, 1, 1.25, 2, 2.5, 5]} etiqueta={`Tramo ${i + 1}: salto`} onCambio={v => tramo(i, { paso: v })} /></div>
             </div>
           </div>
         ))}

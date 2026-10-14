@@ -7,8 +7,10 @@ export const BARRAS: Record<string, number> = { barbell: 20, ez_bar: 10, trap_ba
 export function mancuernasDisponibles(g: Pick<Gimnasio, 'mancuernas'>): number[] {
   const s = new Set<number>()
   for (const t of g.mancuernas) {
-    if (t.paso <= 0) continue
-    for (let v = t.desde; v <= t.hasta + 1e-9; v += t.paso) s.add(Math.round(v * 100) / 100)
+    if (!(t.paso > 0) || !Number.isFinite(t.desde) || !Number.isFinite(t.hasta)) continue
+    // Por índice (no sumando el paso) para que no se acumule error de coma flotante.
+    const n = Math.floor((t.hasta - t.desde) / t.paso + 1e-9)
+    for (let i = 0; i <= n && i <= 2000; i++) s.add(Math.round((t.desde + i * t.paso) * 100) / 100)
   }
   return [...s].sort((a, b) => a - b)
 }
@@ -16,7 +18,8 @@ export function mancuernasDisponibles(g: Pick<Gimnasio, 'mancuernas'>): number[]
 /** Todos los totales posibles con la barra + pares de discos (hasta 300 kg). */
 export function pesosBarra(barra: number, discos: number[], max = 300): number[] {
   const lados = new Set<number>([0])
-  const pares = [...discos].sort((a, b) => b - a)
+  // Solo discos con peso (un 0 o un negativo daría totales imposibles).
+  const pares = [...new Set(discos)].filter(d => Number.isFinite(d) && d > 0).sort((a, b) => b - a)
   // Por lado se pueden combinar discos repetidos: suma de subconjuntos con repetición (hasta 140 kg por lado).
   const limite = (max - barra) / 2
   let frontera = [0]
@@ -34,7 +37,8 @@ export function pesosBarra(barra: number, discos: number[], max = 300): number[]
 /** Lista de pesos para un ejercicio según su material. Máquinas y poleas: de 2,5 en 2,5. */
 export function pesosPara(material: string | null, registro: TipoRegistro, g?: Gimnasio | null): number[] {
   if (registro === 'corporal' || registro === 'tiempo' || registro === 'cardio') return []
-  if (registro === 'asistido') return Array.from({ length: 21 }, (_, i) => -i * 5).reverse() // −100 … 0
+  // −100 … 0 (sin «-0», que se veía como «-0 kg»)
+  if (registro === 'asistido') return Array.from({ length: 21 }, (_, i) => (i ? -i * 5 : 0)).reverse()
   if ((material === 'dumbbell' || material === 'kettlebell') && g) {
     const m = mancuernasDisponibles(g)
     if (m.length) return m
@@ -59,22 +63,43 @@ export function ajustarA(lista: number[], valor: number, abajo = false): number 
   return mejor
 }
 
-/** Siguiente peso disponible arriba o abajo. */
+/**
+ * Siguiente peso disponible arriba o abajo. Si no hay ninguno en esa dirección se queda donde está
+ * (antes, con un peso por encima de la lista, «subir» devolvía el máximo de la lista: bajaba).
+ */
 export function siguiente(lista: number[], valor: number, dir: 1 | -1): number {
   if (!lista.length) return Math.max(0, valor + dir * 2.5)
-  if (dir > 0) return lista.find(v => v > valor + 1e-9) ?? lista[lista.length - 1]!
-  return [...lista].reverse().find(v => v < valor - 1e-9) ?? lista[0]!
+  if (dir > 0) return lista.find(v => v > valor + 1e-9) ?? Math.max(valor, lista[lista.length - 1]!)
+  for (let i = lista.length - 1; i >= 0; i--) if (lista[i]! < valor - 1e-9) return lista[i]!
+  return Math.min(valor, lista[0]!)
 }
 
 /** Discos que van en cada lado para un total (de mayor a menor). Null si no se puede exacto. */
 export function discosPorLado(total: number, barra: number, discos: number[]): number[] | null {
-  let resto = Math.round(((total - barra) / 2) * 100) / 100
-  if (resto < 0) return null
+  if (!Number.isFinite(total) || !Number.isFinite(barra)) return null
+  // En centésimas de kilo para trabajar con enteros.
+  const objetivo = Math.round(((total - barra) / 2) * 100)
+  if (objetivo < 0) return null
+  if (objetivo === 0) return []
+  if (objetivo > 100_000) return null // más de 1000 kg por lado: no es un peso real
+  // Un disco de 0 kg (o negativo) colgaba la calculadora en un bucle infinito.
+  const tipos = [...new Set(discos.filter(d => Number.isFinite(d) && d > 0).map(d => Math.round(d * 100)))].filter(d => d > 0).sort((a, b) => b - a)
+  if (!tipos.length) return null
+  // Mínimo número de discos para cada peso (con repetición). El reparto voraz fallaba con juegos
+  // como 15 + 10: 20 kg por lado son 10 + 10, no 15 + «5 que no hay».
+  const minimo = new Array<number>(objetivo + 1).fill(Infinity)
+  minimo[0] = 0
+  for (let v = 1; v <= objetivo; v++) for (const d of tipos) if (d <= v && minimo[v - d]! + 1 < minimo[v]!) minimo[v] = minimo[v - d]! + 1
+  if (!Number.isFinite(minimo[objetivo]!)) return null
+  // Reconstrucción empezando por los más pesados.
   const out: number[] = []
-  for (const d of [...discos].sort((a, b) => b - a)) {
-    while (resto + 1e-9 >= d) { out.push(d); resto = Math.round((resto - d) * 100) / 100 }
+  let v = objetivo
+  while (v > 0) {
+    const d = tipos.find(x => x <= v && minimo[v - x] === minimo[v]! - 1)!
+    out.push(d / 100)
+    v -= d
   }
-  return resto < 0.01 ? out : null
+  return out.sort((a, b) => b - a)
 }
 
 /** Series de aproximación: ~50 % × 10, ~70 % × 5, ~85 % × 3 (redondeado a pesos reales). */
@@ -83,8 +108,12 @@ export function calentamiento(pesoTrabajo: number, lista: number[], minimo = 0):
   const pasos: [number, number][] = pesoTrabajo >= 40 ? [[0.5, 10], [0.7, 5], [0.85, 3]] : [[0.5, 10], [0.75, 5]]
   const out: { peso: number; reps: number }[] = []
   for (const [f, reps] of pasos) {
-    const p = Math.max(minimo, ajustarA(lista, pesoTrabajo * f, true))
-    if (p < pesoTrabajo && !out.some(o => o.peso === p)) out.push({ peso: p, reps })
+    const objetivo = pesoTrabajo * f
+    // Sin lista de pesos se redondea hacia abajo a 2,5 kg (antes salían cosas como 25,9 kg).
+    const real = lista.length ? ajustarA(lista, objetivo, true) : Math.floor(objetivo / 2.5 + 1e-9) * 2.5
+    const p = Math.max(minimo, real)
+    // Una aproximación de 0 kg no tiene sentido.
+    if (p > 0 && p < pesoTrabajo && !out.some(o => o.peso === p)) out.push({ peso: p, reps })
   }
   return out
 }

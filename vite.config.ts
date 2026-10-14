@@ -28,7 +28,8 @@ export default defineConfig({
     quitarFuentesViejas(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // Se registra a mano en main.tsx: solo en la versión web (en el APK todo va dentro y no hace falta).
+      injectRegister: false,
       includeAssets: ['icono.svg', 'iconos/*.png'],
       manifest: {
         name: 'JowyFit',
@@ -53,6 +54,9 @@ export default defineConfig({
         globIgnores: ['**/Phosphor*.svg'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: 'index.html',
+        // La versión nueva entra sola y controla la página desde la primera visita (sin conexión al momento).
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],

@@ -54,7 +54,9 @@ export type Tarjeta =
 export function tarjetaHoy(r: Rutina | null | undefined, semana: EstadoDia[], hoy: string, enCurso: boolean, perdidaAlSabado: boolean, proximaSemana?: EstadoDia): Tarjeta {
   if (enCurso) return { tipo: 'curso' }
   if (!r) return { tipo: 'sin' }
-  const h = semana.find(d => d.fecha === hoy)!
+  const h = semana.find(d => d.fecha === hoy)
+  // Semana que no contiene hoy (p. ej. calculada antes de medianoche): antes reventaba con h undefined.
+  if (!h) return { tipo: 'descanso', proximo: semana.find(d => d.fecha > hoy && d.estado === 'plan') ?? proximaSemana }
   const proximo = semana.find(d => d.fecha > hoy && d.estado === 'plan') ?? proximaSemana
   // Sesión perdida esta semana que se puede recolocar en el día opcional (hoy o más adelante).
   const perdida = semana.find(d => d.estado === 'perdido')
@@ -73,11 +75,12 @@ export function racha(r: Rutina | null | undefined, sesiones: Sesion[], hoy: str
   if (!fijos) return 0
   let n = 0
   let lunes = semanaDe(hoy)[0]!
+  // Días distintos con entreno hecho (dos sesiones el mismo día no cuentan como dos días cumplidos).
+  const conEntreno = new Set(sesiones.filter(s => s.estado === 'hecha').map(s => s.fecha))
   for (let i = 0; i < 52; i++) {
     const d = deISO(lunes); d.setDate(d.getDate() - 7)
-    lunes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const semana = semanaDe(lunes)
-    const hechas = sesiones.filter(s => s.estado === 'hecha' && semana.includes(s.fecha)).length
+    lunes = aISO(d)
+    const hechas = semanaDe(lunes).filter(f => conEntreno.has(f)).length
     if (hechas >= fijos) n++
     else break
   }

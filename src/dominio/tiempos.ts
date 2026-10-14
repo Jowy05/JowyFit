@@ -16,14 +16,18 @@ export function restanteEjercicio(e: EjercicioSesion): number {
 /** Segundos que faltan para acabar (superseries: el descanso cuenta una vez por par). */
 export function restanteSesion(s: Sesion): number {
   let t = 0
-  for (const e of s.ejercicios) {
-    let r = restanteEjercicio(e)
-    if (e.superserie && s.ejercicios.findIndex(o => o.uid === e.superserie) < s.ejercicios.indexOf(e)) {
+  s.ejercicios.forEach((e, i) => {
+    const j = e.superserie ? s.ejercicios.findIndex(o => o.uid === e.superserie) : -1
+    // Segundo del par (su compañero existe y va antes, y sigue vivo): solo cuenta el tiempo de sus series.
+    // Antes, con el compañero borrado (findIndex = −1), se le quitaba el descanso igualmente.
+    const comp = j >= 0 ? s.ejercicios[j]! : undefined
+    if (comp && j < i && comp.estado !== 'hecho' && comp.estado !== 'saltado' && e.estado !== 'hecho' && e.estado !== 'saltado') {
       const pend = e.series.filter(x => !x.hecha && !x.calentamiento).length
-      r -= pend * e.descanso + TRANSICION_S
+      t += pend * (e.registro === 'tiempo' ? Math.max(30, e.repsMax) : SERIE_S)
+      return
     }
-    t += Math.max(0, r)
-  }
+    t += restanteEjercicio(e)
+  })
   return t
 }
 

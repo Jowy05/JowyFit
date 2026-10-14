@@ -7,7 +7,7 @@ import type { Ejercicio } from '../../../catalogo/tipos'
 import { alternativasDe, bloqueNuevo } from '../../../dominio/generador'
 import { desdeBloque, sustituir } from '../../../dominio/sesion'
 import { sugerenciaPara } from '../../../datos/consultas'
-import { Chip, cx, Hoja, Ico, Th } from '../../comp'
+import { Chip, cx, Hoja, Ico, Th, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
@@ -28,19 +28,22 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
   const [mismoPatron, setMismoPatron] = useState(!!actual)
   const [q, setQ] = useState('')
   const material = useMemo(() => new Set(g?.material ?? []), [g])
+  const unaVez = useUnaVez()
 
   const lista = useMemo(() => {
     const c = catalogoCargado()
     if (!c) return []
-    let l = c.ejercicios.filter(e => (!e.material || material.has(e.material)) && e.categoria !== 'stretching')
+    // Sin gimnasio no se filtra por material (si no, solo saldrían los de peso corporal).
+    let l = c.ejercicios.filter(e => (!g || !e.material || material.has(e.material)) && e.categoria !== 'stretching')
     if (mismoPatron && actual) l = l.filter(e => patron(e) === patron(actual) && e.id !== actual.id)
     l = l.filter(e => !marcas.get(e.id)?.odiado && !marcas.get(e.id)?.duele)
     return buscar(q, l).sort((a, b) => Number(!!marcas.get(b.id)?.favorito) - Number(!!marcas.get(a.id)?.favorito) || a.nombre.localeCompare(b.nombre)).slice(0, 80)
-  }, [q, mismoPatron, actual, material, marcas])
+  }, [q, mismoPatron, actual, material, marcas, g])
 
   const entrada = () => ({ perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] })
 
-  const elegir = async (e: Ejercicio) => {
+  // Doble toque en un ejercicio: se añadía dos veces (al entreno o al plan).
+  const elegir = unaVez(async (e: Ejercicio) => {
     if (modo === 'sesion-anadir' || modo === 'sesion-cambiar') {
       if (!sesion?.id) return
       const b = bloqueNuevo(e.id, entrada())
@@ -77,11 +80,11 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
     await guardarRutina(nueva)
     nav.hoja(null)
     aviso(modo === 'anadir' ? `Añadido: ${e.nombre}` : modo === 'cambiar' ? `Cambiado por ${e.nombre}` : `Alternativa B: ${e.nombre}`)
-  }
+  })
 
   const titulo = { cambiar: 'Cambiar ejercicio', alternativa: 'Elegir alternativa', anadir: 'Añadir ejercicio', 'sesion-anadir': 'Añadir al entreno', 'sesion-cambiar': 'Cambiar ejercicio' }[modo]
   return (
-    <Hoja titulo={titulo} sub={actual ? `En lugar de: ${actual.nombre}` : 'Solo lo que hay en tu gimnasio'} className="tall">
+    <Hoja titulo={titulo} sub={actual ? `En lugar de: ${actual.nombre}` : g ? 'Solo lo que hay en tu gimnasio' : 'Todo el catálogo (aún no tienes gimnasio)'} className="tall">
       <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" placeholder="Buscar ejercicio o músculo" value={q} onChange={e => setQ(e.target.value)} /></label>
       {actual && (
         <div className="chips mt8">

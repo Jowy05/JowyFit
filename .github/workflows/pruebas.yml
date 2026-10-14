@@ -1,0 +1,30 @@
+# Pruebas completas: unitarias y de extremo a extremo (la app usada en un navegador sin ventana).
+# Se lanzan al subir a Studio o pre-prod; prod solo recibe lo que ha pasado por aquí.
+name: Pruebas
+
+on:
+  push:
+    branches: [Studio, pre-prod]
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run repdb
+      - run: npm test
+      - run: npm run build
+      - run: npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-de-fallos
+          path: .cache/e2e-fallo-*.png
+          if-no-files-found: ignore

@@ -29,6 +29,26 @@ export async function alVolverAPrimerPlano(fn: () => void): Promise<() => void> 
 }
 
 // ---------- vibración ----------
+let audio: AudioContext | null = null
+/** Tres pitidos cortos (fin del descanso). Sin archivos de sonido: se generan al momento. */
+export function pitido() {
+  try {
+    audio ??= new AudioContext()
+    void audio.resume()
+    const t0 = audio.currentTime + 0.02
+    for (let i = 0; i < 3; i++) {
+      const o = audio.createOscillator(), g = audio.createGain()
+      o.type = 'sine'; o.frequency.value = i === 2 ? 1320 : 880
+      const t = t0 + i * 0.22
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16)
+      o.connect(g).connect(audio.destination)
+      o.start(t); o.stop(t + 0.18)
+    }
+  } catch { /* sin audio */ }
+}
+
 export async function vibrar(tipo: 'corta' | 'fin' = 'corta') {
   try {
     if (esNativo()) {
@@ -65,12 +85,23 @@ export async function permisoNotificaciones(pedir: boolean): Promise<boolean> {
   return p.display === 'granted'
 }
 
+/** Aviso de fin de descanso (y del calentamiento): va por su propio canal, con vibración, para que llegue al reloj. */
+export const ID_DESCANSO = 9001
+let canales = false
+async function crearCanales(ln: typeof import('@capacitor/local-notifications').LocalNotifications) {
+  if (canales) return
+  canales = true
+  await ln.createChannel({ id: 'descanso', name: 'Fin del descanso', description: 'Avisa cuando toca la siguiente serie (también en el reloj)', importance: 5, visibility: 1, vibration: true }).catch(() => {})
+  await ln.createChannel({ id: 'recordatorios', name: 'Recordatorios', description: 'Dormir, pesarse, suplementos, copias…', importance: 3, visibility: 1, vibration: true }).catch(() => {})
+}
+
 export async function programar(avisos: Aviso[], borrarIds: number[] = []) {
   if (!esNativo()) return
   const { LocalNotifications } = await import('@capacitor/local-notifications')
   if (borrarIds.length) await LocalNotifications.cancel({ notifications: borrarIds.map(id => ({ id })) })
   if (!avisos.length) return
   if (!(await permisoNotificaciones(false))) return
+  await crearCanales(LocalNotifications)
   // Solo se piden alarmas exactas si el sistema ya las permite: si no, el plugin abriría
   // la pantalla de «Alarmas y recordatorios» sin avisar. Un recordatorio inexacto llega igual.
   const exacta = await LocalNotifications.checkExactNotificationSetting().then(s => s.exact_alarm === 'granted').catch(() => false)
@@ -79,6 +110,7 @@ export async function programar(avisos: Aviso[], borrarIds: number[] = []) {
       id: a.id, title: a.titulo, body: a.texto, isExactNotification: exacta,
       schedule: a.repetirCada ? { on: a.repetirCada === 'day' ? { hour: a.cuando.getHours(), minute: a.cuando.getMinutes() } : { weekday: a.cuando.getDay() + 1, hour: a.cuando.getHours(), minute: a.cuando.getMinutes() }, allowWhileIdle: true } : { at: a.cuando, allowWhileIdle: true },
       smallIcon: 'ic_stat_jowyfit', iconColor: '#FF7A1A',
+      channelId: a.id === ID_DESCANSO ? 'descanso' : 'recordatorios',
     })),
   })
 }
@@ -129,10 +161,15 @@ export async function escanearNativo(): Promise<string | null | 'cancelado'> {
     if (!(await BarcodeScanner.isSupported()).supported) return null
     const mod = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable().catch(() => ({ available: true }))
     if (!mod.available) { await BarcodeScanner.installGoogleBarcodeScannerModule().catch(() => {}); }
-    const { barcodes } = await BarcodeScanner.scan({ formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE] })
-    return barcodes[0]?.rawValue ?? 'cancelado'
-  } catch (e) {
-    if (String(e).toLowerCase().includes('cancel')) return 'cancelado'
+    try {
+      const { barcodes } = await BarcodeScanner.scan({ formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE] })
+      return barcodes[0]?.rawValue ?? 'cancelado'
+    } catch {
+      // El escáner de Google ya se abrió: cerrarlo da «Failed to scan code» (no dice «cancel»).
+      // No se cae a la cámara web, que en Android no tiene permiso: se ofrece escribir el código.
+      return 'cancelado'
+    }
+  } catch {
     return null
   }
 }

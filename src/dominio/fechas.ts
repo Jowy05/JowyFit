@@ -54,13 +54,15 @@ export function horaActual(ahora = new Date()): string {
 }
 
 export function minutosDe(hhmm: string): number {
-  const [h, m] = hhmm.split(':').map(Number)
-  return (h ?? 0) * 60 + (m ?? 0)
+  const [h, m] = (hhmm ?? '').split(':').map(Number)
+  // Una hora vacía o mal escrita cuenta como 0 en vez de NaN (NaN rompía todas las comparaciones).
+  const hh = Number.isFinite(h) ? h! : 0, mm = Number.isFinite(m) ? m! : 0
+  return hh * 60 + mm
 }
 
 export function formatoHora(hhmm: string): string {
-  const [h, m] = hhmm.split(':')
-  return `${Number(h)}:${m}`
+  const [h, m] = (hhmm ?? '').split(':')
+  return `${Number(h) || 0}:${(m ?? '00').padStart(2, '0')}`
 }
 
 export function fechaLarga(s: string): string {

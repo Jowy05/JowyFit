@@ -1,6 +1,6 @@
 // Generador automático de rutina. Lógica pura: recibe perfil, gimnasio, marcas y catálogo.
 import type { Ejercicio } from '../catalogo/tipos'
-import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, ZONA_SEGURA, type Patron } from '../catalogo/clasificacion'
+import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, ZONA_EVITAR, ZONA_SEGURA, type Patron } from '../catalogo/clasificacion'
 import type { Bloque, Dia, DiaRutina, Gimnasio, MarcaEjercicio, Perfil, Rutina } from '../datos/tipos'
 import { DIAS } from './fechas'
 
@@ -43,7 +43,9 @@ export function plantillas(nDias: number): { estructura: string; dias: Plantilla
     { letra: 'C', nombre: 'Pierna', huecos: [P('rodilla', 'principal', 1), P('cadera', 'secundario', 1), P('femoral', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
   ]
   const segunda = ppl.map(d => ({ ...d, letra: String.fromCharCode(d.letra.charCodeAt(0) + 3), nombre: `${d.nombre} 2` }))
-  return { estructura: `Empuje / Tirón / Pierna · ${nDias} días`, dias: [...ppl, ...segunda].slice(0, nDias) }
+  // 7 días: el séptimo es un día ligero de brazos, hombros y core (antes se quedaba sin sesión).
+  const septimo: Plantilla = { letra: 'G', nombre: 'Brazos, hombros y core', huecos: [...BRAZOS(2), ...HOMBROS(3), P('core', 'core', 4)] }
+  return { estructura: `Empuje / Tirón / Pierna · ${nDias} días`, dias: [...ppl, ...segunda, septimo].slice(0, Math.min(nDias, 7)) }
 }
 
 const EXTRA: Plantilla = { letra: 'S', nombre: 'Sesión extra', huecos: [...BRAZOS(1), P('tiron-v', 'secundario', 2), ...HOMBROS(3), P('core', 'core', 4)] }
@@ -56,6 +58,8 @@ export type EntradaGenerador = {
   /** Segundos medios por serie y descanso real por ejercicio (semana de calibración). */
   tiempos?: Map<string, { serie: number; descanso: number }>
   calibracion?: boolean
+  /** Descansos por defecto de Ajustes (s). Sin ellos: 150 compuestos y 90 aislamiento. */
+  descansos?: { compuesto: number; aislamiento: number }
   /** Ejercicios de una variante anterior: se intentan evitar para proponer otra. */
   evitar?: Set<string>
 }
@@ -65,6 +69,27 @@ const RANGO_HABITUAL = new Map(HABITUALES.map((id, i) => [id, i]))
 function disponible(e: Ejercicio, material: Set<string> | null): boolean {
   if (!e.material) return true
   return material ? material.has(e.material) : ['dumbbell', 'barbell', 'cable', 'flat_bench', 'pull_up_bar', 'leg_press', 'smith_machine'].includes(e.material)
+}
+
+// El patrón de cada ejercicio no cambia: se calcula una vez (antes se recalculaba para todo el catálogo en cada hueco).
+const cachePatron = new WeakMap<Ejercicio, Patron>()
+function patronDe(e: Ejercicio): Patron {
+  let p = cachePatron.get(e)
+  if (p === undefined) { p = patron(e); cachePatron.set(e, p) }
+  return p
+}
+
+/** Ejercicios aptos para este perfil y gimnasio, agrupados por patrón (una sola pasada por el catálogo). */
+function aptosPorPatron(x: EntradaGenerador, material: Set<string> | null): Map<Patron, Ejercicio[]> {
+  const m = new Map<Patron, Ejercicio[]>()
+  for (const e of x.ejercicios) {
+    if (!apto(e, x, material)) continue
+    const p = patronDe(e)
+    const l = m.get(p)
+    if (l) l.push(e)
+    else m.set(p, [e])
+  }
+  return m
 }
 
 function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null): boolean {
@@ -83,6 +108,8 @@ function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null): 
 function puntuar(e: Ejercicio, h: Hueco, x: EntradaGenerador, usadosOtros: Set<string>): number {
   let s = 0
   const m = x.marcas.get(e.id)
+  // Codo y muñeca no tienen etiqueta en RepDB: lo que más los carga solo sale si no queda otra cosa.
+  if (x.perfil.zonasSensibles.some(z => ZONA_EVITAR[z]?.test(e.id))) s -= 1000
   if (m?.favorito) s += 30
   const r = RANGO_HABITUAL.get(e.id)
   if (r != null) s += 22 - r * 0.15
@@ -121,7 +148,19 @@ function alternativas(elegido: Ejercicio, h: Hueco, candidatos: Ejercicio[], x: 
   return out.map(e => e.id)
 }
 
+/** Ajusta el descanso a los de Ajustes: los compuestos escalan con «compuestos» y el resto con «aislamiento». */
+export function descansoAjustado(base: number, d?: { compuesto: number; aislamiento: number }): number {
+  if (!d || !(d.compuesto > 0) || !(d.aislamiento > 0)) return base
+  const f = base >= 100 ? d.compuesto / 150 : d.aislamiento / 90
+  return Math.max(15, Math.round((base * f) / 15) * 15)
+}
+
 function seriesYReps(h: Hueco, x: EntradaGenerador, e: Ejercicio): Pick<Bloque, 'series' | 'repsMin' | 'repsMax' | 'rpe' | 'descanso'> {
+  const r = seriesYRepsBase(h, x, e)
+  return { ...r, descanso: descansoAjustado(r.descanso, x.descansos) }
+}
+
+function seriesYRepsBase(h: Hueco, x: EntradaGenerador, e: Ejercicio): Pick<Bloque, 'series' | 'repsMin' | 'repsMax' | 'rpe' | 'descanso'> {
   const reps = x.perfil.reps
   const rpeBase = x.calibracion ? 7 : x.perfil.nivel === 'empiezo' ? 7 : 8
   const reg = tipoRegistro(e)
@@ -203,26 +242,66 @@ export function ajustarATiempo(bloques: Bloque[], prioridades: Map<string, numbe
   return bs
 }
 
-function generarDia(pl: Plantilla, x: EntradaGenerador, material: Set<string> | null, usados: Set<string>, dia: Dia | null, opcional: boolean): DiaRutina {
+/**
+ * Patrones parecidos para cuando el gimnasio no tiene nada para un hueco (p. ej. sin material no hay
+ * remos: antes el día de «Tirón» se quedaba solo con una plancha). Solo se usan si el patrón propio está vacío.
+ */
+const RESPALDO: Partial<Record<Patron, Patron[]>> = {
+  rodilla: ['cuadriceps', 'cadera', 'gluteo'],
+  cadera: ['gluteo', 'femoral', 'rodilla'],
+  'empuje-h': ['pecho-aisl', 'empuje-v', 'triceps'],
+  'empuje-v': ['hombro-lat', 'empuje-h'],
+  'tiron-h': ['tiron-v', 'lumbar', 'hombro-post'],
+  'tiron-v': ['tiron-h', 'lumbar', 'hombro-post'],
+  cuadriceps: ['rodilla'],
+  femoral: ['cadera', 'gluteo'],
+  gluteo: ['cadera', 'femoral'],
+  'pecho-aisl': ['empuje-h'],
+  'hombro-lat': ['empuje-v', 'hombro-post'],
+  'hombro-post': ['tiron-h', 'hombro-lat'],
+  biceps: ['antebrazo', 'tiron-v', 'tiron-h'],
+  triceps: ['empuje-h', 'empuje-v'],
+  core: ['lumbar'],
+}
+
+/** Minutos válidos (un perfil a medias puede traer 0, negativos o NaN). */
+const minutosValidos = (m: number, porDefecto: number) => (Number.isFinite(m) && m > 0 ? m : porDefecto)
+
+function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejercicio[]>, usados: Set<string>, dia: Dia | null, opcional: boolean): DiaRutina {
   const bloques: Bloque[] = []
   const prioridades = new Map<string, number>()
   const delDia = new Set<string>()
   const porPar = new Map<number, string>()
-  const huecos = pl.huecos.filter(h => !(h.patron === 'core' && !x.perfil.core && !x.perfil.zonasPrioridad.includes('abdomen')))
+  const pendientesAlt: { b: Bloque; h: Hueco; elegido: Ejercicio; candidatos: Ejercicio[] }[] = []
+  // Copia de los huecos: las plantillas (p. ej. EXTRA) son compartidas y no se deben modificar.
+  const huecos = pl.huecos
+    .filter(h => !(h.patron === 'core' && !x.perfil.core && !x.perfil.zonasPrioridad.includes('abdomen')))
+    .map(h => ({ ...h, par: x.perfil.superseries ? h.par : undefined }))
   for (const h of huecos) {
-    if (h.par != null && !x.perfil.superseries) h.par = undefined
-    const candidatos = x.ejercicios.filter(e => patron(e) === h.patron && apto(e, x, material) && !delDia.has(e.id))
-    if (!candidatos.length) continue
-    const elegido = [...candidatos].sort((a, b) => puntuar(b, h, x, usados) - puntuar(a, h, x, usados) || a.id.localeCompare(b.id))[0]!
+    let candidatos = aptos.get(h.patron) ?? []
+    let libres = candidatos.filter(e => !delDia.has(e.id))
+    for (const otro of libres.length ? [] : RESPALDO[h.patron] ?? []) {
+      candidatos = aptos.get(otro) ?? []
+      libres = candidatos.filter(e => !delDia.has(e.id))
+      if (libres.length) break
+    }
+    if (!libres.length) continue
+    // El mejor por puntuación (y por id a igualdad), puntuando cada candidato una sola vez.
+    let elegido = libres[0]!, mejor = -Infinity
+    for (const e of libres) {
+      const p = puntuar(e, h, x, usados)
+      if (p > mejor || (p === mejor && e.id.localeCompare(elegido.id) < 0)) { mejor = p; elegido = e }
+    }
     delDia.add(elegido.id)
     usados.add(elegido.id)
     const b: Bloque = {
       uid: uid(),
       ejercicio: elegido.id,
-      alternativas: alternativas(elegido, h, candidatos, x),
+      alternativas: [],
       ...seriesYReps(h, x, elegido),
       registro: tipoRegistro(elegido),
     }
+    pendientesAlt.push({ b, h, elegido, candidatos })
     if (h.par != null) {
       const otro = porPar.get(h.par)
       if (otro) {
@@ -231,9 +310,12 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, material: Set<string> | 
         if (o) { o.superserie = b.uid; b.series = o.series = Math.min(o.series, b.series) }
       } else porPar.set(h.par, b.uid)
     }
-    prioridades.set(b.uid, prioriza(x.perfil, h.patron) ? Math.max(h.prioridad - 1, 2) : h.prioridad)
+    // Priorizar una zona sube la prioridad de sus accesorios, pero nunca hace quitable un principal (prioridad 1).
+    prioridades.set(b.uid, prioriza(x.perfil, h.patron) && h.prioridad > 2 ? h.prioridad - 1 : h.prioridad)
     bloques.push(b)
   }
+  // Alternativas al final, sin proponer ningún ejercicio que ya es principal en este día.
+  for (const { b, h, elegido, candidatos } of pendientesAlt) b.alternativas = alternativas(elegido, h, candidatos.filter(e => !delDia.has(e.id)), x)
   // Las superseries van juntas: el segundo del par justo detrás del primero.
   const ordenados: Bloque[] = []
   for (const b of bloques) {
@@ -242,22 +324,27 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, material: Set<string> | 
     const c = b.superserie ? bloques.find(o => o.uid === b.superserie) : undefined
     if (c && !ordenados.includes(c)) ordenados.push(c)
   }
-  const minutos = opcional ? Math.max(x.perfil.minutosNormal, 45) : x.perfil.minutosNormal
-  return { letra: pl.letra, nombre: pl.nombre, dia, opcional, bloques: ajustarATiempo(ordenados, prioridades, minutos, x.perfil.minutosCorta, x) }
+  const normal = minutosValidos(x.perfil.minutosNormal, 60)
+  const corta = Math.min(normal, minutosValidos(x.perfil.minutosCorta, Math.min(45, normal)))
+  const minutos = opcional ? Math.max(normal, 45) : normal
+  return { letra: pl.letra, nombre: pl.nombre, dia, opcional, bloques: ajustarATiempo(ordenados, prioridades, minutos, corta, x) }
 }
 
 export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   const material = x.gimnasio ? new Set(x.gimnasio.material) : null
-  const fijos = [...x.perfil.diasFijos].sort((a, b) => a - b)
+  // Sin repetidos ni valores fuera de 0-6 (un perfil editado a mano o importado puede traerlos).
+  const fijos = [...new Set(x.perfil.diasFijos)].filter(d => Number.isInteger(d) && d >= 0 && d <= 6).sort((a, b) => a - b)
   const { estructura, dias } = plantillas(fijos.length || 3)
   const usados = new Set<string>()
-  const salida: DiaRutina[] = dias.map((pl, i) => generarDia(pl, x, material, usados, fijos[i] ?? null, false))
-  const opcionales = x.perfil.diasOpcionales.filter(d => !fijos.includes(d))
-  if (opcionales.length) salida.push(generarDia(EXTRA, x, material, usados, opcionales[0]!, true))
+  const aptos = aptosPorPatron(x, material)
+  const salida: DiaRutina[] = dias.map((pl, i) => generarDia(pl, x, aptos, usados, fijos[i] ?? null, false))
+  const opcionales = [...new Set(x.perfil.diasOpcionales)].filter(d => Number.isInteger(d) && d >= 0 && d <= 6 && !fijos.includes(d))
+  if (opcionales.length) salida.push(generarDia(EXTRA, x, aptos, usados, opcionales[0]!, true))
 
   const porque: string[] = []
   const n = fijos.length || 3
-  const seguidos = fijos.some((d, i) => i > 0 && d - fijos[i - 1]! === 1)
+  // Domingo y lunes también son seguidos (la semana da la vuelta).
+  const seguidos = fijos.some((d, i) => i > 0 && d - fijos[i - 1]! === 1) || (fijos.length > 1 && fijos.includes(0) && fijos.includes(6))
   if (n <= 3) porque.push(`${n} día${n === 1 ? '' : 's'}${seguidos ? ', dos seguidos' : ''} → cuerpo completo: cada músculo se trabaja ${n} ve${n === 1 ? 'z' : 'ces'} por semana sin acumular cansancio.`)
   else if (n <= 5) porque.push(`${n} días → torso y pierna alternos: cada músculo dos veces por semana.`)
   else porque.push(`${n} días → empuje, tirón y pierna dos veces por semana.`)
@@ -305,13 +392,15 @@ export function alternativasDe(id: string, x: EntradaGenerador): string[] {
   const material = x.gimnasio ? new Set(x.gimnasio.material) : null
   const p = patron(elegido)
   const h: Hueco = { patron: p, papel: elegido.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
-  const candidatos = x.ejercicios.filter(e => patron(e) === p && apto(e, x, material))
+  const candidatos = x.ejercicios.filter(e => patronDe(e) === p && apto(e, x, material))
   return alternativas(elegido, h, candidatos, x)
 }
 
 /** Bloque nuevo con series y reps razonables para un ejercicio añadido a mano. */
 export function bloqueNuevo(id: string, x: Pick<EntradaGenerador, 'perfil' | 'ejercicios'> & Partial<EntradaGenerador>): Bloque {
-  const e = x.ejercicios.find(z => z.id === id)!
+  const e = x.ejercicios.find(z => z.id === id)
+  // Ejercicio que ya no está en el catálogo (o propio): bloque genérico en vez de romper.
+  if (!e) return { uid: uid(), ejercicio: id, alternativas: [], series: 3, repsMin: 8, repsMax: 12, rpe: x.calibracion ? 7 : 8, descanso: 90, registro: 'peso' }
   const h: Hueco = { patron: patron(e), papel: patron(e) === 'core' ? 'core' : e.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
   const entrada: EntradaGenerador = { perfil: x.perfil, gimnasio: x.gimnasio ?? null, marcas: x.marcas ?? new Map(), ejercicios: x.ejercicios }
   return { uid: uid(), ejercicio: id, alternativas: alternativasDe(id, entrada), ...seriesYReps(h, entrada, e), registro: tipoRegistro(e) }

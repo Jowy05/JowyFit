@@ -23,7 +23,7 @@ export function Linea({ puntos, objetivo, etiquetaObjetivo, decimales = 1, disco
   const ult = puntos[puntos.length - 1]!
   const marcas = puntos.length > 6 ? puntos.map((_, i) => i).filter(i => i % Math.ceil(puntos.length / 5) === 0 || i === puntos.length - 1) : puntos.map((_, i) => i)
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img">
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfica de ${puntos.length} punto${puntos.length === 1 ? '' : 's'}, el último ${num(ult.y, decimales)}`}>
       {[Y0, (Y0 + Y1) / 2, Y1].map(v => <line key={v} className="gl" x1="30" y1={v} x2="312" y2={v} />)}
       <text className="ax" x="0" y={Y0 + 4}>{num(max, decimales)}</text>
       <text className="ax" x="0" y={Y1 + 4}>{num(min, decimales)}</text>
@@ -46,14 +46,14 @@ export function Linea({ puntos, objetivo, etiquetaObjetivo, decimales = 1, disco
 export function Barras({ puntos }: { puntos: Punto[] }) {
   if (!puntos.length) return <p className="small muted">Aún no hay datos para la gráfica.</p>
   const max = Math.max(...puntos.map(p => p.y)) || 1
-  const ancho = Math.min(24, (X1 - X0) / puntos.length - 6)
+  const ancho = Math.max(2, Math.min(24, (X1 - X0) / puntos.length - 6))
   const x = (i: number) => (puntos.length === 1 ? (X0 + X1) / 2 : X0 + (i * (X1 - X0)) / (puntos.length - 1))
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img">
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfica de barras de ${puntos.length} día${puntos.length === 1 ? '' : 's'}, el último ${num(puntos[puntos.length - 1]!.y, 0)}`}>
       {[Y0, (Y0 + Y1) / 2, Y1].map(v => <line key={v} className="gl" x1="30" y1={v} x2="312" y2={v} />)}
       <text className="ax" x="0" y={Y0 + 4}>{num(max, 0)}</text>
       {puntos.map((p, i) => {
-        const h = (p.y / max) * (Y1 - Y0)
+        const h = Math.max(0, (p.y / max) * (Y1 - Y0))
         return <rect key={i} className={i === puntos.length - 1 ? 'vb last' : 'vb'} x={x(i) - ancho / 2} y={Y1 - h} width={ancho} height={h} rx="3" />
       })}
       {puntos.map((p, i) => (puntos.length <= 7 || i % 2 === 0 || i === puntos.length - 1) && <text key={`t${i}`} className="ax" x={x(i)} y="124" textAnchor="middle">{p.x}</text>)}

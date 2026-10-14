@@ -7,10 +7,10 @@ import { catalogoCargado, ejercicio } from '../../../catalogo/catalogo'
 import { ES_MAQUINA } from '../../../catalogo/clasificacion'
 import { DIAS_CORTOS, DIAS } from '../../../dominio/fechas'
 import { generarRutina, tiemposReales } from '../../../dominio/generador'
-import { Cab, Ico, Pantalla } from '../../comp'
+import { Cab, Ico, Pantalla, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
-import { useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos'
+import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos'
 import { filas, minutos } from './comun'
 import { capital } from './comun'
 
@@ -21,6 +21,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
   const g = useGimnasio()
   const marcas = useMarcas()
   const actual = useRutina()
+  const ajustes = useAjustes()
   const definitiva = !!ruta.d?.definitiva
   const [variante, setVariante] = useState(0)
   const [evitar, setEvitar] = useState<Set<string>>(new Set())
@@ -31,19 +32,26 @@ export function Generar({ ruta }: { ruta: Ruta }) {
     const c = catalogoCargado()
     if (!c) return null
     const tiempos = definitiva ? tiemposReales(calib) : undefined
-    return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: !definitiva && !actual, evitar, tiempos })
+    return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: !definitiva && !actual, evitar, tiempos, descansos: { compuesto: ajustes.descansoCompuesto, aislamiento: ajustes.descansoAislamiento } })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length])
+    // !!actual: la rutina activa llega después del primer cálculo; sin esto, al regenerar con una rutina ya hecha
+    // la propuesta salía marcada como «semana de calibración».
+  }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length, !!actual, ajustes.descansoCompuesto, ajustes.descansoAislamiento])
 
-  const usar = async () => {
-    if (!propuesta) return
+  // Doble toque: dos rutinas guardadas.
+  const unaVez = useUnaVez()
+  const guardarPropuesta = async (): Promise<boolean> => {
+    if (!propuesta) return false
     await db.transaction('rw', db.rutinas, async () => {
       await db.rutinas.toCollection().modify({ activa: false })
       await db.rutinas.add({ ...propuesta, activa: true })
     })
     aviso(definitiva ? 'Rutina definitiva guardada' : 'Rutina guardada')
     nav.raiz('rut')
+    return true
   }
+  const usar = unaVez(guardarPropuesta)
+  const ajustar = unaVez(async () => { if (await guardarPropuesta()) nav.ir('rut-edit', undefined, 'rut') })
   const otra = () => {
     if (!propuesta) return
     setEvitar(new Set(propuesta.dias.flatMap(d => d.bloques.map(b => b.ejercicio))))
@@ -94,10 +102,10 @@ export function Generar({ ruta }: { ruta: Ruta }) {
           </div>
         )}
         <div className="dock col">
-          <button className="btn" onClick={usar}>Usar esta rutina</button>
+          <button className="btn" onClick={() => void usar()}>Usar esta rutina</button>
           <div className="btns">
             <button className="btn gry sm" onClick={otra}>Otra variante</button>
-            <button className="btn ln sm" onClick={async () => { await usar(); nav.ir('rut-edit', undefined, 'rut') }}>Ajustar a mano</button>
+            <button className="btn ln sm" onClick={() => void ajustar()}>Ajustar a mano</button>
           </div>
         </div>
       </div>

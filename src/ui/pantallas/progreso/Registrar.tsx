@@ -6,7 +6,7 @@ import type { Bascula, Medicion, OrigenMedicion } from '../../../datos/tipos'
 import { num } from '../../../dominio/calculos'
 import { fechaCorta, horaActual, hoyISO } from '../../../dominio/fechas'
 import { ultimoValor, type PuntoFecha } from '../../../dominio/tendencias'
-import { Cab, Chip, cx, Ico, Pantalla, Stepper } from '../../comp'
+import { Cab, Chip, cx, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { Medir } from '../alta/Alta'
@@ -56,6 +56,7 @@ export function Registrar() {
   const [bas, setBas] = useState<Partial<Record<keyof Bascula, string>>>({})
   const [origen, setOrigen] = useState<OrigenMedicion | null>(null)
   const [fecha, setFecha] = useState(hoy)
+  const unaVez = useUnaVez()
 
   const tocado = (c: Campo) => tocados.includes(c)
   const valor = (c: Campo) => (tocado(c) ? valores[c] ?? null : ultimos?.v[c]?.valor ?? POR_DEFECTO[c])
@@ -67,7 +68,8 @@ export function Registrar() {
   const basculaRellena = CAMPOS_BASCULA.some(c => leerNumero(bas[c.k]) != null)
   const origenFinal: OrigenMedicion = origen ?? (tocado('peso') || basculaRellena ? 'casa' : 'cinta')
 
-  const guardar = async () => {
+  // Doble toque: dos mediciones iguales y dos «atrás».
+  const guardar = unaVez(async () => {
     const perimetros: NonNullable<Medicion['perimetros']> = {}
     for (const p of PERIMETROS) if (tocado(p.k) && valores[p.k] != null) perimetros[p.k] = valores[p.k]
     const bascula: Bascula = {}
@@ -86,7 +88,7 @@ export function Registrar() {
     const delta = perimetros.cintura != null && antes != null ? perimetros.cintura - antes : null
     aviso(delta != null && delta !== 0 ? `Medidas guardadas · cintura ${signo(delta)} cm` : 'Medidas guardadas')
     nav.atras()
-  }
+  })
 
   const etiqueta = (c: Campo, texto: ReactNode) => (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginBottom: 6 }}>
@@ -98,7 +100,8 @@ export function Registrar() {
   )
   const paso = (c: Campo, sm: boolean, p: number) => (
     <div style={{ opacity: tocado(c) ? 1 : 0.55 }}>
-      <Stepper className={cx(sm && 'sm')} valor={valor(c)} onCambio={n => cambia(c, n)} paso={p} min={0} decimales={1} sufijo={c === 'peso' ? 'kg' : 'cm'} etiqueta={c} />
+      <Stepper className={cx(sm && 'sm')} valor={valor(c)} onCambio={n => cambia(c, n)} paso={p} min={0} decimales={1} sufijo={c === 'peso' ? 'kg' : 'cm'}
+        etiqueta={c === 'peso' ? 'Peso' : PERIMETROS.find(x => x.k === c)?.t ?? c} />
     </div>
   )
 

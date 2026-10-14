@@ -21,6 +21,8 @@ export function EditarPlan({ ruta }: { ruta: Ruta }) {
   const aviso = useAviso()
   const r = useRutina()
   const [letra, setLetra] = useState<string>(String(ruta.d?.letra ?? 'A'))
+  // undefined = aún cargando: no enseñar «Aún no tienes rutina» durante un instante.
+  if (r === undefined) return <Pantalla><Cab atras crumb="Mi plan" titulo="Editar plan" /><div className="cargando">Cargando…</div></Pantalla>
   if (!r) return <Pantalla><Cab atras crumb="Mi plan" titulo="Editar plan" /><div className="pg"><Vacio icono="clipboard-text" titulo="Aún no tienes rutina" accion="Crear mi rutina" onAccion={() => nav.ir('rut-gen')} /></div></Pantalla>
   const dia = r.dias.find(d => d.letra === letra) ?? r.dias[0]!
 

@@ -3,12 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { ejercicio } from '../../../catalogo/catalogo'
 import { DIAS_CORTOS, deISO, diaSemana, diasEntre, hoyISO, numeroSemana } from '../../../dominio/fechas'
-import { cx, estilo, Ico, Pantalla, Vacio } from '../../comp'
+import { cx, estilo, Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAjustes, useRutina, useSesionEnCurso } from '../../datos'
 import { useAviso } from '../../aviso'
 import { CabRutina, filas, minutos, nombreDia, seriesPorGrupo, seriesTxt } from './comun'
-import { iniciarEntreno } from '../entreno/iniciar'
+import { abrirEntreno, iniciarEntreno } from '../entreno/iniciar'
 
 export function MiPlan() {
   const nav = useNav()
@@ -19,7 +19,9 @@ export function MiPlan() {
   const hoy = hoyISO()
   const ds = diaSemana(deISO(hoy))
   const crumb = a.inicio ? `Semana ${numeroSemana(a.inicio, hoy)}` : undefined
-  const sesiones = useLiveQuery(() => db.sesiones.where('estado').equals('hecha').count(), []) ?? 0
+  // Entrenos de calibración que cuentan: los de esta rutina y no libres (igual que en el fin del entreno).
+  const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === r.id && s.letra !== 'L').length), [r?.id]) ?? 0
+  const unaVez = useUnaVez()
 
   if (r === undefined) return <Pantalla><CabRutina actual="rut" crumb={crumb} /></Pantalla>
   if (r === null) return (
@@ -35,11 +37,13 @@ export function MiPlan() {
   const opc = r.dias.filter(d => d.opcional)
   const grupos = seriesPorGrupo(r)
   const semanas = Math.max(1, Math.ceil(diasEntre(r.creada.slice(0, 10), hoy) / 7))
-  const libre = async () => {
-    if (enCurso) { aviso('Ya tienes un entreno en curso'); nav.restaurar(); return }
+  // Doble toque: dos entrenos libres en curso. Y «restaurar» no abría nada si la app se había cerrado a mitad.
+  const libre = unaVez(async () => {
+    if (enCurso) { aviso('Ya tienes un entreno en curso'); abrirEntreno(nav); return }
     await iniciarEntreno({ libre: true })
     nav.completa('entreno')
-  }
+  })
+  const faltan = Math.max(0, fijos.length - sesiones)
 
   return (
     <Pantalla>
@@ -60,7 +64,7 @@ export function MiPlan() {
               <p><span>En uso</span><b>{semanas} semana{semanas === 1 ? '' : 's'}</b></p>
             </div>
           </div>
-          {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>Semana de calibración:</b> pesos cómodos. Después de {Math.max(0, fijos.length - sesiones)} entreno{fijos.length - sesiones === 1 ? '' : 's'} más te propongo la rutina definitiva con tus tiempos reales.</span></p>}
+          {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>Semana de calibración:</b> pesos cómodos. {faltan > 0 ? <>Después de {faltan} entreno{faltan === 1 ? '' : 's'} más te propongo</> : <>Al guardar el próximo entreno te propongo</>} la rutina definitiva con tus tiempos reales.</span></p>}
         </div>
 
         <div className="sec">
@@ -111,7 +115,7 @@ export function MiPlan() {
               <span className="tx"><b>Empezar otro día</b></span>
               <span className="chips mini">{r.dias.map(d => <button key={d.letra} className="chip" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}>{d.letra}</button>)}</span>
             </div>
-            <button className="it" onClick={libre}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>Entreno libre</b><small>Sin plan, añadiendo sobre la marcha</small></span><Ico n="caret-right" className="car" /></button>
+            <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>Entreno libre</b><small>Sin plan, añadiendo sobre la marcha</small></span><Ico n="caret-right" className="car" /></button>
             <button className="it" onClick={() => nav.ir('rut-gen')}><span className="ico"><Ico n="magic-wand" /></span><span className="tx"><b>Generar rutina</b><small>Con tus días, tiempo y gimnasio</small></span><Ico n="caret-right" className="car" /></button>
             <button className="it" onClick={() => nav.ir('rut-edit')}><span className="ico"><Ico n="pencil-simple" /></span><span className="tx"><b>Editar plan</b><small>Orden, series, alternativas, versión corta</small></span><Ico n="caret-right" className="car" /></button>
           </div>

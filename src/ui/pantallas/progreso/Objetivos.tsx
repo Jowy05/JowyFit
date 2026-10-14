@@ -1,5 +1,5 @@
 // PRO-07 · Objetivos e hitos (y la hoja para crear o editar una meta)
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { sesionesHechas } from '../../../datos/consultas'
@@ -8,7 +8,7 @@ import { nombreEjercicio } from '../../../catalogo/catalogo'
 import { kg, num } from '../../../dominio/calculos'
 import { fechaCorta, hoyISO } from '../../../dominio/fechas'
 import { ejerciciosHechos, faltaMeta, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../../dominio/tendencias'
-import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, Vacio } from '../../comp'
+import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { usePerfil } from '../../datos'
@@ -152,10 +152,14 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
   const [ej, setEj] = useState<string | undefined>(meta?.ejercicio ?? ejercicios[0])
   const [hecha, setHecha] = useState(!!meta?.hecha)
   const info = TIPOS_META.find(t => t.v === tipo)!
+  const unaVez = useUnaVez()
+  // Solo vale la última propuesta: si se cambia de tipo rápido, una respuesta vieja pisaba el objetivo del tipo nuevo.
+  const ultimaPropuesta = useRef(0)
 
   // Al crear, propone un objetivo razonable a partir del valor actual.
   const proponer = (t: Meta['tipo'], e?: string) => {
-    void valorActualMeta(t, e, perfil).then(v => setObjetivo(sugerido(t, v)))
+    const yo = ++ultimaPropuesta.current
+    void valorActualMeta(t, e, perfil).then(v => { if (yo === ultimaPropuesta.current) setObjetivo(sugerido(t, v)) })
   }
   useEffect(() => { if (!meta) proponer(inicialTipo, ej) }, []) // solo al abrir
 
@@ -167,7 +171,8 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
   }
   const cambiarEj = (e: string) => { setEj(e); if (!meta) proponer('ejercicio', e) }
 
-  const guardar = async () => {
+  // Una meta nueva no tiene id: con un doble toque se creaban dos.
+  const guardar = unaVez(async () => {
     if (tipo === 'ejercicio' && !ej) { aviso('Elige un ejercicio'); return }
     const mismoValor = meta && meta.tipo === tipo && (tipo !== 'ejercicio' || meta.ejercicio === ej)
     const inicio = mismoValor ? meta.inicio : (await valorActualMeta(tipo, ej, perfil)) ?? undefined
@@ -182,7 +187,7 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
     await db.metas.put(nueva)
     nav.hoja(null)
     aviso(meta ? 'Meta guardada' : 'Meta creada')
-  }
+  })
 
   const borrar = async () => {
     if (meta?.id == null) return

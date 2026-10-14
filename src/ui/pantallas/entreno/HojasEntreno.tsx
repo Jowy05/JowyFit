@@ -3,12 +3,14 @@ import { useState, type ReactElement } from 'react'
 import { db } from '../../../datos/db'
 import { ejercicio, imagen } from '../../../catalogo/catalogo'
 import { BARRAS, calentamiento, discosPorLado, pesosBarra, pesosPara } from '../../../dominio/pesos'
-import { anadirCalentamiento, saltar } from '../../../dominio/sesion'
+import { saltar } from '../../../dominio/sesion'
+import type { Serie, Sesion } from '../../../datos/tipos'
 import { kg, num } from '../../../dominio/calculos'
 import { Chip, cx, Hoja, Ico, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useSesionEnCurso } from '../../datos'
+import { conCalentamiento } from './iniciar'
 
 export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -17,6 +19,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
   const idx = Number(ruta.d?.idx ?? 0)
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)
+  if (s === undefined) return <Hoja titulo="Herramientas"><p className="muted">Cargando…</p></Hoja>
   if (!s || !e || !ej) return <Hoja titulo="Herramientas"><p className="muted">No hay entreno en curso.</p></Hoja>
   const conBarra = !!ej.material && ej.material in BARRAS
   return (
@@ -25,7 +28,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
         {conBarra && <button className="it" onClick={() => nav.hoja('sheet-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>Calculadora de discos</b></span><Ico n="caret-right" className="car" /></button>}
         {(e.registro === 'peso' || e.registro === 'mancuerna') && <button className="it" onClick={() => nav.hoja('sheet-cal', { idx })}><span className="ico"><Ico n="thermometer-simple" /></span><span className="tx"><b>Calentamiento sugerido</b></span><Ico n="caret-right" className="car" /></button>}
         <button className="it" onClick={() => nav.hoja('sheet-instr', { id: ej.id })}><span className="ico"><Ico n="book-open" /></span><span className="tx"><b>Instrucciones</b></span><Ico n="caret-right" className="car" /></button>
-        <button className="it" onClick={() => { nav.hoja(null); nav.ir('rut-ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>Historial del ejercicio</b><small>Abre la ficha (el entreno sigue)</small></span><Ico n="caret-right" className="car" /></button>
+        <button className="it" onClick={() => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>Historial del ejercicio</b><small>Abre la ficha (el entreno sigue)</small></span><Ico n="caret-right" className="car" /></button>
         <button className="it" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx, id: e.ejercicio })}><span className="ico"><Ico n="swap" /></span><span className="tx"><b>Cambiar ejercicio</b></span><Ico n="caret-right" className="car" /></button>
         <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso('Saltado: lo verás en la lista', () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>Saltarlo</b></span></button>
       </div>
@@ -43,11 +46,15 @@ export function HojaDiscos({ ruta }: { ruta: Ruta }) {
   const e = s?.ejercicios[Number(ruta.d?.idx ?? 0)]
   const ej = ejercicio(e?.ejercicio)
   const barraPorDefecto = ej?.material === 'barbell' || !ej?.material ? (g?.barraKg ?? 20) : (BARRAS[ej.material] ?? 20)
-  const [barra, setBarra] = useState(barraPorDefecto)
+  // La sesión y el gimnasio llegan un instante después de abrir la hoja: mientras no se toque,
+  // se usa lo de la serie actual (si se guardara en el estado inicial, saldría siempre «barra + 20»).
+  const [barraElegida, setBarra] = useState<number | null>(null)
+  const barra = barraElegida ?? barraPorDefecto
   const discos = g?.discos?.length ? g.discos : [1.25, 2.5, 5, 10, 15, 20]
   const lista = pesosBarra(barra, discos)
   const actualPeso = e?.series.find(x => !x.hecha)?.peso ?? barra + 20
-  const [peso, setPeso] = useState(Math.max(barra, actualPeso))
+  const [pesoElegido, setPeso] = useState<number | null>(null)
+  const peso = pesoElegido ?? Math.max(barra, actualPeso)
   const lado = discosPorLado(peso, barra, discos)
   let xi = 103, xd = 237
   const izq: ReactElement[] = [], der: ReactElement[] = []
@@ -92,11 +99,14 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta }) {
   const idx = Number(ruta.d?.idx ?? 0)
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)
+  if (s === undefined) return <Hoja titulo="Calentamiento"><p className="muted">Cargando…</p></Hoja>
   if (!s || !e || !ej) return <Hoja titulo="Calentamiento"><p className="muted">No hay entreno en curso.</p></Hoja>
   const trabajo = e.series.find(x => !x.calentamiento)?.peso ?? 0
   const lista = pesosPara(ej.material, e.registro, g)
   const series = calentamiento(trabajo, lista, ej.material === 'barbell' ? (g?.barraKg ?? 20) : 0)
   const ya = e.series.some(x => x.calentamiento)
+  // Con series ya hechas, el calentamiento se metería delante y pasaría a ser «la serie que toca».
+  const empezado = e.series.some(x => x.hecha)
   return (
     <Hoja titulo="Calentamiento sugerido" sub={<>Para trabajar con <b className="mono">{kg(trabajo)} kg</b></>}>
       {series.length ? (
@@ -110,7 +120,10 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta }) {
         </div>
       ) : <p className="muted">Pon antes el peso de trabajo.</p>}
       <p className="small muted mt8">Descansa lo justo entre ellas: 45-60 s.</p>
-      <button className={cx('btn mt16', (ya || !series.length) && 'off')} onClick={async () => { await db.sesiones.put(anadirCalentamiento(s, idx, series)); nav.hoja(null); aviso('Calentamiento añadido') }}>{ya ? 'Ya está añadido' : 'Añadir a la lista'}</button>
+      <button className={cx('btn mt16', (ya || empezado || !series.length) && 'off')} disabled={ya || empezado || !series.length}
+        onClick={async () => { await db.sesiones.put(conCalentamiento(s, idx, series)); nav.hoja(null); aviso('Calentamiento añadido') }}>
+        {ya ? 'Ya está añadido' : empezado ? 'Ya has empezado este ejercicio' : 'Añadir a la lista'}
+      </button>
     </Hoja>
   )
 }
@@ -131,16 +144,24 @@ export function HojaInstrucciones({ ruta }: { ruta: Ruta }) {
 }
 
 export function HojaNotaSerie({ ruta }: { ruta: Ruta }) {
-  const nav = useNav()
-  const aviso = useAviso()
   const s = useSesionEnCurso()
   const idx = Number(ruta.d?.idx ?? 0), n = Number(ruta.d?.n ?? 0)
   const serie = s?.ejercicios[idx]?.series[n]
-  const [t, setT] = useState(serie?.nota ?? '')
+  if (s === undefined) return <Hoja titulo="Nota"><p className="muted">Cargando…</p></Hoja>
   if (!s || !serie) return <Hoja titulo="Nota"><p className="muted">No hay serie.</p></Hoja>
+  // El formulario se monta cuando ya hay sesión: si no, la nota que ya tenía la serie no aparecería.
+  return <FormNotaSerie s={s} idx={idx} n={n} serie={serie} />
+}
+
+function FormNotaSerie({ s, idx, n, serie }: { s: Sesion; idx: number; n: number; serie: Serie }) {
+  const nav = useNav()
+  const aviso = useAviso()
+  const [t, setT] = useState(serie.nota ?? '')
+  const e = s.ejercicios[idx]!
+  const titulo = serie.calentamiento ? 'Calentamiento' : `Serie ${e.series.filter(x => !x.calentamiento).indexOf(serie) + 1}`
   return (
-    <Hoja titulo="Nota de la serie" sub={`Serie ${n + 1}`}>
-      <textarea className="inp" autoFocus value={t} onChange={e => setT(e.target.value)} placeholder="Molestia en el hombro, agarre falló…" />
+    <Hoja titulo="Nota de la serie" sub={titulo}>
+      <textarea className="inp" autoFocus aria-label="Nota de la serie" value={t} onChange={e => setT(e.target.value)} placeholder="Molestia en el hombro, agarre falló…" />
       <div className="chips mt8">{['Molestia', 'Me ha costado', 'Muy fácil', 'Mal agarre'].map(x => <Chip key={x} onClick={() => setT(v => (v ? `${v}. ${x}` : x))}>{x}</Chip>)}</div>
       <button className="btn mt16" onClick={async () => { const x = structuredClone(s); x.ejercicios[idx]!.series[n]!.nota = t; await db.sesiones.put(x); nav.hoja(null); aviso('Nota guardada') }}>Guardar</button>
     </Hoja>

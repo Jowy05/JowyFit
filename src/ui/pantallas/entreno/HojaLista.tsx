@@ -1,7 +1,7 @@
 // SES-05 · Lista de la sesión
 import { db } from '../../../datos/db'
 import type { Sesion } from '../../../datos/tipos'
-import { ejercicio } from '../../../catalogo/catalogo'
+import { nombreEjercicio } from '../../../catalogo/catalogo'
 import { irA, mover, serieActual } from '../../../dominio/sesion'
 import { kg } from '../../../dominio/calculos'
 import { cx, Hoja, Ico } from '../../comp'
@@ -13,13 +13,14 @@ export function HojaLista() {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
+  if (s === undefined) return <Hoja titulo="Lista de la sesión"><p className="muted">Cargando…</p></Hoja>
   if (!s) return <Hoja titulo="Lista de la sesión"><p className="muted">No hay entreno en curso.</p></Hoja>
   const guardar = (x: Sesion) => db.sesiones.put(x)
   return (
     <Hoja titulo="Lista de la sesión" sub="Toca para ir · flechas para reordenar" className="tall">
       <div className="list">
         {s.ejercicios.map((e, i) => {
-          const ej = ejercicio(e.ejercicio)
+          const nombre = nombreEjercicio(e.ejercicio)
           const hechas = e.series.filter(x => x.hecha && !x.calentamiento)
           const total = e.series.filter(x => !x.calentamiento).length
           const sust = e.ejercicio !== e.planificado
@@ -38,9 +39,9 @@ export function HojaLista() {
                 if (e.estado === 'pendiente') await guardar(irA(s, i))
                 nav.hoja(null)
               }}>
-                <b>{e.superserie ? `${ej?.nombre} (superserie)` : ej?.nombre}</b>
+                <b>{e.superserie ? `${nombre} (superserie)` : nombre}</b>
                 <small className="mono">
-                  {e.estado === 'saltado' ? 'Toca para recuperarlo' : sust ? `Sustituye a ${ejercicio(e.planificado)?.nombre}` : e.estado === 'hecho' ? `${hechas.length}/${total}${hechas[0]?.peso != null ? ` · ${kg(hechas[0].peso)} kg × ${hechas[0].reps}` : ''}` : e.estado === 'curso' ? `Serie ${Math.max(1, serieActual(e) + 1 - e.series.filter(x => x.calentamiento).length)} de ${total}` : `${total} × ${e.repsMin}-${e.repsMax}`}
+                  {e.estado === 'saltado' ? 'Toca para recuperarlo' : sust ? `Sustituye a ${nombreEjercicio(e.planificado)}`: e.estado === 'hecho' ? `${hechas.length}/${total}${hechas[0]?.peso != null ? ` · ${kg(hechas[0].peso)} kg × ${hechas[0].reps}` : ''}` : e.estado === 'curso' ? `Serie ${Math.max(1, serieActual(e) + 1 - e.series.filter(x => x.calentamiento).length)} de ${total}` : `${total} × ${e.repsMin}-${e.repsMax}`}
                 </small>
               </button>
               <span className={cx('tag', e.estado === 'hecho' && 'ok', e.estado === 'curso' && 'go', sust && e.estado === 'pendiente' && 'blue')}>

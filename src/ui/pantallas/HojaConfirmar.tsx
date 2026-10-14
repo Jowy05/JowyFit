@@ -1,7 +1,8 @@
 // Hoja de confirmación para lo irreversible.
 import { db, TABLAS } from '../../datos/db'
 import { guardarAjustes } from '../../datos/repos'
-import { cx, Hoja, Ico } from '../comp'
+import { cancelar } from '../../plataforma'
+import { cx, Hoja, Ico, useUnaVez } from '../comp'
 import { useNav, type Ruta } from '../nav'
 import { useAviso } from '../aviso'
 
@@ -9,7 +10,9 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
   const aviso = useAviso()
   const d = ruta.d ?? {}
-  const hacer = async () => {
+  const unaVez = useUnaVez()
+  // Un doble toque hacía dos veces «atrás» (borrar gimnasio o entreno) y sacaba de la pantalla anterior.
+  const hacer = unaVez(async () => {
     switch (d.accion) {
       case 'regenerar':
         nav.hoja(null)
@@ -26,6 +29,8 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
         nav.hoja(null); nav.atras(); aviso('Entreno borrado'); return
       case 'cancelar-entreno':
         await db.sesiones.delete(Number(d.id))
+        // Si había un descanso en marcha, su notificación (9001) ya no tiene sentido.
+        void cancelar([9001])
         nav.hoja(null); nav.completa(null); aviso('Entreno descartado'); return
       case 'borrar-medicion':
         await db.mediciones.delete(Number(d.id))
@@ -41,7 +46,7 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
       default:
         nav.hoja(null)
     }
-  }
+  })
   return (
     <Hoja titulo={String(d.titulo ?? '¿Seguro?')}>
       {d.texto ? <p className="muted">{String(d.texto)}</p> : null}

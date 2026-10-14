@@ -151,7 +151,7 @@ export function Fotos() {
         </div>
 
         <div className="sec">
-          <div className="sec-h"><h2>Galería</h2><span className="lbl">cada {perfil.fotosCadaSemanas || 2}-4 semanas</span></div>
+          <div className="sec-h"><h2>Galería</h2><span className="lbl">{perfil.fotosCadaSemanas > 0 && perfil.fotosCadaSemanas !== 2 ? `cada ${perfil.fotosCadaSemanas} semana${perfil.fotosCadaSemanas === 1 ? '' : 's'}` : 'cada 2-4 semanas'}</span></div>
           {vista && (
             <div className="card pd" style={{ marginBottom: 12 }}>
               <img src={urls.get(vista.id!)} alt={`${NOMBRE_POSE[vista.pose]} · ${fechaCorta(vista.fecha)}`} className="foto-prev" style={{ maxHeight: 420, objectFit: 'contain' }} />

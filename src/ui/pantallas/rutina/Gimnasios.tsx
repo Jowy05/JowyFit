@@ -3,7 +3,7 @@ import { db } from '../../../datos/db'
 import { gimnasioNuevo, guardarAjustes } from '../../../datos/repos'
 import { mancuernasDisponibles } from '../../../dominio/pesos'
 import { num } from '../../../dominio/calculos'
-import { cx, Ico, Pantalla } from '../../comp'
+import { cx, Ico, Pantalla, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasios, useRutina } from '../../datos'
@@ -17,10 +17,12 @@ export function Gimnasios() {
   const a = useAjustes()
   const r = useRutina()
   const activo = a.gimnasioActivo ?? lista[0]?.id
-  const nuevo = async () => {
+  // Doble toque: dos gimnasios nuevos y dos editores abiertos uno encima de otro.
+  const unaVez = useUnaVez()
+  const nuevo = unaVez(async () => {
     const id = await db.gimnasios.add(gimnasioNuevo(`Gimnasio ${lista.length + 1}`))
     nav.ir('rut-gym-edit', { id, nuevo: true })
-  }
+  })
   const activar = async (id: number) => {
     await guardarAjustes({ gimnasioActivo: id })
     aviso('Gimnasio activo cambiado')
@@ -57,7 +59,7 @@ export function Gimnasios() {
             </div>
           )
         })}
-        <button className="btn mt16" onClick={nuevo}><Ico n="plus" b />Nuevo gimnasio</button>
+        <button className="btn mt16" onClick={() => void nuevo()}><Ico n="plus" b />Nuevo gimnasio</button>
       </div>
     </Pantalla>
   )

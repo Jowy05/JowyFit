@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
+import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, ordenarPlantillas, picoteoDeSemana, picoteoPorTamano, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
 import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
 import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
 
@@ -143,6 +143,15 @@ describe('nota rápida y Mis comidas', () => {
     expect(tamanoDe(200, 8, 'desayuno')).toBe('ligera')
     expect(tamanoDe(900, 35, 'cena')).toBe('abundante')
     expect(tamanoDe(610, 25, 'comida')).toBeNull()
+  })
+  it('el picoteo tiene sus propios «Poco · Normal · Mucho», más pequeños que una comida', () => {
+    const [p, n, m] = TAMANOS_NOTA.map(t => picoteoPorTamano(t.v))
+    expect(p!.kcal).toBeLessThan(n!.kcal)
+    expect(n!.kcal).toBeLessThan(m!.kcal)
+    expect(m!.kcal).toBeLessThan(notaPorTamano('normal', 'desayuno').kcal + 1)
+    expect(tamanoDe(200, 3, 'comida', true)).toBe('normal')
+    expect(tamanoDe(200, 3, 'comida')).toBeNull()
+    expect(tamanoDe(210, 3, 'merienda', true)).toBeNull()
   })
   it('no repite los escaneados que ya están en Mis comidas', () => {
     const ps = [{ codigo: '1' }, { codigo: '2' }, { codigo: '3' }]

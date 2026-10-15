@@ -216,9 +216,17 @@ export function notaPorTamano(t: TamanoNota, franja: Franja): { kcal: number; pr
   return v[t]
 }
 
-/** Qué tamaño corresponde a unos valores (para marcar el botón al editar una comida guardada); null si se afinaron a mano. */
-export function tamanoDe(kcal: number, proteina: number, franja: Franja): TamanoNota | null {
-  return TAMANOS_NOTA.find(t => { const v = notaPorTamano(t.v, franja); return v.kcal === kcal && v.proteina === proteina })?.v ?? null
+/** Valores típicos de un picoteo según su tamaño (una pieza de fruta, una bolsa de patatas, un bocadillo pequeño…). */
+export function picoteoPorTamano(t: TamanoNota): { kcal: number; proteina: number } {
+  return { ligera: { kcal: 100, proteina: 2 }, normal: { kcal: 200, proteina: 3 }, abundante: { kcal: 350, proteina: 6 } }[t]
+}
+
+/**
+ * Qué tamaño corresponde a unos valores (para marcar el botón al editar una comida guardada o apuntada);
+ * null si se afinaron a mano. Con `picoteo`, los tamaños son los del picoteo.
+ */
+export function tamanoDe(kcal: number, proteina: number, franja: Franja, picoteo = false): TamanoNota | null {
+  return TAMANOS_NOTA.find(t => { const v = picoteo ? picoteoPorTamano(t.v) : notaPorTamano(t.v, franja); return v.kcal === kcal && v.proteina === proteina })?.v ?? null
 }
 
 /** Productos escaneados que aún no están guardados en «Mis comidas» (para no enseñarlos dos veces). */

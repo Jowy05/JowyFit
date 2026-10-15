@@ -251,6 +251,14 @@ escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await pulsar('Deshacer')
   await ver('Bolsa de patatas pequeña')
   await ver('1 día con picoteo')
+  // Crear una comida desde Añadir: «Guardar y apuntar» la guarda en Mis comidas y la deja apuntada.
+  await pulsar('Añadir', '.dock')
+  await pulsar('Crear comida nueva', '.sheet')
+  await t('escribir', '.sheet input[aria-label="Nombre de la comida"]', 'Lentejas de mi madre')
+  await pulsar('Guardar y apuntar', '.sheet')
+  await ver('Añadido: Lentejas de mi madre')
+  await seg('Mis comidas')
+  await ver('Lentejas de mi madre')
 })
 
 escenario('comida: escáner con y sin conexión', async () => {

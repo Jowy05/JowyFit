@@ -8,13 +8,28 @@ let indice: Map<string, Ejercicio> = new Map()
 
 const base = () => import.meta.env.BASE_URL ?? '/'
 
-/** Nombres como se dicen en el gimnasio: «Polea» (no «Cable») y «Barra Z» (no «Barra EZ»), en toda la app. */
+/**
+ * Nombres como se dicen en el gimnasio: «Polea» (no «Cable»), «Barra Z» (no «Barra EZ») y «Máquina de Barra Guiada»
+ * (no «Máquina Smith», que no dice nada a quien no lo sabe), en toda la app.
+ */
 export function nombreComun(nombre: string): string {
   return nombre.replace(/\b(?:con|en) Cable\b/g, 'en Polea').replace(/\bCable\b/g, 'Polea').replace(/\bBarra EZ\b/g, 'Barra Z')
+    .replace(/\bMáquina Smith\b/g, 'Máquina de Barra Guiada')
+}
+
+/** Lo mismo en las frases (descripción, pasos y consejos), que van en minúscula: «la máquina de barra guiada». */
+export function textoComun(t: string): string {
+  return t.replace(/\b([Mm])áquina Smith\b/g, '$1áquina de barra guiada').replace(/\bbarra Smith\b/g, 'barra guiada')
 }
 
 export function usarCatalogo(c: Catalogo) {
-  for (const e of c.ejercicios) e.nombre = nombreComun(e.nombre)
+  for (const e of c.ejercicios) {
+    e.nombre = nombreComun(e.nombre)
+    e.descripcion = textoComun(e.descripcion)
+    e.instrucciones = e.instrucciones.map(textoComun)
+    e.consejos = e.consejos.map(textoComun)
+  }
+  for (const m of Object.values(c.material)) m.nombre = textoComun(m.nombre)
   cache = c
   indice = new Map(c.ejercicios.map(e => [e.id, e]))
 }

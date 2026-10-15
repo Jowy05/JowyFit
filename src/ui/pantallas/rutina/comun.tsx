@@ -52,12 +52,12 @@ export function nombreEj(x: string | Ejercicio | null | undefined): string {
   const e = typeof x === 'string' ? ejercicio(x) : x
   return e ? nombreVisible(e.nombre) : ''
 }
-/** Material corto para las alternativas («Barra → Prensa de piernas → Máquina Smith»). */
+/** Material corto para las alternativas («Barra → Prensa de piernas → Barra guiada»). */
 export function materialCorto(id: string): string {
   const e = ejercicio(id)
   if (!e) return '?'
   if (!e.material) return 'Peso corporal'
-  if (e.material === 'smith_machine') return 'Máquina Smith'
+  if (e.material === 'smith_machine') return 'Barra guiada'
   return capital(nombreMaterial(e.material).replace(/^Máquina (de )?/, ''))
 }
 

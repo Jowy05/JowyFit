@@ -240,7 +240,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
       )}
 
       <div className="row jb mt16">
-        <button className="lnk" onClick={() => nav.hoja('sheet-plant', {})}><Ico n="bowl-food" /> Crear comida nueva</button>
+        <button className="lnk" onClick={() => nav.hoja('sheet-plant', { fecha, franja })}><Ico n="bowl-food" /> Crear comida nueva</button>
         <button className="lnk" onClick={() => nav.ir('com-plant', undefined, 'com')}>Mis comidas <Ico n="caret-right" /></button>
       </div>
     </Hoja>

@@ -13,8 +13,8 @@ import { cx, Hoja, Ico, Th, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useSesionEnCurso } from '../../datos'
+import { materialCorto } from '../rutina/comun'
 
-const corto = (id: string) => { const e = ejercicio(id); return e?.material ? nombreMaterial(e.material).replace(/^Máquina (de )?/, '') : 'Corporal' }
 
 export function HojaOcupado({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -56,7 +56,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
       {plan.map((id, i) => (
         <span key={id} style={{ display: 'contents' }}>
           {i > 0 && <Ico n="arrow-right" />}
-          <span className={cx(i < paso && 'x', i === paso && 'on')}>{corto(id)}</span>
+          <span className={cx(i < paso && 'x', i === paso && 'on')}>{materialCorto(id)}</span>
         </span>
       ))}
     </div>
@@ -78,7 +78,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta }) {
   return (
     <Hoja>
       {abc}
-      <div className="sh-h"><div><h2>{paso === actualEn + 1 ? `${ejercicio(e.ejercicio)?.nombre} ocupado` : 'También ocupada'}</h2><p className="sub">{paso >= plan.length - 1 ? 'Última alternativa:' : 'Alternativa:'}</p></div></div>
+      <div className="sh-h"><div><h2>{paso === actualEn + 1 ? `${ejercicio(e.ejercicio)?.nombre} ocupado` : 'También ocupada'}</h2><p className="sub">{paso >= plan.length - 1 ? 'Si está ocupada, haz esta (es la última):' : 'Si está ocupada, haz esta:'}</p></div></div>
       <div className="altc card">
         <Th ej={x} size="l" />
         <div className="grow">

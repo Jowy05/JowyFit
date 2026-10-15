@@ -43,4 +43,11 @@ describe('nombres como en el gimnasio', () => {
     expect(nombreComun('Curl con Barra EZ')).toBe('Curl con Barra Z')
     expect(nombreComun('Cables y Cablea')).toBe('Cables y Cablea')
   })
+  it('«Máquina Smith» pasa a «Máquina de barra guiada», en los nombres y en las frases', async () => {
+    const { nombreComun, textoComun } = await import('../src/catalogo/catalogo')
+    expect(nombreComun('Sentadilla en Máquina Smith')).toBe('Sentadilla en Máquina de Barra Guiada')
+    expect(textoComun('Máquina Smith')).toBe('Máquina de barra guiada')
+    expect(textoComun('Coloca un banco dentro de la máquina Smith.')).toBe('Coloca un banco dentro de la máquina de barra guiada.')
+    expect(textoComun('Salir de debajo de una barra Smith cargada')).toBe('Salir de debajo de una barra guiada cargada')
+  })
 })

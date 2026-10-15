@@ -100,7 +100,7 @@ function patronDe(e: Ejercicio): Patron {
 // es el otro con algo más detrás y la parte común tiene al menos dos palabras («Peso muerto» y «Peso muerto
 // rumano»; «Press de banca» y «Press de banca con agarre cerrado»). Una sola palabra común («Curl», «Remo»)
 // no basta: un curl de martillo y uno con barra pueden ir el mismo día.
-const MATERIAL_EN_NOMBRE = /\b(?:con|en|sobre)\s+(?:la\s+|el\s+|una\s+|un\s+)?(?:barra\s+(?:z|ez|hexagonal|trap|recta)|barra|(?:doble|dos)\s+mancuernas?|mancuernas?|(?:dos\s+)?pesas?\s+rusas?|kettlebells?|cable|poleas?|bandas?(?:\s+elasticas?)?|trx|landmine|discos?|maquina(?:\s+smith)?(?:\s+de\s+(?:discos|predicador))?|multipower|smith)\b/g
+const MATERIAL_EN_NOMBRE = /\b(?:con|en|sobre)\s+(?:la\s+|el\s+|una\s+|un\s+)?(?:maquina\s+de\s+barra\s+guiada|barra\s+guiada|barra\s+(?:z|ez|hexagonal|trap|recta)|barra|(?:doble|dos)\s+mancuernas?|mancuernas?|(?:dos\s+)?pesas?\s+rusas?|kettlebells?|cable|poleas?|bandas?(?:\s+elasticas?)?|trx|landmine|discos?|maquina(?:\s+smith)?(?:\s+de\s+(?:discos|predicador))?|multipower|smith)\b/g
 const LADO = /\b(?:a\s+un\s+brazo|a\s+una\s+mano|unilateral)\b/g
 const RELLENO = new Set(['de', 'del', 'la', 'el', 'en', 'con', 'y', 'a', 'al', 'los', 'las', 'trasera', 'biceps'])
 const cacheClave = new WeakMap<Ejercicio, string>()

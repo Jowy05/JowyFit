@@ -96,20 +96,15 @@ export function MiPlan() {
                 </div>
               </div>
             )
+            // Los días que no son hoy, plegados: solo cuántos ejercicios; la lista, al tocarlo.
+            const nEj = d.bloques.length
             return (
               <button key={d.letra} className={cx('dayc card', i && 'mt8', d.opcional && 'optd')} onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
                 <span className="dayc-h">
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
-                  <span className="tx"><b>{d.opcional ? `${tituloDia(d)} · opcional` : tituloDia(d)}</b><small>{d.opcional ? `${d.nombre} · ~${minutos(d)} min` : `${d.dia != null ? `${d.nombre} · ` : `Día ${d.letra} · `}~${minutos(d)} min · con prisa ~${minutos(d, true)}`}</small></span>
+                  <span className="tx"><b>{d.opcional ? `${tituloDia(d)} · opcional` : tituloDia(d)}</b><small>{d.dia != null ? d.nombre : `Día ${d.letra}`} · {nEj} ejercicio{nEj === 1 ? '' : 's'} · ~{minutos(d)} min</small></span>
                   <Ico n="caret-right" className="car" />
                 </span>
-                {!d.opcional && (
-                  <span className="pl-sum">
-                    {filas(d.bloques).map((f, k) => (
-                      <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>{SS}{ss()}</em> {nombreEj(f[0].ejercicio)} + {nombreEj(f[1].ejercicio)}</> : nombreEj(f.ejercicio)}</span>
-                    ))}
-                  </span>
-                )}
               </button>
             )
           })}
@@ -117,17 +112,25 @@ export function MiPlan() {
 
         <div className="sec">
           <div className="list">
-            <div className="it">
-              <span className="ico"><Ico n="calendar-blank" /></span>
-              <span className="tx">
-                <b>Empezar otro día</b>
-                <small>Si hoy prefieres hacer otro entreno</small>
-                <span className="chips ux-rut-otro">{r.dias.map(d => <button key={d.letra} className="chip" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}>{tituloDia(d)}</button>)}</span>
-              </span>
-            </div>
-            <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>Entreno libre</b><small>Sin plan: añades ejercicios sobre la marcha</small></span><Ico n="caret-right" className="car" /></button>
             <button className="it" onClick={() => nav.ir('rut-edit')}><span className="ico"><Ico n="pencil-simple" /></span><span className="tx"><b>Editar plan</b><small>Cambiar ejercicios o series, o rehacer la rutina</small></span><Ico n="caret-right" className="car" /></button>
           </div>
+          {/* Lo que casi nunca hace falta, plegado: otro día de la rutina o un entreno sin plan. */}
+          <details className="fold mt12">
+            <summary>Otras formas de entrenar<Ico n="caret-down" /></summary>
+            <div className="in">
+              <div className="list">
+                <div className="it">
+                  <span className="ico"><Ico n="calendar-blank" /></span>
+                  <span className="tx">
+                    <b>Empezar otro día</b>
+                    <small>Si hoy prefieres hacer otro entreno</small>
+                    <span className="chips ux-rut-otro">{r.dias.map(d => <button key={d.letra} className="chip" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}>{tituloDia(d)}</button>)}</span>
+                  </span>
+                </div>
+                <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>Entreno libre</b><small>Sin plan: añades ejercicios sobre la marcha</small></span><Ico n="caret-right" className="car" /></button>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </Pantalla>

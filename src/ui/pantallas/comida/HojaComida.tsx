@@ -1,9 +1,9 @@
-// Editar algo ya apuntado: nombre, cuándo (franja), hora, ración, proteína, kcal y cafeína.
+// Editar algo ya apuntado: nombre, cuándo (franja), cuánto («Poco · Normal · Mucho»), hora y, en «Afinar», los números.
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
-import type { Comida } from '../../../datos/tipos'
-import { FACTOR_RACION, FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, type Racion } from '../../../dominio/comida'
-import { Chip, Hoja, Stepper } from '../../comp'
+import type { Comida, Franja } from '../../../datos/tipos'
+import { FACTOR_RACION, FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, TAMANOS_NOTA, notaPorTamano, tamanoDe, type Racion, type TamanoNota } from '../../../dominio/comida'
+import { Chip, Hoja, Ico, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useUrlBlob } from './comun'
@@ -14,14 +14,28 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
   const id = Number(ruta.d?.id)
   const [c, setC] = useState<Comida | null>(null)
   const [original, setOriginal] = useState<Comida | null>(null)
+  // Lo escrito a mano («nota» o «foto»): el tamaño elegido, o null si los números se afinaron a mano.
+  const [tam, setTam] = useState<TamanoNota | null>(null)
   const fotoUrl = useUrlBlob(c?.foto)
-  useEffect(() => { void db.comidas.get(id).then(x => { setC(x ?? null); setOriginal(x ?? null) }) }, [id])
+  useEffect(() => {
+    void db.comidas.get(id).then(x => {
+      setC(x ?? null)
+      setOriginal(x ?? null)
+      setTam(x ? tamanoDe(x.kcal, x.proteina, x.franja) : null)
+    })
+  }, [id])
   if (!c || !original) return <Hoja titulo="Editar"><p className="muted">Cargando…</p></Hoja>
   const cambia = (x: Partial<Comida>) => setC({ ...c, ...x })
+  // Lo que viene de algo guardado (Mis comidas, un producto, picoteo o bebida) se agranda o achica con la ración;
+  // lo escrito a mano, con los mismos tamaños que al apuntarlo.
+  const aMano = c.tipo === 'nota' || c.tipo === 'foto'
   const ponerRacion = (r: Racion) => {
     const f = FACTOR_RACION[r] / FACTOR_RACION[c.racion]
     cambia({ racion: r, kcal: Math.round(c.kcal * f), proteina: Math.round(c.proteina * f), cafeina: c.cafeina ? Math.round(c.cafeina * f) : c.cafeina })
   }
+  const ponerTamano = (t: TamanoNota) => { setTam(t); cambia(notaPorTamano(t, c.franja)) }
+  const ponerFranja = (franja: Franja) => cambia({ franja, ...(aMano && tam ? notaPorTamano(tam, franja) : {}) })
+  const afinar = (x: Partial<Comida>) => { setTam(null); cambia(x) }
   const guardar = async () => {
     await db.comidas.put({ ...c, nombre: c.nombre.trim() || original.nombre })
     nav.hoja(null)
@@ -40,24 +54,32 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
       <input className="inp" value={c.nombre} onChange={e => cambia({ nombre: e.target.value })} aria-label="Nombre" />
       <p className="lbl fl mt16">Cuándo</p>
       <div className="chips eq">
-        {FRANJAS.map(f => <Chip key={f.v} on={c.franja === f.v} onClick={() => cambia({ franja: f.v })}>{NOMBRE_FRANJA[f.v]}</Chip>)}
+        {FRANJAS.map(f => <Chip key={f.v} on={c.franja === f.v} onClick={() => ponerFranja(f.v)}>{NOMBRE_FRANJA[f.v]}</Chip>)}
       </div>
-      {(c.tipo === 'plantilla' || c.tipo === 'producto') && (
-        <>
-          <p className="lbl fl mt16">¿Cuánto has comido?</p>
-          <div className="chips eq">
-            {(['P', 'N', 'G'] as const).map(r => <Chip key={r} on={c.racion === r} onClick={() => ponerRacion(r)}>{NOMBRE_RACION[r]}</Chip>)}
-          </div>
-        </>
-      )}
-      <p className="lbl fl mt16">Proteína y calorías (aproximado vale)</p>
-      <div className="grid2">
-        <Stepper className="sm" valor={c.proteina} onCambio={v => cambia({ proteina: v })} paso={1} min={0} sufijo="g prot." etiqueta="Proteína" />
-        <Stepper className="sm" valor={c.kcal} onCambio={v => cambia({ kcal: v })} paso={10} min={0} sufijo="kcal" etiqueta="kcal" />
+      <p className="lbl fl mt16">{c.tipo === 'bebida' ? '¿Cuánto has bebido?' : '¿Cuánto has comido?'}</p>
+      <div className="chips eq">
+        {aMano
+          ? TAMANOS_NOTA.map(t => (
+              <Chip key={t.v} className="big ux-com-tam" on={tam === t.v} onClick={() => ponerTamano(t.v)}>
+                <span>{t.t}<small className="mono">~{notaPorTamano(t.v, c.franja).kcal} kcal</small></span>
+              </Chip>
+            ))
+          : (['P', 'N', 'G'] as const).map(r => <Chip key={r} on={c.racion === r} onClick={() => ponerRacion(r)}>{NOMBRE_RACION[r]}</Chip>)}
       </div>
-      {(c.tipo === 'bebida' || (c.cafeina ?? 0) > 0) && (
-        <div className="mt8"><Stepper className="sm" valor={c.cafeina ?? 0} onCambio={v => cambia({ cafeina: v })} paso={10} min={0} sufijo="mg cafeína" etiqueta="Cafeína" /></div>
-      )}
+      <details className="ux-com-afinar mt8">
+        <summary>
+          <span>Afinar: <span className="mono">{c.kcal} kcal · {c.proteina} g proteína{c.cafeina ? ` · ${c.cafeina} mg cafeína` : ''}</span></span>
+          <Ico n="caret-down" />
+        </summary>
+        <div className="grid2 mt8">
+          <Stepper className="sm" valor={c.proteina} onCambio={v => afinar({ proteina: v })} paso={1} min={0} sufijo="g prot." etiqueta="Proteína" />
+          <Stepper className="sm" valor={c.kcal} onCambio={v => afinar({ kcal: v })} paso={10} min={0} sufijo="kcal" etiqueta="kcal" />
+        </div>
+        {(c.tipo === 'bebida' || (c.cafeina ?? 0) > 0) && (
+          <div className="mt8"><Stepper className="sm" valor={c.cafeina ?? 0} onCambio={v => afinar({ cafeina: v })} paso={10} min={0} sufijo="mg cafeína" etiqueta="Cafeína" /></div>
+        )}
+      </details>
+      <p className="small muted mt4">Aproximado vale.</p>
       <p className="lbl fl mt16">Hora</p>
       <input className="inp inp-num" type="time" value={c.hora} onChange={e => e.target.value && cambia({ hora: e.target.value })} aria-label="Hora" />
       <div className="btns mt20">

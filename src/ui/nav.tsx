@@ -84,6 +84,15 @@ export function puedeVolver(s: EstadoNav): boolean {
   return !!s.hoja || !!s.completa || s.pilas[s.pestana].length > 1 || s.pestana !== 'ini'
 }
 
+/**
+ * Qué hace el botón atrás del móvil: en el entreno (sin ninguna hoja abierta) pregunta si acabarlo, para no
+ * salir sin querer; si no, vuelve atrás o, sin nada a lo que volver, Android minimiza la app.
+ */
+export function queHaceAtras(s: EstadoNav): 'preguntar-entreno' | 'atras' | 'minimizar-app' {
+  if (s.completa?.p === 'entreno' && !s.hoja) return 'preguntar-entreno'
+  return puedeVolver(s) ? 'atras' : 'minimizar-app'
+}
+
 type Nav = {
   estado: EstadoNav
   ir: (p: string, d?: Record<string, unknown>, pestana?: Pestana) => void

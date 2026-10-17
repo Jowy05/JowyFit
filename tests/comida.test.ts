@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, ordenarPlantillas, picoteoDeSemana, picoteoPorTamano, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
+import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
 import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
 import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
 
@@ -13,10 +13,26 @@ describe('franjas y raciones', () => {
     expect(franjaPorHora('21:00')).toBe('cena')
     expect(franjaPorHora('00:30')).toBe('cena')
   })
-  it('escala la ración P/N/G', () => {
-    expect(conRacion({ kcal: 600, proteina: 22 }, 'P')).toEqual({ kcal: 420, proteina: 15, cafeina: undefined })
-    expect(conRacion({ kcal: 600, proteina: 22 }, 'G').kcal).toBe(840)
-    expect(conRacion({ kcal: 230, proteina: 0, cafeina: 160 }, 'N').cafeina).toBe(160)
+  it('un plato: Poco = ⅓, Normal = el plato, Mucho = plato y medio', () => {
+    expect(conRacion({ kcal: 600, proteina: 24 }, 'P')).toEqual({ kcal: 200, proteina: 8, cafeina: undefined })
+    expect(conRacion({ kcal: 600, proteina: 24 }, 'N').kcal).toBe(600)
+    expect(conRacion({ kcal: 600, proteina: 24 }, 'G').kcal).toBe(900)
+    expect(conRacion({ kcal: 230, proteina: 0, cafeina: 160 }, 'N', 'bebida').cafeina).toBe(160)
+    // Si se cambian las kcal del plato, Poco y Mucho cambian en proporción.
+    expect(conRacion({ kcal: 900, proteina: 30 }, 'P', 'comida').kcal).toBe(300)
+    expect(conRacion({ kcal: 900, proteina: 30 }, 'G', 'comida').kcal).toBe(1350)
+  })
+  it('un picoteo guarda la bolsa entera: Poco = ⅓, Normal = la mitad, Mucho = todo', () => {
+    expect(conRacion({ kcal: 800, proteina: 9 }, 'P', 'picoteo').kcal).toBe(267)
+    expect(conRacion({ kcal: 800, proteina: 9 }, 'N', 'picoteo')).toMatchObject({ kcal: 400, proteina: 5 })
+    expect(conRacion({ kcal: 800, proteina: 9 }, 'G', 'picoteo').kcal).toBe(800)
+    expect(factorRacion('G', 'plantilla')).toBe(1.5)
+    expect(factorRacion('N', 'picoteo')).toBe(0.5)
+  })
+  it('los macros (hidratos, azúcares, grasas, sal) siguen a la ración', () => {
+    expect(conRacion({ kcal: 300, proteina: 6, hidratos: 30, azucares: 12, grasas: 9, sal: 0.9 }, 'P', 'comida')).toMatchObject({ hidratos: 10, azucares: 4, grasas: 3, sal: 0.3 })
+    expect(conRacion({ kcal: 300, proteina: 6 }, 'G')).not.toHaveProperty('hidratos')
+    expect(escalarMacros({ sal: 1.25 }, 2)).toEqual({ sal: 2.5 })
   })
   it('ordena plantillas por uso', () => {
     const ps: Plantilla[] = [{ nombre: 'B', kcal: 1, proteina: 1, tipo: 'comida', usos: 2 }, { nombre: 'A', kcal: 1, proteina: 1, tipo: 'comida', usos: 9 }, { nombre: 'C', kcal: 1, proteina: 1, tipo: 'comida', usos: 2 }]
@@ -29,7 +45,7 @@ describe('Open Food Facts', () => {
     status: 1,
     product: {
       product_name: 'Arroz al curry con pollo', brands: 'Hacendado, Mercadona', serving_quantity: '360',
-      nutriments: { 'energy-kcal_100g': 167, proteins_100g: 6.1, carbohydrates_100g: 23, fat_100g: 5 },
+      nutriments: { 'energy-kcal_100g': 167, proteins_100g: 6.1, carbohydrates_100g: 23, fat_100g: 5, sugars_100g: 2.5, salt_100g: 0.8 },
       image_front_small_url: 'https://images.openfoodfacts.org/x.jpg',
     },
   }
@@ -40,6 +56,10 @@ describe('Open Food Facts', () => {
     expect(p.kcalRacion).toBe(601)
     expect(p.proteinaRacion).toBe(22)
     expect(porRacion(p)).toMatchObject({ kcal: 601, proteina: 22, base: 'racion' })
+    // Hidratos, azúcares, grasas y sal de la etiqueta, pasados a la ración de 360 g.
+    expect(p.azucares100).toBe(2.5)
+    expect(p.sal100).toBe(0.8)
+    expect(porRacion(p)).toMatchObject({ hidratos: 82.8, azucares: 9, grasas: 18, sal: 2.9 })
   })
   it('usa kJ si no hay kcal y por 100 g si no hay ración', () => {
     const p = leerOFF('1', { status: 1, product: { product_name: 'Galletas', nutriments: { 'energy-kj_100g': 2092, proteins_100g: 7 } } })!
@@ -122,9 +142,10 @@ describe('lo de ayer y recientes', () => {
 
 describe('nota rápida y Mis comidas', () => {
   it('rellena kcal y proteína según el tamaño y la franja', () => {
+    // Las mismas proporciones que un plato: ⅓, el plato, plato y medio.
     expect(notaPorTamano('normal', 'comida')).toEqual({ kcal: 600, proteina: 25 })
-    expect(notaPorTamano('ligera', 'cena')).toEqual({ kcal: 350, proteina: 15 })
-    expect(notaPorTamano('abundante', 'comida')).toEqual({ kcal: 900, proteina: 35 })
+    expect(notaPorTamano('ligera', 'cena')).toEqual({ kcal: 200, proteina: 8 })
+    expect(notaPorTamano('abundante', 'comida')).toEqual({ kcal: 900, proteina: 38 })
     // Desayuno y merienda, más pequeños.
     expect(notaPorTamano('normal', 'desayuno').kcal).toBeLessThan(notaPorTamano('normal', 'comida').kcal)
     expect(notaPorTamano('ligera', 'merienda').kcal).toBeLessThan(notaPorTamano('normal', 'merienda').kcal)
@@ -140,18 +161,9 @@ describe('nota rápida y Mis comidas', () => {
   })
   it('reconoce el tamaño de una comida guardada', () => {
     expect(tamanoDe(600, 25, 'comida')).toBe('normal')
-    expect(tamanoDe(200, 8, 'desayuno')).toBe('ligera')
-    expect(tamanoDe(900, 35, 'cena')).toBe('abundante')
+    expect(tamanoDe(120, 5, 'desayuno')).toBe('ligera')
+    expect(tamanoDe(900, 38, 'cena')).toBe('abundante')
     expect(tamanoDe(610, 25, 'comida')).toBeNull()
-  })
-  it('el picoteo tiene sus propios «Poco · Normal · Mucho», más pequeños que una comida', () => {
-    const [p, n, m] = TAMANOS_NOTA.map(t => picoteoPorTamano(t.v))
-    expect(p!.kcal).toBeLessThan(n!.kcal)
-    expect(n!.kcal).toBeLessThan(m!.kcal)
-    expect(m!.kcal).toBeLessThan(notaPorTamano('normal', 'desayuno').kcal + 1)
-    expect(tamanoDe(200, 3, 'comida', true)).toBe('normal')
-    expect(tamanoDe(200, 3, 'comida')).toBeNull()
-    expect(tamanoDe(210, 3, 'merienda', true)).toBeNull()
   })
   it('no repite los escaneados que ya están en Mis comidas', () => {
     const ps = [{ codigo: '1' }, { codigo: '2' }, { codigo: '3' }]

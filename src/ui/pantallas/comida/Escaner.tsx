@@ -9,7 +9,7 @@ import type { Camara } from '../../../plataforma/escanerWeb'
 import { cx, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
-import { Mini, apuntar, kp } from './comun'
+import { LineaMacros, Mini, apuntar, kp } from './comun'
 
 type Estado =
   | { e: 'camara' }
@@ -75,8 +75,9 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
   // Doble toque en «Añadir»: apuntaba dos veces y hacía «atrás» dos veces (salía también de la pantalla anterior).
   const unaVez = useUnaVez()
   const apuntarProducto = async (p: Producto) => {
-    const v = porRacion(p)
-    const des = await apuntar({ fecha, franja, nombre: p.nombre, kcal: v.kcal, proteina: v.proteina, cafeina: v.cafeina, racion: 'N', tipo: 'producto', codigo: p.codigo })
+    const { base: _, ...v } = porRacion(p)
+    // Con lo que traiga la etiqueta: hidratos, azúcares, grasas y sal se apuntan también.
+    const des = await apuntar({ fecha, franja, nombre: p.nombre, ...v, racion: 'N', tipo: 'producto', codigo: p.codigo })
     nav.atras()
     aviso(`Añadido: ${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
   }
@@ -154,6 +155,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
                   <small className="muted">{estado.p.marca ? `${estado.p.marca} · ` : ''}<span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span> {v.base === 'racion' ? 'por ración' : 'por 100 g'}</small>
                 </div>
               </div>
+              <LineaMacros m={v} className="mt8" />
               <button className="btn mt12" onClick={() => void anadir(estado.p)}><Ico n="plus" b />Añadir</button>
               <div className="btns mt8">
                 <button className="btn gry sm" onClick={() => nav.reemplazar('com-prod', { codigo: estado.p.codigo, fecha, franja })}>Ver producto</button>

@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Comida, Franja } from '../../../datos/tipos'
-import { FACTOR_RACION, FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, TAMANOS_NOTA, notaPorTamano, tamanoDe, type Racion, type TamanoNota } from '../../../dominio/comida'
+import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, escalarMacros, factorRacion, notaPorTamano, tamanoDe, tipoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
 import { Chip, Hoja, Ico, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
-import { useUrlBlob } from './comun'
+import { LineaMacros, useUrlBlob } from './comun'
 
 export function HojaComida({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -29,9 +29,11 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
   // Lo que viene de algo guardado (Mis comidas, un producto, picoteo o bebida) se agranda o achica con la ración;
   // lo escrito a mano, con los mismos tamaños que al apuntarlo.
   const aMano = c.tipo === 'nota' || c.tipo === 'foto'
+  // Lo que sería «Normal» con los números de ahora: de ahí salen Poco y Mucho (un picoteo guarda «Normal» = la mitad).
+  const enRacion = (r: Racion) => factorRacion(r, c.tipo) / factorRacion(c.racion, c.tipo)
   const ponerRacion = (r: Racion) => {
-    const f = FACTOR_RACION[r] / FACTOR_RACION[c.racion]
-    cambia({ racion: r, kcal: Math.round(c.kcal * f), proteina: Math.round(c.proteina * f), cafeina: c.cafeina ? Math.round(c.cafeina * f) : c.cafeina })
+    const f = enRacion(r)
+    cambia({ racion: r, kcal: Math.round(c.kcal * f), proteina: Math.round(c.proteina * f), cafeina: c.cafeina ? Math.round(c.cafeina * f) : c.cafeina, ...escalarMacros(c, f) })
   }
   const ponerTamano = (t: TamanoNota) => { setTam(t); cambia(notaPorTamano(t, c.franja)) }
   const ponerFranja = (franja: Franja) => cambia({ franja, ...(aMano && tam ? notaPorTamano(tam, franja) : {}) })
@@ -64,7 +66,11 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
                 <span>{t.t}<small className="mono">~{notaPorTamano(t.v, c.franja).kcal} kcal</small></span>
               </Chip>
             ))
-          : (['P', 'N', 'G'] as const).map(r => <Chip key={r} on={c.racion === r} onClick={() => ponerRacion(r)}>{NOMBRE_RACION[r]}</Chip>)}
+          : (['P', 'N', 'G'] as const).map(r => (
+              <Chip key={r} className="big ux-com-tam" on={c.racion === r} onClick={() => ponerRacion(r)}>
+                <span>{NOMBRE_RACION[r]}<small>{PISTA_RACION[tipoRacion(c.tipo)][r]} · <span className="mono">{Math.round(c.kcal * enRacion(r))}</span></small></span>
+              </Chip>
+            ))}
       </div>
       <details className="ux-com-afinar mt8">
         <summary>
@@ -79,6 +85,7 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
           <div className="mt8"><Stepper className="sm" valor={c.cafeina ?? 0} onCambio={v => afinar({ cafeina: v })} paso={10} min={0} sufijo="mg cafeína" etiqueta="Cafeína" /></div>
         )}
       </details>
+      <LineaMacros m={c} className="mt4" />
       <p className="small muted mt4">Aproximado vale.</p>
       <p className="lbl fl mt16">Hora</p>
       <input className="inp inp-num" type="time" value={c.hora} onChange={e => e.target.value && cambia({ hora: e.target.value })} aria-label="Hora" />

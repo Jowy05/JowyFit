@@ -214,6 +214,11 @@ export type Comida = {
   plantillaId?: number
   codigo?: string
   foto?: Blob
+  /** Gramos, solo si se saben (escaneados): hidratos, de ellos azúcares, grasas y sal. */
+  hidratos?: number
+  azucares?: number
+  grasas?: number
+  sal?: number
 }
 
 export type Plantilla = {
@@ -227,6 +232,11 @@ export type Plantilla = {
   usos: number
   foto?: Blob
   codigo?: string
+  /** Gramos, solo si se saben (de un escaneado): hidratos, de ellos azúcares, grasas y sal. */
+  hidratos?: number
+  azucares?: number
+  grasas?: number
+  sal?: number
 }
 
 export type Producto = {
@@ -238,6 +248,8 @@ export type Producto = {
   proteina100: number | null
   hidratos100?: number | null
   grasas100?: number | null
+  azucares100?: number | null
+  sal100?: number | null
   /** mg por 100 g */
   cafeina100?: number | null
   racionG: number | null

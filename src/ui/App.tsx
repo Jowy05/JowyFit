@@ -8,7 +8,7 @@ import { alPulsarAtras } from '../plataforma'
 import { ProveedorAviso } from './aviso'
 import { cx, Ico } from './comp'
 import { letraGuardada } from './tema'
-import { ProveedorNav, puedeVolver, useNav, type Pestana, type Ruta } from './nav'
+import { ProveedorNav, queHaceAtras, useNav, type Pestana, type Ruta } from './nav'
 import { useSesionEnCurso } from './datos'
 import { HOJAS, PANTALLAS, precargarPantallas } from './pantallas/registro'
 import { Alta } from './pantallas/alta/Alta'
@@ -16,6 +16,8 @@ import { MiniBarra } from './pantallas/entreno/MiniBarra'
 import { arrancarServicios } from './servicios'
 
 export type PropsPantalla = { ruta: Ruta }
+
+declare global { interface Window { __jfAtras?: () => boolean } }
 
 export function App() {
   const [listo, setListo] = useState(false)
@@ -64,14 +66,17 @@ function Marco() {
   estado.current = nav.estado
 
   useEffect(() => {
+    const manejar = () => {
+      const que = queHaceAtras(estado.current)
+      if (que === 'preguntar-entreno') nav.hoja('sheet-salir-entreno')
+      else if (que === 'atras') nav.atras()
+      return que !== 'minimizar-app'
+    }
+    // Las pruebas de extremo a extremo (en el navegador no hay botón atrás) lo pulsan por aquí.
+    window.__jfAtras = manejar
     let quitar = () => {}
-    void alPulsarAtras(() => {
-      const s = estado.current
-      if (!puedeVolver(s)) return false
-      nav.atras()
-      return true
-    }).then(f => { quitar = f })
-    return () => quitar()
+    void alPulsarAtras(manejar).then(f => { quitar = f })
+    return () => { quitar(); delete window.__jfAtras }
   }, [nav])
 
   useEffect(() => {

@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { db } from '../../../datos/db'
 import type { Comida, Plantilla } from '../../../datos/tipos'
-import { aspecto, buscarOFF, conRacion, franjaPorHora, type Racion } from '../../../dominio/comida'
+import { CLAVES_MACROS, NOMBRE_MACRO, aspecto, buscarOFF, conRacion, franjaPorHora, type Macros, type Racion } from '../../../dominio/comida'
+import { num } from '../../../dominio/calculos'
 import { horaActual } from '../../../dominio/fechas'
 import { Cab, cx, Ico, Seg } from '../../comp'
 import { useNav } from '../../nav'
@@ -47,11 +48,11 @@ export async function apuntar(c: Omit<Comida, 'id' | 'hora' | 'franja'> & { hora
   return () => { void db.comidas.delete(id) }
 }
 
-/** Apunta una plantilla en la ración elegida y cuenta un uso más. */
+/** Apunta una plantilla en la ración elegida (un picoteo guarda la bolsa entera; una comida, el plato) y cuenta un uso más. */
 export async function apuntarPlantilla(p: Plantilla, r: Racion, fecha: string, franja?: Comida['franja']): Promise<() => void> {
-  const v = conRacion(p, r)
+  const v = conRacion(p, r, p.tipo)
   const tipo: Comida['tipo'] = p.tipo === 'comida' ? 'plantilla' : p.tipo
-  const deshacer = await apuntar({ fecha, franja, nombre: p.nombre, kcal: v.kcal, proteina: v.proteina, cafeina: v.cafeina, racion: r, tipo, plantillaId: p.id, codigo: p.codigo, foto: p.foto })
+  const deshacer = await apuntar({ fecha, franja, nombre: p.nombre, ...v, racion: r, tipo, plantillaId: p.id, codigo: p.codigo, foto: p.foto })
   if (p.id != null) await db.plantillas.update(p.id, { usos: p.usos + 1 })
   return () => { deshacer(); if (p.id != null) void db.plantillas.update(p.id, { usos: p.usos }) }
 }
@@ -84,6 +85,13 @@ export function Deslizable({ children, onBorrar, onAbrir }: { children: ReactNod
       <button className="swipe-del" aria-label="Borrar" onClick={() => { setAbierta(false); onBorrar() }}><Ico n="trash" b />Borrar</button>
     </div>
   )
+}
+
+/** Hidratos, azúcares, grasas y sal en una línea pequeña («Hidratos 23 g · de ellos, azúcares 4 g · …»); nada si no se saben. */
+export function LineaMacros({ m, className }: { m: Macros; className?: string }) {
+  const hay = CLAVES_MACROS.filter(k => m[k] != null)
+  if (!hay.length) return null
+  return <p className={cx('small muted', className)}>{hay.map(k => `${NOMBRE_MACRO[k]} ${num(m[k]!)} g`).join(' · ')}</p>
 }
 
 /** kcal y proteína en una línea («600 kcal · 22 g proteína»), siempre con la unidad. */

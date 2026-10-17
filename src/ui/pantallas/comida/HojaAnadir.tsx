@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Comida, Franja, Plantilla, Producto } from '../../../datos/tipos'
-import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, notaPorTamano, ordenarPlantillas, porRacion, recientes, textoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
+import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, notaPorTamano, ordenarPlantillas, porRacion, recientes, soloMacros, textoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
 import { horaActual, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
@@ -46,7 +46,8 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const ayer = deAyer(ultimas, sumarDias(fecha, -1), franja)
   const recien = recientes(ultimas, fecha, plantillas, MAX_RECIENTES)
   const comidas = ordenarPlantillas(plantillas.filter(p => p.tipo === 'comida'))
-  const snacks = ordenarPlantillas(plantillas.filter(p => p.tipo !== 'comida'))
+  const picoteos = ordenarPlantillas(plantillas.filter(p => p.tipo === 'picoteo'))
+  const bebidas = ordenarPlantillas(plantillas.filter(p => p.tipo === 'bebida'))
   const tipico = tam ? notaPorTamano(tam, franja) : null
   const kcal = tipico ? tipico.kcal : manual.kcal
   const prot = tipico ? tipico.proteina : manual.prot
@@ -75,16 +76,16 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
 
   const usar = unaVez(async (p: Plantilla, r: Racion) => {
     const des = await apuntarPlantilla(p, r, fecha, p.tipo === 'comida' ? franja : esHoy ? franjaPorHora(hora) : franja)
-    const v = conRacion(p, r)
+    const v = conRacion(p, r, p.tipo)
     listo(p.tipo === 'comida' ? `${p.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}` : `${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
   })
   const usarProducto = unaVez(async (p: Producto) => {
-    const v = porRacion(p)
-    const des = await apuntar({ fecha, hora, franja, nombre: p.nombre, kcal: v.kcal, proteina: v.proteina, cafeina: v.cafeina, racion: 'N', tipo: 'producto', codigo: p.codigo })
+    const { base: _, ...v } = porRacion(p)
+    const des = await apuntar({ fecha, hora, franja, nombre: p.nombre, ...v, racion: 'N', tipo: 'producto', codigo: p.codigo })
     listo(p.nombre, des)
   })
   // Copia de algo ya apuntado (sin la foto, que era de aquel día).
-  const copia = (c: Comida) => apuntar({ fecha, hora, franja, nombre: c.nombre, kcal: c.kcal, proteina: c.proteina, cafeina: c.cafeina, racion: c.racion, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
+  const copia = (c: Comida) => apuntar({ fecha, hora, franja, nombre: c.nombre, kcal: c.kcal, proteina: c.proteina, cafeina: c.cafeina, ...soloMacros(c), racion: c.racion, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
   const repetirAyer = unaVez(async () => {
     const deshacer = await Promise.all(ayer.map(copia))
     listo(ayer.length === 1 ? ayer[0]!.nombre : `${NOMBRE_FRANJA[franja].toLowerCase()} de ayer (${ayer.length})`, () => deshacer.forEach(d => d()))
@@ -206,9 +207,27 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
         </>
       )}
 
-      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">Picoteo y bebida</h2><span className="lbl">Toca para apuntar</span></div>
+      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">Picoteo</h2><span className="lbl">Poco ⅓ · Normal la mitad · Mucho todo</span></div>
+      {picoteos.length > 0 && (
+        <div className="list">
+          {picoteos.map(p => (
+            <div key={p.id} className="it tpl">
+              <button className="tpl-m" onClick={() => void usar(p, 'N')}>
+                <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
+                <span className="tx"><b>{p.nombre}</b><small className="mono">entero: {p.kcal} kcal</small></span>
+              </button>
+              <span className="png ux-com-png" role="group" aria-label={`Cuánto de ${p.nombre}`}>
+                {(['P', 'N', 'G'] as const).map(r => (
+                  <button key={r} className={cx(r === 'N' && 'on')} aria-label={`${NOMBRE_RACION[r]} (${PISTA_RACION.picoteo[r]})`} onClick={() => void usar(p, r)}>{NOMBRE_RACION[r]}</button>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="sec-h mt16"><h2 className="h3">Bebida</h2><span className="lbl">Toca para apuntar</span></div>
       <div className="snk">
-        {snacks.map(p => (
+        {bebidas.map(p => (
           <button key={p.id} onClick={() => void usar(p, 'N')}>
             <b>{p.nombre}</b>
             <small className="mono">{textoSnack(p)}</small>

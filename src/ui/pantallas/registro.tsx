@@ -35,6 +35,7 @@ const Entreno = perezosa(() => import('./entreno/Entreno'), 'Entreno')
 const FinEntreno = perezosa(() => import('./entreno/FinEntreno'), 'FinEntreno')
 const HojaOcupado = perezosa(() => import('./entreno/HojaOcupado'), 'HojaOcupado')
 const HojaLista = perezosa(() => import('./entreno/HojaLista'), 'HojaLista')
+const HojaSalirEntreno = perezosa(() => import('./entreno/HojaSalirEntreno'), 'HojaSalirEntreno')
 const HojaHerramientas = perezosa(() => import('./entreno/HojasEntreno'), 'HojaHerramientas')
 const HojaDiscos = perezosa(() => import('./entreno/HojasEntreno'), 'HojaDiscos')
 const HojaCalentamiento = perezosa(() => import('./entreno/HojasEntreno'), 'HojaCalentamiento')
@@ -101,6 +102,7 @@ export const HOJAS: Record<string, P> = {
   'sheet-ses1': HojaEmpezar,
   'sheet-ocup': HojaOcupado,
   'sheet-lista': HojaLista,
+  'sheet-salir-entreno': HojaSalirEntreno,
   'sheet-tools': HojaHerramientas,
   'sheet-discos': HojaDiscos,
   'sheet-cal': HojaCalentamiento,

@@ -224,6 +224,36 @@ escenario('entreno: minimizar, recargar y seguir', async () => {
   await ver('Entreno terminado')
 })
 
+escenario('entreno: el botón atrás pregunta si acabarlo', async () => {
+  await deCero('2026-10-13T05:20:00')
+  await alta()
+  // Entreno libre: atrás → «Estás en un entreno libre». «Continuar» sigue; «Acabar» sin series lo cierra y sale.
+  await pestana('Rutina')
+  await pulsar('Otras formas de entrenar')
+  await pulsar('Entreno libre')
+  await ver('Añade el primer ejercicio', 8000)
+  await js('window.__jfAtras()')
+  await ver('Estás en un entreno libre')
+  await pulsar('Continuar', '.sheet')
+  await ver('Añade el primer ejercicio')
+  await js('window.__jfAtras()')
+  await pulsar('Acabar', '.sheet')
+  await ver('Entreno libre cerrado')
+  await noVer('Añade el primer ejercicio')
+  if ((await tabla('sesiones')).some(s => s.estado === 'curso')) throw new Error('El entreno libre sigue abierto')
+  // Entreno de la rutina con una serie hecha: «Acabar» lleva al resumen para guardarlo.
+  await pestana('Inicio')
+  await pulsar('Empezar rutina')
+  await pulsar('Empezar', '.sheet')
+  await ver('Hecho', 8000)
+  await ponerPesoSiFalta()
+  await pulsar(/^Hecho$/)
+  await js('window.__jfAtras()')
+  await ver('Estás entrenando')
+  await pulsar('Acabar', '.sheet')
+  await ver('Entreno terminado')
+})
+
 escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await deCero('2026-10-13T14:10:00')
   await alta()
@@ -256,9 +286,23 @@ escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await pulsar('Crear comida nueva', '.sheet')
   await t('escribir', '.sheet input[aria-label="Nombre de la comida"]', 'Lentejas de mi madre')
   await pulsar('Guardar y apuntar', '.sheet')
-  await ver('Añadido: Lentejas de mi madre')
+  await ver('Apuntado: Lentejas de mi madre')
+  // El picoteo guarda la bolsa entera: «Mucho» es toda la bolsa (800 kcal) y «Normal», la mitad.
+  await pulsar('Añadir', '.dock')
+  await t('pulsarSel', '.sheet [aria-label="Cuánto de Bolsa de patatas grande"] [aria-label="Mucho (todo)"]')
+  await ver('Añadido: Bolsa de patatas grande')
+  const apuntadas = await tabla('comidas')
+  if (apuntadas.find(c => c.nombre === 'Lentejas de mi madre')?.kcal !== 600) throw new Error('«Guardar y apuntar» no apunta el plato normal')
+  if (apuntadas.find(c => c.nombre === 'Bolsa de patatas grande')?.kcal !== 800) throw new Error('«Mucho» de un picoteo no es la bolsa entera')
   await seg('Mis comidas')
   await ver('Lentejas de mi madre')
+  // Desde Mis comidas también se puede apuntar al crear, y borrar al editar.
+  await pulsar('Crear comida nueva')
+  await ver('Guardar y apuntar')
+  await t('pulsarSel', '.sheet button[aria-label="Cerrar"]')
+  await t('pulsarSel', 'button[aria-label="Editar Lentejas de mi madre"]')
+  await pulsar('Borrar de Mis comidas', '.sheet')
+  await ver('Borrado de Mis comidas')
 })
 
 escenario('comida: escáner con y sin conexión', async () => {

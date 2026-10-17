@@ -44,7 +44,7 @@ export function Plantillas() {
         <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
         <span className="tx">
           <b>{p.nombre}</b>
-          <small>{p.tipo !== 'comida' && <span className="tag">{TIPO[p.tipo]}</span>}<span className="mono">{kp(p.kcal, p.proteina, p.cafeina)}</span></small>
+          <small>{p.tipo !== 'comida' && <span className="tag">{TIPO[p.tipo]}</span>}<span className="mono">{p.tipo === 'picoteo' ? 'entero: ' : ''}{kp(p.kcal, p.proteina, p.cafeina)}</span></small>
         </span>
         <Ico n="plus" b className="car" />
       </button>

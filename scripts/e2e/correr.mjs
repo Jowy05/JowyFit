@@ -260,9 +260,11 @@ escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await pestana('Comida')
   await pulsar('Añadir', '.dock')
   await pulsar('Batido de proteína', '.sheet')
+  await pulsar(/^Normal/, '.popup')
   await ver('Añadido: Batido')
   await pulsar('Añadir', '.dock')
   await pulsar('Bolsa de patatas pequeña', '.sheet')
+  await pulsar(/^Normal/, '.popup')
   // El aviso no puede tapar el botón principal de abajo.
   const tapaAviso = await js(`const a = document.querySelector('.toast')?.getBoundingClientRect(); const d = document.querySelector('.dock .btn')?.getBoundingClientRect(); return !!(a && d && a.bottom > d.top && a.top < d.bottom)`)
   if (tapaAviso) throw new Error('El aviso tapa el botón «Añadir»')
@@ -289,7 +291,10 @@ escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await ver('Apuntado: Lentejas de mi madre')
   // El picoteo guarda la bolsa entera: «Mucho» es toda la bolsa (800 kcal) y «Normal», la mitad.
   await pulsar('Añadir', '.dock')
-  await t('pulsarSel', '.sheet [aria-label="Cuánto de Bolsa de patatas grande"] [aria-label="Mucho (todo)"]')
+  // Tocar cualquier comida abre «¿Cuánto?»: se elige y se suma.
+  await pulsar('Bolsa de patatas grande', '.sheet')
+  await ver('¿Cuánto has tomado?')
+  await pulsar(/^Mucho/, '.popup')
   await ver('Añadido: Bolsa de patatas grande')
   const apuntadas = await tabla('comidas')
   if (apuntadas.find(c => c.nombre === 'Lentejas de mi madre')?.kcal !== 600) throw new Error('«Guardar y apuntar» no apunta el plato normal')
@@ -402,6 +407,7 @@ if (!compilada) escenario('copia de seguridad: exportar e importar', async () =>
   await pestana('Comida')
   await pulsar('Añadir', '.dock')
   await pulsar('Batido de proteína', '.sheet')
+  await pulsar(/^Normal/, '.popup')
   // Exporta con la función real de la app, borra todo e importa.
   const r = await js(`
     const m = await import('/src/datos/copias.ts').catch(() => null)
@@ -491,6 +497,7 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   await pestana('Comida')
   await pulsar('Añadir', '.dock')
   await pulsar('Batido de proteína', '.sheet')
+  await pulsar(/^Normal/, '.popup')
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
   await pulsar('Hacer copia ahora')
@@ -593,6 +600,44 @@ escenario('comida: lo de ayer y recientes', async () => {
   await ver('Añadido: Tostadas con tomate')
   const hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-14')
   if (hoy.length !== 1 || hoy[0].franja !== 'desayuno') throw new Error('No se ha repetido lo de ayer: ' + JSON.stringify(hoy))
+  // Un reciente también pregunta cuánto: «Poco» es un tercio de lo que era su «Normal».
+  await pulsar('Añadir', '.dock')
+  await js(`[...document.querySelectorAll('.sheet button.it')].find(b => b.innerText.trim().startsWith('Tostadas con tomate')).click()`)
+  await pulsar(/^Poco/, '.popup')
+  await ver('Añadido: Tostadas con tomate (poco)')
+  const poco = (await tabla('comidas')).filter(c => c.fecha === '2026-10-14').map(c => c.kcal).sort((a, b) => a - b)
+  if (poco.length !== 2 || poco[0] !== Math.round(poco[1] / 3)) throw new Error('«Poco» de un reciente no es un tercio: ' + JSON.stringify(poco))
+})
+
+escenario('comida: suplementos con su cantidad y el batido suma proteína', async () => {
+  await deCero('2026-10-13T18:10:00')
+  await alta()
+  // En el alta no se eligen suplementos: se ponen en el perfil.
+  const perfil = (await tabla('perfil'))[0]
+  perfil.suplementos = ['Creatina', 'Batido de proteína']
+  await meter('perfil', [perfil])
+  await recargar()
+  await pestana('Comida')
+  await ver('Suplementos de hoy')
+  await ver('3-5 g')
+  // Cambiar la cantidad de creatina y la proteína del batido.
+  await t('pulsarSel', 'button[aria-label="Cambiar cantidad de Creatina"]')
+  await t('escribir', '.sheet input', '10 g')
+  await pulsar('Guardar', '.sheet')
+  await ver('10 g')
+  await t('pulsarSel', 'button[aria-label="Cambiar cantidad de Batido de proteína"]')
+  for (let i = 0; i < 6; i++) await t('pulsarSel', '.sheet [aria-label="Proteína del batido"] button[aria-label="Más"]')
+  await pulsar('Guardar', '.sheet')
+  await ver('30 g proteína')
+  // Marcar el batido lo apunta y suma 30 g al día; desmarcarlo lo quita.
+  await pulsar('Batido de proteína')
+  await ver('Apuntado: Batido de proteína · 30 g proteína')
+  let hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-13')
+  if (hoy.length !== 1 || hoy[0].proteina !== 30) throw new Error('El batido no suma su proteína: ' + JSON.stringify(hoy))
+  await pulsar('Batido de proteína')
+  await esperar(400)
+  hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-13')
+  if (hoy.length !== 0) throw new Error('Al desmarcar el batido no se quita')
 })
 
 escenario('repaso visual de todas las pestañas', async () => {

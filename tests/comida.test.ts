@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FRANJAS, NOMBRE_RACION, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
+import { FRANJAS, NOMBRE_RACION, batidoDe, dosisDe, esBatido, kcalBatido, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
 import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
 import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
 
@@ -169,5 +169,21 @@ describe('nota rápida y Mis comidas', () => {
     const ps = [{ codigo: '1' }, { codigo: '2' }, { codigo: '3' }]
     expect(escaneadosSueltos(ps, [{ codigo: '2' }, {}]).map(p => p.codigo)).toEqual(['1', '3'])
     expect(escaneadosSueltos(ps, [])).toHaveLength(3)
+  })
+})
+
+describe('suplementos', () => {
+  it('cada uno con su cantidad, o la habitual si no la ha puesto', () => {
+    expect(dosisDe(undefined, 'Creatina')).toBe('3-5 g')
+    expect(dosisDe({ Creatina: '10 g' }, 'Creatina')).toBe('10 g')
+    expect(dosisDe({ Creatina: '  ' }, 'Creatina')).toBe('3-5 g')
+    expect(dosisDe({}, 'Omega 3')).toBe('')
+  })
+  it('el batido lleva su proteína (24 g si no se ha dicho)', () => {
+    expect(esBatido('Batido de proteína')).toBe(true)
+    expect(esBatido('Creatina')).toBe(false)
+    expect(batidoDe(undefined)).toEqual({ proteina: 24, kcal: 120 })
+    expect(batidoDe({ proteina: 30, kcal: 150 }).proteina).toBe(30)
+    expect(kcalBatido(30)).toBe(150)
   })
 })

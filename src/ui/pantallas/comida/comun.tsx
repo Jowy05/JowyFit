@@ -1,8 +1,9 @@
 // Piezas compartidas de la pestaña Comida.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { db } from '../../../datos/db'
 import type { Comida, Plantilla } from '../../../datos/tipos'
-import { CLAVES_MACROS, NOMBRE_MACRO, aspecto, buscarOFF, conRacion, franjaPorHora, type Macros, type Racion } from '../../../dominio/comida'
+import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, buscarOFF, conRacion, escalarMacros, factorRacion, franjaPorHora, tipoRacion, type Macros, type Racion } from '../../../dominio/comida'
 import { num } from '../../../dominio/calculos'
 import { horaActual } from '../../../dominio/fechas'
 import { Cab, cx, Ico, Seg } from '../../comp'
@@ -110,4 +111,43 @@ export async function buscarPendientes(): Promise<number> {
     if (r.estado === 'encontrado') { await db.productos.put(r.producto); n++ }
   }
   return n
+}
+
+/** Algo que se va a apuntar: lo guardado (el plato, o la bolsa entera si es picoteo) y qué hacer con la ración elegida. */
+export type ParaElegir = { nombre: string; base: { kcal: number; proteina: number; cafeina?: number } & Macros; tipo?: string; elegir: (r: Racion) => void }
+
+/** Lo guardado de algo ya apuntado: deshace su ración (un «Mucho» de 900 kcal era un plato de 600). */
+export function baseDeApuntada(c: Comida): ParaElegir['base'] {
+  const f = 1 / factorRacion(c.racion, c.tipo)
+  return { kcal: c.kcal * f, proteina: c.proteina * f, cafeina: c.cafeina ? c.cafeina * f : undefined, ...escalarMacros(c, f) }
+}
+
+/**
+ * Ventana «¿Cuánto?» al tocar cualquier cosa para apuntarla: tres botones grandes (Poco · Normal · Mucho) con lo que
+ * suma cada uno. Se pinta encima de todo (también de la hoja de Añadir). Tocar fuera o «Cancelar» la cierra.
+ */
+export function ElegirCuanto({ x, onCerrar }: { x: ParaElegir | null; onCerrar: () => void }) {
+  if (!x) return null
+  const tr = tipoRacion(x.tipo)
+  const destino = document.querySelector('.app') ?? document.body
+  return createPortal(
+    <div className="popup-fondo" onClick={onCerrar}>
+      <div className="popup" role="dialog" aria-modal="true" aria-label={`Cuánto de ${x.nombre}`} onClick={e => e.stopPropagation()}>
+        <p className="lbl">¿Cuánto has tomado?</p>
+        <h3 className="h3 mt4">{x.nombre}</h3>
+        <div className="popup-op">
+          {(['P', 'N', 'G'] as const).map(r => {
+            const v = conRacion(x.base, r, x.tipo)
+            return (
+              <button key={r} className={cx('chip big ux-com-tam', r === 'N' && 'on')} onClick={() => x.elegir(r)}>
+                <span>{NOMBRE_RACION[r]}<small className="mono">{v.kcal} kcal</small><small>{PISTA_RACION[tr][r]}</small></span>
+              </button>
+            )
+          })}
+        </div>
+        <button className="btn gry sm mt12" onClick={onCerrar}>Cancelar</button>
+      </div>
+    </div>,
+    destino,
+  )
 }

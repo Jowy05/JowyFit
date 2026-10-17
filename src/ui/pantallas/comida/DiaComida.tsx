@@ -4,13 +4,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { objetivosEnergia, totalesComida } from '../../../datos/consultas'
 import type { Comida } from '../../../datos/tipos'
-import { FRANJAS, avisoCafeina, datosQuincena, picoteoDeSemana, textoRacion } from '../../../dominio/comida'
+import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, picoteoDeSemana, textoRacion } from '../../../dominio/comida'
 import { DIAS, MESES_CORTOS, deISO, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { Barra, cx, Ico, Pantalla, Seccion } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
 import { CabComida, Deslizable, Mini } from './comun'
+import { batidoAMano, desmarcarSuplemento, marcarSuplemento } from './suplementos'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -44,10 +45,11 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
     await db.comidas.delete(c.id!)
     aviso(`Borrado: ${c.nombre}`, () => { void db.comidas.add(c) })
   }
+  // El batido, al marcarlo, se apunta con su proteína (suma al día); al desmarcarlo, se quita.
   const alternarSuplemento = async (s: string) => {
-    const t = new Set(tomados)
-    if (t.has(s)) t.delete(s); else t.add(s)
-    await db.suplementos.put({ fecha, tomados: [...t] })
+    if (tomados.includes(s)) { await desmarcarSuplemento(fecha, s); return }
+    const deshacer = await marcarSuplemento(perfil, fecha, s)
+    if (esBatido(s)) aviso(`Apuntado: ${s} · ${batidoDe(perfil.batido).proteina} g proteína`, deshacer)
   }
   const verDia = (n: number) => setFecha(f => sumarDias(f, n))
   // Redondeado: las raciones P/G dejan decimales y salía «Faltan 112.6 g».
@@ -136,14 +138,20 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
           <Seccion titulo={esHoy ? 'Suplementos de hoy' : 'Suplementos'}>
             <div className="list">
               {perfil.suplementos.map(s => {
-                const batidoApuntado = /prote|batido/i.test(s) && comidas.some(c => /batido|prote/i.test(c.nombre))
-                const hecho = tomados.includes(s) || batidoApuntado
+                const batido = esBatido(s)
+                // Un batido apuntado a mano (desde Añadir) también cuenta como tomado, sin apuntarlo dos veces.
+                const aMano = batido && !tomados.includes(s) && batidoAMano(comidas)
+                const hecho = tomados.includes(s) || aMano
+                const dosis = dosisDe(perfil.dosisSuplementos, s)
+                const detalle = [dosis, batido ? `${batidoDe(perfil.batido).proteina} g proteína${hecho && !aMano ? ' · sumada al día' : ''}` : '', aMano ? 'ya apuntado' : ''].filter(Boolean).join(' · ')
                 return (
-                  <button key={s} className={cx('it todo', hecho && 'done')} onClick={() => batidoApuntado && !tomados.includes(s) ? aviso('Ya tienes un batido apuntado hoy') : void alternarSuplemento(s)}>
-                    <span className="box"><Ico n="check" b /></span>
-                    <span className="tx"><b>{s}</b><small>{batidoApuntado ? '1 batido · ya apuntado' : /creatina/i.test(s) ? '3-5 g' : hecho ? 'Tomado' : 'Toca cuando lo tomes'}</small></span>
-                    <Ico n={/prote|batido/i.test(s) ? 'drop' : 'pill'} className="car" />
-                  </button>
+                  <div key={s} className="it tpl ux-com-fila">
+                    <button className={cx('tpl-m todo', hecho && 'done')} onClick={() => aMano ? aviso('Ya tienes un batido apuntado hoy') : void alternarSuplemento(s)}>
+                      <span className="box"><Ico n="check" b /></span>
+                      <span className="tx"><b>{s}</b><small>{detalle || (hecho ? 'Tomado' : 'Toca cuando lo tomes')}</small></span>
+                    </button>
+                    <button className="ib ux-com-lapiz" aria-label={`Cambiar cantidad de ${s}`} onClick={() => nav.hoja('sheet-supl', { nombre: s })}><Ico n="pencil-simple" /></button>
+                  </div>
                 )
               })}
             </div>

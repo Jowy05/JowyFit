@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Comida, Franja, Plantilla, Producto } from '../../../datos/tipos'
-import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, notaPorTamano, ordenarPlantillas, porRacion, recientes, soloMacros, textoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
+import { FRANJAS, NOMBRE_FRANJA, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, notaPorTamano, ordenarPlantillas, porRacion, recientes, soloMacros, textoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
 import { horaActual, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
 import { Chip, cx, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
-import { Mini, apuntar, apuntarPlantilla, kp, useUrlBlob } from './comun'
+import { ElegirCuanto, Mini, apuntar, apuntarPlantilla, baseDeApuntada, kp, useUrlBlob, type ParaElegir } from './comun'
 
 /** Comidas guardadas a la vista antes de «Ver todas». */
 const MAX_COMIDAS = 5
@@ -70,7 +70,9 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   }
 
   const hora = esHoy ? horaActual() : franja === 'desayuno' ? '08:00' : franja === 'comida' ? '14:00' : franja === 'merienda' ? '17:30' : '21:00'
-  const listo = (txt: string, deshacer: () => void) => { nav.hoja(null); aviso(`Añadido: ${txt}`, deshacer) }
+  const listo = (txt: string, deshacer: () => void) => { setElegir(null); nav.hoja(null); aviso(`Añadido: ${txt}`, deshacer) }
+  // Tocar cualquier cosa abre «¿Cuánto?» (Poco · Normal · Mucho); se apunta lo que se elija.
+  const [elegir, setElegir] = useState<ParaElegir | null>(null)
   // Los botones de un toque (picoteo, bebida, Mis comidas) apuntaban dos veces con un doble toque.
   const unaVez = useUnaVez()
 
@@ -79,10 +81,10 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
     const v = conRacion(p, r, p.tipo)
     listo(p.tipo === 'comida' ? `${p.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}` : `${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
   })
-  const usarProducto = unaVez(async (p: Producto) => {
+  const usarProducto = unaVez(async (p: Producto, r: Racion) => {
     const { base: _, ...v } = porRacion(p)
-    const des = await apuntar({ fecha, hora, franja, nombre: p.nombre, ...v, racion: 'N', tipo: 'producto', codigo: p.codigo })
-    listo(p.nombre, des)
+    const des = await apuntar({ fecha, hora, franja, nombre: p.nombre, ...conRacion(v, r), racion: r, tipo: 'producto', codigo: p.codigo })
+    listo(`${p.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}`, des)
   })
   // Copia de algo ya apuntado (sin la foto, que era de aquel día).
   const copia = (c: Comida) => apuntar({ fecha, hora, franja, nombre: c.nombre, kcal: c.kcal, proteina: c.proteina, cafeina: c.cafeina, ...soloMacros(c), racion: c.racion, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
@@ -90,7 +92,15 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
     const deshacer = await Promise.all(ayer.map(copia))
     listo(ayer.length === 1 ? ayer[0]!.nombre : `${NOMBRE_FRANJA[franja].toLowerCase()} de ayer (${ayer.length})`, () => deshacer.forEach(d => d()))
   })
-  const usarReciente = unaVez(async (c: Comida) => { listo(c.nombre, await copia(c)) })
+  // Lo reciente se repite en la ración que se elija, contando desde lo que era su «Normal».
+  const usarReciente = unaVez(async (c: Comida, r: Racion) => {
+    const v = conRacion(baseDeApuntada(c), r, c.tipo)
+    const des = await apuntar({ fecha, hora, franja, nombre: c.nombre, ...v, racion: r, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
+    listo(`${c.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}`, des)
+  })
+  const pedirPlantilla = (p: Plantilla) => setElegir({ nombre: p.nombre, base: p, tipo: p.tipo, elegir: r => void usar(p, r) })
+  const pedirProducto = (p: Producto) => { const { base: _, ...v } = porRacion(p); setElegir({ nombre: p.nombre, base: v, tipo: 'producto', elegir: r => void usarProducto(p, r) }) }
+  const pedirReciente = (c: Comida) => setElegir({ nombre: c.nombre, base: baseDeApuntada(c), tipo: c.tipo, elegir: r => void usarReciente(c, r) })
   const guardarNota = unaVez(async () => {
     const nombre = texto.trim() || (foto ? 'Comida (foto)' : 'Comida')
     const des = await apuntar({ fecha, hora, franja, nombre, kcal, proteina: prot, racion: 'N', tipo: foto ? 'foto' : 'nota', foto })
@@ -107,14 +117,14 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const q = normalizar(busca.trim())
   const encontrados = q.length >= 2
     ? [
-        ...plantillas.filter(p => normalizar(p.nombre).includes(q)).map(p => ({ k: `p${p.id}`, nombre: p.nombre, sub: kp(p.kcal, p.proteina, p.cafeina), tipo: p.tipo as string, foto: p.foto, imagen: undefined as string | undefined, ir: () => void usar(p, 'N') })),
-        ...productos.filter(p => !p.pendiente && (normalizar(p.nombre).includes(q) || normalizar(p.marca).includes(q))).map(p => { const v = porRacion(p); return { k: p.codigo, nombre: p.nombre, sub: `${p.marca ? `${p.marca} · ` : ''}${kp(v.kcal, v.proteina, v.cafeina)}`, tipo: 'producto', foto: undefined as Blob | undefined, imagen: p.imagen, ir: () => void usarProducto(p) } }),
+        ...plantillas.filter(p => normalizar(p.nombre).includes(q)).map(p => ({ k: `p${p.id}`, nombre: p.nombre, sub: kp(p.kcal, p.proteina, p.cafeina), tipo: p.tipo as string, foto: p.foto, imagen: undefined as string | undefined, ir: () => pedirPlantilla(p) })),
+        ...productos.filter(p => !p.pendiente && (normalizar(p.nombre).includes(q) || normalizar(p.marca).includes(q))).map(p => { const v = porRacion(p); return { k: p.codigo, nombre: p.nombre, sub: `${p.marca ? `${p.marca} · ` : ''}${kp(v.kcal, v.proteina, v.cafeina)}`, tipo: 'producto', foto: undefined as Blob | undefined, imagen: p.imagen, ir: () => pedirProducto(p) } }),
       ].slice(0, 8)
     : []
   const comidasVista = todas ? comidas : comidas.slice(0, MAX_COMIDAS)
 
   return (
-    <Hoja titulo="Añadir" sub={esHoy ? 'Toca lo que has tomado y queda apuntado' : `Para el ${fecha.split('-').reverse().slice(0, 2).join('/')}`} className="tall">
+    <Hoja titulo="Añadir" sub={esHoy ? 'Toca lo que has tomado y elige cuánto' : `Para el ${fecha.split('-').reverse().slice(0, 2).join('/')}`} className="tall">
       <p className="lbl fl">Cuándo{esHoy ? ' · elegido por la hora' : ''}</p>
       <div className="chips eq">
         {FRANJAS.map(f => <Chip key={f.v} on={franja === f.v} onClick={() => setFranja(f.v)}>{NOMBRE_FRANJA[f.v]}</Chip>)}
@@ -171,7 +181,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
           <div className="sec-h mt16"><h2 className="h3">Recientes</h2><span className="lbl">Toca para apuntar</span></div>
           <div className="list">
             {recien.map(c => (
-              <button key={`${c.fecha}-${c.hora}-${c.nombre}`} className="it" onClick={() => void usarReciente(c)}>
+              <button key={`${c.fecha}-${c.hora}-${c.nombre}`} className="it" onClick={() => pedirReciente(c)}>
                 <Mini nombre={c.nombre} tipo={c.tipo} />
                 <span className="tx"><b>{c.nombre}</b><small className="mono">{kp(c.kcal, c.proteina, c.cafeina)}</small></span>
                 <Ico n="plus" b className="car" />
@@ -186,17 +196,11 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
           <div className="sec-h mt16"><h2 className="h3">Comidas</h2><span className="lbl">Toca para apuntar</span></div>
           <div className="list">
             {comidasVista.map(p => (
-              <div key={p.id} className="it tpl">
-                <button className="tpl-m" onClick={() => void usar(p, 'N')}>
-                  <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-                  <span className="tx"><b>{p.nombre}</b><small className="mono">{kp(p.kcal, p.proteina)}</small></span>
-                </button>
-                <span className="png ux-com-png" role="group" aria-label={`Cuánto de ${p.nombre}`}>
-                  {(['P', 'N', 'G'] as const).map(r => (
-                    <button key={r} className={cx(r === 'N' && 'on')} onClick={() => void usar(p, r)}>{NOMBRE_RACION[r]}</button>
-                  ))}
-                </span>
-              </div>
+              <button key={p.id} className="it" onClick={() => pedirPlantilla(p)}>
+                <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
+                <span className="tx"><b>{p.nombre}</b><small className="mono">{kp(p.kcal, p.proteina)}</small></span>
+                <Ico n="plus" b className="car" />
+              </button>
             ))}
           </div>
           {comidas.length > MAX_COMIDAS && (
@@ -207,28 +211,22 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
         </>
       )}
 
-      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">Picoteo</h2><span className="lbl">Poco ⅓ · Normal la mitad · Mucho todo</span></div>
+      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">Picoteo</h2><span className="lbl">Toca para apuntar</span></div>
       {picoteos.length > 0 && (
         <div className="list">
           {picoteos.map(p => (
-            <div key={p.id} className="it tpl">
-              <button className="tpl-m" onClick={() => void usar(p, 'N')}>
-                <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-                <span className="tx"><b>{p.nombre}</b><small className="mono">entero: {p.kcal} kcal</small></span>
-              </button>
-              <span className="png ux-com-png" role="group" aria-label={`Cuánto de ${p.nombre}`}>
-                {(['P', 'N', 'G'] as const).map(r => (
-                  <button key={r} className={cx(r === 'N' && 'on')} aria-label={`${NOMBRE_RACION[r]} (${PISTA_RACION.picoteo[r]})`} onClick={() => void usar(p, r)}>{NOMBRE_RACION[r]}</button>
-                ))}
-              </span>
-            </div>
+            <button key={p.id} className="it" onClick={() => pedirPlantilla(p)}>
+              <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
+              <span className="tx"><b>{p.nombre}</b><small className="mono">entero: {p.kcal} kcal</small></span>
+              <Ico n="plus" b className="car" />
+            </button>
           ))}
         </div>
       )}
       <div className="sec-h mt16"><h2 className="h3">Bebida</h2><span className="lbl">Toca para apuntar</span></div>
       <div className="snk">
         {bebidas.map(p => (
-          <button key={p.id} onClick={() => void usar(p, 'N')}>
+          <button key={p.id} onClick={() => pedirPlantilla(p)}>
             <b>{p.nombre}</b>
             <small className="mono">{textoSnack(p)}</small>
           </button>
@@ -262,6 +260,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
         <button className="lnk" onClick={() => nav.hoja('sheet-plant', { fecha, franja })}><Ico n="bowl-food" /> Crear comida nueva</button>
         <button className="lnk" onClick={() => nav.ir('com-plant', undefined, 'com')}>Mis comidas <Ico n="caret-right" /></button>
       </div>
+      <ElegirCuanto x={elegir} onCerrar={() => setElegir(null)} />
     </Hoja>
   )
 }

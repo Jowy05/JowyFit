@@ -1,16 +1,16 @@
 // COM-05 · Mis comidas: lo que comes a menudo (más usado primero) y, debajo, lo escaneado.
 // Antes eran dos pestañas («Plantillas» y «Productos»); para quien lee poco, todo es «cosas que como».
 // Tocar una fila la APUNTA hoy (con «Deshacer»); para cambiarla, el lápiz de la derecha.
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import { escaneadosSueltos, ordenarPlantillas, porRacion } from '../../../dominio/comida'
+import { escaneadosSueltos, ordenarPlantillas, porRacion, textoRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import type { Plantilla } from '../../../datos/tipos'
 import { Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
-import { CabComida, Mini, apuntarPlantilla, buscarPendientes, kp } from './comun'
+import { CabComida, ElegirCuanto, Mini, apuntarPlantilla, buscarPendientes, kp, type ParaElegir } from './comun'
 
 const TIPO = { picoteo: 'Picoteo', bebida: 'Bebida' } as const
 /** Escaneados a la vista; el resto, en la lista completa (con buscador). */
@@ -32,15 +32,19 @@ export function Plantillas() {
   const nueva = () => nav.hoja('sheet-plant', {})
   // Un doble toque apuntaba dos veces.
   const unaVez = useUnaVez()
-  const apuntarHoy = unaVez(async (p: Plantilla) => {
-    const deshacer = await apuntarPlantilla(p, 'N', hoyISO())
-    aviso(`Apuntado hoy: ${p.nombre}`, deshacer)
+  const apuntarHoy = unaVez(async (p: Plantilla, r: Racion) => {
+    setElegir(null)
+    const deshacer = await apuntarPlantilla(p, r, hoyISO())
+    aviso(`Apuntado hoy: ${p.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}`, deshacer)
   })
+  // Tocar abre «¿Cuánto?» (Poco · Normal · Mucho).
+  const [elegir, setElegir] = useState<ParaElegir | null>(null)
+  const pedir = (p: Plantilla) => setElegir({ nombre: p.nombre, base: p, tipo: p.tipo, elegir: r => void apuntarHoy(p, r) })
 
   // Toda la fila apunta; el lápiz (aparte) edita. Sin etiqueta de momento del día: la sección ya dice qué es.
   const fila = (p: Plantilla) => (
     <div key={p.id} className="it tpl ux-com-fila">
-      <button className="tpl-m" onClick={() => void apuntarHoy(p)}>
+      <button className="tpl-m" onClick={() => pedir(p)}>
         <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
         <span className="tx">
           <b>{p.nombre}</b>
@@ -101,6 +105,7 @@ export function Plantillas() {
         <button className="btn mt20" onClick={nueva}><Ico n="bowl-food" b />Crear comida nueva</button>
         {productos.some(p => !p.manual && !p.pendiente) && <p className="credit">Datos de productos: Open Food Facts · licencia ODbL</p>}
       </div>
+      <ElegirCuanto x={elegir} onCerrar={() => setElegir(null)} />
     </Pantalla>
   )
 }

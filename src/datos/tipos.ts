@@ -51,6 +51,10 @@ export type Perfil = {
   franjasHambre: string[]
   bebidas: string[]
   suplementos: string[]
+  /** Cuánto toma de cada suplemento, escrito por el dueño («10 g», «2 cápsulas»). Si falta, se enseña lo habitual. */
+  dosisSuplementos?: Record<string, string>
+  /** Lo que lleva su batido de proteína: al marcarlo en Comida se apunta y suma al día. */
+  batido?: { proteina: number; kcal: number }
   trabajo: Trabajo
   pasosObjetivo: number
   // seguimiento
@@ -214,6 +218,8 @@ export type Comida = {
   plantillaId?: number
   codigo?: string
   foto?: Blob
+  /** Apuntado al marcar un suplemento (el batido): al desmarcarlo se quita. */
+  suplemento?: string
   /** Gramos, solo si se saben (escaneados): hidratos, de ellos azúcares, grasas y sal. */
   hidratos?: number
   azucares?: number

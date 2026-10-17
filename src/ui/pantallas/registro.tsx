@@ -43,6 +43,7 @@ const HojaInstrucciones = perezosa(() => import('./entreno/HojasEntreno'), 'Hoja
 const HojaNotaSerie = perezosa(() => import('./entreno/HojasEntreno'), 'HojaNotaSerie')
 const DiaComida = perezosa(() => import('./comida/DiaComida'), 'DiaComida')
 const HojaAnadir = perezosa(() => import('./comida/HojaAnadir'), 'HojaAnadir')
+const HojaSuplemento = perezosa(() => import('./comida/HojaSuplemento'), 'HojaSuplemento')
 const Escaner = perezosa(() => import('./comida/Escaner'), 'Escaner')
 const Producto = perezosa(() => import('./comida/Producto'), 'Producto')
 const Plantillas = perezosa(() => import('./comida/Plantillas'), 'Plantillas')
@@ -111,6 +112,7 @@ export const HOJAS: Record<string, P> = {
   'sheet-add': HojaAnadir,
   'sheet-plant': HojaPlantilla,
   'sheet-comida': HojaComida,
+  'sheet-supl': HojaSuplemento,
   'sheet-maq': HojaMaquina,
   'sheet-elegir': HojaElegirEjercicio,
   'sheet-meta': HojaMeta,

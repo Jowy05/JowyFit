@@ -47,3 +47,11 @@
 
 /* Producto: lo que trae, en una línea. */
 .ux-com-prod-res b{font-size:17px}
+
+/* Ventana «¿Cuánto?» al tocar algo para apuntarlo: encima de todo, también de la hoja de Añadir. */
+.popup-fondo{position:absolute;inset:0;z-index:90;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:16px;animation:jf-fade .18s both}
+.popup{width:100%;max-width:380px;padding:18px 16px 14px;background:var(--surface);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.popup-op{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.popup-op .chip.ux-com-tam{min-height:84px}
+.popup-op .chip.ux-com-tam>span{font-size:16px}
+.popup .btn{width:100%}

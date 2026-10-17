@@ -20,6 +20,8 @@ import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { pendientesDeHoy } from './pendientes'
+import { marcarSuplemento } from '../comida/suplementos'
+import { batidoDe, esBatido } from '../../../dominio/comida'
 import { abrirEntreno } from '../entreno/iniciar'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -333,12 +335,12 @@ function Pendientes() {
   const perfil = usePerfil()
   const hoy = hoyISO()
   const lista = useLiveQuery(() => pendientesDeHoy(perfil, hoy), [perfil, hoy]) ?? []
-  const supl = useLiveQuery(() => db.suplementos.get(hoy), [hoy])
+  const aviso = useAviso()
   const [ocultos, setOcultos] = useState<string[]>([])
+  // Igual que en Comida: el batido se apunta con su proteína y suma al día.
   const marcar = async (s: string) => {
-    const tomados = new Set(supl?.tomados ?? [])
-    tomados.add(s)
-    await db.suplementos.put({ fecha: hoy, tomados: [...tomados] })
+    const deshacer = await marcarSuplemento(perfil, hoy, s)
+    if (esBatido(s)) aviso(`Apuntado: ${s} · ${batidoDe(perfil.batido).proteina} g proteína`, () => { deshacer(); setOcultos(o => o.filter(x => x !== s)) })
     setTimeout(() => setOcultos(o => [...o, s]), 700)
   }
   const visibles = lista.filter(p => !ocultos.includes(p.id))

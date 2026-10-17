@@ -266,3 +266,19 @@ export function escaneadosSueltos<P extends { codigo: string }>(productos: P[], 
   const ya = new Set(plantillas.map(p => p.codigo).filter(Boolean))
   return productos.filter(p => !ya.has(p.codigo))
 }
+
+// ---------- suplementos ----------
+/** El batido de proteína se apunta como comida (suma proteína al día); el resto solo se marca. */
+export const esBatido = (s: string) => /prote|batido/i.test(s)
+/** Lo habitual si el dueño no ha escrito su cantidad. */
+export function dosisPorDefecto(s: string): string {
+  if (/creatina/i.test(s)) return '3-5 g'
+  if (esBatido(s)) return '1 cacito'
+  return ''
+}
+/** La cantidad que toma (la suya o la habitual). */
+export const dosisDe = (dosis: Record<string, string> | undefined, s: string) => dosis?.[s]?.trim() || dosisPorDefecto(s)
+/** Lo que lleva el batido: lo suyo o un cacito típico de 24 g de proteína (unas 120 kcal). */
+export const batidoDe = (b: { proteina: number; kcal: number } | undefined) => b ?? { proteina: 24, kcal: 120 }
+/** kcal aproximadas de un batido a partir de su proteína (la proteína en polvo da unas 5 kcal por gramo con lo demás). */
+export const kcalBatido = (proteina: number) => Math.round(proteina * 5)

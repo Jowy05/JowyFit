@@ -1,7 +1,7 @@
 {
   "name": "jowyfit",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "App personal de entrenamiento de fuerza y recomposición corporal. Todo en local.",
   "author": "Jowy05",
   "license": "MIT",

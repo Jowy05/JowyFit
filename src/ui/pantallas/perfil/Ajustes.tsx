@@ -10,13 +10,13 @@ import { objetivosEnergia } from '../../../datos/consultas'
 import type { Ajustes as TAjustes } from '../../../datos/tipos'
 import { useCatalogo } from '../../../catalogo/catalogo'
 import { aISO, duracion, fechaCorta, horaDe } from '../../../dominio/fechas'
-import { copiasGuardadas, elegirArchivo, esIPhone, esNativo, leerCopiaGuardada, pasosDisponibles, pedirPermisoPasos, permisoNotificaciones } from '../../../plataforma'
+import { abrirHealthConnect, copiasGuardadas, elegirArchivo, esAndroid, esIPhone, esNativo, leerCopiaGuardada, pasosDisponibles, pedirPermisoPasos, permisoNotificaciones } from '../../../plataforma'
 import { cx, Cab, Elegir, Ico, Interruptor, Pantalla, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil } from '../../datos'
 import { guardarLetra, guardarTema, letraGuardada, temaGuardado, type Letra, type PreferenciaTema } from '../../tema'
-import { activarBascula, comprobarSalud, hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos } from '../../servicios'
+import { activarBascula, comprobarSalud, conectarSalud, hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos } from '../../servicios'
 import { diasTxt } from './textos'
 
 type Noti = TAjustes['noti']
@@ -45,6 +45,8 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const [hayPasos, setHayPasos] = useState(false)
   // Resultado de «Comprobar Health Connect» (para probar en el móvil).
   const [salud, setSalud] = useState<string[] | null>(null)
+  const conectado = a.fuentePasos === 'auto' || a.fuenteBascula === 'auto'
+  const conectadoTodo = a.fuentePasos === 'auto' && a.fuenteBascula === 'auto'
   const [permNoti, setPermNoti] = useState(false)
   const [copias, setCopias] = useState<Copia[]>([])
   const [confirmar, setConfirmar] = useState<string | null>(null)
@@ -202,6 +204,31 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
           <p className="note plain"><Ico n="device-mobile" /><span><b>{esIPhone() ? 'No disponible en iPhone:' : 'Solo en la app de Android:'}</b> los recordatorios se ven dentro de la app.</span></p>
         )}
 
+        {/* ---------- Reloj y báscula: Health Connect, a la vista (antes estaba dentro de «Más ajustes» y no se encontraba) ---------- */}
+        <p className="grp-t">Reloj y báscula</p>
+        {!esAndroid() ? (
+          <p className="note plain"><Ico n="watch" /><span><b>{esIPhone() ? 'No disponible en iPhone:' : 'Solo en la app de Android:'}</b> los pasos y el peso se apuntan a mano.</span></p>
+        ) : hayPasos ? (
+          <div className="list">
+            <div className="it col">
+              <span className="row"><span className="ico"><Ico n="heartbeat" /></span><span className="tx"><b>Health Connect</b><small>{conectado
+                ? `Conectado: ${conectadoTodo ? 'pasos, peso y grasa' : a.fuentePasos === 'auto' ? 'pasos' : 'peso y grasa'}. Se actualiza solo al abrir la app.`
+                : 'Trae solos los pasos de tu reloj y el peso y la grasa de tu báscula (Garmin, Samsung, Xiaomi, Fitdays…).'}</small></span></span>
+              {!conectadoTodo && <button className="btn sm w100" onClick={() => void conectarSalud().then(t => aviso(t))}><Ico n="link" b />{conectado ? 'Conectar también lo que falta' : 'Conectar Health Connect'}</button>}
+              <button className="btn ln sm w100" onClick={() => { setSalud(['Comprobando…']); void comprobarSalud().then(setSalud) }}><Ico n="heartbeat" />Comprobar qué llega</button>
+              {salud && <p className="small muted">{salud.join(' · ')}</p>}
+              <button className="lnk" onClick={() => void abrirHealthConnect()}>Abrir Health Connect (permisos) <Ico n="caret-right" /></button>
+            </div>
+          </div>
+        ) : (
+          <div className="list">
+            <div className="it col">
+              <span className="row"><span className="ico"><Ico n="heartbeat" /></span><span className="tx"><b>Health Connect no está listo en este móvil</b><small>En Android 14 o más viene con el móvil: Ajustes → Seguridad y privacidad → Privacidad → Health Connect. En Android 13 o menos, se instala desde Google Play.</small></span></span>
+              <button className="btn ln sm w100" onClick={() => void abrirHealthConnect().then(ok => { if (!ok) aviso('No se ha podido abrir: búscalo en los ajustes del móvil o en Google Play') })}>Abrir Health Connect</button>
+            </div>
+          </div>
+        )}
+
         {/* ---------- Copia de seguridad ---------- */}
         <p className="grp-t" ref={refDatos} id="aju-datos">Copia de seguridad</p>
         <p className="note ok"><Ico n="device-mobile-camera" /><span><b>Todo se guarda en este móvil.</b> Una copia de vez en cuando te sirve si cambias de móvil o se borra algo.</span></p>
@@ -312,12 +339,6 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
                   <span className="ico"><Ico n="footprints" /></span>
                   <span className="tx"><b>De dónde salen los pasos</b><small>En este móvil no hay Health Connect: los pasos se apuntan a mano en Progreso → Pasos.</small></span>
                   <span className="end small">A mano</span>
-                </div>
-              )}
-              {hayPasos && (
-                <div className="it col">
-                  <span className="tx"><b>Comprobar Health Connect</b><small>{salud ? salud.join(' · ') : 'Mira qué ve la app ahora: permisos, pasos de hoy y la última pesada'}</small></span>
-                  <button className="btn ln sm w100" onClick={() => { setSalud(['Comprobando…']); void comprobarSalud().then(setSalud) }}><Ico n="heartbeat" />Comprobar ahora</button>
                 </div>
               )}
               {hayPasos && (

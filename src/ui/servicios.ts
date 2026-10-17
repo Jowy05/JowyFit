@@ -5,7 +5,7 @@ import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { DIAS, deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
-import { alVolverAPrimerPlano, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
+import { alVolverAPrimerPlano, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
 import { fechaLocal, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
 
@@ -96,6 +96,18 @@ export async function activarBascula(): Promise<string> {
   await guardarAjustes({ fuenteBascula: 'auto' })
   const n = await sincronizarBascula()
   return n ? `Báscula conectada: ${n === 1 ? '1 pesada traída' : `${n} pesadas traídas`}` : 'Báscula conectada. Aún no hay pesadas en Health Connect: actívalo en la app de tu báscula'
+}
+
+/** Conecta Health Connect de una vez: pasos del reloj y peso y grasa de la báscula. Devuelve el aviso. */
+export async function conectarSalud(): Promise<string> {
+  const ok = await pedirPermisosSalud()
+  const pasos = ok.includes('steps'), bascula = ok.includes('weight') || ok.includes('bodyFat')
+  if (!pasos && !bascula) return 'Sin permiso de Health Connect: los pasos y el peso se apuntan a mano'
+  await guardarAjustes({ ...(pasos ? { fuentePasos: 'auto' as const } : {}), ...(bascula ? { fuenteBascula: 'auto' as const } : {}) })
+  if (pasos) await sincronizarPasos()
+  const n = bascula ? await sincronizarBascula() : 0
+  const que = pasos && bascula ? 'pasos y báscula' : pasos ? 'pasos' : 'báscula'
+  return `Health Connect conectado: ${que}${n ? ` · ${n === 1 ? '1 pesada traída' : `${n} pesadas traídas`}` : ''}`
 }
 
 /** Para probar en el móvil: qué ve la app en Health Connect (permisos, pasos de hoy y la última pesada). */

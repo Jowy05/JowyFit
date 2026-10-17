@@ -162,6 +162,24 @@ export async function pedirPermisoBascula(): Promise<boolean> {
   } catch { return false }
 }
 
+/** Pide de una vez leer los pasos, el peso y la grasa. Devuelve lo que quedó permitido. */
+export async function pedirPermisosSalud(): Promise<string[]> {
+  try {
+    const { Health } = await import('@capgo/capacitor-health')
+    const r = await Health.requestAuthorization({ read: ['steps', 'weight', 'bodyFat'] })
+    return (r as unknown as { readAuthorized?: string[] }).readAuthorized ?? []
+  } catch { return [] }
+}
+
+/** Abre Health Connect (para dar o quitar permisos, o instalarlo si falta). */
+export async function abrirHealthConnect(): Promise<boolean> {
+  try {
+    const { Health } = await import('@capgo/capacitor-health')
+    await Health.openHealthConnectSettings()
+    return true
+  } catch { return false }
+}
+
 /** Qué deja leer Health Connect ahora mismo (pasos, peso, grasa). */
 export async function permisosSalud(): Promise<string[]> {
   try {

@@ -86,6 +86,9 @@ export type Medicion = {
   pesoKg?: number
   perimetros?: Partial<Record<'cintura' | 'cuello' | 'cadera' | 'pecho' | 'brazo' | 'brazoContraido' | 'muslo', number>>
   bascula?: Bascula
+  /** Traída de Health Connect: sus ids (para no traerla dos veces) y la app que la escribió (la de la báscula). */
+  hc?: string[]
+  fuente?: string
 }
 
 export type Foto = { id?: number; fecha: string; pose: 'frente' | 'perfil' | 'espalda'; imagen: Blob }
@@ -300,6 +303,8 @@ export type Ajustes = {
   cafeinaLimite: number
   cafeinaHoraTope: string
   fuentePasos: 'auto' | 'manual'
+  /** Peso y % de grasa de la báscula: se traen solos de Health Connect o se apuntan a mano. */
+  fuenteBascula?: 'auto' | 'manual'
   noti: {
     dormir: boolean
     pesarse: boolean

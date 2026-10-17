@@ -1,0 +1,77 @@
+// Peso y % de grasa de la báscula que llegan por Health Connect (la app de la báscula los escribe allí).
+// Health Connect da el peso y la grasa por separado: aquí se juntan los de la misma pesada y se quitan
+// los que ya están en la app (traídos antes o apuntados a mano), para no tener la misma medida dos veces.
+import type { Medicion } from '../datos/tipos'
+
+/** Un dato suelto de Health Connect: cuándo (ISO), el valor, su id y la app que lo escribió. */
+export type MuestraHC = { fecha: string; valor: number; id?: string; fuente?: string }
+/** Una pesada: peso, grasa o los dos. */
+export type LecturaBascula = { fecha: string; pesoKg?: number; grasaPct?: number; ids: string[]; fuente?: string }
+
+/** Peso y grasa de la misma pesada si se tomaron con menos de 10 minutos de diferencia. */
+const MISMA_PESADA_MS = 10 * 60_000
+const valido = { peso: (v: number) => v >= 25 && v <= 300, grasa: (v: number) => v >= 2 && v <= 70 }
+
+export function juntarBascula(pesos: MuestraHC[], grasas: MuestraHC[]): LecturaBascula[] {
+  const t = (m: MuestraHC) => new Date(m.fecha).getTime()
+  const out: LecturaBascula[] = pesos
+    .filter(p => valido.peso(p.valor))
+    .map(p => ({ fecha: p.fecha, pesoKg: Math.round(p.valor * 10) / 10, ids: p.id ? [p.id] : [], fuente: p.fuente }))
+  for (const g of grasas.filter(x => valido.grasa(x.valor))) {
+    const cerca = out
+      .filter(l => l.grasaPct == null && Math.abs(new Date(l.fecha).getTime() - t(g)) <= MISMA_PESADA_MS)
+      .sort((a, b) => Math.abs(new Date(a.fecha).getTime() - t(g)) - Math.abs(new Date(b.fecha).getTime() - t(g)))[0]
+    const grasaPct = Math.round(g.valor * 10) / 10
+    if (cerca) { cerca.grasaPct = grasaPct; if (g.id) cerca.ids.push(g.id) }
+    else out.push({ fecha: g.fecha, grasaPct, ids: g.id ? [g.id] : [], fuente: g.fuente })
+  }
+  return out.sort((a, b) => a.fecha.localeCompare(b.fecha))
+}
+
+/** Fecha y hora local «AAAA-MM-DDTHH:MM», como guarda la app las mediciones. */
+export function fechaLocal(iso: string): string {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/**
+ * Las pesadas que aún no están en la app. Una ya está si se trajo antes (mismo id de Health Connect) o si ese
+ * mismo día hay una medición con el mismo peso (o la misma grasa, si solo trae grasa): la apuntaste a mano.
+ */
+export function lecturasNuevas(lecturas: LecturaBascula[], mediciones: Medicion[]): LecturaBascula[] {
+  const vistos = new Set(mediciones.flatMap(m => m.hc ?? []))
+  return lecturas.filter(l => {
+    if (l.ids.some(id => vistos.has(id))) return false
+    const dia = fechaLocal(l.fecha).slice(0, 10)
+    const ese = mediciones.filter(m => m.fecha.slice(0, 10) === dia)
+    if (l.pesoKg != null) return !ese.some(m => m.pesoKg != null && Math.abs(m.pesoKg - l.pesoKg!) < 0.15)
+    return !ese.some(m => m.bascula?.grasaPct != null && Math.abs(m.bascula.grasaPct - l.grasaPct!) < 0.15)
+  })
+}
+
+/** La medición que se guarda: báscula de casa, con el peso, la grasa y de dónde viene. */
+export function medicionDeLectura(l: LecturaBascula): Medicion {
+  return {
+    fecha: fechaLocal(l.fecha),
+    origen: 'casa',
+    ...(l.pesoKg != null ? { pesoKg: l.pesoKg } : {}),
+    ...(l.grasaPct != null ? { bascula: { grasaPct: l.grasaPct } } : {}),
+    hc: l.ids,
+    ...(l.fuente ? { fuente: l.fuente } : {}),
+  }
+}
+
+/** Nombre de la app que escribió el dato: Health Connect a veces solo da el paquete («com.garmin…»). */
+const APPS: [RegExp, string][] = [
+  [/garmin/i, 'Garmin Connect'], [/fitdays/i, 'Fitdays'], [/xiaomi|mi\.?fit|wearable/i, 'Mi Fitness'], [/huami|zepp/i, 'Zepp'],
+  [/shealth|samsung/i, 'Samsung Health'], [/google.*fitness|fitbit/i, 'Google Fit'], [/withings/i, 'Withings'], [/renpho/i, 'Renpho'],
+]
+export function nombreFuente(fuente?: string): string {
+  if (!fuente) return 'tu báscula'
+  const conocida = APPS.find(([re]) => re.test(fuente))
+  if (conocida) return conocida[1]
+  if (!fuente.includes('.')) return fuente
+  const ult = fuente.split('.').pop()!
+  return ult.charAt(0).toUpperCase() + ult.slice(1)
+}

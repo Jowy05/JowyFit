@@ -5,7 +5,9 @@ import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { DIAS, deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
-import { alVolverAPrimerPlano, esNativo, guardarArchivo, leerPasos, pasosDisponibles, programar, cancelar, type Aviso } from '../plataforma'
+import { alVolverAPrimerPlano, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
+import { fechaLocal, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
+import { dosisDe } from '../dominio/comida'
 
 // Identificadores fijos de los recordatorios (el de fin de descanso es el 9001).
 const ID = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700 }
@@ -43,7 +45,7 @@ export async function reprogramarNotificaciones(): Promise<void> {
     avisos.push({ id: ID.pesarse + i, titulo: 'Hoy toca pesarse', texto: 'En ayunas y después del baño', cuando: enFecha(fecha, a.noti.pesarseHora), repetirCada: 'week' })
   })
   if (a.noti.batido) avisos.push({ id: ID.batido, titulo: '¿Batido de proteína?', texto: 'Te ayuda a llegar a tu proteína del día', cuando: enFecha(hoy, a.noti.batidoHora), repetirCada: 'day' })
-  if (a.noti.creatina) avisos.push({ id: ID.creatina, titulo: 'La creatina de hoy', texto: '3-5 g, a cualquier hora', cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
+  if (a.noti.creatina) avisos.push({ id: ID.creatina, titulo: 'La creatina de hoy', texto: `${dosisDe(p.dosisSuplementos, 'Creatina') || 'Tu dosis'}, a cualquier hora`, cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
   if (a.noti.copia) avisos.push({ id: ID.copia, titulo: 'Copia de seguridad', texto: 'Hace una semana de la última copia. Tus datos solo están en este móvil.', cuando: enFecha(sumarDias(hoy, 7), '20:00') })
   if (a.noti.domingo) {
     const hoyD = diaSemana(deISO(hoy))
@@ -68,6 +70,55 @@ export async function sincronizarPasos(): Promise<boolean> {
     }
     return true
   } catch { return false }
+}
+
+/**
+ * Trae el peso y el % de grasa de la báscula desde Health Connect (si está activado): los últimos 30 días
+ * la primera vez y luego las dos últimas semanas. Devuelve cuántas pesadas nuevas ha guardado.
+ */
+export async function sincronizarBascula(): Promise<number> {
+  const a = await leerAjustes()
+  if (a.fuenteBascula !== 'auto' || !(await pasosDisponibles())) return 0
+  try {
+    const mediciones = await db.mediciones.toArray()
+    const primeraVez = !mediciones.some(m => m.hc?.length)
+    const desde = new Date(Date.now() - (primeraVez ? 30 : 14) * 86_400_000)
+    const { pesos, grasas } = await leerBascula(desde)
+    const nuevas = lecturasNuevas(juntarBascula(pesos, grasas), mediciones)
+    if (nuevas.length) await db.mediciones.bulkAdd(nuevas.map(medicionDeLectura))
+    return nuevas.length
+  } catch { return 0 }
+}
+
+/** Conecta la báscula: pide permiso, lo deja activado y trae lo que haya. Devuelve el aviso para el usuario. */
+export async function activarBascula(): Promise<string> {
+  if (!(await pedirPermisoBascula())) return 'Sin permiso de Health Connect: el peso se apunta a mano'
+  await guardarAjustes({ fuenteBascula: 'auto' })
+  const n = await sincronizarBascula()
+  return n ? `Báscula conectada: ${n === 1 ? '1 pesada traída' : `${n} pesadas traídas`}` : 'Báscula conectada. Aún no hay pesadas en Health Connect: actívalo en la app de tu báscula'
+}
+
+/** Para probar en el móvil: qué ve la app en Health Connect (permisos, pasos de hoy y la última pesada). */
+export async function comprobarSalud(): Promise<string[]> {
+  if (!(await pasosDisponibles())) return ['Health Connect no está en este móvil (o no está instalado).']
+  const permisos = await permisosSalud()
+  const si = (k: string) => (permisos.includes(k) ? 'sí' : 'no')
+  const lineas = [`Permisos · pasos: ${si('steps')} · peso: ${si('weight')} · grasa: ${si('bodyFat')}`]
+  if (permisos.includes('steps')) {
+    try {
+      const hoy = hoyISO()
+      const p = (await leerPasos(hoy, hoy))[hoy]
+      lineas.push(`Pasos de hoy en Health Connect: ${p == null ? 'ninguno todavía' : p.toLocaleString('es-ES')}`)
+    } catch { lineas.push('No se han podido leer los pasos.') }
+  }
+  if (permisos.includes('weight') || permisos.includes('bodyFat')) {
+    const { pesos, grasas } = await leerBascula(new Date(Date.now() - 30 * 86_400_000))
+    const l = juntarBascula(pesos, grasas).pop()
+    lineas.push(l
+      ? `Última pesada: ${l.pesoKg != null ? `${String(l.pesoKg).replace('.', ',')} kg` : ''}${l.grasaPct != null ? ` · ${String(l.grasaPct).replace('.', ',')} % grasa` : ''} (${fechaLocal(l.fecha).slice(0, 10).split('-').reverse().join('/')}, ${nombreFuente(l.fuente)})`
+      : 'No hay pesadas en Health Connect de los últimos 30 días.')
+  }
+  return lineas
 }
 
 /** Copia automática semanal en Documentos/JowyFit (Android). */
@@ -96,7 +147,7 @@ let arrancado = false
 export function arrancarServicios(): () => void {
   if (arrancado) return () => {}
   arrancado = true
-  const tarea = () => { void sincronizarPasos(); void copiaAutomatica(); void reprogramarNotificaciones() }
+  const tarea = () => { void sincronizarPasos(); void sincronizarBascula(); void copiaAutomatica(); void reprogramarNotificaciones() }
   tarea()
   let quitar = () => {}
   void alVolverAPrimerPlano(tarea).then(f => { quitar = f })

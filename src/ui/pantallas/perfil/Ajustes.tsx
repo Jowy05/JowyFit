@@ -16,7 +16,7 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil } from '../../datos'
 import { guardarLetra, guardarTema, letraGuardada, temaGuardado, type Letra, type PreferenciaTema } from '../../tema'
-import { hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos } from '../../servicios'
+import { activarBascula, comprobarSalud, hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos } from '../../servicios'
 import { diasTxt } from './textos'
 
 type Noti = TAjustes['noti']
@@ -43,6 +43,8 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const [tema, setTema] = useState<PreferenciaTema>(temaGuardado())
   const [letra, setLetra] = useState<Letra>(letraGuardada())
   const [hayPasos, setHayPasos] = useState(false)
+  // Resultado de «Comprobar Health Connect» (para probar en el móvil).
+  const [salud, setSalud] = useState<string[] | null>(null)
   const [permNoti, setPermNoti] = useState(false)
   const [copias, setCopias] = useState<Copia[]>([])
   const [confirmar, setConfirmar] = useState<string | null>(null)
@@ -102,6 +104,10 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const cambiarFuente = (f: 'auto' | 'manual') => {
     if (f === 'auto') void activarPasos()
     else guardar({ fuentePasos: 'manual' })
+  }
+  const cambiarBascula = (f: 'auto' | 'manual') => {
+    if (f === 'auto') void activarBascula().then(t => aviso(t))
+    else guardar({ fuenteBascula: 'manual' })
   }
 
   // ---------- notificaciones ----------
@@ -294,7 +300,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
             </div>
 
             {/* ---------- Pasos ---------- */}
-            <p className="grp-t">Pasos</p>
+            <p className="grp-t">Pasos y báscula</p>
             <div className="list">
               {hayPasos ? (
                 <div className="it col">
@@ -306,6 +312,18 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
                   <span className="ico"><Ico n="footprints" /></span>
                   <span className="tx"><b>De dónde salen los pasos</b><small>En este móvil no hay Health Connect: los pasos se apuntan a mano en Progreso → Pasos.</small></span>
                   <span className="end small">A mano</span>
+                </div>
+              )}
+              {hayPasos && (
+                <div className="it col">
+                  <span className="tx"><b>Comprobar Health Connect</b><small>{salud ? salud.join(' · ') : 'Mira qué ve la app ahora: permisos, pasos de hoy y la última pesada'}</small></span>
+                  <button className="btn ln sm w100" onClick={() => { setSalud(['Comprobando…']); void comprobarSalud().then(setSalud) }}><Ico n="heartbeat" />Comprobar ahora</button>
+                </div>
+              )}
+              {hayPasos && (
+                <div className="it col">
+                  <span className="tx"><b>Peso y grasa de la báscula</b><small>{a.fuenteBascula === 'auto' ? 'Se traen solos de Health Connect (la app de tu báscula los escribe allí)' : 'Los apuntas tú con «+ Peso» o en Progreso → Cuerpo'}</small></span>
+                  <Elegir eq className="w100" opciones={[{ v: 'auto' as const, t: 'Health Connect' }, { v: 'manual' as const, t: 'A mano' }]} valor={a.fuenteBascula ?? 'manual'} onCambio={cambiarBascula} />
                 </div>
               )}
               <button className="it" onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>

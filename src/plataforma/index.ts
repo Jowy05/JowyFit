@@ -152,6 +152,38 @@ export async function leerPasos(desde: string, hasta: string): Promise<Record<st
   return out
 }
 
+// ---------- báscula (peso y % de grasa en Health Connect) ----------
+/** Pide leer el peso y la grasa. Devuelve si al menos el peso quedó permitido. */
+export async function pedirPermisoBascula(): Promise<boolean> {
+  try {
+    const { Health } = await import('@capgo/capacitor-health')
+    const r = await Health.requestAuthorization({ read: ['weight', 'bodyFat'] })
+    return (r as unknown as { readAuthorized?: string[] }).readAuthorized?.includes('weight') ?? true
+  } catch { return false }
+}
+
+/** Qué deja leer Health Connect ahora mismo (pasos, peso, grasa). */
+export async function permisosSalud(): Promise<string[]> {
+  try {
+    const { Health } = await import('@capgo/capacitor-health')
+    const r = await Health.checkAuthorization({ read: ['steps', 'weight', 'bodyFat'] })
+    return (r as unknown as { readAuthorized?: string[] }).readAuthorized ?? []
+  } catch { return [] }
+}
+
+export type MuestraBascula = { fecha: string; valor: number; id?: string; fuente?: string }
+/** Pesos (kg) y % de grasa escritos en Health Connect desde una fecha. Si falta un permiso, esa parte llega vacía. */
+export async function leerBascula(desde: Date): Promise<{ pesos: MuestraBascula[]; grasas: MuestraBascula[] }> {
+  const { Health } = await import('@capgo/capacitor-health')
+  const leer = async (dataType: 'weight' | 'bodyFat') => {
+    try {
+      const r = await Health.readSamples({ dataType, startDate: desde.toISOString(), endDate: new Date().toISOString(), limit: 500, ascending: true })
+      return r.samples.map(x => ({ fecha: x.startDate, valor: x.value, id: x.platformId, fuente: x.sourceName }))
+    } catch { return [] }
+  }
+  return { pesos: await leer('weight'), grasas: await leer('bodyFat') }
+}
+
 // ---------- escáner de códigos de barras ----------
 /** Android: escáner nativo de Google (ML Kit). Devuelve null si no hay escáner nativo. */
 export async function escanearNativo(): Promise<string | null | 'cancelado'> {

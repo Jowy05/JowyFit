@@ -1,5 +1,5 @@
 // PRO-04 · Cuerpo
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Medicion, OrigenMedicion } from '../../../datos/tipos'
@@ -9,7 +9,12 @@ import { grasaPorMedidas, mediasSemanales, pendienteSemanal, serieMedida, ultimo
 import { Linea } from '../../graficas'
 import { Ico, Pantalla, Vacio } from '../../comp'
 import { useNav } from '../../nav'
-import { usePerfil } from '../../datos'
+import { useAjustes, usePerfil } from '../../datos'
+import { useAviso } from '../../aviso'
+import { guardarAjustes } from '../../../datos/repos'
+import { nombreFuente } from '../../../dominio/bascula'
+import { pasosDisponibles } from '../../../plataforma'
+import { activarBascula } from '../../servicios'
 import { CabProgreso, capital, fechaPunto, ICONO_ORIGEN, NOMBRE_ORIGEN, PERIMETROS } from './comun'
 
 const signo = (n: number, d = 1) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${num(Math.abs(n), d)}`
@@ -32,6 +37,21 @@ export function Cuerpo() {
   const ms = useLiveQuery(() => db.mediciones.orderBy('fecha').toArray(), [])
   const metaCintura = useLiveQuery(async () => (await db.metas.where('tipo').equals('cintura').toArray()).find(m => !m.hecha) ?? null, [])
   const [cuantas, setCuantas] = useState(15)
+  const ajustes = useAjustes()
+  const aviso = useAviso()
+  // En Android con Health Connect, se ofrece traer el peso y la grasa de la báscula (una vez: «Ahora no» lo esconde).
+  const [hayHC, setHayHC] = useState(false)
+  useEffect(() => { let vivo = true; void pasosDisponibles().then(v => { if (vivo) setHayHC(v) }); return () => { vivo = false } }, [])
+  const ofrecerBascula = hayHC && ajustes.fuenteBascula == null
+  const tarjetaBascula = ofrecerBascula && (
+    <div className="card pd mt12">
+      <p className="row"><span className="ico okb"><Ico n="scales" /></span><span className="tx"><b>¿Tu báscula apunta en Health Connect?</b><small>Si su app (Fitdays, Garmin, Mi Fitness…) escribe allí, el peso y la grasa llegan solos.</small></span></p>
+      <div className="btns mt12">
+        <button className="btn gry sm" onClick={() => void guardarAjustes({ fuenteBascula: 'manual' })}>Ahora no</button>
+        <button className="btn sm" onClick={() => void activarBascula().then(t => aviso(t))}>Conectar</button>
+      </div>
+    </div>
+  )
   const cab = <CabProgreso actual="pro-cuerpo" crumb="Tendencias" />
 
   if (!ms) return <Pantalla>{cab}</Pantalla>
@@ -41,6 +61,7 @@ export function Cuerpo() {
       <div className="pg"><div className="sec">
         <Vacio icono="ruler" titulo="Aún no hay medidas" texto="Pésate y mide la cintura una o dos veces por semana. La cintura dice más que la báscula."
           accion={<><Ico n="plus" b />Registrar medidas</>} onAccion={() => nav.ir('pro-reg')} />
+        {tarjetaBascula}
       </div></div>
     </Pantalla>
   )
@@ -160,12 +181,13 @@ export function Cuerpo() {
         )}
 
         <div className="sec">
-          <div className="sec-h"><h2>Historial</h2><button className="lnk" onClick={() => nav.ir('pro-reg')}><Ico n="plus" b /> Registrar</button></div>
+          {tarjetaBascula}
+          <div className="sec-h mt12"><h2>Historial</h2><button className="lnk" onClick={() => nav.ir('pro-reg')}><Ico n="plus" b /> Registrar</button></div>
           <div className="list">
             {historial.slice(0, cuantas).map(m => (
               <div key={m.id} className="it">
                 <span className="code">{fechaCorta(m.fecha)}</span>
-                <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {NOMBRE_ORIGEN[m.origen]}</small></span>
+                <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {m.hc?.length ? `${nombreFuente(m.fuente)} · Health Connect` : NOMBRE_ORIGEN[m.origen]}</small></span>
                 <button className="ib" aria-label="Borrar medición" onClick={() => nav.hoja('sheet-confirmar', {
                   titulo: '¿Borrar esta medición?', texto: `${textoMedicion(m, 9)} · ${fechaCorta(m.fecha)}`, si: 'Borrar', peligro: true, accion: 'borrar-medicion', id: m.id,
                 })}><Ico n="trash" /></button>

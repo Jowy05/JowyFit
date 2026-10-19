@@ -8,6 +8,8 @@ import { conPartida, desdeReferencia, sugerir, type Sugerencia } from '../domini
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
 import { edad, hoyISO } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
+import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
+import { grasaPorMedidas } from '../dominio/tendencias'
 
 export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
 
@@ -96,6 +98,37 @@ export async function ultimaMedicion(campo: 'peso' | 'cintura' | 'cuello' | 'cad
 
 export async function pesoActual(): Promise<number | null> {
   return (await ultimaMedicion('peso'))?.pesoKg ?? null
+}
+
+/** % de grasa más reciente: el de la báscula (de los últimos 4 meses) o, si no, el de la cinta (cintura y cuello). */
+export async function grasaReciente(p: Perfil): Promise<number | null> {
+  const ms = await db.mediciones.orderBy('fecha').toArray()
+  const limite = new Date(Date.now() - 120 * 86_400_000).toISOString().slice(0, 10)
+  const bascula = [...ms].reverse().find(m => m.bascula?.grasaPct != null && m.fecha.slice(0, 10) >= limite)?.bascula?.grasaPct
+  if (bascula != null) return bascula
+  return grasaPorMedidas(ms, p.sexo, p.alturaCm).pop()?.valor ?? null
+}
+
+export type GastoDia = { basal: number; formula: 'katch' | 'mifflin'; peso: number; grasa: number | null; pasos: number; entreno: GastoEntreno; hayEntreno: boolean }
+
+/**
+ * Lo que gastas en un día: en reposo (con tu peso, altura, edad, sexo y % de grasa) y por ejercicio
+ * (los pasos y los entrenos de ese día, contando solo las series hechas). Null si falta el peso o la altura.
+ */
+export async function gastoDelDia(p: Perfil, fecha: string): Promise<GastoDia | null> {
+  const peso = await pesoActual()
+  if (peso == null || !(p.alturaCm > 0)) return null
+  const grasa = await grasaReciente(p)
+  const b = basalDia({ pesoKg: peso, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, grasaPct: grasa })
+  const dia = await db.pasos.get(fecha)
+  const pasos = dia ? kcalPasos(dia.pasos, peso, p.alturaCm, dia.troteKm ?? 0) : 0
+  const sesiones = (await db.sesiones.where('fecha').equals(fecha).toArray()).filter(s => s.estado !== 'cancelada')
+  const entreno: GastoEntreno = { hecho: 0, plan: 0, saltado: 0 }
+  for (const s of sesiones) {
+    const k = kcalSesion(s, peso, id => ejercicio(id)?.met)
+    entreno.hecho += k.hecho; entreno.plan += k.plan; entreno.saltado += k.saltado
+  }
+  return { basal: b.kcal, formula: b.formula, peso, grasa, pasos, entreno, hayEntreno: sesiones.some(s => s.ejercicios.some(e => e.series.some(x => x.hecha))) }
 }
 
 /** Objetivo de kcal y proteína (automático o el que puso el usuario). */

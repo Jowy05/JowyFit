@@ -94,3 +94,6 @@
 .ux-corr-f{display:grid;gap:10px}
 .ux-lista-series{display:grid;gap:6px;padding:10px 14px 14px;border-top:1px solid var(--line);background:var(--bg)}
 .ux-lista-series .set.ux-tocable{background:var(--surface)}
+
+/* «Saltar este ejercicio», pequeño y centrado bajo «Hecho». */
+.lnk.ux-saltar-ej{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:40px;margin-top:4px;color:var(--muted)}

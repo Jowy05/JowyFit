@@ -3,7 +3,8 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { guardarAjustes } from '../../../datos/repos'
-import { objetivosEnergia, sesionesHechas, sugerenciasDia, totalesComida } from '../../../datos/consultas'
+import { gastoDelDia, objetivosEnergia, sesionesHechas, sugerenciasDia, totalesComida } from '../../../datos/consultas'
+import { basalHastaAhora } from '../../../dominio/energia'
 import type { DiaRutina, Rutina, Sesion } from '../../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../../catalogo/catalogo'
 import { indiceActual } from '../../../dominio/sesion'
@@ -41,6 +42,8 @@ export function Inicio() {
   const pasos = useLiveQuery(() => db.pasos.get(hoy), [hoy])
   const yaEntreno = useLiveQuery(async () => !!(await db.sesiones.where('estado').equals('hecha').first()), []) ?? false
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
+  // Lo que gastas hoy: en reposo y por ejercicio (pasos + entreno). Se recalcula al cambiar pasos, entrenos o medidas.
+  const gasto = useLiveQuery(() => gastoDelDia(perfil, hoy), [perfil, hoy])
   const semana = estadoSemana(rutina, sesiones, hoy, ajustes.recolocadas)
   const proxSemana = estadoSemana(rutina, sesiones, sumarDias(dias[6]!, 1), ajustes.recolocadas).find(d => d.estado === 'plan')
   const tarjeta = tarjetaHoy(rutina, semana, hoy, !!enCurso, perfil.sesionPerdida === 'sabado', proxSemana)
@@ -141,6 +144,23 @@ export function Inicio() {
                   <p className="d">de {num(perfil.pasosObjetivo, 0)}</p>
                 </div>
               </button>
+            )}
+            {ajustes.mostrarKcal && gasto && (
+              <>
+                <button className="card kpi" onClick={() => aviso(gasto.formula === 'katch'
+                  ? `Lo que gasta tu cuerpo sin moverte, con tu peso (${num(gasto.peso)} kg) y tu grasa (${num(gasto.grasa)} %). Aproximado.`
+                  : `Lo que gasta tu cuerpo sin moverte, con tu peso (${num(gasto.peso)} kg), tu altura, tu edad y tu sexo. Con tu % de grasa saldría más fino. Aproximado.`)}>
+                  <span className="lbl">En reposo</span>
+                  <p className="k">{num(gasto.basal, 0)}<small>kcal</small></p>
+                  <p className="d">al día sin moverte · llevas ~{num(basalHastaAhora(gasto.basal, new Date().getHours() * 60 + new Date().getMinutes()), 0)}</p>
+                </button>
+                <button className="card kpi" onClick={() => aviso('Pasos: unas 0,5 kcal por kilo y kilómetro (con tu zancada). Entreno: según cada ejercicio y las series que has hecho. Sin contar el reposo. Aproximado.')}>
+                  <span className="lbl">Por ejercicio</span>
+                  <p className="k">{num(gasto.pasos + gasto.entreno.hecho, 0)}<small>kcal</small></p>
+                  <p className="d">pasos ~{num(gasto.pasos, 0)}{gasto.hayEntreno ? ` · entreno ~${num(gasto.entreno.hecho, 0)}` : ''}</p>
+                  {gasto.entreno.saltado > 0 && <p className="d warnc">−{num(gasto.entreno.saltado, 0)} por lo saltado</p>}
+                </button>
+              </>
             )}
             {tot.cafeina > 0 && (
               <div className="card kpi span2 row">

@@ -42,7 +42,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
           if (nueva.ejercicios[idx]!.series.length === e.series.length) { aviso('Queda una sola serie: no se puede quitar'); return }
           await guardar(nueva); nav.hoja(null); aviso('Serie quitada', () => void guardar(antes))
         }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>Quitar una serie</b></span></button>}
-        <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso('Saltado: lo verás en la lista', () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>Saltarlo</b><small>Puedes recuperarlo desde la lista</small></span></button>
+        <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso('Saltado: lo verás en la lista', () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>Saltar este ejercicio</b><small>Puedes recuperarlo desde la lista</small></span></button>
       </div>
       <details className="fold mt16">
         <summary><Ico n="dots-three-circle" className="blue" />Otras opciones<Ico n="caret-down" /></summary>

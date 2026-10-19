@@ -450,6 +450,12 @@ function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, total, on
           if (comprobar(d)) enviar(d)
         }}><Ico n="check" b />Hecho</button>
       </div>
+      {/* Saltar el ejercicio entero, a la vista (antes solo estaba dentro de «Más»). Se recupera desde la lista. */}
+      <button className="lnk small ux-saltar-ej" onClick={async () => {
+        const antes = s
+        await db.sesiones.put(saltar(s, idx))
+        aviso(`Saltado: ${nombreEjercicio(e.ejercicio)}. Lo recuperas desde la lista`, () => void db.sesiones.put(antes))
+      }}><Ico n="skip-forward" />Saltar este ejercicio</button>
     </div>
   )
 }

@@ -1,0 +1,5 @@
+/* Provisional: la landing de verdad la construye el workflow de la landing. */
+html[data-plataforma='apple'] .solo-otro, html[data-plataforma='otro'] .solo-apple { display: none !important; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #10151c; color: #e7eef6; }
+#landing { min-height: 100vh; display: grid; place-content: center; gap: 16px; text-align: center; padding: 24px; }
+.cta { display: inline-block; padding: 16px 24px; border-radius: 14px; background: #ff7a1a; color: #10151c; font-weight: 800; text-decoration: none; }

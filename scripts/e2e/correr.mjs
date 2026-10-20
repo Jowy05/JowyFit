@@ -25,6 +25,8 @@ const servidor = compilada
   ? await preview({ root: RAIZ, logLevel: 'error', preview: { port: 5198, strictPort: true, host: '127.0.0.1' } })
   : await createServer({ root: RAIZ, logLevel: 'error', server: { port: 5199, strictPort: true, host: '127.0.0.1' } }).then(s => s.listen())
 const URL_APP = compilada ? 'http://127.0.0.1:5198/' : 'http://127.0.0.1:5199/'
+// La app está en app.html; index.html es la landing (elige landing o app según el navegador).
+const PAGINA_APP = URL_APP + 'app.html'
 const nav = await abrirNavegador()
 const { cdp } = nav
 
@@ -85,7 +87,7 @@ const noVer = texto => t('noVer', texto)
 
 /** Carga la app de cero (base vacía) a una fecha y hora concretas. */
 async function deCero(fechaHora) {
-  await cdp.enviar('Page.navigate', { url: URL_APP })
+  await cdp.enviar('Page.navigate', { url: PAGINA_APP })
   await esperar(300)
   await js(`
     sessionStorage.setItem('__e2e_fecha', String(new Date(${JSON.stringify(fechaHora)}).getTime() - Date.__real()));

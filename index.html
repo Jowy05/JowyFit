@@ -2,17 +2,45 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#10151C" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="JowyFit" />
     <link rel="icon" href="icono.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="iconos/icono-180.png" />
-    <title>JowyFit</title>
+    <title>JowyFit · Tu fuerza y tu comida, en una ficha clara</title>
+    <meta name="description" content="App de entrenamiento de fuerza, comida y progreso. Gratis, sin cuentas y sin anuncios: todo se queda en tu móvil." />
+    <!--
+      Enrutador (antes de pintar nada):
+      - La app instalada (pantalla de inicio del iPhone) o el APK van directos a la app (app.html).
+      - Navegadores de Apple (iPhone, iPad, Safari en Mac): landing; su botón abre la app con las
+        instrucciones para instalarla.
+      - Cualquier otro navegador: landing; su botón descarga el APK de Android.
+      - «?landing» fuerza la landing (para probarla); «?plataforma=apple|otro» fuerza el tipo de navegador.
+    -->
+    <script>
+      ;(function () {
+        var q = new URLSearchParams(location.search)
+        var ua = navigator.userAgent
+        var instalada = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)
+        var apk = /JowyFit \(\+https/.test(ua)
+        if (!q.has('landing') && (instalada || apk)) { location.replace('app.html' + location.hash); return }
+        var esApple = /iPhone|iPad|iPod/.test(ua)
+          || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+          || (/Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/.test(ua))
+        var forzada = q.get('plataforma')
+        if (forzada === 'apple' || forzada === 'otro') esApple = forzada === 'apple'
+        document.documentElement.setAttribute('data-plataforma', esApple ? 'apple' : 'otro')
+      })()
+    </script>
   </head>
   <body>
-    <div id="raiz"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <main id="landing">
+      <h1>JowyFit</h1>
+      <p>Tu fuerza y tu comida, en una ficha clara.</p>
+      <a class="cta solo-otro" id="cta-apk" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk">Descargar para Android</a>
+      <a class="cta solo-apple" id="cta-app" href="app.html?instalar=1">Abrir JowyFit</a>
+    </main>
+    <script type="module" src="/src/landing/main.ts"></script>
   </body>
 </html>

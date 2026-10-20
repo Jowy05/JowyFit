@@ -8,7 +8,7 @@ import { nombreEjercicio } from '../../../catalogo/catalogo'
 import { kg, num } from '../../../dominio/calculos'
 import { fechaCorta, hoyISO } from '../../../dominio/fechas'
 import { ejerciciosHechos, faltaMeta, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../../dominio/tendencias'
-import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio } from '../../comp'
+import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { usePerfil } from '../../datos'
@@ -218,13 +218,13 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
       <Stepper valor={objetivo} onCambio={setObjetivo} paso={info.paso} min={0} sufijo={unidad} decimales={2} etiqueta="Objetivo" />
 
       <div className="grid2 mt12">
-        <Campo etiqueta="Unidad"><input className="inp" value={unidad} onChange={e => setUnidad(e.target.value)} placeholder="kg, cm, reps…" /></Campo>
+        <Campo etiqueta="Unidad"><input className="inp" maxLength={20} value={unidad} onChange={e => setUnidad(e.target.value)} placeholder="kg, cm, reps…" /></Campo>
         <Campo etiqueta="Fecha (opcional)"><input className="inp" type="date" value={fecha} min={meta ? undefined : hoyISO()} onChange={e => setFecha(e.target.value)} /></Campo>
       </div>
 
       <div className="mt12">
         <Campo etiqueta="Nombre" ayuda="Si lo dejas vacío, lo ponemos nosotros.">
-          <input className="inp" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={tituloAuto(tipo, objetivo, unidad, ej)} />
+          <input className="inp" maxLength={LARGO.nombre} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={tituloAuto(tipo, objetivo, unidad, ej)} />
         </Campo>
       </div>
 

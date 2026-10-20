@@ -9,6 +9,7 @@ import { duracionDia } from '../../../dominio/generador'
 import { Cab, Ico, Seg } from '../../comp'
 import { useNav } from '../../nav'
 import { useGimnasio } from '../../datos'
+import { propio } from '../../../dominio/claves'
 
 export function CabRutina({ actual, crumb, titulo = 'Rutina', children }: { actual: 'rut' | 'rut-ej' | 'rut-gym'; crumb?: ReactNode; titulo?: string; children?: ReactNode }) {
   const nav = useNav()
@@ -79,7 +80,7 @@ const MUSCULO_COMUN: Record<string, string> = {
   gluteus_maximus: 'Glúteo', gluteus_medius: 'Glúteo', abductors: 'Glúteo',
   quadriceps: 'Pierna', hamstrings: 'Pierna', adductors: 'Pierna', gastrocnemius: 'Pierna', soleus: 'Pierna', tibialis_anterior: 'Pierna',
 }
-export const musculoComun = (id: string) => MUSCULO_COMUN[id] ?? nombreMusculo(id)
+export const musculoComun = (id: string) => propio(MUSCULO_COMUN, id) ?? nombreMusculo(id)
 /** Músculos en palabras normales, sin repetir: «Pierna · Glúteo». */
 export function musculosComunes(ids: string[], n = 3): string[] {
   return [...new Set(ids.map(musculoComun))].slice(0, n)
@@ -88,7 +89,7 @@ export function musculosComunes(ids: string[], n = 3): string[] {
 const ZONA_COMUN: Record<string, string> = {
   back: 'Espalda', chest: 'Pecho', core: 'Abdomen', full_body: 'Cuerpo entero', lower_arms: 'Brazo', lower_legs: 'Pierna', shoulders: 'Hombro', upper_arms: 'Brazo', upper_legs: 'Pierna',
 }
-export const zonaComun = (z: string) => ZONA_COMUN[z] ?? z
+export const zonaComun = (z: string) => propio(ZONA_COMUN, z) ?? z
 
 export const seriesTxt = (b: Bloque) => (b.registro === 'tiempo' ? `${b.series} × ${b.repsMin}-${b.repsMax} s` : `${b.series} × ${b.repsMin}-${b.repsMax}`)
 

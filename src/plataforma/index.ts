@@ -372,6 +372,24 @@ export async function compartirArchivo(nombre: string, bytes: Uint8Array, tipo =
   }
 }
 
+/**
+ * Android: abre el menú Compartir del sistema con un archivo (WhatsApp, Gmail, Drive…). Se deja antes en la caché,
+ * en la carpeta «compartir», que es la que el FileProvider deja dar a otra app (res/xml/file_paths.xml).
+ */
+export async function compartirNativo(nombre: string, bytes: Uint8Array, titulo: string): Promise<'compartido' | 'cancelado'> {
+  const { Filesystem, Directory } = await import('@capacitor/filesystem')
+  const { Share } = await import('@capacitor/share')
+  const r = await Filesystem.writeFile({ path: `compartir/${nombre}`, data: aBase64(bytes), directory: Directory.Cache, recursive: true })
+  try {
+    await Share.share({ title: titulo, files: [r.uri], dialogTitle: titulo })
+    return 'compartido'
+  } catch (e) {
+    // Cerrar el menú sin elegir nada no es un error.
+    if (/cancel/i.test(String((e as Error)?.message ?? e))) return 'cancelado'
+    throw e
+  }
+}
+
 /** Lista las copias guardadas en Documentos/JowyFit (solo Android). */
 export async function copiasGuardadas(): Promise<{ nombre: string; fecha: number; tam: number }[]> {
   if (!esNativo()) return []

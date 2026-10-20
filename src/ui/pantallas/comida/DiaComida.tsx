@@ -6,7 +6,7 @@ import { objetivosEnergia, totalesComida } from '../../../datos/consultas'
 import type { Comida } from '../../../datos/tipos'
 import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, picoteoDeSemana, textoRacion } from '../../../dominio/comida'
 import { DIAS, MESES_CORTOS, deISO, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../../dominio/fechas'
-import { Barra, cx, Ico, Pantalla, Seccion, useUnaVez } from '../../comp'
+import { Barra, cx, Ico, Pantalla, Seccion, useUnaVez, recortar } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
@@ -108,7 +108,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
                     <Deslizable key={c.id} onBorrar={() => void borrar(c)} onAbrir={() => nav.hoja('sheet-comida', { id: c.id })}>
                       <Mini nombre={c.nombre} tipo={c.tipo} foto={c.foto} />
                       <span className="tx">
-                        <b>{c.nombre}</b>
+                        <b>{recortar(c.nombre)}</b>
                         <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ${textoRacion(c.racion)}` : ''}{c.cafeina ? ` · ${c.cafeina} mg cafeína` : ''}{c.foto ? ' · con foto' : ''}</small>
                       </span>
                       <span className="end ux-com-end"><em>{Math.round(c.proteina)} g</em><small> prot.</small><br /><small>{Math.round(c.kcal)} kcal</small></span>

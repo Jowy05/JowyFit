@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Franja, Producto as TProducto } from '../../../datos/tipos'
-import { NOMBRE_RACION, aspecto, buscarOFF, escalarMacros, factorRacion, porRacion, soloMacros, textoRacion, type Racion } from '../../../dominio/comida'
+import { NOMBRE_RACION, aspecto, buscarOFF, escalarMacros, imagenOFF, factorRacion, porRacion, soloMacros, textoRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { num } from '../../../dominio/calculos'
-import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio } from '../../comp'
+import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio, recortar } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, apuntar, kp } from './comun'
@@ -63,16 +63,18 @@ export function Producto({ ruta }: { ruta: Ruta }) {
     aviso(`Borrado: ${x.nombre}`, () => { void db.productos.put(x) })
   })
 
+  // Solo imágenes de Open Food Facts: una copia ajena podía meter la de cualquier servidor («píxel espía»).
+  const imagen = imagenOFF(p.imagen)
   return (
     <Pantalla>
-      <div className={cx('prod-hero', !p.imagen && a.fp)} style={p.imagen ? { background: '#fff' } : undefined}>
+      <div className={cx('prod-hero', !imagen && a.fp)} style={imagen ? { background: '#fff' } : undefined}>
         <button className="gal-back" aria-label="Atrás" onClick={() => nav.atras()}><Ico n="caret-left" b /></button>
-        {p.imagen ? <img src={p.imagen} alt="" style={{ maxHeight: '78%', maxWidth: '70%', objectFit: 'contain', position: 'relative' }} /> : <Ico n={a.icono} className="prod-ic" />}
+        {imagen ? <img src={imagen} alt="" style={{ maxHeight: '78%', maxWidth: '70%', objectFit: 'contain', position: 'relative' }} /> : <Ico n={a.icono} className="prod-ic" />}
         <span className="gal-cnt tag mono">EAN {p.codigo}</span>
       </div>
       <div className="pg">
         {p.marca && <p className="lbl">{p.marca}</p>}
-        <h1 className="ficha-t">{p.nombre}</h1>
+        <h1 className="ficha-t">{recortar(p.nombre)}</h1>
 
         {p.pendiente ? (
           <div className="card pd mt12">

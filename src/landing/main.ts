@@ -47,6 +47,17 @@ function lineaVersion() {
   for (const el of document.querySelectorAll<HTMLElement>('[data-version-corta]')) el.textContent = `Versión ${version}`
 }
 
+/** «¿Es seguro instalarla?»: si se conoce la huella SHA-256 del APK publicado (apk.ts), se enseña para comprobarlo. */
+function huella() {
+  const sha = APK.version === version && /^[0-9a-f]{64}$/i.test(APK.sha256) ? APK.sha256.toLowerCase() : ''
+  for (const el of document.querySelectorAll<HTMLElement>('[data-huella]')) {
+    const codigo = el.querySelector<HTMLElement>('[data-huella-valor]')
+    if (!sha || !codigo) { el.hidden = true; continue }
+    codigo.textContent = sha
+    el.hidden = false
+  }
+}
+
 /** En iPhone, dentro del navegador de otra app (Instagram, Facebook…), no se puede añadir a la pantalla de inicio. */
 function dentroDeOtraApp() {
   const aviso = document.querySelector<HTMLElement>('[data-dentro-app]')
@@ -69,7 +80,9 @@ function preguntas() {
     if (d instanceof HTMLDetailsElement && getComputedStyle(d).display !== 'none') d.open = true
   }
   const porAncla = () => {
-    const h = decodeURIComponent(location.hash.slice(1))
+    // Un enlace con el ancla mal codificada («#%E0%A4%A») lanzaba un error y cortaba el arranque de la página.
+    let h = location.hash.slice(1)
+    try { h = decodeURIComponent(h) } catch { /* se usa tal cual */ }
     if (h === 'instalar') abrir(raiz.dataset.plataforma === 'apple' ? 'd-iphone' : 'd-android')
     else if (h) abrir(document.getElementById(h)?.closest('details')?.id ?? null)
   }
@@ -81,9 +94,7 @@ function preguntas() {
   })
 }
 
-letra()
-lineaVersion()
-notaOrdenador()
-dentroDeOtraApp()
-preguntas()
-arrancar()
+// Cada paso por separado: si uno falla, los demás siguen (antes un fallo dejaba la página a medio arrancar).
+for (const paso of [letra, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, arrancar, huella]) {
+  try { paso() } catch (e) { console.error('Landing:', e) }
+}

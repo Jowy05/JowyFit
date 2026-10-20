@@ -6,7 +6,7 @@ import { BARRAS, calentamiento, discosPorLado, pesosBarra, pesosPara } from '../
 import { anadirSerie, cambiarSerie, quitarSerie, saltar, serieActual } from '../../../dominio/sesion'
 import type { Serie, Sesion } from '../../../datos/tipos'
 import { kg, num } from '../../../dominio/calculos'
-import { Chip, cx, Hoja, Ico, Interruptor, Stepper } from '../../comp'
+import { Chip, cx, Hoja, Ico, Interruptor, Stepper, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useSesionEnCurso } from '../../datos'
@@ -193,7 +193,7 @@ function FormNotaSerie({ s, idx, n, serie }: { s: Sesion; idx: number; n: number
   const titulo = serie.calentamiento ? 'Calentamiento' : `Serie ${e.series.filter(x => !x.calentamiento).indexOf(serie) + 1}`
   return (
     <Hoja titulo="Nota de la serie" sub={titulo}>
-      <textarea className="inp" autoFocus aria-label="Nota de la serie" value={t} onChange={e => setT(e.target.value)} placeholder="Molestia en el hombro, agarre falló…" />
+      <textarea className="inp" autoFocus aria-label="Nota de la serie" maxLength={LARGO.nota} value={t} onChange={e => setT(e.target.value)} placeholder="Molestia en el hombro, agarre falló…" />
       <div className="chips mt8">{['Molestia', 'Me ha costado', 'Muy fácil', 'Mal agarre'].map(x => <Chip key={x} onClick={() => setT(v => (v ? `${v}. ${x}` : x))}>{x}</Chip>)}</div>
       <button className="btn mt16" onClick={async () => { const x = structuredClone(s); x.ejercicios[idx]!.series[n]!.nota = t; await db.sesiones.put(x); nav.hoja(null); aviso('Nota guardada') }}>Guardar</button>
     </Hoja>

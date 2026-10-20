@@ -3,10 +3,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { db } from '../../../datos/db'
 import type { Comida, Plantilla } from '../../../datos/tipos'
-import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, buscarOFF, conRacion, escalarMacros, factorRacion, franjaPorHora, tipoRacion, type Macros, type Racion } from '../../../dominio/comida'
+import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, buscarOFF, imagenOFF, conRacion, escalarMacros, factorRacion, franjaPorHora, tipoRacion, type Macros, type Racion } from '../../../dominio/comida'
 import { num } from '../../../dominio/calculos'
 import { horaActual } from '../../../dominio/fechas'
-import { Cab, cx, Ico, Seg } from '../../comp'
+import { Cab, cx, Ico, recortar, Seg } from '../../comp'
 import { useNav } from '../../nav'
 
 type Vista = 'com' | 'com-plant'
@@ -25,8 +25,9 @@ export function CabComida({ vista, crumb, fecha }: { vista: Vista; crumb: string
 /** Miniatura de color con icono (o la foto si la hay). */
 export function Mini({ nombre, tipo, foto, imagen, className }: { nombre: string; tipo?: string; foto?: Blob; imagen?: string; className?: string }) {
   const url = useUrlBlob(foto)
-  const a = aspecto(nombre, tipo)
-  const src = url ?? imagen
+  const a = aspecto(recortar(nombre, 200), tipo)
+  // Imágenes de fuera, solo las de Open Food Facts (una copia ajena podía meter un «píxel espía»).
+  const src = url ?? imagenOFF(imagen)
   if (src) return <span className={cx('fp', className)} style={{ background: '#fff' }}><img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></span>
   return <span className={cx('fp', a.fp, className)}><Ico n={a.icono} b /></span>
 }
@@ -135,7 +136,7 @@ export function ElegirCuanto({ x, onCerrar }: { x: ParaElegir | null; onCerrar: 
     <div className="popup-fondo" onClick={onCerrar}>
       <div className="popup" role="dialog" aria-modal="true" aria-label={`Cuánto de ${x.nombre}`} onClick={e => e.stopPropagation()}>
         <p className="lbl">¿Cuánto has tomado?</p>
-        <h3 className="h3 mt4">{x.nombre}</h3>
+        <h3 className="h3 mt4">{recortar(x.nombre)}</h3>
         <div className="popup-op">
           {(['P', 'N', 'G'] as const).map(r => {
             const v = conRacion(x.base, r, x.tipo)

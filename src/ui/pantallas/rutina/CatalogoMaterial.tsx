@@ -4,7 +4,7 @@ import { catalogoCargado, imagenMaterial, nombreMaterial, normalizar } from '../
 import { GRUPOS_MATERIAL } from '../../../catalogo/clasificacion'
 import type { Gimnasio, Tramo } from '../../../datos/tipos'
 import { mancuernasDisponibles } from '../../../dominio/pesos'
-import { cx, Ico, Stepper } from '../../comp'
+import { cx, Ico, Stepper, LARGO } from '../../comp'
 import { num } from '../../../dominio/calculos'
 
 /** Claves de material que usa algún ejercicio (las demás no aportan nada). */
@@ -28,7 +28,7 @@ export function CatalogoMaterial({ material, onCambio }: { material: string[]; o
     <>
       <label className="search">
         <Ico n="magnifying-glass" />
-        <input className="inp" type="search" placeholder="Buscar en el catálogo" aria-label="Buscar en el catálogo" value={q} onChange={e => setQ(e.target.value)} />
+        <input className="inp" type="search" maxLength={LARGO.buscar} placeholder="Buscar en el catálogo" aria-label="Buscar en el catálogo" value={q} onChange={e => setQ(e.target.value)} />
       </label>
       <p className="small muted mt8">Lo de peso corporal ya está siempre disponible.</p>
       {GRUPOS_MATERIAL.map((g, gi) => {

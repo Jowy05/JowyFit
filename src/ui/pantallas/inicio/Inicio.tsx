@@ -16,7 +16,7 @@ import { resumenSemana } from '../../../dominio/resumen'
 import { recordsEn, subidas } from '../../../dominio/tendencias'
 import { kg, num } from '../../../dominio/calculos'
 import type { Sugerencia } from '../../../dominio/progresion'
-import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, Th, useUnaVez } from '../../comp'
+import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, Th, useUnaVez, LARGO, recortar } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
@@ -100,7 +100,7 @@ export function Inicio() {
         <SemanaSuave rutina={rutina ?? null} />
 
         <Seccion titulo="Hoy te toca" accion={tarjeta.tipo === 'hoy' ? 'Ver día' : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('rut-dia', { letra: tarjeta.dia.letra }, 'rut')}>
-          <TarjetaHoy t={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre} />
+          <TarjetaHoy t={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre == null ? undefined : recortar(gym.nombre, LARGO.nombre)} />
         </Seccion>
 
         {/* El domingo, «¿Voy bien?» justo debajo de «Hoy te toca» (antes salía al final y no se llegaba). */}

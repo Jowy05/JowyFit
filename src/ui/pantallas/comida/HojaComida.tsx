@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Comida, Franja } from '../../../datos/tipos'
 import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, escalarMacros, factorRacion, notaPorTamano, tamanoDe, tipoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
-import { Chip, Hoja, Ico, Stepper } from '../../comp'
+import { Chip, Hoja, Ico, Stepper, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, useUrlBlob } from './comun'
@@ -53,7 +53,7 @@ export function HojaComida({ ruta }: { ruta: Ruta }) {
     <Hoja titulo="Editar" sub={NOMBRE_FRANJA[c.franja]} className="tall">
       {fotoUrl && <img className="foto-prev" src={fotoUrl} alt="Foto de la comida" />}
       <span className="lbl fl mt8">Qué es</span>
-      <input className="inp" value={c.nombre} onChange={e => cambia({ nombre: e.target.value })} aria-label="Nombre" />
+      <input className="inp" maxLength={LARGO.nombre} value={c.nombre} onChange={e => cambia({ nombre: e.target.value })} aria-label="Nombre" />
       <p className="lbl fl mt16">Cuándo</p>
       <div className="chips eq">
         {FRANJAS.map(f => <Chip key={f.v} on={c.franja === f.v} onClick={() => ponerFranja(f.v)}>{NOMBRE_FRANJA[f.v]}</Chip>)}

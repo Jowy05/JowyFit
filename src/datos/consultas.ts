@@ -1,8 +1,8 @@
 // Consultas que combinan tablas: historial de ejercicios, sugerencias, totales del día…
 import { db } from './db'
 import type { Comida, DiaRutina, Gimnasio, Medicion, Perfil, Serie, Sesion } from './tipos'
-import { ejercicio } from '../catalogo/catalogo'
-import { tipoRegistro } from '../catalogo/clasificacion'
+import { cargarCatalogo, ejercicio, nombreEjercicio } from '../catalogo/catalogo'
+import { patron, tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
 import { conPartida, desdeReferencia, sugerir, type Sugerencia } from '../dominio/progresion'
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
@@ -10,6 +10,7 @@ import { edad, hoyISO } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
 import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
 import { grasaPorMedidas } from '../dominio/tendencias'
+import { calcularInforme, hayDatosEn, primerDato, rangoInforme, type CatalogoInforme, type Informe, type PeriodoInforme, type RangoInforme, type SeccionesInforme, type TablasInforme } from '../dominio/informe'
 
 export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
 
@@ -143,4 +144,45 @@ export async function objetivosEnergia(p: Perfil): Promise<{ kcal: number; prote
 export async function sesionDeHoy(): Promise<Sesion | undefined> {
   const hoy = hoyISO()
   return (await db.sesiones.where('fecha').equals(hoy).toArray()).find(s => s.estado === 'hecha')
+}
+
+// ---------- informe en PDF ----------
+
+/** Todo lo que necesita el informe, leído de una vez (las tablas enteras: el periodo se filtra en el dominio). */
+export async function tablasInforme(): Promise<TablasInforme> {
+  const [perfil, ajustes, mediciones, sesiones, rutina, comidas, suplementos, pasos, metas] = await Promise.all([
+    db.perfil.get('yo'),
+    db.ajustes.get('app'),
+    db.mediciones.toArray(),
+    db.sesiones.toArray(),
+    db.rutinas.filter(r => r.activa).last(),
+    db.comidas.toArray(),
+    db.suplementos.toArray(),
+    db.pasos.toArray(),
+    db.metas.toArray(),
+  ])
+  return { perfil, ajustes, mediciones, sesiones, rutina: rutina ?? null, comidas, suplementos, pasos, metas }
+}
+
+/** Nombres, grupos y MET de los ejercicios (RepDB). Sin catálogo (sin conexión la primera vez), el informe sale igual con lo que haya. */
+async function catalogoInforme(): Promise<CatalogoInforme> {
+  await cargarCatalogo().catch(() => null)
+  return {
+    nombre: id => (ejercicio(id) ? nombreEjercicio(id) : id),
+    patron: id => { const e = ejercicio(id); return e ? patron(e) : undefined },
+    met: id => ejercicio(id)?.met,
+  }
+}
+
+/** Fechas de un periodo y si hay algo apuntado en ellas (para la hoja de Ajustes: el texto y el botón gris). */
+export async function periodoInforme(periodo: PeriodoInforme, ahora = new Date()): Promise<RangoInforme & { hayDatos: boolean }> {
+  const t = await tablasInforme()
+  const r = rangoInforme(periodo, ahora, primerDato(t))
+  return { ...r, hayDatos: hayDatosEn(t, r.inicio, r.fin) }
+}
+
+/** Todos los datos del informe en PDF de un periodo, listos para dibujar. */
+export async function datosInforme(periodo: PeriodoInforme, ahora = new Date(), secciones?: Partial<SeccionesInforme>): Promise<Informe> {
+  const [t, catalogo] = await Promise.all([tablasInforme(), catalogoInforme()])
+  return calcularInforme({ ...t, periodo, ahora, secciones, catalogo })
 }

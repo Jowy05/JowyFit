@@ -4,7 +4,7 @@ import { db } from '../../../datos/db'
 import type { MaquinaPropia } from '../../../datos/tipos'
 import { catalogoCargado, nombreMaterial } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
-import { Chip, Hoja, Ico } from '../../comp'
+import { Chip, Hoja, Ico, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 
@@ -37,7 +37,7 @@ export function HojaMaquina({ ruta }: { ruta: Ruta }) {
         {url ? <img src={url} alt="" className="photo-real" /> : <><Ico n="camera" /><span>Hacer foto</span></>}
       </button>
       <span className="lbl fl mt16">Nombre</span>
-      <input className="inp" value={m.nombre} onChange={e => setM(x => ({ ...x, nombre: e.target.value }))} placeholder="Remo T con apoyo" aria-label="Nombre de la máquina" />
+      <input className="inp" maxLength={LARGO.nombre} value={m.nombre} onChange={e => setM(x => ({ ...x, nombre: e.target.value }))} placeholder="Remo T con apoyo" aria-label="Nombre de la máquina" />
       <span className="lbl fl mt16">¿A qué se parece?</span>
       <p className="small muted">Así sabemos qué ejercicios permite.</p>
       <div className="chips mt8">
@@ -45,7 +45,7 @@ export function HojaMaquina({ ruta }: { ruta: Ruta }) {
         <Chip on={m.parecida === null} onClick={() => setM(x => ({ ...x, parecida: null }))}>Otra</Chip>
       </div>
       <span className="lbl fl mt16">Notas</span>
-      <textarea className="inp" value={m.notas ?? ''} onChange={e => setM(x => ({ ...x, notas: e.target.value }))} placeholder="Dónde está, discos máximos…" aria-label="Notas de la máquina" />
+      <textarea className="inp" maxLength={LARGO.nota} value={m.notas ?? ''} onChange={e => setM(x => ({ ...x, notas: e.target.value }))} placeholder="Dónde está, discos máximos…" aria-label="Notas de la máquina" />
       {suma > 0 && <div className="note mt12"><Ico n="info" /><span>Permite <b className="mono">{suma}</b> ejercicio{suma === 1 ? '' : 's'} del catálogo.</span></div>}
       <button className="btn mt16" onClick={guardar}>Guardar</button>
     </Hoja>

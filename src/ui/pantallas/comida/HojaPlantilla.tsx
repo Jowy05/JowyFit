@@ -8,7 +8,7 @@ import type { Franja, Plantilla } from '../../../datos/tipos'
 import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora, tipoRacion } from '../../../dominio/comida'
 import { horaActual, hoyISO } from '../../../dominio/fechas'
 import { hacerFoto } from '../../../plataforma'
-import { Chip, cx, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
+import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, apuntarPlantilla, useUrlBlob } from './comun'
@@ -86,7 +86,7 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
         </button>
         <div className="grow">
           <span className="lbl fl">Nombre</span>
-          <input className="inp" value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="p. ej. Lentejas de mi madre" aria-label="Nombre de la comida" />
+          <input className="inp" maxLength={LARGO.nombre} value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="p. ej. Lentejas de mi madre" aria-label="Nombre de la comida" />
           <small className="small muted">Foto opcional: toca la cámara.</small>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { db } from '../../../datos/db'
 import { escaneadosSueltos, ordenarPlantillas, porRacion, textoRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import type { Plantilla } from '../../../datos/tipos'
-import { Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
+import { Ico, Pantalla, useUnaVez, Vacio, recortar } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { CabComida, ElegirCuanto, Mini, apuntarPlantilla, buscarPendientes, kp, type ParaElegir } from './comun'
@@ -47,7 +47,7 @@ export function Plantillas() {
       <button className="tpl-m" onClick={() => pedir(p)}>
         <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
         <span className="tx">
-          <b>{p.nombre}</b>
+          <b>{recortar(p.nombre)}</b>
           <small>{p.tipo !== 'comida' && <span className="tag">{TIPO[p.tipo]}</span>}<span className="mono">{p.tipo === 'picoteo' ? 'entero: ' : ''}{kp(p.kcal, p.proteina, p.cafeina)}</span></small>
         </span>
         <Ico n="plus" b className="car" />
@@ -89,7 +89,7 @@ export function Plantillas() {
                 <button key={p.codigo} className="it" onClick={() => nav.ir('com-prod', { codigo: p.codigo })}>
                   <Mini nombre={p.nombre} imagen={p.imagen} />
                   <span className="tx">
-                    <b>{p.nombre}</b>
+                    <b>{recortar(p.nombre)}</b>
                     <small>{p.pendiente ? <span className="tag warn">Pendiente de buscar</span> : <><span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span>{v.base === '100g' ? ' (100 g)' : ''}</>}</small>
                   </span>
                   <Ico n="caret-right" className="car muted" />

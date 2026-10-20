@@ -6,7 +6,7 @@ import { db } from '../../../datos/db'
 import { porRacion } from '../../../dominio/comida'
 import { fechaCorta } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
-import { Cab, Ico, Pantalla, Vacio } from '../../comp'
+import { Cab, Ico, Pantalla, Vacio, recortar, LARGO } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { Mini, buscarPendientes, kp } from './comun'
@@ -31,7 +31,7 @@ export function Guardados() {
       <div className="pg">
         <label className="search">
           <Ico n="magnifying-glass" />
-          <input className="inp" type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en lo escaneado" aria-label="Buscar en lo escaneado" />
+          <input className="inp" type="search" maxLength={LARGO.buscar} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en lo escaneado" aria-label="Buscar en lo escaneado" />
         </label>
         <div className="count"><p><b className="mono">{productos.length}</b> productos guardados en el móvil</p></div>
         {!productos.length && <Vacio icono="barcode" titulo="Aún no has escaneado nada" texto="Escanea el código de barras y se guarda aquí: la próxima vez sale al instante, también sin conexión." accion="Escanear" onAccion={() => nav.ir('com-scan')} />}
@@ -43,7 +43,7 @@ export function Guardados() {
               <button key={p.codigo} className="it" onClick={() => nav.ir('com-prod', { codigo: p.codigo })}>
                 <Mini nombre={p.nombre} imagen={p.imagen} />
                 <span className="tx">
-                  <b>{p.nombre}</b>
+                  <b>{recortar(p.nombre)}</b>
                   <small>{p.pendiente ? <span className="tag warn">Pendiente de buscar</span> : <>{p.marca ? `${p.marca} · ` : ''}<span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span>{v.base === '100g' ? ' (100 g)' : ''}</>}</small>
                 </span>
                 <span className="end muted small">{fechaCorta(p.guardado.slice(0, 10))}</span>

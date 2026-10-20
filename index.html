@@ -137,11 +137,12 @@
                   <div class="segura-cuerpo">
                     <p>Se instala con un archivo de esta página, no desde Google Play. Por eso el móvil te pide permiso y te avisa: lo hace con cualquier app de fuera de la tienda.</p>
                     <ul>
-                      <li><b>Pide pocos permisos.</b> Avisos, para que suene el final del descanso. Y, solo si tú lo activas, leer tus pasos, tu peso y tu grasa de la app de salud del móvil.</li>
+                      <li><b>Pide pocos permisos.</b> Avisos, para que suene el final del descanso; la cámara, solo para escanear códigos de barras. Y, solo si tú lo activas, leer tus pasos, tu peso y tu grasa de Health Connect, la app de salud de Android.</li>
                       <li><b>No pide</b> tu ubicación, tus contactos ni el micrófono.</li>
-                      <li><b>Tus datos no salen del móvil.</b> Solo usa internet para buscar un código de barras en una lista pública de alimentos, y lo único que envía es ese número.</li>
+                      <li><b>Tus datos no salen del móvil.</b> Solo usa internet con el escáner: busca el código de barras en Open Food Facts (una lista pública de alimentos) y enseña la foto del producto desde sus servidores. Envía ese número y nada más.</li>
                       <li><b>Google Play Protect</b>, que viene en los móviles Android, puede revisarla al instalarla, como a cualquier app.</li>
                       <li><b>Siempre con la misma firma:</b> el móvil solo deja instalar encima versiones hechas por la misma persona.</li>
+                      <li hidden data-huella><b>Para comprobar que es el archivo de verdad:</b> su huella (SHA-256) es <code class="huella" data-huella-valor></code>. Si la calculas con el archivo que has descargado y sale igual, es exactamente el que se publicó y nadie lo ha cambiado.</li>
                       <li><b>Se quita como cualquier app:</b> mantén pulsado el icono y toca «Desinstalar».</li>
                     </ul>
                   </div>
@@ -357,7 +358,7 @@
             <p class="titulillo">Comida</p>
             <h2 id="t-comer">Come sin contar calorías.</h2>
             <p>Apunta lo que comes con <strong>Poco</strong>, <strong>Normal</strong> o <strong>Mucho</strong>. Primero ves la proteína; lo demás, en segundo plano. Y si tiene código de barras, lo escaneas.</p>
-            <p class="nota-peq">Los productos escaneados salen de Open Food Facts, una lista pública y gratuita de alimentos.</p>
+            <p class="nota-peq">Los productos escaneados salen de Open Food Facts, una lista pública y gratuita de alimentos: al escanear se le envía el código de barras y la foto del producto se carga de sus servidores.</p>
           </div>
           <div class="col-movil" data-revelar="izq">
             <figure class="movil movil-dia">
@@ -396,7 +397,7 @@
             <p class="titulillo">Tu cuerpo</p>
             <h2 id="t-cambias">Ve cómo cambias.</h2>
             <p>Peso, cintura y grasa corporal en una gráfica sencilla. Con la media de cada semana, porque el peso de un día suelto engaña.</p>
-            <p class="solo-otro">Si tienes una báscula o un reloj conectados al móvil, los pasos y el peso se apuntan solos (a través de Health Connect, la app de salud de Android).</p>
+            <p class="solo-otro">Si tienes una báscula o un reloj conectados al móvil, los pasos y el peso se apuntan solos (a través de Health Connect, la app de salud de Android, y solo si tú lo activas).</p>
             <p class="solo-apple">En el iPhone, el peso y los pasos los apuntas tú en un momento.</p>
           </div>
           <div class="col-movil" data-revelar="izq">
@@ -445,7 +446,7 @@
           </ul>
           <ul class="garantias-datos">
             <li data-revelar style="--i:0"><svg class="ico" aria-hidden="true"><use href="#i-eye-slash"/></svg><div><b>Esta página tampoco te sigue</b><span>No tiene analíticas ni cookies.</span></div></li>
-            <li data-revelar style="--i:1"><svg class="ico" aria-hidden="true"><use href="#i-wifi-slash"/></svg><div><b>Funciona sin internet</b><span>Solo el escáner necesita conexión para buscar el producto.</span></div></li>
+            <li data-revelar style="--i:1"><svg class="ico" aria-hidden="true"><use href="#i-wifi-slash"/></svg><div><b>Funciona sin internet</b><span>Solo el escáner necesita conexión: busca el código en Open Food Facts y carga de allí la foto del producto. Nada más sale del móvil.</span></div></li>
             <li data-revelar style="--i:2"><svg class="ico" aria-hidden="true"><use href="#i-user-circle-minus"/></svg><div><b>Sin cuentas ni contraseñas</b><span>Abres la app y empiezas.</span></div></li>
             <li data-revelar style="--i:3"><svg class="ico" aria-hidden="true"><use href="#i-shield-check"/></svg><div><b>Tu copia, en tu archivo</b><span>Guarda una copia cuando quieras y llévatela a otro móvil.</span></div></li>
           </ul>
@@ -460,10 +461,10 @@
       <section class="seccion dia" aria-labelledby="t-quien">
         <div class="contenedor">
           <p class="titulillo" data-revelar>Quién la ha hecho</p>
-          <h2 id="t-quien" data-revelar>Hecha por alguien que entrena a las 5:30.</h2>
+          <h2 id="t-quien" data-revelar>Hecha por alguien que entrena temprano.</h2>
           <article class="ficha ficha-autor" data-revelar>
-            <span class="chip">Martes · 5:30</span>
-            <p class="autor-texto">La hice para mí. Entreno martes, jueves y viernes a las <span class="dato">5:30</span> en un gimnasio de barrio, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.</p>
+            <span class="chip">Antes de trabajar</span>
+            <p class="autor-texto">La hice para mí. Entreno <span class="dato">temprano</span>, tres días a la semana, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.</p>
             <p class="autor-firma">Jowy</p>
             <div class="botones-sec">
               <a class="boton-sec" href="#novedades" data-abrir="d-novedades"><svg class="ico" aria-hidden="true"><use href="#i-list-bullets"/></svg>Novedades de cada versión</a>
@@ -583,6 +584,7 @@
               <summary id="novedades"><span>Novedades: qué ha cambiado en cada versión</span><svg class="ico chev" aria-hidden="true"><use href="#i-caret-down"/></svg></summary>
               <div class="respuesta">
                 <ul class="novedades">
+                  <li><p class="nov-cab"><b>Versión 0.2.0</b> · 21 de octubre de 2026</p><p>Informe en PDF: elige los días y qué lleva (entrenos, esfuerzo de cada ejercicio, récords, comida, cuerpo y pasos) y guárdalo o envíalo. Las copias de seguridad se revisan antes de recuperarlas, y la app ya funciona en el iPhone desde Safari.</p></li>
                   <li><p class="nov-cab"><b>Versión 0.1.6</b> · 20 de octubre de 2026</p><p>Repaso completo de la app y 20 fallos arreglados: volver al entreno tras la última serie, los avisos del descanso, la pantalla encendida en el iPhone y corregir las series de un entreno ya guardado. «Borrar todo» pide confirmarlo dos veces.</p></li>
                   <li><p class="nov-cab"><b>Versión 0.1.5</b> · 19 de octubre de 2026</p><p>En Inicio ves las calorías que gastas en reposo y entrenando. Y «Saltar este ejercicio» está a la vista.</p></li>
                   <li><p class="nov-cab"><b>Versión 0.1.4</b> · 18 de octubre de 2026</p><p>Conectar el reloj y la báscula es más fácil: un solo botón en Ajustes (Android).</p></li>

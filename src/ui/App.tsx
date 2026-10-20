@@ -15,6 +15,7 @@ import { Alta } from './pantallas/alta/Alta'
 import { MiniBarra } from './pantallas/entreno/MiniBarra'
 import { arrancarServicios } from './servicios'
 import { alPedirInstrucciones, ensenarAlEmpezar, Instalar, marcarVistas } from './pantallas/instalar/Instalar'
+import { PantallaRescate, RedSeguridad } from './Rescate'
 import './estilos/ux-iphone.css'
 
 // Apple: estilos propios (barra de estado de la app instalada). En todas partes: el sonido se abre con el primer
@@ -39,7 +40,8 @@ export function App() {
   const [instalar, setInstalar] = useState(ensenarAlEmpezar)
   useEffect(() => alPedirInstrucciones(() => setInstalar(true)), [])
   const cerrarInstalar = () => { marcarVistas(); setInstalar(false) }
-  if (error) return <div className="app"><div className="cargando" style={{ padding: 24, textAlign: 'center' }}>No se pudo abrir la app: {error}</div></div>
+  // Antes solo decía «No se pudo abrir la app» y no había salida: ahora se puede recuperar una copia o borrar los datos.
+  if (error) return <PantallaRescate detalle={`No se pudo abrir la app: ${error}`} />
   if (!listo || perfil === null) return <div className="app"><div className="cargando">JowyFit</div></div>
   return (
     <ProveedorAviso>
@@ -116,9 +118,12 @@ function Marco() {
   return (
     <div className={cx('app', full && 'is-full', enCurso && 'session-on')} data-letra={letra}>
       <div className="screens">
-        <Suspense fallback={<div className="cargando" />}>
-          <Pant key={`${ruta.p}:${JSON.stringify(ruta.d ?? {})}`} ruta={ruta} />
-        </Suspense>
+        {/* Una pantalla que falla no tumba la app: se queda la barra de pestañas y la salida a Inicio. */}
+        <RedSeguridad key={`${ruta.p}:${JSON.stringify(ruta.d ?? {})}`} nivel="pantalla" alVolver={() => { nav.completa(null); nav.hoja(null); nav.pestana('ini') }}>
+          <Suspense fallback={<div className="cargando" />}>
+            <Pant ruta={ruta} />
+          </Suspense>
+        </RedSeguridad>
       </div>
       {enCurso && <MiniBarra sesion={sesion} />}
       <nav className="tabbar" aria-label="Pestañas">
@@ -131,9 +136,11 @@ function Marco() {
       {hoja && Hoja && (
         <>
           <div className="backdrop" onClick={() => nav.hoja(null)} />
-          <Suspense fallback={null}>
-            <Hoja key={`${hoja.p}:${JSON.stringify(hoja.d ?? {})}`} ruta={hoja} />
-          </Suspense>
+          <RedSeguridad key={`${hoja.p}:${JSON.stringify(hoja.d ?? {})}`} nivel="hoja" alVolver={() => nav.hoja(null)}>
+            <Suspense fallback={null}>
+              <Hoja ruta={hoja} />
+            </Suspense>
+          </RedSeguridad>
         </>
       )}
     </div>

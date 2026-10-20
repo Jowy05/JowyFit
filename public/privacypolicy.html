@@ -3,21 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'" />
     <title>JowyFit · Privacidad</title>
     <style>
-      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #10151c; color: #e7eef6 }
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #10151c; color: #e7eef6; max-width: 720px }
       h1 { font-size: 24px } h2 { font-size: 18px; margin-top: 24px } a { color: #4fb3f0 }
     </style>
   </head>
   <body>
     <h1>Privacidad de JowyFit</h1>
-    <p>JowyFit guarda todos tus datos <b>solo en este móvil</b>. No hay cuentas, ni servidores, ni envío de datos a terceros.</p>
-    <h2>Datos de salud</h2>
-    <p>Si lo activas, JowyFit lee el <b>número de pasos</b> de Health Connect para mostrarte tu actividad diaria y tu objetivo de pasos. No escribe nada en Health Connect, no lee ningún otro dato de salud y no comparte los pasos con nadie.</p>
-    <p>Puedes retirar el permiso cuando quieras desde los ajustes de Health Connect.</p>
-    <h2>Conexiones a internet</h2>
-    <p>Solo cuando escaneas un código de barras, la app consulta ese código en Open Food Facts para obtener las calorías y la proteína del producto. No se envía ningún dato personal.</p>
+    <p>JowyFit guarda todos tus datos <b>solo en este móvil</b>: entrenos, comidas, medidas, fotos de progreso y tu perfil. No hay cuentas, ni servidores propios, ni anuncios, ni analíticas. Nadie más recibe tus datos.</p>
+
+    <h2>Lo único que sale del móvil: el escáner de comida</h2>
+    <p>Cuando escaneas (o escribes) un código de barras, la app pregunta por ese código a <b>Open Food Facts</b>, una lista pública y gratuita de alimentos, para saber sus calorías y su proteína. Lo que se envía es el número del código; como en cualquier conexión a internet, Open Food Facts ve también la dirección IP desde la que llega la consulta.</p>
+    <p>Si el producto tiene foto, la foto se carga de los servidores de Open Food Facts (images.openfoodfacts.org) cada vez que se enseña ese producto en la app. La app no carga imágenes de ningún otro sitio.</p>
+    <p>No se envía nada más: ni tu nombre, ni tu peso, ni lo que comes.</p>
+
+    <h2>Datos de salud (Health Connect, solo en Android)</h2>
+    <p>Solo si tú lo activas, JowyFit lee de Health Connect tus <b>pasos</b> y el <b>peso</b> y el <b>% de grasa</b> que guarde tu báscula, para enseñártelos en la app. No escribe nada en Health Connect y no comparte esos datos con nadie: se quedan en el móvil como el resto.</p>
+    <p>Puedes retirar el permiso cuando quieras desde los ajustes de Health Connect. En iPhone no se usa Health Connect: los pasos y el peso los apuntas tú.</p>
+
+    <h2>Cámara y fotos</h2>
+    <p>La cámara se usa para escanear códigos de barras y, si quieres, para hacer fotos de progreso o de tus comidas. Esas fotos se guardan solo en el móvil.</p>
+
+    <h2>Avisos</h2>
+    <p>Los avisos (fin del descanso, recordatorios) se programan en el propio móvil. No pasan por ningún servidor.</p>
+
     <h2>Copias de seguridad</h2>
-    <p>Las copias se guardan como archivo en tu móvil. Tú decides dónde guardarlas después.</p>
+    <p>Las copias se guardan como un archivo en tu móvil. Tú decides dónde guardarlas después (por ejemplo, mandártelas por correo o subirlas a tu nube): a partir de ahí las trata ese servicio.</p>
   </body>
 </html>

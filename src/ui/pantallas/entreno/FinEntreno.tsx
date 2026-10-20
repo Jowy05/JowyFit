@@ -9,7 +9,7 @@ import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyI
 import { estadoSemana } from '../../../dominio/semana'
 import { kg } from '../../../dominio/calculos'
 import { cancelar } from '../../../plataforma'
-import { Cab, Chip, Ico, Pantalla, Th, useUnaVez } from '../../comp'
+import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina } from '../../datos'
@@ -136,9 +136,9 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
               <Chip on={!hayMolestia} onClick={() => setHayMolestia(false)}>Ninguna</Chip>
               <Chip on={hayMolestia} onClick={() => setHayMolestia(true)}>Sí, te digo dónde</Chip>
             </div>
-            {hayMolestia && <input className="inp" value={molestia} onChange={e => setMolestia(e.target.value)} placeholder="Hombro derecho en el press…" />}
+            {hayMolestia && <input className="inp" maxLength={LARGO.frase} value={molestia} onChange={e => setMolestia(e.target.value)} placeholder="Hombro derecho en el press…" />}
             <p className="lbl">Nota</p>
-            <textarea className="inp" value={nota} onChange={e => setNota(e.target.value)} placeholder="Algo que quieras recordar" aria-label="Nota del entreno" />
+            <textarea className="inp" maxLength={LARGO.nota} value={nota} onChange={e => setNota(e.target.value)} placeholder="Algo que quieras recordar" aria-label="Nota del entreno" />
           </div>
         </div>
         {/* Hasta saber si se completa la calibración no se guarda: si no, no se abriría la rutina definitiva. */}

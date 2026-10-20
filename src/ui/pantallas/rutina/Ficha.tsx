@@ -17,6 +17,7 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
+import { propio } from '../../../dominio/claves'
 import { musculoComun, musculosComunes, nombreVisible, tituloDia, zonaComun } from './comun'
 
 const REGISTRO_TXT = { peso: 'kg y repeticiones', mancuerna: 'kg de cada mancuerna', asistido: 'kg de ayuda', corporal: 'repeticiones', tiempo: 'segundos', cardio: 'minutos' }
@@ -260,7 +261,7 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
                 <p><span>Esfuerzo</span><b>{enPlan.b.rpe}/10</b></p>
               </>}
             </div>
-            {e.etiquetas.length > 0 && <div className="chips mt8">{e.etiquetas.map(t => <span key={t} className="tag blue">{ETIQUETAS_ES[t] ?? t}</span>)}</div>}
+            {e.etiquetas.length > 0 && <div className="chips mt8">{e.etiquetas.map(t => <span key={t} className="tag blue">{propio(ETIQUETAS_ES, t) ?? t}</span>)}</div>}
           </div>
         </details>
         <p className="credit">Exercise data by <a href="https://repdb.co" style={{ color: 'inherit' }}>RepDB (repdb.co)</a></p>

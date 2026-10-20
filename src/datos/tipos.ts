@@ -330,4 +330,9 @@ export type Ajustes = {
   semanaSuave?: string | null
   /** «Ahora no» a la semana suave: no se vuelve a proponer hasta pasado este lunes. */
   suavePospuesta?: string | null
+  /** Lo último que se eligió en «Informe en PDF» (de qué días y qué lleva). */
+  informe?: {
+    periodo: 'hoy' | 'ayer' | 'semana' | 'mes' | 'todo'
+    secciones: { entrenos: boolean; comida: boolean; cuerpo: boolean; pasos: boolean; detalle: boolean }
+  }
 }

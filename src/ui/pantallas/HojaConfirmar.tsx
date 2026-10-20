@@ -1,6 +1,7 @@
 // Hoja de confirmación para lo irreversible.
 import { useState } from 'react'
-import { db, TABLAS } from '../../datos/db'
+import { db } from '../../datos/db'
+import { borrarTodosLosDatos } from '../../datos/copias'
 import { guardarAjustes } from '../../datos/repos'
 import { cancelar } from '../../plataforma'
 import { cx, Hoja, Ico, useUnaVez } from '../comp'
@@ -51,8 +52,8 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
         await db.fotos.delete(Number(d.id))
         nav.hoja(null); aviso('Foto borrada'); return
       case 'borrar-todo':
-        await db.transaction('rw', TABLAS.map(t => db.table(t)), async () => { for (const t of TABLAS) await db.table(t).clear() })
-        try { localStorage.clear() } catch { /* nada */ }
+        // Borra la base entera: también reinicia los contadores que una copia rara podía dejar agotados.
+        await borrarTodosLosDatos()
         location.reload()
         return
       default:

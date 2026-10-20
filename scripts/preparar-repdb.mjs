@@ -7,6 +7,7 @@
 //   public/repdb/mini/*.webp     miniaturas 160×160 para listas
 //   public/repdb/maq/*.webp      imágenes de material y máquinas
 //   public/repdb/mus/*.webp      diagramas de músculos
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { unzipSync } from 'fflate'
@@ -17,14 +18,39 @@ const CACHE = path.join(RAIZ, '.cache', 'repdb')
 const ZIP = path.join(CACHE, 'repdb-free.zip')
 const SALIDA = path.join(RAIZ, 'public', 'repdb')
 const URL_ZIP = 'https://cdn.repdb.co/repdb-assets/site/repdb-free.zip'
+// Huella SHA-256 de la versión de RepDB con la que se ha probado la app (revisada el 20/10/2026: la del 18/10 solo
+// añade 7 ejercicios y retoca 3 textos; no quita ni cambia ningún id).
+// Si lo descargado no cuadra (el zip ha cambiado o alguien lo ha manipulado), la compilación se para:
+// así nunca se publica un catálogo que no se ha revisado. Para pasar a una versión nueva de RepDB, se revisa
+// y se pone aquí su huella (o se compila una vez con REPDB_SHA256=<huella nueva>).
+const SHA256_ZIP = process.env.REPDB_SHA256 || '5fcfebed712bde3b71f38d68d400badff7438eaf83065ce60979ad69ca08d301'
+
+export const huella = datos => createHash('sha256').update(datos).digest('hex')
+
+/** Lanza un error claro si los bytes no son la versión revisada de RepDB. */
+export function comprobarRepDB(datos, origen = 'descargado', esperada = SHA256_ZIP) {
+  const h = huella(datos)
+  if (h !== esperada) {
+    throw new Error(
+      `RepDB: el archivo ${origen} no es el esperado.\n` +
+      `  Huella esperada: ${esperada}\n  Huella obtenida: ${h}\n` +
+      '  Puede que RepDB haya publicado otra versión o que el archivo esté dañado o manipulado. No se sigue.\n' +
+      '  Si es una versión nueva y la has revisado, pon su huella en SHA256_ZIP (scripts/preparar-repdb.mjs).',
+    )
+  }
+}
 
 async function descargar() {
-  if (fs.existsSync(ZIP) && fs.statSync(ZIP).size > 1_000_000) return
+  // El guardado solo vale si es la versión revisada; si no, se descarga (sin borrar el guardado hasta que lo nuevo cuadre).
+  if (fs.existsSync(ZIP) && huella(fs.readFileSync(ZIP)) === SHA256_ZIP) return
+  if (fs.existsSync(ZIP)) console.warn('RepDB: el archivo guardado en .cache/repdb no es la versión esperada. Se descarga de nuevo.')
   fs.mkdirSync(CACHE, { recursive: true })
   console.log('Descargando RepDB…')
   const r = await fetch(URL_ZIP)
   if (!r.ok) throw new Error(`No se pudo descargar RepDB: HTTP ${r.status}`)
-  fs.writeFileSync(ZIP, Buffer.from(await r.arrayBuffer()))
+  const datos = Buffer.from(await r.arrayBuffer())
+  comprobarRepDB(datos)
+  fs.writeFileSync(ZIP, datos)
 }
 
 function limpiar(dir) {
@@ -92,4 +118,7 @@ async function main() {
   console.log(`RepDB listo: ${ejercicios.length} ejercicios, ${n} imágenes, ${Object.keys(material).length} tipos de material, ${Object.keys(musculos).length} músculos.`)
 }
 
-main().catch(e => { console.error(e); process.exit(1) })
+// Solo al ejecutarlo (node scripts/preparar-repdb.mjs); al importarlo (pruebas) no hace nada.
+if (path.basename(process.argv[1] ?? '') === 'preparar-repdb.mjs') {
+  main().catch(e => { console.error(e.message ?? e); process.exit(1) })
+}

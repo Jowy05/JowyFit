@@ -65,6 +65,7 @@ const Perfil = perezosa(() => import('./perfil/Perfil'), 'Perfil')
 const SeccionPerfil = perezosa(() => import('./perfil/SeccionPerfil'), 'SeccionPerfil')
 const Ajustes = perezosa(() => import('./perfil/Ajustes'), 'Ajustes')
 const Creditos = perezosa(() => import('./perfil/Creditos'), 'Creditos')
+const HojaInforme = perezosa(() => import('./perfil/HojaInforme'), 'HojaInforme')
 
 export const PANTALLAS: Record<string, P> = {
   ini: Inicio,
@@ -118,4 +119,5 @@ export const HOJAS: Record<string, P> = {
   'sheet-meta': HojaMeta,
   'sheet-trote': HojaTrote,
   'sheet-confirmar': HojaConfirmar,
+  'sheet-informe': HojaInforme,
 }

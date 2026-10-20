@@ -5,11 +5,12 @@ import { db } from '../../../datos/db'
 import { guardarPerfil } from '../../../datos/repos'
 import { batidoDe, dosisDe, dosisPorDefecto, esBatido, kcalBatido } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
-import { Hoja, Ico, Stepper, useUnaVez } from '../../comp'
+import { Hoja, Ico, Stepper, useUnaVez, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { usePerfilCargado } from '../../datos'
 import type { Perfil } from '../../../datos/tipos'
+import { propio } from '../../../dominio/claves'
 
 export function HojaSuplemento({ ruta }: { ruta: Ruta }) {
   // El formulario se monta con el perfil ya cargado: con el de por defecto, «Guardar» pisaba el batido con 24 g.
@@ -23,7 +24,7 @@ function Formulario({ perfil, s }: { perfil: Perfil; s: string }) {
   const nav = useNav()
   const aviso = useAviso()
   const batido = esBatido(s)
-  const [dosis, setDosis] = useState(perfil.dosisSuplementos?.[s] ?? '')
+  const [dosis, setDosis] = useState(() => { const v = propio(perfil.dosisSuplementos, s); return typeof v === 'string' ? v : '' })
   const [b, setB] = useState(batidoDe(perfil.batido))
   // Mientras no se toquen las kcal, siguen a la proteína.
   const [kcalTocadas, setKcalTocadas] = useState(!!perfil.batido && perfil.batido.kcal !== kcalBatido(perfil.batido.proteina))
@@ -43,7 +44,7 @@ function Formulario({ perfil, s }: { perfil: Perfil; s: string }) {
   return (
     <Hoja titulo={s} sub="Cuánto tomas">
       <span className="lbl fl">Cantidad</span>
-      <input className="inp" value={dosis} onChange={e => setDosis(e.target.value)} placeholder={dosisPorDefecto(s) || 'p. ej. 1 cápsula'} aria-label={`Cantidad de ${s}`} />
+      <input className="inp" maxLength={LARGO.corto} value={dosis} onChange={e => setDosis(e.target.value)} placeholder={dosisPorDefecto(s) || 'p. ej. 1 cápsula'} aria-label={`Cantidad de ${s}`} />
       <p className="small muted mt4">Escríbelo como lo tomas: «10 g», «2 cápsulas»… {dosisPorDefecto(s) ? `Si lo dejas vacío, pone «${dosisDe(undefined, s)}».` : ''}</p>
       {batido && (
         <>

@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { type Plugin } from 'vite'
@@ -41,12 +42,55 @@ function appComoIndex(activo: boolean): Plugin {
   }
 }
 
+/**
+ * Content-Security-Policy por <meta>, solo en la compilación (el servidor de desarrollo mete scripts en línea).
+ * Qué permite: el código y los archivos de la propia app, el wasm del escáner web, las imágenes y la API de
+ * Open Food Facts, y nada más. Corta los «píxeles espía» de otros servidores y que un archivo raro cargue código.
+ * Los <script> en línea de index.html (enrutador y letra grande) van con su huella sha256, calculada aquí.
+ * En el APK (modo android) se permite además el script en línea: Capacitor, en los WebView viejos que no
+ * saben inyectar su puente al empezar, lo mete como <script> en línea dentro del HTML (JSInjector).
+ */
+export function cspPara(html: string, android: boolean): string {
+  const huellas = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
+    .map(m => `'sha256-${createHash('sha256').update(m[1] ?? '', 'utf8').digest('base64')}'`)
+  const script = ["'self'", "'wasm-unsafe-eval'", ...(android ? ["'unsafe-inline'"] : huellas)]
+  return [
+    "default-src 'self'",
+    `script-src ${script.join(' ')}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://images.openfoodfacts.org https://static.openfoodfacts.org",
+    "connect-src 'self' https://world.openfoodfacts.org",
+    "font-src 'self' data:",
+    "worker-src 'self' blob:",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "frame-src 'none'",
+    "base-uri 'self'",
+    "form-action 'none'",
+  ].join('; ')
+}
+function politicaSeguridad(android: boolean): Plugin {
+  return {
+    name: 'politica-seguridad',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        if (/http-equiv=["']Content-Security-Policy/i.test(html)) return html
+        // Lo primero del <head>: la política solo vale para lo que viene detrás.
+        return html.replace(/<head>/i, `<head>\n    <meta http-equiv="Content-Security-Policy" content="${cspPara(html, android)}" />`)
+      },
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => ({
   base,
   plugins: [
     react(),
     quitarFuentesViejas(),
     appComoIndex(mode === 'android'),
+    politicaSeguridad(mode === 'android'),
     VitePWA({
       registerType: 'autoUpdate',
       // Se registra a mano en main.tsx: solo en la versión web (en el APK todo va dentro y no hace falta).

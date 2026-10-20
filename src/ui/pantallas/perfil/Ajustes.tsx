@@ -1,11 +1,11 @@
-// AJU-01 · Ajustes. Arriba lo de todo el mundo (letra, tema, recordatorios, copia);
+// AJU-01 · Ajustes. Arriba lo de todo el mundo (letra, tema, recordatorios, informe en PDF, copia);
 // lo técnico (entreno, comida, pasos, permisos) plegado en «Más ajustes»; «Borrar todo», al final.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import paquete from '../../../../package.json'
 import { db } from '../../../datos/db'
 import { guardarAjustes } from '../../../datos/repos'
-import { importar, nombreCopia } from '../../../datos/copias'
+import { importar } from '../../../datos/copias'
 import { objetivosEnergia } from '../../../datos/consultas'
 import type { Ajustes as TAjustes } from '../../../datos/tipos'
 import { useCatalogo } from '../../../catalogo/catalogo'
@@ -148,8 +148,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
         else if (r.resultado === 'cancelado') aviso('No se ha guardado la copia')
         return
       }
-      const nombre = nombreCopia()
-      await hacerCopiaAhora()
+      const nombre = await hacerCopiaAhora()
       aviso(nativo ? `Copia guardada en Documentos/JowyFit: ${nombre}` : `Copia descargada: ${nombre}`)
       refrescarCopias()
     } catch (e) {
@@ -256,6 +255,16 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
             </div>
           </>
         )}
+
+        {/* ---------- Informe en PDF: arriba, junto a la copia (se busca aquí para enseñar o guardar los datos) ---------- */}
+        <p className="grp-t">Informe en PDF</p>
+        <div className="list">
+          <button className="it" onClick={() => nav.hoja('sheet-informe')}>
+            <span className="ico"><Ico n="file-pdf" /></span>
+            <span className="tx"><b>Informe en PDF</b><small>Tus entrenos, tu comida y tu cuerpo en un PDF para guardar o enseñar</small></span>
+            <Ico n="caret-right" className="car" />
+          </button>
+        </div>
 
         {/* ---------- Copia de seguridad ---------- */}
         <p className="grp-t" ref={refDatos} id="aju-datos">Copia de seguridad</p>

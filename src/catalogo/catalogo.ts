@@ -1,6 +1,7 @@
 // Catálogo de ejercicios RepDB: carga, búsqueda, imágenes y nombres en español.
 import { useEffect, useState } from 'react'
 import type { Catalogo, Ejercicio } from './tipos'
+import { propio } from '../dominio/claves'
 
 let cache: Catalogo | null = null
 let promesa: Promise<Catalogo> | null = null
@@ -76,18 +77,18 @@ export function miniatura(e: Ejercicio): string {
   return `${base()}repdb/mini/${e.id}-${p}.webp`
 }
 export function imagenMaterial(clave: string): string | undefined {
-  const m = cache?.material[clave]
+  const m = propio(cache?.material, clave)
   return m?.imagen ? `${base()}repdb/maq/${m.imagen}` : undefined
 }
 export function imagenMusculo(clave: string): string | undefined {
-  const m = cache?.musculos[clave]
+  const m = propio(cache?.musculos, clave)
   return m?.imagen ? `${base()}repdb/mus/${m.imagen}` : undefined
 }
 
 export const nombreMaterial = (clave: string | null) =>
-  clave ? (cache?.material[clave]?.nombre ?? clave) : 'Peso corporal'
-export const nombreMusculo = (clave: string) => cache?.musculos[clave]?.nombre ?? clave
-export const etiqueta = (grupo: string, clave: string) => cache?.etiquetas[grupo]?.[clave] ?? clave
+  clave ? (propio(cache?.material, clave)?.nombre ?? clave) : 'Peso corporal'
+export const nombreMusculo = (clave: string) => propio(cache?.musculos, clave)?.nombre ?? clave
+export const etiqueta = (grupo: string, clave: string) => propio(propio(cache?.etiquetas, grupo), clave) ?? clave
 
 /** Normaliza para buscar sin tildes ni mayúsculas. */
 export function normalizar(t: string): string {

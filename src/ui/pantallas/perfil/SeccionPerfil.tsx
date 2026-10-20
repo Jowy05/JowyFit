@@ -6,7 +6,7 @@ import { guardarPerfil } from '../../../datos/repos'
 import type { Bascula, Dia, Medicion, Perfil, Zona } from '../../../datos/tipos'
 import { kg, num } from '../../../dominio/calculos'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../../dominio/fechas'
-import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, TextoGuardado, Vacio } from '../../comp'
+import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { usePerfilCargado } from '../../datos'
@@ -78,8 +78,8 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta }) {
 // ---------- piezas comunes ----------
 
 /** Texto que se guarda solo (al dejar de escribir, al salir del campo y al cerrar la pantalla). */
-function Texto({ valor, onGuardar, placeholder, area, etiqueta }: { valor: string; onGuardar: (v: string) => void; placeholder?: string; area?: boolean; etiqueta?: string }) {
-  return <TextoGuardado valor={valor} onGuardar={v => { if (v !== valor) onGuardar(v) }} placeholder={placeholder} area={area} etiqueta={etiqueta} />
+function Texto({ valor, onGuardar, placeholder, area, etiqueta, max }: { valor: string; onGuardar: (v: string) => void; placeholder?: string; area?: boolean; etiqueta?: string; max?: number }) {
+  return <TextoGuardado valor={valor} onGuardar={v => { if (v !== valor) onGuardar(v) }} placeholder={placeholder} area={area} etiqueta={etiqueta} max={max} />
 }
 
 function Grupo({ t, children, ayuda }: { t: ReactNode; children: ReactNode; ayuda?: ReactNode }) {
@@ -106,7 +106,7 @@ function Fila({ t, d, on, c, ico }: { t: string; d?: string; on: boolean; c: (v:
 function Datos({ p, guardar }: Props) {
   return (
     <div className="fields mt16">
-      <label><span className="lbl fl">Nombre</span><Texto valor={p.nombre} onGuardar={v => guardar({ nombre: v.trim() })} placeholder="¿Cómo te llamamos?" /></label>
+      <label><span className="lbl fl">Nombre</span><Texto valor={p.nombre} max={LARGO.nombre} onGuardar={v => guardar({ nombre: v.trim() })} placeholder="¿Cómo te llamamos?" /></label>
       <label>
         <span className="lbl fl">Fecha de nacimiento</span>
         <input className="inp" type="date" value={p.nacimiento} onChange={e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) guardar({ nacimiento: e.target.value }) }} />
@@ -228,7 +228,7 @@ function Objetivos({ p, guardar }: Props) {
           </div>
         )}
         <div className="row mt8">
-          <input className="inp grow" value={nueva} onChange={e => setNueva(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') anadir(nueva) }} placeholder="Añadir otra prioridad" aria-label="Nueva prioridad" />
+          <input className="inp grow" maxLength={LARGO.nombre} value={nueva} onChange={e => setNueva(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') anadir(nueva) }} placeholder="Añadir otra prioridad" aria-label="Nueva prioridad" />
           <button className="btn sm auto" onClick={() => anadir(nueva)} disabled={!nueva.trim()}><Ico n="plus" b />Añadir</button>
         </div>
         {sugerencias.length > 0 && <div className="chips mt8">{sugerencias.map(x => <Chip key={x} onClick={() => anadir(x)}><Ico n="plus" />{x}</Chip>)}</div>}
@@ -292,7 +292,7 @@ function Experiencia({ p, guardar }: Props) {
         <div className="fields mt8">
           {REFERENCIAS.map(r => (
             <label key={r.k}><span className="lbl fl">{r.t}</span>
-              <Texto valor={p.referencias[r.k] ?? ''} placeholder="kg × reps" etiqueta={r.t} onGuardar={v => {
+              <Texto valor={p.referencias[r.k] ?? ''} max={LARGO.corto} placeholder="kg × reps" etiqueta={r.t} onGuardar={v => {
                 const refs = { ...p.referencias }
                 if (v.trim()) refs[r.k] = v.trim()
                 else delete refs[r.k]
@@ -344,7 +344,7 @@ function Alimentacion({ p, guardar }: Props) {
       <Grupo t="Suplementos que tomas" ayuda="Salen en Comida para marcarlos cada día. Para quitar uno, desmárcalo.">
         <Elegir opciones={todos.map(s => ({ v: s, t: s }))} valor={p.suplementos} onCambio={s => guardar({ suplementos: alternar(p.suplementos, s) })} />
         <div className="row mt8">
-          <input className="inp grow" value={otro} onChange={e => setOtro(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') anadir() }} placeholder="Otro (p. ej. pre-entreno)" aria-label="Otro suplemento" />
+          <input className="inp grow" maxLength={LARGO.nombre} value={otro} onChange={e => setOtro(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') anadir() }} placeholder="Otro (p. ej. pre-entreno)" aria-label="Otro suplemento" />
           <button className="btn sm auto" disabled={!otro.trim()} onClick={anadir}><Ico n="plus" b />Añadir</button>
         </div>
       </Grupo>

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Gimnasio } from '../../../datos/tipos'
-import { Cab, Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
+import { Cab, Ico, Pantalla, useUnaVez, Vacio, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasios } from '../../datos'
@@ -50,9 +50,9 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta }) {
       <Cab atras crumb="Gimnasios" titulo="Editor de gimnasio" />
       <div className="pg">
         <span className="lbl fl">Nombre</span>
-        <input className="inp" value={g.nombre} onChange={e => cambia({ nombre: e.target.value })} aria-label="Nombre del gimnasio" />
+        <input className="inp" maxLength={LARGO.nombre} value={g.nombre} onChange={e => cambia({ nombre: e.target.value })} aria-label="Nombre del gimnasio" />
         <span className="lbl fl mt12">Notas</span>
-        <textarea className="inp" value={g.notas} onChange={e => cambia({ notas: e.target.value })} placeholder="A qué hora hay poca gente, qué suele estar ocupado…" aria-label="Notas" />
+        <textarea className="inp" maxLength={LARGO.nota} value={g.notas} onChange={e => cambia({ notas: e.target.value })} placeholder="A qué hora hay poca gente, qué suele estar ocupado…" aria-label="Notas" />
         <div className="sec">
           <div className="sec-h"><h2>Máquinas y material</h2><span className="lbl">{g.material.length} marcadas</span></div>
           <CatalogoMaterial material={g.material} onCambio={m => cambia({ material: m })} />

@@ -1,10 +1,11 @@
 // Copias de seguridad: un archivo .jowyfit (zip con datos.json y las fotos). Todo local.
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { db, TABLAS, type NombreTabla } from './db'
-import { guardarPerfil } from './repos'
+import { ajustesPorDefecto, guardarPerfil, perfilPorDefecto } from './repos'
 import type { Medicion, Perfil } from './tipos'
+import { comprobarCabecera, TIPOS_FOTO, validarDatos, VERSION_COPIA, type RefArchivo } from './validarCopia'
 
-const VERSION = 1
+const VERSION = VERSION_COPIA
 type Fila = Record<string, unknown>
 
 async function blobAU8(b: Blob): Promise<Uint8Array> {
@@ -45,19 +46,36 @@ export async function exportar(): Promise<Uint8Array> {
   return zipSync({ 'datos.json': strToU8(json), ...archivos }, { level: 6 })
 }
 
-export function nombreCopia(fecha = new Date()): string {
+/**
+ * Nombre del archivo de la copia, con la fecha y la hora: dos copias del mismo día ya no se pisan (antes, la copia
+ * automática tras recuperar otra machacaba la que se había hecho a mano ese día). Si ya existe uno con ese nombre
+ * (dos en el mismo minuto), se añade «-2», «-3»…
+ */
+export function nombreCopia(fecha = new Date(), existentes?: Iterable<string>): string {
   const d = (n: number) => String(n).padStart(2, '0')
-  return `jowyfit-${fecha.getFullYear()}-${d(fecha.getMonth() + 1)}-${d(fecha.getDate())}.jowyfit`
+  const base = `jowyfit-${fecha.getFullYear()}-${d(fecha.getMonth() + 1)}-${d(fecha.getDate())}-${d(fecha.getHours())}${d(fecha.getMinutes())}`
+  const usados = new Set(existentes ?? [])
+  let nombre = `${base}.jowyfit`
+  for (let i = 2; usados.has(nombre); i++) nombre = `${base}-${i}.jowyfit`
+  return nombre
 }
 
+/** Vuelve a hacer Blob una foto de la copia. El tipo ya viene comprobado (solo imágenes); si falta el archivo, nada. */
 function revivir(v: unknown, archivos: Record<string, Uint8Array>): unknown {
   if (v && typeof v === 'object' && '__archivo' in (v as Fila)) {
-    const r = v as { __archivo: string; tipo: string }
-    const bytes = archivos[r.__archivo]
-    return bytes ? new Blob([bytes as BlobPart], { type: r.tipo }) : undefined
+    const r = v as RefArchivo
+    const bytes = Object.prototype.hasOwnProperty.call(archivos, r.__archivo) ? archivos[r.__archivo] : undefined
+    return bytes && (TIPOS_FOTO as readonly string[]).includes(r.tipo) ? new Blob([bytes as BlobPart], { type: r.tipo }) : undefined
   }
   if (Array.isArray(v)) return v.map(x => revivir(x, archivos))
-  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, revivir(x, archivos)]))
+  if (v && typeof v === 'object') {
+    const out: Fila = {}
+    for (const [k, x] of Object.entries(v)) {
+      const r = revivir(x, archivos)
+      if (r !== undefined) Object.defineProperty(out, k, { value: r, enumerable: true, writable: true, configurable: true })
+    }
+    return out
+  }
   return v
 }
 
@@ -69,71 +87,103 @@ function leerJSON(texto: string): any {
   }
 }
 
-/** Clave primaria de las tablas que no la generan solas: sin ella IndexedDB rechaza la fila. */
-const CLAVE: Partial<Record<NombreTabla, string>> = { perfil: 'id', ajustes: 'id', marcas: 'id', productos: 'codigo', pasos: 'fecha', suplementos: 'fecha' }
+// Límites al abrir una copia: una «bomba zip» de 400 KB se convertía en 400 MB en memoria.
+const MB = 1024 * 1024
+export const LIMITES_ZIP = { archivo: 400 * MB, json: 50 * MB, foto: 30 * MB, total: 300 * MB, entradas: 20_000 }
 
-/**
- * Comprueba la copia ANTES de tocar la base. Antes una copia con `datos: {}` (o con tablas que no eran
- * listas) vaciaba todo el móvil: se borraban las tablas y no había nada que poner.
- */
-function validarDatos(datos: unknown): Record<string, Fila[]> {
-  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) throw new Error('La copia está dañada: no tiene datos')
-  const d = datos as Record<string, unknown>
-  if (!TABLAS.some(t => Array.isArray(d[t]))) throw new Error('La copia está dañada: no tiene ninguna tabla de JowyFit')
-  if (!Array.isArray(d.perfil)) throw new Error('La copia está incompleta: falta el perfil')
-  for (const t of TABLAS) {
-    const v = d[t]
-    if (v == null) continue
-    if (!Array.isArray(v)) throw new Error(`La copia está dañada (${t})`)
-    const clave = CLAVE[t]
-    for (const f of v) {
-      if (!f || typeof f !== 'object' || Array.isArray(f)) throw new Error(`La copia está dañada (${t})`)
-      if (clave && (typeof (f as Fila)[clave] !== 'string' || !(f as Fila)[clave])) throw new Error(`La copia está dañada (${t} sin ${clave})`)
-      const id = (f as Fila).id
-      if (!clave && id != null && (typeof id !== 'number' || !Number.isFinite(id))) throw new Error(`La copia está dañada (${t} con id raro)`)
-    }
+/** Abre el zip en dos pasos: primero solo datos.json; luego solo las fotos que usa, con su tamaño comprobado. */
+function abrirZip(bytes: Uint8Array): { json: string; leerArchivos: (usados: Set<string>) => Record<string, Uint8Array> } {
+  const tamanos = new Map<string, number>()
+  let entradas = 0
+  let ar: Record<string, Uint8Array>
+  try {
+    ar = unzipSync(bytes, {
+      filter: f => {
+        entradas++
+        tamanos.set(f.name, f.originalSize)
+        return f.name === 'datos.json' && f.originalSize <= LIMITES_ZIP.json
+      },
+    })
+  } catch {
+    throw new Error('El archivo está dañado (no se puede descomprimir)')
   }
-  return d as Record<string, Fila[]>
-}
-
-function comprobarVersion(obj: { version?: unknown }) {
-  if (typeof obj.version === 'number' && obj.version > VERSION) throw new Error('La copia es de una versión más nueva de JowyFit: actualiza la app')
+  if (entradas > LIMITES_ZIP.entradas) throw new Error('El archivo no es una copia de JowyFit (tiene demasiados archivos dentro)')
+  if ((tamanos.get('datos.json') ?? 0) > LIMITES_ZIP.json) throw new Error('La copia es demasiado grande para abrirla')
+  const json = ar['datos.json']
+  if (!json) throw new Error('El archivo no es una copia de JowyFit')
+  return {
+    json: strFromU8(json),
+    leerArchivos: usados => {
+      let total = 0
+      for (const n of usados) {
+        const t = tamanos.get(n)
+        if (t == null) continue // falta: esa foto se queda fuera
+        if (t > LIMITES_ZIP.foto) throw new Error('La copia tiene una foto demasiado grande')
+        total += t
+      }
+      if (total > LIMITES_ZIP.total) throw new Error('La copia es demasiado grande para abrirla')
+      if (!usados.size) return {}
+      try {
+        return unzipSync(bytes, { filter: f => usados.has(f.name) && f.name !== 'datos.json' })
+      } catch {
+        throw new Error('El archivo está dañado (no se puede descomprimir)')
+      }
+    },
+  }
 }
 
 /** Restaura una copia completa (sustituye todo) o importa un perfil en formato JSON sencillo. */
 export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
   if (!bytes || !bytes.length) throw new Error('El archivo está vacío')
+  if (bytes.length > LIMITES_ZIP.archivo) throw new Error('El archivo es demasiado grande para ser una copia de JowyFit')
   const esZip = bytes[0] === 0x50 && bytes[1] === 0x4b
   if (!esZip) {
+    if (bytes.length > LIMITES_ZIP.json) throw new Error('El archivo es demasiado grande para ser una copia de JowyFit')
     const obj = leerJSON(new TextDecoder().decode(bytes))
-    // La copia sin comprimir (datos.json suelto) también mira la versión: antes una de una versión más nueva entraba sin avisar.
-    if (obj?.app === 'JowyFit') { comprobarVersion(obj); await restaurar(validarDatos(obj.datos), {}); return 'copia' }
+    // La copia sin comprimir (datos.json suelto) también se comprueba entera.
+    if (obj?.app === 'JowyFit') {
+      comprobarCabecera(obj)
+      await restaurar(validarDatos(obj.datos).tablas, {})
+      return 'copia'
+    }
     await importarPerfilSencillo(obj)
     return 'perfil'
   }
-  let ar: Record<string, Uint8Array>
-  try {
-    ar = unzipSync(bytes)
-  } catch {
-    throw new Error('El archivo está dañado (no se puede descomprimir)')
-  }
-  const json = ar['datos.json']
-  if (!json) throw new Error('El archivo no es una copia de JowyFit')
-  const obj = leerJSON(strFromU8(json))
-  if (obj?.app !== 'JowyFit') throw new Error('El archivo no es una copia de JowyFit')
-  comprobarVersion(obj)
-  await restaurar(validarDatos(obj.datos), ar)
+  const zip = abrirZip(bytes)
+  const obj = leerJSON(zip.json)
+  comprobarCabecera(obj)
+  const { tablas, archivos } = validarDatos(obj.datos)
+  await restaurar(tablas, zip.leerArchivos(archivos))
   return 'copia'
 }
 
-async function restaurar(datos: Record<string, Fila[]>, archivos: Record<string, Uint8Array>) {
+async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<string, Uint8Array>) {
+  const filas = {} as Record<NombreTabla, Fila[]>
+  for (const t of TABLAS) filas[t] = (datos[t] ?? []).map(f => revivir(f, archivos) as Fila)
+  // Fotos cuyo archivo falta o no es una imagen: fuera (la pantalla de fotos fallaba con una foto sin imagen).
+  filas.fotos = filas.fotos.filter(f => f.imagen instanceof Blob)
+  // Lo que falte del perfil y de los ajustes (copias de versiones viejas) se completa con lo de siempre.
+  filas.perfil = filas.perfil.map(p => ({ ...perfilPorDefecto(), ...p }))
+  filas.ajustes = filas.ajustes.map(a => ({ ...ajustesPorDefecto(), ...a, noti: { ...ajustesPorDefecto().noti, ...(a.noti as object | undefined) } }))
   await db.transaction('rw', TABLAS.map(t => db.table(t)), async () => {
     for (const t of TABLAS) {
       await db.table(t).clear()
-      const filas = (datos[t as NombreTabla] ?? []).map(f => revivir(f, archivos))
-      if (filas.length) await db.table(t).bulkPut(filas)
+      if (filas[t].length) await db.table(t).bulkPut(filas[t])
     }
   })
+}
+
+/**
+ * «Borrar todos los datos»: borra la base entera (no tabla a tabla). Así también se reinician los contadores de
+ * IndexedDB, que una copia con un id enorme podía dejar agotados para siempre (no se podía apuntar nada más).
+ */
+export async function borrarTodosLosDatos(): Promise<void> {
+  try {
+    await db.delete()
+  } catch {
+    await db.transaction('rw', TABLAS.map(t => db.table(t)), async () => { for (const t of TABLAS) await db.table(t).clear() })
+  }
+  try { localStorage.clear() } catch { /* nada */ }
 }
 
 /** Formato de data/perfil.ejemplo.json: perfil + mediciones + logística + objetivos. */

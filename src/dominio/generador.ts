@@ -3,6 +3,7 @@ import type { Ejercicio } from '../catalogo/tipos'
 import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, ZONA_EVITAR, ZONA_SEGURA, type Patron } from '../catalogo/clasificacion'
 import type { Bloque, Dia, DiaRutina, Gimnasio, MarcaEjercicio, Perfil, Rutina } from '../datos/tipos'
 import { DIAS } from './fechas'
+import { propio } from './claves'
 
 type Papel = 'principal' | 'secundario' | 'accesorio' | 'core'
 type Hueco = { patron: Patron; papel: Papel; prioridad: number; par?: number }
@@ -146,7 +147,7 @@ function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null): 
   const m = x.marcas.get(e.id)
   if (m?.odiado || m?.duele) return false
   for (const z of x.perfil.zonasSensibles) {
-    const etiqueta = ZONA_SEGURA[z]
+    const etiqueta = propio(ZONA_SEGURA, z)
     if (etiqueta && !e.etiquetas.includes(etiqueta)) return false
   }
   if ((x.perfil.nivel === 'empiezo' || x.perfil.nivel === 'vuelvo') && e.dificultad === 'advanced') return false
@@ -157,7 +158,7 @@ function puntuar(e: Ejercicio, h: Hueco, x: EntradaGenerador, usadosOtros: Set<s
   let s = 0
   const m = x.marcas.get(e.id)
   // Codo y muñeca no tienen etiqueta en RepDB: lo que más los carga solo sale si no queda otra cosa.
-  if (x.perfil.zonasSensibles.some(z => ZONA_EVITAR[z]?.test(e.id))) s -= 1000
+  if (x.perfil.zonasSensibles.some(z => propio(ZONA_EVITAR, z)?.test(e.id))) s -= 1000
   if (m?.favorito) s += 30
   const r = RANGO_HABITUAL.get(e.id)
   if (r != null) s += 22 - r * 0.15
@@ -231,7 +232,7 @@ const ZONA_PATRON: Record<string, Patron[]> = {
   piernas: ['rodilla', 'cadera', 'cuadriceps', 'femoral'], gluteo: ['cadera', 'gluteo'], abdomen: ['core'],
 }
 function prioriza(p: Perfil, patronH: Patron): boolean {
-  return p.zonasPrioridad.some(z => ZONA_PATRON[z]?.includes(patronH))
+  return p.zonasPrioridad.some(z => propio(ZONA_PATRON, z)?.includes(patronH))
 }
 
 let contador = 0

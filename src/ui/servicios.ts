@@ -5,7 +5,7 @@ import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { DIAS, deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
-import { alVolverAPrimerPlano, compartirArchivo, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
+import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
 
@@ -138,6 +138,15 @@ export async function comprobarSalud(): Promise<string[]> {
   return lineas
 }
 
+/**
+ * Nombre libre para una copia nueva en Documentos/JowyFit: con la hora y, si ya existe, con «-2», «-3»…
+ * Antes era uno por día y la copia automática (tras recuperar otra) pisaba la que se había hecho a mano.
+ */
+export async function nombreCopiaLibre(fecha = new Date()): Promise<string> {
+  const existentes = esNativo() ? (await copiasGuardadas()).map(c => c.nombre) : []
+  return nombreCopia(fecha, existentes)
+}
+
 /** Copia automática semanal en Documentos/JowyFit (Android). */
 export async function copiaAutomatica(): Promise<boolean> {
   const a = await leerAjustes()
@@ -145,17 +154,19 @@ export async function copiaAutomatica(): Promise<boolean> {
   if (a.ultimaCopia && Date.now() - new Date(a.ultimaCopia).getTime() < 7 * 86_400_000) return false
   if (!(await db.perfil.get('yo'))?.altaCompleta) return false
   try {
-    await guardarArchivo(nombreCopia(), await exportar())
+    await guardarArchivo(await nombreCopiaLibre(), await exportar())
     await guardarAjustes({ ultimaCopia: new Date().toISOString() })
     return true
   } catch { return false }
 }
 
+/** Hace la copia y devuelve el nombre del archivo (el que sale en el aviso: lleva la hora y, si hace falta, «-2»). */
 export async function hacerCopiaAhora(): Promise<string> {
   const bytes = await exportar()
-  const ruta = await guardarArchivo(nombreCopia(), bytes, 'application/zip')
+  const nombre = await nombreCopiaLibre()
+  await guardarArchivo(nombre, bytes, 'application/zip')
   await guardarAjustes({ ultimaCopia: new Date().toISOString() })
-  return ruta
+  return nombre
 }
 
 export type CopiaPreparada = { nombre: string; bytes: Uint8Array }

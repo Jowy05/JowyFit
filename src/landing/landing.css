@@ -579,3 +579,4 @@ html.con-barra .pie { padding-bottom: 120px; } /* hueco para la barra fija, del 
   [data-revelar] { opacity: 1 !important; transform: none !important; }
   .barra-fija, .control-anim, .boton-letra { display: none !important; }
 }
+.huella{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:.85em;word-break:break-all;overflow-wrap:anywhere}

@@ -1,5 +1,6 @@
 // Comida: franjas por hora, raciones P/N/G, lectura de Open Food Facts, picoteo y cafeína.
 import type { Comida, Franja, Medicion, Plantilla, Producto } from '../datos/tipos'
+import { propio } from './claves'
 import { minutosDe } from './fechas'
 import { consejoQuincenal } from './resumen'
 import { datosQuincena as numerosQuincena } from './tendencias'
@@ -100,6 +101,20 @@ const n = (v: unknown): number | null => {
 }
 const r1 = (v: number | null) => (v == null ? null : Math.round(v * 10) / 10)
 
+/**
+ * La imagen de un producto solo se pinta si es https de Open Food Facts (images.openfoodfacts.org…). Cualquier otra
+ * (de una copia ajena o de una respuesta manipulada) se descarta: servía de «píxel espía» para saber cuándo usas la app.
+ */
+export function imagenOFF(u: unknown): string | undefined {
+  if (typeof u !== 'string' || u.length > 2000) return undefined
+  try {
+    const x = new URL(u)
+    return x.protocol === 'https:' && !x.username && !x.password && !x.port && /(^|\.)openfoodfacts\.(org|net)$/.test(x.hostname) ? x.href : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Convierte la respuesta de Open Food Facts (API v2) en nuestro Producto. Null si no hay producto. */
 export function leerOFF(codigo: string, json: { status?: number; product?: ProductoOFF } | null, ahora = new Date()): Producto | null {
   const p = json?.product
@@ -114,12 +129,14 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
   const prot100 = n(nu['proteins_100g'])
   if (protRacion == null && prot100 != null && racionG) protRacion = (prot100 * racionG) / 100
   const caf = n(nu['caffeine_100g'])
-  const nombre = (p.product_name_es || p.product_name || p.generic_name_es || '').trim()
+  const txt = (v: unknown) => (typeof v === 'string' ? v : '')
+  const nombre = (txt(p.product_name_es) || txt(p.product_name) || txt(p.generic_name_es)).trim()
   return {
     codigo,
-    nombre: nombre || `Producto ${codigo}`,
-    marca: (p.brands ?? '').split(',')[0]!.trim(),
-    imagen: p.image_front_small_url || p.image_front_url || undefined,
+    // Recortados: un nombre enorme congelaba las listas al pintarlas.
+    nombre: (nombre || `Producto ${codigo}`).slice(0, 150),
+    marca: (typeof p.brands === 'string' ? p.brands : '').split(',')[0]!.trim().slice(0, 80),
+    imagen: imagenOFF(p.image_front_small_url) ?? imagenOFF(p.image_front_url),
     kcal100: kcal100 == null ? null : Math.round(kcal100),
     proteina100: r1(prot100),
     hidratos100: r1(n(nu['carbohydrates_100g'])),
@@ -289,7 +306,11 @@ export function dosisPorDefecto(s: string): string {
   return ''
 }
 /** La cantidad que toma (la suya o la habitual). */
-export const dosisDe = (dosis: Record<string, string> | undefined, s: string) => dosis?.[s]?.trim() || dosisPorDefecto(s)
+export const dosisDe = (dosis: Record<string, string> | undefined, s: string) => {
+  // Solo la dosis guardada de verdad: «constructor» o «toString» devolvían funciones de JavaScript y Comida fallaba.
+  const v = propio(dosis, s)
+  return (typeof v === 'string' ? v.trim() : '') || dosisPorDefecto(s)
+}
 /** Lo que lleva el batido: lo suyo o un cacito típico de 24 g de proteína (unas 120 kcal). */
 export const batidoDe = (b: { proteina: number; kcal: number } | undefined) => b ?? { proteina: 24, kcal: 120 }
 /** kcal aproximadas de un batido a partir de su proteína (la proteína en polvo da unas 5 kcal por gramo con lo demás). */

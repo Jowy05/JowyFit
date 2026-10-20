@@ -5,6 +5,8 @@ import { num } from './calculos'
 
 export type Resumen = {
   semaforo: 'verde' | 'ambar' | 'rojo'
+  /** Puntos de la semana (de 0 a PUNTOS_MAXIMOS): entrenos hasta 2, proteína 1, cintura 1 y pasos 0,5. */
+  puntos: number
   titulo: string
   frase: string
   entrenos: number
@@ -19,6 +21,9 @@ export type Resumen = {
   pasos: { media: number | null; diasCumplidos: number; objetivo: number }
   picoteo: { dias: number; anterior: number }
 }
+
+/** Máximo de puntos de una semana: entrenos 2 + proteína 1 + cintura 1 + pasos 0,5. */
+export const PUNTOS_MAXIMOS = 4.5
 
 const media = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null)
 
@@ -97,7 +102,7 @@ export function resumenSemana(o: {
     : [bien.length ? `Bien: ${bien.join(', ')}` : '', mal.length ? `A mejorar: ${mal.join(', ')}` : ''].filter(Boolean).join('. ') + '.'
 
   return {
-    semaforo, titulo, frase,
+    semaforo, puntos, titulo, frase,
     entrenos: fijasHechas, fijos: o.fijos, extra,
     records: o.recordsSemana, subidas: o.subidasSemana,
     cintura: { actual: cActual, delta: dC },

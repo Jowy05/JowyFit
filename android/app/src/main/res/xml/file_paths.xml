@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Rutas que el FileProvider puede dar a otra app (solo con permiso puntual: el provider no está exportado).
+  Antes eran «.» en todo el almacenamiento y en toda la caché. Ahora solo:
+  - las copias de seguridad (Documentos/JowyFit, donde las guarda src/plataforma: guardarArchivo);
+  - una carpeta propia de la caché para compartir archivos.
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
+    <external-path name="copias" path="Documents/JowyFit/" />
+    <cache-path name="compartir" path="compartir/" />
 </paths>

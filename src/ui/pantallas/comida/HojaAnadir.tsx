@@ -8,7 +8,7 @@ import { FRANJAS, NOMBRE_FRANJA, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora,
 import { horaActual, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
-import { Chip, cx, Hoja, Ico, Stepper, useUnaVez } from '../../comp'
+import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, recortar, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { ElegirCuanto, Mini, apuntar, apuntarPlantilla, baseDeApuntada, kp, useUrlBlob, type ParaElegir } from './comun'
@@ -139,7 +139,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
 
       <div ref={notaRef} className={cx('nota-r card pd mt8', nota && 'show')}>
         {fotoUrl && <img className="foto-prev mb8" src={fotoUrl} alt="Foto de la comida" />}
-        <input ref={notaInput} className="inp" value={texto} onChange={e => setTexto(e.target.value)} placeholder={foto ? 'Qué es (opcional)' : 'Qué has comido · p. ej. Lentejas'} aria-label="Qué has comido" />
+        <input ref={notaInput} className="inp" maxLength={LARGO.nombre} value={texto} onChange={e => setTexto(e.target.value)} placeholder={foto ? 'Qué es (opcional)' : 'Qué has comido · p. ej. Lentejas'} aria-label="Qué has comido" />
         <p className="lbl fl mt12">¿Cuánto has comido?</p>
         <div className="chips eq">
           {TAMANOS_NOTA.map(t => {
@@ -183,7 +183,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
             {recien.map(c => (
               <button key={`${c.fecha}-${c.hora}-${c.nombre}`} className="it" onClick={() => pedirReciente(c)}>
                 <Mini nombre={c.nombre} tipo={c.tipo} />
-                <span className="tx"><b>{c.nombre}</b><small className="mono">{kp(c.kcal, c.proteina, c.cafeina)}</small></span>
+                <span className="tx"><b>{recortar(c.nombre)}</b><small className="mono">{kp(c.kcal, c.proteina, c.cafeina)}</small></span>
                 <Ico n="plus" b className="car" />
               </button>
             ))}
@@ -198,7 +198,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
             {comidasVista.map(p => (
               <button key={p.id} className="it" onClick={() => pedirPlantilla(p)}>
                 <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-                <span className="tx"><b>{p.nombre}</b><small className="mono">{kp(p.kcal, p.proteina)}</small></span>
+                <span className="tx"><b>{recortar(p.nombre)}</b><small className="mono">{kp(p.kcal, p.proteina)}</small></span>
                 <Ico n="plus" b className="car" />
               </button>
             ))}
@@ -217,7 +217,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
           {picoteos.map(p => (
             <button key={p.id} className="it" onClick={() => pedirPlantilla(p)}>
               <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-              <span className="tx"><b>{p.nombre}</b><small className="mono">entero: {p.kcal} kcal</small></span>
+              <span className="tx"><b>{recortar(p.nombre)}</b><small className="mono">entero: {p.kcal} kcal</small></span>
               <Ico n="plus" b className="car" />
             </button>
           ))}
@@ -227,7 +227,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
       <div className="snk">
         {bebidas.map(p => (
           <button key={p.id} onClick={() => pedirPlantilla(p)}>
-            <b>{p.nombre}</b>
+            <b>{recortar(p.nombre)}</b>
             <small className="mono">{textoSnack(p)}</small>
           </button>
         ))}
@@ -236,14 +236,14 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
       <div className="sec-h mt20"><h2 className="h3">¿No está aquí?</h2></div>
       <label className="search">
         <Ico n="magnifying-glass" />
-        <input className="inp" type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en lo guardado" aria-label="Buscar en Mis comidas y escaneados" />
+        <input className="inp" type="search" maxLength={LARGO.buscar} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en lo guardado" aria-label="Buscar en Mis comidas y escaneados" />
       </label>
       {q.length >= 2 && encontrados.length > 0 && (
         <div className="list mt8">
           {encontrados.map(e => (
             <button key={e.k} className="it" onClick={e.ir}>
               <Mini nombre={e.nombre} tipo={e.tipo} foto={e.foto} imagen={e.imagen} />
-              <span className="tx"><b>{e.nombre}</b><small className="mono">{e.sub}</small></span>
+              <span className="tx"><b>{recortar(e.nombre)}</b><small className="mono">{e.sub}</small></span>
               <Ico n="plus" b className="car" />
             </button>
           ))}

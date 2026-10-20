@@ -6,7 +6,7 @@ import { buscarOFF, codigoValido, porRacion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { escanearNativo, esAndroid, vibrar } from '../../../plataforma'
 import type { Camara } from '../../../plataforma/escanerWeb'
-import { cx, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
+import { cx, Ico, Pantalla, Stepper, useUnaVez, recortar, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, Mini, apuntar, kp } from './comun'
@@ -129,7 +129,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
         {(escribir && estado.e === 'camara') && (
           <div className="cam-panel">
             <p className="lbl fl">Escribe el número que hay debajo de las barras</p>
-            <input className="inp inp-num" inputMode="numeric" autoFocus value={codigoMano} onChange={e => setCodigoMano(e.target.value.replace(/\D/g, ''))} placeholder="8480000123458" aria-label="Código de barras" />
+            <input className="inp inp-num" inputMode="numeric" autoFocus maxLength={14} value={codigoMano} onChange={e => setCodigoMano(e.target.value.replace(/\D/g, ''))} placeholder="8480000123458" aria-label="Código de barras" />
             <button className="btn mt12" disabled={!codigoValido(codigoMano)} onClick={() => void buscar(codigoMano)}>Buscar</button>
           </div>
         )}
@@ -153,7 +153,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
                 <Mini nombre={estado.p.nombre} imagen={estado.p.imagen} className="l" />
                 <div className="grow">
                   {estado.ya ? <span className="tag blue"><Ico n="check" b />Ya lo tenías</span> : <span className="tag ok"><Ico n="check" b />Encontrado</span>}
-                  <b className="d-block">{estado.p.nombre}</b>
+                  <b className="d-block">{recortar(estado.p.nombre)}</b>
                   <small className="muted">{estado.p.marca ? `${estado.p.marca} · ` : ''}<span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span> {v.base === 'racion' ? 'por ración' : 'por 100 g'}</small>
                 </div>
               </div>
@@ -172,7 +172,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
           <div className="cam-panel">
             <p className="row"><span className="tag warn">No está</span><b>No está en la base de datos</b></p>
             <p className="small muted mt4">Apúntalo tú: mira la etiqueta del envase.</p>
-            <input className="inp mt8" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto" aria-label="Nombre del producto" />
+            <input className="inp mt8" maxLength={LARGO.nombre} value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto" aria-label="Nombre del producto" />
             <div className="grid2 mt8">
               <Stepper className="sm" valor={kcal} onCambio={setKcal} paso={10} min={0} sufijo="kcal" etiqueta="kcal por envase" />
               <Stepper className="sm" valor={prot} onCambio={setProt} paso={1} min={0} sufijo="g prot." etiqueta="Proteína por envase" />

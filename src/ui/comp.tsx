@@ -210,8 +210,17 @@ export function Seccion({ titulo, accion, onAccion, extra, children, className }
  * Campo de texto que se guarda solo: un momento después de dejar de escribir, al salir del campo y al cerrar la
  * pantalla (antes solo al salir del campo: con «atrás» o cambiando de pestaña se perdía lo escrito).
  */
-export function TextoGuardado({ valor, onGuardar, area, className = 'inp', placeholder, etiqueta }: {
-  valor: string; onGuardar: (v: string) => void; area?: boolean; className?: string; placeholder?: string; etiqueta?: string
+/** Largo máximo de lo que se escribe: nombres cortos y notas de un párrafo (un texto enorme congelaba las pantallas). */
+export const LARGO = { nombre: 80, corto: 40, frase: 200, nota: 1000, buscar: 100 } as const
+
+/** Recorta un texto para pintarlo: uno enorme (de una copia vieja) congelaba la pantalla al dibujarlo. */
+export function recortar(t: unknown, n: number = LARGO.frase): string {
+  const s = typeof t === 'string' ? t : t == null ? '' : String(t)
+  return s.length > n ? `${s.slice(0, n)}…` : s
+}
+
+export function TextoGuardado({ valor, onGuardar, area, className = 'inp', placeholder, etiqueta, max }: {
+  valor: string; onGuardar: (v: string) => void; area?: boolean; className?: string; placeholder?: string; etiqueta?: string; max?: number
 }) {
   const [local, setLocal] = useState(valor)
   const enfocado = useRef(false)
@@ -233,7 +242,7 @@ export function TextoGuardado({ valor, onGuardar, area, className = 'inp', place
     temporizador.current = window.setTimeout(volcar, 700)
   }
   const comun = {
-    className, value: local, placeholder, 'aria-label': etiqueta,
+    className, value: local, placeholder, 'aria-label': etiqueta, maxLength: max ?? (area ? LARGO.nota : LARGO.frase),
     onFocus: () => { enfocado.current = true },
     onBlur: () => { enfocado.current = false; volcar() },
   }

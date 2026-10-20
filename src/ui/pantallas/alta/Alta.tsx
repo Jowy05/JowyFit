@@ -11,12 +11,13 @@ import { generarRutina } from '../../../dominio/generador'
 import { estadoSemana } from '../../../dominio/semana'
 import { DIAS, DIAS_CORTOS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../../dominio/fechas'
 import { elegirArchivo } from '../../../plataforma'
-import { cx, Elegir, Ico, Interruptor, Stepper } from '../../comp'
+import { cx, Elegir, Ico, Interruptor, Stepper, LARGO } from '../../comp'
 import { useAviso } from '../../aviso'
 import { guardarLetra, letraGuardada, type Letra } from '../../tema'
 import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from '../rutina/CatalogoMaterial'
 // Los minutos de cada día salen del mismo cálculo que usa Mi plan, para que digan lo mismo.
 import { minutos } from '../rutina/comun'
+import { propio } from '../../../dominio/claves'
 
 // Pasos del alta (antes eran 10: «Tu cuerpo hoy» va dentro de «Sobre ti» y «Comida y actividad»
 // salió del alta; sus datos tienen valores por defecto y se cambian en Perfil).
@@ -301,7 +302,7 @@ export function Alta() {
             <Elegir eq opciones={[{ v: 'sentado', t: 'Sentado' }, { v: 'depie', t: 'De pie' }, { v: 'fisico', t: 'Físico' }]} valor={p.trabajo} onCambio={v => cambia({ trabajo: v })} />
             <p className="small muted mt4">Sentado: oficina, coche · De pie: tienda, bar · Físico: obra, almacén</p>
           </div>
-          <label><span className="lbl fl">Nombre <span className="hint">(opcional)</span></span><input className="inp" aria-label="Nombre" value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="¿Cómo te llamamos?" /></label>
+          <label><span className="lbl fl">Nombre <span className="hint">(opcional)</span></span><input className="inp" aria-label="Nombre" maxLength={LARGO.nombre} value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="¿Cómo te llamamos?" /></label>
         </div>
         <details className="fold mt16">
           <summary><Ico n="ruler" className="blue" />Más medidas <span className="tag">opcional</span><Ico n="caret-down" /></summary>
@@ -351,7 +352,7 @@ export function Alta() {
     [PASO.salud]: { t: 'Salud', d: 'Para no proponerte ejercicios que no te convienen. Si no te molesta nada, sigue.', c: (
       <div className="fields mt16">
         <div><span className="lbl fl">¿Te molesta alguna zona? <span className="hint">(opcional)</span></span><Elegir opciones={[{ v: 'rodilla', t: 'Rodilla' }, { v: 'lumbar', t: 'Lumbar (espalda baja)' }, { v: 'hombro', t: 'Hombro' }, { v: 'muneca', t: 'Muñeca' }, { v: 'codo', t: 'Codo' }] as { v: Zona; t: string }[]} valor={p.zonasSensibles} onCambio={z => cambia({ zonasSensibles: p.zonasSensibles.includes(z) ? p.zonasSensibles.filter(x => x !== z) : [...p.zonasSensibles, z] })} /></div>
-        <label><span className="lbl fl">Lesiones o molestias <span className="hint">(opcional)</span></span><textarea className="inp" value={p.lesiones} onChange={e => cambia({ lesiones: e.target.value })} placeholder="Por ejemplo: me duele la rodilla al bajar escaleras" /></label>
+        <label><span className="lbl fl">Lesiones o molestias <span className="hint">(opcional)</span></span><textarea className="inp" maxLength={LARGO.nota} value={p.lesiones} onChange={e => cambia({ lesiones: e.target.value })} placeholder="Por ejemplo: me duele la rodilla al bajar escaleras" /></label>
         <p className="note plain"><Ico n="first-aid" /><span>Si un ejercicio te duele, márcalo con «Me duele» en su ficha y no volverá a salir. <b>Esto no es consejo médico.</b></span></p>
       </div>) },
     [PASO.gimnasio]: { t: 'Tu gimnasio', d: '¿Qué tiene tu gimnasio? Si no lo sabes, deja «Gimnasio completo».', c: (
@@ -366,7 +367,7 @@ export function Alta() {
         </div>
         {gymModo === 'yo' && (
           <>
-            <label className="mt16" style={{ display: 'block' }}><span className="lbl fl">Nombre del gimnasio</span><input className="inp" aria-label="Nombre del gimnasio" value={gym.nombre} onChange={e => setGym(g => ({ ...g, nombre: e.target.value }))} /></label>
+            <label className="mt16" style={{ display: 'block' }}><span className="lbl fl">Nombre del gimnasio</span><input className="inp" aria-label="Nombre del gimnasio" maxLength={LARGO.nombre} value={gym.nombre} onChange={e => setGym(g => ({ ...g, nombre: e.target.value }))} /></label>
             <div className="sec"><div className="sec-h"><h2>Máquinas y material</h2><span className="lbl">{gym.material.length} marcadas</span></div>
               <CatalogoMaterial material={gym.material} onCambio={m => setGym(g => ({ ...g, material: m }))} />
             </div>
@@ -565,7 +566,7 @@ function Generando({ onListo, p }: { onListo: () => Promise<void>; p: Perfil }) 
         <li><Ico n="check" b />{fijos} día{fijos === 1 ? '' : 's'} a la semana{p.diasOpcionales.some(d => !p.diasFijos.includes(d)) ? ' y uno extra si puedes' : ''}</li>
         <li><Ico n="check" b />Sesiones de {p.minutosNormal} min como mucho</li>
         <li><Ico n="check" b />{p.preferencia === 'maquinas' ? 'Máquinas y poleas por delante' : p.preferencia === 'libre' ? 'Peso libre por delante' : 'Máquinas y peso libre'}</li>
-        <li><Ico n="check" b />{p.zonasPrioridad.length ? `Más trabajo en: ${p.zonasPrioridad.map(z => ZONA_TXT[z] ?? z).join(', ')}` : 'Todo el cuerpo por igual'}</li>
+        <li><Ico n="check" b />{p.zonasPrioridad.length ? `Más trabajo en: ${p.zonasPrioridad.map(z => propio(ZONA_TXT, z) ?? z).join(', ')}` : 'Todo el cuerpo por igual'}</li>
       </ul>
     </>
   )

@@ -30,6 +30,7 @@ const ajustes: Required<Ajustes> = {
   ...ajustesPorDefecto(), gimnasioActivo: 1, kcalManual: 2300, proteinaManual: 150, fuentePasos: 'auto', fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'],
   ultimaCopia: '2026-10-12T10:00:00.000Z', ultimoAjusteEnergia: '2026-10-01', recolocadas: [{ fecha: '2026-10-17', letra: 'C', desde: '2026-10-16' }],
   inicio: '2026-10-13', semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28',
+  informe: { periodo: 'semana', secciones: { entrenos: true, comida: false, cuerpo: true, pasos: false, detalle: true } },
 }
 const medicion: Required<Medicion> = {
   id: 1, fecha: '2026-10-13T07:05', origen: 'casa', pesoKg: 79.1,
@@ -53,7 +54,7 @@ const sesion: Required<Sesion> = {
 }
 const comidaFila: Required<Comida> = { id: 1, fecha: '2026-10-13', hora: '14:00', franja: 'comida', nombre: 'Arroz', kcal: 600, proteina: 22, cafeina: 0, racion: 'G', tipo: 'producto', plantillaId: 3, codigo: '8480000123458', foto: imagen('plato'), suplemento: 'Batido de proteína', hidratos: 82.8, azucares: 9, grasas: 18, sal: 2.9 }
 const plantilla: Required<Plantilla> = { id: 3, nombre: 'Arroz al curry', kcal: 601, proteina: 22, cafeina: 0, franja: 'comida', tipo: 'comida', usos: 4, foto: imagen('arroz', 'image/png'), codigo: '8480000123458', hidratos: 82.8, azucares: 9, grasas: 18, sal: 2.9 }
-const producto: Required<Producto> = { codigo: '8480000123458', nombre: 'Arroz al curry', marca: 'Hacendado', imagen: 'https://x/y.jpg', kcal100: 167, proteina100: 6.1, hidratos100: 23, grasas100: 5, azucares100: 2.5, sal100: 0.8, cafeina100: null, racionG: 360, kcalRacion: 601, proteinaRacion: 22, guardado: '2026-10-13T10:00:00.000Z', pendiente: false, manual: false }
+const producto: Required<Producto> = { codigo: '8480000123458', nombre: 'Arroz al curry', marca: 'Hacendado', imagen: 'https://images.openfoodfacts.org/images/products/848/000/012/3458/front_es.3.200.jpg', kcal100: 167, proteina100: 6.1, hidratos100: 23, grasas100: 5, azucares100: 2.5, sal100: 0.8, cafeina100: null, racionG: 360, kcalRacion: 601, proteinaRacion: 22, guardado: '2026-10-13T10:00:00.000Z', pendiente: false, manual: false }
 const pasos: Required<PasosDia> = { fecha: '2026-10-13', pasos: 8123, fuente: 'auto', troteKm: 2.5 }
 const suple: Required<DiaSuplementos> = { fecha: '2026-10-13', tomados: ['Creatina'] }
 const meta: Required<Meta> = { id: 1, tipo: 'ejercicio', titulo: 'Banca 60 kg', objetivo: 60, unidad: 'kg', fecha: '2027-06-01', ejercicio: 'bench-press', inicio: 40, hecha: false }
@@ -109,6 +110,7 @@ describe('copia completa: cada tabla y cada campo', () => {
     expect(p.batido).toEqual({ proteina: 30, kcal: 150 })
     const a = (await db.ajustes.get('app'))!
     expect(a).toMatchObject({ fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'], semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28' })
+    expect(a.informe).toEqual({ periodo: 'semana', secciones: { entrenos: true, comida: false, cuerpo: true, pasos: false, detalle: true } })
     const m = (await db.mediciones.toArray())[0]!
     expect(m.hc).toEqual(['hc-1', 'hc-2'])
     expect(m.fuente).toBe('com.fitdays.fitdays')
@@ -137,20 +139,20 @@ describe('copia completa: cada tabla y cada campo', () => {
     for (const t of TABLAS) await db.table(t).clear()
     expect(await importar(strToU8(JSON.stringify(sinFotos)))).toBe('copia')
     expect(await db.sesiones.count()).toBe(1)
-    // Sin el zip no hay imágenes: la foto se queda sin imagen en vez de romper.
-    expect((await db.fotos.toArray())[0]!.imagen).toBeUndefined()
+    // Sin el zip no hay imágenes: la foto sin imagen no se restaura (la pantalla de fotos fallaba con ella).
+    expect(await db.fotos.count()).toBe(0)
   })
   it('fallaba: una copia sin comprimir de una versión más nueva entraba sin avisar', async () => {
     const antes = await instantanea()
     await expect(importar(copiaJSON({ perfil: [] }, 2))).rejects.toThrow(/versión más nueva/)
     expect(await instantanea()).toEqual(antes)
   })
-  it('una copia con un archivo de imagen que falta: la fila entra sin esa imagen', async () => {
+  it('una copia con un archivo de imagen que falta: la foto se queda fuera y el resto entra sin esa imagen', async () => {
     const ar = unzipSync(await exportar())
     const json = ar['datos.json']!
     for (const t of TABLAS) await db.table(t).clear()
     await importar(zipSync({ 'datos.json': json }))
-    expect((await db.fotos.toArray())[0]!.imagen).toBeUndefined()
+    expect(await db.fotos.count()).toBe(0)
     expect((await db.gimnasios.toArray())[0]!.propias[0]!.foto).toBeUndefined()
   })
   it('restaurar sustituye todo: lo que había y no está en la copia desaparece', async () => {
@@ -204,10 +206,15 @@ describe('copias viejas (sin los campos nuevos)', () => {
     expect(s.accion).toBe('subir')
     expect(await gastoDelDia(p, '2026-09-02')).not.toBeNull()
   })
-  it('una copia sin la tabla de ajustes ni el perfil relleno no rompe al leer los ajustes', async () => {
-    await importar(copiaJSON({ perfil: [] }))
-    expect(await db.perfil.count()).toBe(0)
+  it('una copia sin la tabla de ajustes no rompe al leer los ajustes', async () => {
+    await importar(copiaJSON({ perfil: [{ id: 'yo', altaCompleta: true, nombre: 'Mínimo' }] }))
+    expect((await db.perfil.get('yo'))!.nombre).toBe('Mínimo')
     expect(await leerAjustes()).toEqual(ajustesPorDefecto())
+  })
+  it('un perfil mínimo se completa con lo de siempre (antes dejaba la app en blanco)', async () => {
+    await importar(copiaJSON({ perfil: [{ id: 'yo', altaCompleta: true }] }))
+    const p = (await db.perfil.get('yo'))!
+    expect(p).toMatchObject({ ...perfilPorDefecto(), creado: expect.any(String), altaCompleta: true })
   })
 })
 
@@ -258,10 +265,15 @@ describe('perfil sencillo (data/perfil.ejemplo.json): todos los campos', () => {
 })
 
 describe('nombre del archivo de la copia', () => {
-  it('jowyfit-AAAA-MM-DD.jowyfit con la fecha local', () => {
-    expect(nombreCopia(new Date(2026, 9, 3, 23, 59))).toBe('jowyfit-2026-10-03.jowyfit')
-    expect(nombreCopia(new Date(2027, 0, 1, 0, 1))).toBe('jowyfit-2027-01-01.jowyfit')
-    expect(nombreCopia()).toMatch(/^jowyfit-\d{4}-\d{2}-\d{2}\.jowyfit$/)
+  it('jowyfit-AAAA-MM-DD-HHMM.jowyfit con la fecha y la hora locales', () => {
+    expect(nombreCopia(new Date(2026, 9, 3, 23, 59))).toBe('jowyfit-2026-10-03-2359.jowyfit')
+    expect(nombreCopia(new Date(2027, 0, 1, 0, 1))).toBe('jowyfit-2027-01-01-0001.jowyfit')
+    expect(nombreCopia()).toMatch(/^jowyfit-\d{4}-\d{2}-\d{2}-\d{4}\.jowyfit$/)
+  })
+  it('si ya hay una copia con ese nombre, se añade -2, -3… (no se pisa)', () => {
+    const f = new Date(2026, 9, 20, 7, 5)
+    expect(nombreCopia(f, ['jowyfit-2026-10-20-0705.jowyfit'])).toBe('jowyfit-2026-10-20-0705-2.jowyfit')
+    expect(nombreCopia(f, ['jowyfit-2026-10-20-0705.jowyfit', 'jowyfit-2026-10-20-0705-2.jowyfit'])).toBe('jowyfit-2026-10-20-0705-3.jowyfit')
   })
 })
 

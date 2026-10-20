@@ -7,7 +7,7 @@ import type { Ejercicio } from '../../../catalogo/tipos'
 import { alternativasDe, bloqueNuevo, patronGenerador } from '../../../dominio/generador'
 import { desdeBloque, sustituir } from '../../../dominio/sesion'
 import { sugerenciaPara } from '../../../datos/consultas'
-import { Chip, cx, Hoja, Ico, Th, useUnaVez } from '../../comp'
+import { Chip, cx, Hoja, Ico, Th, useUnaVez, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
@@ -86,7 +86,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
   const titulo = { cambiar: 'Cambiar ejercicio', alternativa: 'Si está ocupado', anadir: 'Añadir ejercicio', 'sesion-anadir': 'Añadir al entreno', 'sesion-cambiar': 'Cambiar ejercicio' }[modo]
   return (
     <Hoja titulo={titulo} sub={actual ? (modo === 'alternativa' ? `Qué hacer si ${nombreEj(actual)} está ocupado` : `En lugar de: ${nombreEj(actual)}`) : g ? 'Solo lo que hay en tu gimnasio' : 'Todo el catálogo (aún no tienes gimnasio)'} className="tall">
-      <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" placeholder="Buscar ejercicio o músculo" value={q} onChange={e => setQ(e.target.value)} /></label>
+      <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder="Buscar ejercicio o músculo" value={q} onChange={e => setQ(e.target.value)} /></label>
       {actual && (
         <div className="chips mt8">
           <Chip on={mismoPatron} onClick={() => setMismoPatron(true)}>Parecidos</Chip>

@@ -23,6 +23,7 @@ import './ui/estilos/ux-rutina.css'
 import './ui/estilos/ux-progreso.css'
 import { Capacitor } from '@capacitor/core'
 import { App } from './ui/App'
+import { RedSeguridad } from './ui/Rescate'
 import { aplicarTemaGuardado } from './ui/tema'
 
 aplicarTemaGuardado()
@@ -38,6 +39,9 @@ if (Capacitor.isNativePlatform()) {
 
 createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
-    <App />
+    {/* Si algo falla al pintar, nunca se queda en blanco: «Algo ha ido mal» con salida (Inicio, copia, borrar). */}
+    <RedSeguridad nivel="app">
+      <App />
+    </RedSeguridad>
   </StrictMode>,
 )

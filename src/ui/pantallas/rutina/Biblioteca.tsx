@@ -6,7 +6,7 @@ import { buscar, catalogoCargado, nombreMaterial } from '../../../catalogo/catal
 import { mejorMarca } from '../../../dominio/progresion'
 import { hoyISO } from '../../../dominio/fechas'
 import { kg } from '../../../dominio/calculos'
-import { Chip, Ico, Pantalla, Th } from '../../comp'
+import { Chip, Ico, Pantalla, Th, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useGimnasio, useMarcas, useRutina } from '../../datos'
 import { abrevDia, CabRutina, musculoComun, musculosComunes, nombreVisible, zonaComun } from './comun'
@@ -69,7 +69,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
     <Pantalla>
       <CabRutina actual="rut-ej" crumb="Biblioteca" />
       <div className="pg">
-        <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" placeholder="Buscar ejercicio o máquina" aria-label="Buscar ejercicio" value={q} onChange={e => { setQ(e.target.value); setN(40) }} /></label>
+        <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder="Buscar ejercicio o máquina" aria-label="Buscar ejercicio" value={q} onChange={e => { setQ(e.target.value); setN(40) }} /></label>
         <div className="chips scroll mt12">
           <select className="chip filt" value={grupo} onChange={e => setGrupo(e.target.value)} aria-label="Músculo" style={{ appearance: 'none', background: grupo ? 'var(--blue-t)' : 'var(--surface)', color: grupo ? 'var(--blue)' : 'var(--ink)' }}>
             <option value="">Músculo ▾</option>

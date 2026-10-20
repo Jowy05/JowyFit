@@ -1,6 +1,7 @@
 // Doble progresión con esfuerzo (RPE) y récords.
 import type { Serie, TipoRegistro } from '../datos/tipos'
 import { epley } from './calculos'
+import { propio } from './claves'
 import { BARRAS, siguiente } from './pesos'
 
 export type Sugerencia = {
@@ -123,8 +124,8 @@ export function leerReferencia(texto: string | undefined): { peso: number; reps:
  * un 10 % menos por el parón y dejando en reserva las reps que pide el esfuerzo objetivo.
  */
 export function desdeReferencia(id: string, referencias: Record<string, string> | undefined, objetivo: { repsMin: number; rpe: number }, lista: number[]): Sugerencia | null {
-  const m = DESDE_REFERENCIA[id]
-  const r = m ? leerReferencia(referencias?.[m.ref]) : null
+  const m = propio(DESDE_REFERENCIA, id)
+  const r = m ? leerReferencia(propio(referencias, m.ref)) : null
   if (!m || !r) return null
   const reserva = Math.max(1, 10 - (Number.isFinite(objetivo.rpe) ? objetivo.rpe : 7))
   const bruto = (epley(r.peso, r.reps) * m.f * 0.9) / (1 + (objetivo.repsMin + reserva) / 30)

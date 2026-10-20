@@ -14,7 +14,8 @@ async function crearDetector(): Promise<Detector> {
   return detector
 }
 
-export type Camara = { parar: () => void; linterna: (on: boolean) => Promise<boolean> }
+/** `tieneLinterna`: la cámara dice que deja encenderla (en casi todos los iPhone, Safari no). */
+export type Camara = { parar: () => void; linterna: (on: boolean) => Promise<boolean>; tieneLinterna: boolean }
 
 /** Abre la cámara trasera en el <video> y llama a `alLeer` con el primer código que encuentre. */
 export async function abrirCamara(video: HTMLVideoElement, alLeer: (codigo: string) => void): Promise<Camara> {
@@ -48,7 +49,10 @@ export async function abrirCamara(video: HTMLVideoElement, alLeer: (codigo: stri
   }
   void bucle()
   const pista = flujo.getVideoTracks()[0]
+  let tieneLinterna = false
+  try { tieneLinterna = !!(pista?.getCapabilities?.() as { torch?: boolean } | undefined)?.torch } catch { /* sin datos de la cámara */ }
   return {
+    tieneLinterna,
     parar: () => { vivo = false; flujo.getTracks().forEach(t => t.stop()); video.srcObject = null },
     linterna: async on => {
       try { await pista?.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] }); return true } catch { return false }

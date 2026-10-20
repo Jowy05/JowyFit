@@ -6,7 +6,7 @@ import { guardarAjustes, guardarPerfil } from '../../../datos/repos'
 import { num } from '../../../dominio/calculos'
 import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../../dominio/tendencias'
-import { esIPhone, pasosDisponibles, pedirPermisoPasos } from '../../../plataforma'
+import { esAndroid, esIPhone, pasosDisponibles, pedirPermisoPasos } from '../../../plataforma'
 import { sincronizarPasos } from '../../servicios'
 import { Anillo, Cab, Chip, cx, estilo, Hoja, Ico, Pantalla, Stepper, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
@@ -38,7 +38,8 @@ export function Pasos() {
   const media = conDatos.length ? Math.round(conDatos.reduce((t, r) => t + r.pasos, 0) / conDatos.length) : null
   const cumplidos = valores.filter(v => v >= objetivo).length
   const tope = Math.max(objetivo * 1.25, ...valores) || 1
-  const auto = ajustes.fuentePasos === 'auto'
+  // Solo en Android llegan solos: una copia traída de Android a un iPhone no deja los pasos sin poder apuntarlos.
+  const auto = ajustes.fuentePasos === 'auto' && esAndroid()
 
   const conectar = async () => {
     setConectando(true)

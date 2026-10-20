@@ -11,11 +11,14 @@ const base = process.env.JOWYFIT_BASE ?? '/'
 
 // Los iconos Phosphor traen formatos antiguos (svg, ttf, woff) que ningún móvil actual usa: fuera.
 function quitarFuentesViejas(): Plugin {
+  // La carpeta de salida real (también con --outDir, p. ej. .cache/dist-iphone): antes siempre era dist/.
+  let salida = 'dist'
   return {
     name: 'quitar-fuentes-viejas',
     apply: 'build',
+    configResolved(c) { salida = c.build.outDir },
     closeBundle() {
-      const dir = path.resolve('dist', 'assets')
+      const dir = path.resolve(salida, 'assets')
       if (!fs.existsSync(dir)) return
       for (const f of fs.readdirSync(dir)) if (/^Phosphor.*\.(svg|ttf|woff)$/.test(f)) fs.rmSync(path.join(dir, f))
     },
@@ -25,13 +28,15 @@ function quitarFuentesViejas(): Plugin {
 // Android (APK): solo la app, y app.html pasa a ser index.html (el APK abre index.html). Web: landing en
 // index.html (elige landing o app según el navegador) y la app en app.html.
 function appComoIndex(activo: boolean): Plugin {
+  let salida = 'dist'
   return {
     name: 'app-como-index',
     apply: 'build',
+    configResolved(c) { salida = c.build.outDir },
     closeBundle() {
       if (!activo) return
-      const desde = path.resolve('dist', 'app.html')
-      if (fs.existsSync(desde)) fs.renameSync(desde, path.resolve('dist', 'index.html'))
+      const desde = path.resolve(salida, 'app.html')
+      if (fs.existsSync(desde)) fs.renameSync(desde, path.resolve(salida, 'index.html'))
     },
   }
 }

@@ -128,7 +128,9 @@ export function anadirSerie(s0: Sesion, idx: number): Sesion {
   const s = clon(s0)
   const e = s.ejercicios[idx]!
   const ult = e.series[e.series.length - 1]
-  e.series.push({ n: e.series.length + 1, peso: ult?.peso ?? null, reps: ult?.reps ?? e.repsMin, segundos: ult?.segundos ?? null, rpe: null, calentamiento: false, hecha: false })
+  // Por tiempo va en segundos y sin reps (antes la serie añadida a una plancha salía con «8 reps» y sin segundos).
+  const tiempo = e.registro === 'tiempo'
+  e.series.push({ n: e.series.length + 1, peso: ult?.peso ?? null, reps: tiempo ? null : ult?.reps ?? e.repsMin, segundos: tiempo ? ult?.segundos ?? e.repsMin : null, rpe: null, calentamiento: false, hecha: false })
   if (e.estado === 'hecho') e.estado = 'curso'
   return s
 }

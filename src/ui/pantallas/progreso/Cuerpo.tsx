@@ -13,7 +13,7 @@ import { useAjustes, usePerfil } from '../../datos'
 import { useAviso } from '../../aviso'
 import { guardarAjustes } from '../../../datos/repos'
 import { nombreFuente } from '../../../dominio/bascula'
-import { pasosDisponibles } from '../../../plataforma'
+import { esAndroid, pasosDisponibles } from '../../../plataforma'
 import { activarBascula } from '../../servicios'
 import { CabProgreso, capital, fechaPunto, ICONO_ORIGEN, NOMBRE_ORIGEN, PERIMETROS } from './comun'
 
@@ -187,7 +187,7 @@ export function Cuerpo() {
             {historial.slice(0, cuantas).map(m => (
               <div key={m.id} className="it">
                 <span className="code">{fechaCorta(m.fecha)}</span>
-                <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {m.hc?.length ? `${nombreFuente(m.fuente)} · Health Connect` : NOMBRE_ORIGEN[m.origen]}</small></span>
+                <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {m.hc?.length ? `${nombreFuente(m.fuente)} · ${esAndroid() ? 'Health Connect' : 'báscula'}` : NOMBRE_ORIGEN[m.origen]}</small></span>
                 <button className="ib" aria-label="Borrar medición" onClick={() => nav.hoja('sheet-confirmar', {
                   titulo: '¿Borrar esta medición?', texto: `${textoMedicion(m, 9)} · ${fechaCorta(m.fecha)}`, si: 'Borrar', peligro: true, accion: 'borrar-medicion', id: m.id,
                 })}><Ico n="trash" /></button>

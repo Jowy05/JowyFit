@@ -62,16 +62,28 @@ export function conRacion(base: { kcal: number; proteina: number; cafeina?: numb
   return { kcal: Math.round(base.kcal * f), proteina: Math.round(base.proteina * f), cafeina: base.cafeina ? Math.round(base.cafeina * f) : undefined, ...escalarMacros(base, f) }
 }
 
+/**
+ * ¿Alguna de las palabras empieza una palabra del nombre? Antes se buscaban en cualquier sitio y «chocolate»
+ * (por «cola»), «aguacate» (por «agua») o «panceta» salían como bebida o como pan; y «té» no casaba nunca
+ * (\b no funciona tras una letra con tilde). `entera` obliga a que la palabra acabe ahí.
+ */
+function empieza(n: string, palabras: string, entera = false): boolean {
+  return new RegExp(`(?:^|[^\\p{L}])(?:${palabras})${entera ? '(?![\\p{L}])' : ''}`, 'u').test(n)
+}
+
 /** Color e icono de la miniatura según lo que parece el nombre. */
 export function aspecto(nombre: string, tipo?: string): { fp: string; icono: string } {
   const n = nombre.toLowerCase()
-  if (tipo === 'bebida' || /monster|red ?bull|energ|fuse|cola|refresco|café|cafe|zumo|agua|bebida|cerveza|té\b/.test(n)) return { fp: 'f-dr', icono: /café|cafe/.test(n) ? 'coffee' : 'lightning' }
-  if (/batido|prote|yogur|leche|whey|skyr/.test(n)) return { fp: 'f-sh', icono: 'drop' }
-  if (/pizza/.test(n)) return { fp: 'f-pz', icono: 'pizza' }
-  if (/bocadillo|bocata|sandwich|sándwich|pan|tostada|fuet/.test(n)) return { fp: 'f-bo', icono: 'bread' }
-  if (/albóndiga|albondiga|guiso|lentej|garbanz|estofado|potaje/.test(n)) return { fp: 'f-al', icono: 'cooking-pot' }
-  if (/teriyaki|wok|ramen|sopa|caldo|fideo|noodle/.test(n)) return { fp: 'f-te', icono: 'bowl-steam' }
-  if (tipo === 'picoteo' || /patata|quicos|chips|galleta|chocolate|snack|bollo|donut|nachos|frutos secos|cacahuete/.test(n)) return { fp: 'f-sn', icono: 'cookie' }
+  const cafe = empieza(n, 'café|cafe|cafés|cafes', true)
+  if (tipo === 'bebida' || cafe || empieza(n, 'monster|red ?bull|energética|energetica|bebida energ|fuze|fuse|refresco|zumo|bebida|cerveza|cola|coca') || empieza(n, 'agua|aguas|té|te verde|te negro|infusión|infusion', true)) {
+    return { fp: 'f-dr', icono: cafe ? 'coffee' : 'lightning' }
+  }
+  if (empieza(n, 'batido|prote|yogur|leche|whey|skyr')) return { fp: 'f-sh', icono: 'drop' }
+  if (empieza(n, 'pizza')) return { fp: 'f-pz', icono: 'pizza' }
+  if (empieza(n, 'bocadillo|bocata|sandwich|sándwich|tostada|fuet') || empieza(n, 'pan|panes', true)) return { fp: 'f-bo', icono: 'bread' }
+  if (empieza(n, 'albóndiga|albondiga|guiso|lentej|garbanz|estofado|potaje')) return { fp: 'f-al', icono: 'cooking-pot' }
+  if (empieza(n, 'teriyaki|wok|ramen|sopa|caldo|fideo|noodle')) return { fp: 'f-te', icono: 'bowl-steam' }
+  if (tipo === 'picoteo' || empieza(n, 'patata|quicos|chips|galleta|chocolate|snack|bollo|donut|nachos|frutos secos|cacahuete')) return { fp: 'f-sn', icono: 'cookie' }
   return { fp: 'f-cu', icono: 'bowl-food' }
 }
 

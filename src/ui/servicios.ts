@@ -5,7 +5,7 @@ import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { DIAS, deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
-import { alVolverAPrimerPlano, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
+import { alVolverAPrimerPlano, compartirArchivo, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
 
@@ -156,6 +156,22 @@ export async function hacerCopiaAhora(): Promise<string> {
   const ruta = await guardarArchivo(nombreCopia(), bytes, 'application/zip')
   await guardarAjustes({ ultimaCopia: new Date().toISOString() })
   return ruta
+}
+
+export type CopiaPreparada = { nombre: string; bytes: Uint8Array }
+/**
+ * Web de Apple: la copia se guarda con el menú Compartir («Guardar en Archivos», AirDrop…) y, si el navegador no
+ * comparte archivos, se descarga. Si Safari no deja abrir el menú (se tardó en preparar la copia tras el toque),
+ * devuelve 'sin-gesto' con la copia ya hecha: se vuelve a llamar con ella al tocar otra vez.
+ * La fecha de la última copia solo se apunta si de verdad se ha guardado o enviado.
+ */
+export async function copiaCompartiendo(lista?: CopiaPreparada): Promise<{ resultado: 'compartido' | 'descargado' | 'cancelado' | 'sin-gesto'; copia: CopiaPreparada }> {
+  const copia = lista ?? { nombre: nombreCopia(), bytes: await exportar() }
+  const r = await compartirArchivo(copia.nombre, copia.bytes, 'application/zip')
+  if (r === 'cancelado' || r === 'sin-gesto') return { resultado: r, copia }
+  if (r === 'no-se-puede') await guardarArchivo(copia.nombre, copia.bytes, 'application/zip')
+  await guardarAjustes({ ultimaCopia: new Date().toISOString() })
+  return { resultado: r === 'compartido' ? 'compartido' : 'descargado', copia }
 }
 
 export const NOMBRES_DIAS = DIAS

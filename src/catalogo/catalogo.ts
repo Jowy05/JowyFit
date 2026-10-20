@@ -40,6 +40,9 @@ export async function cargarCatalogo(): Promise<Catalogo> {
     if (!r.ok) throw new Error(`No se pudo cargar el catálogo (${r.status})`)
     return r.json() as Promise<Catalogo>
   }).then(c => { usarCatalogo(c); return c })
+  // Si falla (sin conexión, archivo a medio bajar), la próxima vez se vuelve a intentar: antes el fallo se quedaba
+  // guardado y el catálogo ya no cargaba hasta cerrar la app.
+  promesa.catch(() => { promesa = null })
   return promesa
 }
 

@@ -104,11 +104,15 @@ export const TIPOS_META: { v: Meta['tipo']; t: string; unidad: string; paso: num
   { v: 'libre', t: 'Otra', unidad: '', paso: 1, icono: 'flag' },
 ]
 
-/** % de grasa más reciente: por medidas (Marina) y, si no, el de la báscula. */
+/**
+ * % de grasa más reciente: el de la medida más nueva, sea de la báscula o de la cinta (cintura y cuello).
+ * Antes ganaba siempre la cinta, aunque fuera de hace meses y la báscula de hoy (y en Inicio era al revés).
+ */
 export function grasaActual(ms: Medicion[], p: Perfil): number | null {
-  const marina = grasaPorMedidas(ms, p.sexo, p.alturaCm)
-  if (marina.length) return marina[marina.length - 1]!.valor
-  return ultimoValor(ms, m => m.bascula?.grasaPct)?.valor ?? null
+  const marina = grasaPorMedidas(ms, p.sexo, p.alturaCm).at(-1) ?? null
+  const bascula = ultimoValor(ms, m => m.bascula?.grasaPct) ?? null
+  if (marina && bascula) return bascula.fecha >= marina.fecha ? bascula.valor : marina.valor
+  return (bascula ?? marina)?.valor ?? null
 }
 
 /** Valor actual de una meta leyendo la base de datos (null si no se puede saber). */

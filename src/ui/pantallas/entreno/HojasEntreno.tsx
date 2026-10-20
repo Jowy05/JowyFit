@@ -147,11 +147,14 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta }) {
             </div>
           ))}
         </div>
-      ) : <p className="muted">Pon antes el peso de trabajo.</p>}
+      ) : trabajo > 0
+        // Con un peso ligero (p. ej. la barra vacía) no hay nada más ligero con que calentar: no hace falta.
+        ? <p className="muted">Con {kg(trabajo)} kg no hace falta calentar con menos peso: haz unas repeticiones suaves con este mismo y empieza.</p>
+        : <p className="muted">Pon antes el peso de trabajo.</p>}
       <p className="small muted mt8">Descansa lo justo entre ellas: 45-60 s.</p>
       <button className={cx('btn mt16', (ya || empezado || !series.length) && 'off')} disabled={ya || empezado || !series.length}
         onClick={async () => { await db.sesiones.put(conCalentamiento(s, idx, series)); nav.hoja(null); aviso('Calentamiento añadido') }}>
-        {ya ? 'Ya está añadido' : empezado ? 'Ya has empezado este ejercicio' : 'Añadir a la lista'}
+        {ya ? 'Ya está añadido' : empezado ? 'Ya has empezado este ejercicio' : !series.length && trabajo > 0 ? 'No hace falta' : 'Añadir a la lista'}
       </button>
     </Hoja>
   )

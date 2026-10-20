@@ -10,13 +10,14 @@ import { objetivosEnergia } from '../../../datos/consultas'
 import type { Ajustes as TAjustes } from '../../../datos/tipos'
 import { useCatalogo } from '../../../catalogo/catalogo'
 import { aISO, duracion, fechaCorta, horaDe } from '../../../dominio/fechas'
-import { abrirHealthConnect, copiasGuardadas, elegirArchivo, esAndroid, esIPhone, esNativo, leerCopiaGuardada, pasosDisponibles, pedirPermisoPasos, permisoNotificaciones } from '../../../plataforma'
+import { abrirHealthConnect, copiasGuardadas, dispositivoApple, elegirArchivo, esAndroid, esNativo, estaInstalada, leerCopiaGuardada, pasosDisponibles, pedirPermisoPasos, permisoNotificaciones, puedeVibrar } from '../../../plataforma'
 import { cx, Cab, Elegir, Ico, Interruptor, Pantalla, Stepper } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil } from '../../datos'
 import { guardarLetra, guardarTema, letraGuardada, temaGuardado, type Letra, type PreferenciaTema } from '../../tema'
-import { activarBascula, comprobarSalud, conectarSalud, hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos } from '../../servicios'
+import { activarBascula, comprobarSalud, conectarSalud, copiaCompartiendo, hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos, type CopiaPreparada } from '../../servicios'
+import { abrirInstrucciones } from '../instalar/Instalar'
 import { diasTxt } from './textos'
 
 type Noti = TAjustes['noti']
@@ -37,6 +38,8 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const gym = useGimnasio()
   const catalogo = useCatalogo()
   const nativo = esNativo()
+  // Web de Apple (iPhone, iPad, Mac): no se enseña nada que allí no funcione (Health Connect, recordatorios, vibración…).
+  const apple = dispositivoApple()
   const refDatos = useRef<HTMLParagraphElement>(null)
   const refComida = useRef<HTMLParagraphElement>(null)
 
@@ -52,6 +55,8 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const [confirmar, setConfirmar] = useState<string | null>(null)
   const [archivo, setArchivo] = useState<{ nombre: string; bytes: Uint8Array } | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  // iPhone: la copia está hecha pero Safari no dejó abrir el menú Compartir (tardó demasiado tras el toque).
+  const [copiaLista, setCopiaLista] = useState<CopiaPreparada | null>(null)
   // «Más ajustes» se abre solo si venimos a tocar algo de dentro (p. ej. el objetivo manual de comida).
   const [masAbierto, setMasAbierto] = useState(ruta.d?.seccion === 'comida')
 
@@ -134,6 +139,15 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
   const copiaAhora = async () => {
     setOcupado(true)
     try {
+      if (apple) {
+        // Menú Compartir: «Guardar en Archivos», AirDrop, WhatsApp… Si no se puede, se descarga.
+        const r = await copiaCompartiendo(copiaLista ?? undefined)
+        setCopiaLista(r.resultado === 'sin-gesto' ? r.copia : null)
+        if (r.resultado === 'compartido') aviso('Copia hecha. Guárdala en Archivos o envíatela')
+        else if (r.resultado === 'descargado') aviso(`Copia guardada en Archivos → Descargas: ${r.copia.nombre}`)
+        else if (r.resultado === 'cancelado') aviso('No se ha guardado la copia')
+        return
+      }
       const nombre = nombreCopia()
       await hacerCopiaAhora()
       aviso(nativo ? `Copia guardada en Documentos/JowyFit: ${nombre}` : `Copia descargada: ${nombre}`)
@@ -189,8 +203,8 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
         </div>
 
         {/* ---------- Recordatorios ---------- */}
-        <p className="grp-t">Recordatorios</p>
-        {nativo ? (
+        {!apple && <p className="grp-t">Recordatorios</p>}
+        {apple ? null : nativo ? (
           <div className="list">
             <Fila t="Una hora antes de dormir" d={`Te dice qué entrenas mañana · te acuestas a las ${p.horaDormir.replace(/^0/, '')}`} on={a.noti.dormir} c={v => void cambiarNoti({ dormir: v })} />
             <FilaHora t="Pesarse" d={pesarseTxt} on={a.noti.pesarse} hora={a.noti.pesarseHora} c={v => void cambiarNoti({ pesarse: v })} h={v => void cambiarNoti({ pesarseHora: v })} />
@@ -201,13 +215,13 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
             <Fila t="Resumen del domingo" d="¿Voy bien? Tu semana en 10 segundos" on={a.noti.domingo} c={v => void cambiarNoti({ domingo: v })} />
           </div>
         ) : (
-          <p className="note plain"><Ico n="device-mobile" /><span><b>{esIPhone() ? 'No disponible en iPhone:' : 'Solo en la app de Android:'}</b> los recordatorios se ven dentro de la app.</span></p>
+          <p className="note plain"><Ico n="device-mobile" /><span><b>Solo en la app de Android:</b> los recordatorios se ven dentro de la app.</span></p>
         )}
 
         {/* ---------- Reloj y báscula: Health Connect, a la vista (antes estaba dentro de «Más ajustes» y no se encontraba) ---------- */}
-        <p className="grp-t">Reloj y báscula</p>
-        {!esAndroid() ? (
-          <p className="note plain"><Ico n="watch" /><span><b>{esIPhone() ? 'No disponible en iPhone:' : 'Solo en la app de Android:'}</b> los pasos y el peso se apuntan a mano.</span></p>
+        {!apple && <p className="grp-t">Reloj y báscula</p>}
+        {apple ? null : !esAndroid() ? (
+          <p className="note plain"><Ico n="watch" /><span><b>Solo en la app de Android:</b> los pasos y el peso se apuntan a mano.</span></p>
         ) : hayPasos ? (
           <div className="list">
             <div className="it col">
@@ -229,17 +243,33 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
           </div>
         )}
 
+        {/* ---------- Apple: cómo tenerla en la pantalla de inicio (las instrucciones del arranque, otra vez) ---------- */}
+        {apple && (
+          <>
+            <p className="grp-t">{apple === 'mac' ? 'App en el Dock' : 'App en la pantalla de inicio'}</p>
+            <div className="list">
+              <button className="it" onClick={abrirInstrucciones}>
+                <span className="ico"><Ico n={apple === 'mac' ? 'desktop' : 'device-mobile'} /></span>
+                <span className="tx"><b>{apple === 'mac' ? 'Cómo ponerla en el Dock' : 'Cómo ponerla en la pantalla de inicio'}</b><small>{estaInstalada() ? 'Ya la tienes instalada · ver los pasos' : 'Se abre como una app, a pantalla completa y sin internet'}</small></span>
+                <Ico n="caret-right" className="car" />
+              </button>
+            </div>
+          </>
+        )}
+
         {/* ---------- Copia de seguridad ---------- */}
         <p className="grp-t" ref={refDatos} id="aju-datos">Copia de seguridad</p>
         <p className="note ok"><Ico n="device-mobile-camera" /><span><b>Todo se guarda en este móvil.</b> Una copia de vez en cuando te sirve si cambias de móvil o se borra algo.</span></p>
         <div className="list mt8">
           <button className="it" disabled={ocupado} onClick={() => void copiaAhora()}>
             <span className="ico"><Ico n="floppy-disk" /></span>
-            <span className="tx"><b>Hacer copia ahora</b><small>Guarda una copia de todo · {a.ultimaCopia ? `la última, ${cuando(a.ultimaCopia)}` : 'aún no has hecho ninguna'}</small></span>
+            <span className="tx"><b>{copiaLista ? 'Guardar la copia' : 'Hacer copia ahora'}</b><small>{copiaLista
+              ? 'Está lista: toca para elegir dónde guardarla'
+              : <>{apple ? 'Guárdala en Archivos o envíatela' : 'Guarda una copia de todo'} · {a.ultimaCopia ? `la última, ${cuando(a.ultimaCopia)}` : 'aún no has hecho ninguna'}</>}</small></span>
           </button>
           <button className="it" disabled={ocupado} onClick={() => void elegir()}>
             <span className="ico"><Ico n="clock-counter-clockwise" /></span>
-            <span className="tx"><b>Recuperar una copia</b><small>Elige un archivo .jowyfit que guardaste antes</small></span>
+            <span className="tx"><b>Recuperar una copia</b><small>{apple ? 'Elige en Archivos el .jowyfit que guardaste antes' : 'Elige un archivo .jowyfit que guardaste antes'}</small></span>
           </button>
           {archivo && (
             <div className="it col">
@@ -284,7 +314,8 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
             {/* ---------- Entreno ---------- */}
             <p className="grp-t">Entreno</p>
             <div className="list">
-              <Fila t="Vibrar al acabar el descanso" on={a.vibrar} c={v => guardar({ vibrar: v })} />
+              {/* Sin vibración (iPhone): no se ofrece; al acabar el descanso destella la pantalla. */}
+              {puedeVibrar() && <Fila t="Vibrar al acabar el descanso" on={a.vibrar} c={v => guardar({ vibrar: v })} />}
               <Fila t="Sonido al acabar el descanso" on={a.sonido} c={v => guardar({ sonido: v })} />
               <Fila t="Pantalla siempre encendida" d="Durante el entreno" on={a.pantallaEncendida} c={v => guardar({ pantallaEncendida: v })} />
               <div className="it col">
@@ -337,7 +368,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
               ) : (
                 <div className="it">
                   <span className="ico"><Ico n="footprints" /></span>
-                  <span className="tx"><b>De dónde salen los pasos</b><small>En este móvil no hay Health Connect: los pasos se apuntan a mano en Progreso → Pasos.</small></span>
+                  <span className="tx"><b>De dónde salen los pasos</b><small>{apple ? 'Los apuntas tú en Progreso → Pasos (míralos en la app Salud).' : 'En este móvil no hay Health Connect: los pasos se apuntan a mano en Progreso → Pasos.'}</small></span>
                   <span className="end small">A mano</span>
                 </div>
               )}
@@ -362,12 +393,12 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
                 <span className="tx"><b>Gimnasios</b><small>{gym ? `${gym.nombre} · activo` : 'Ninguno todavía'}</small></span>
                 <Ico n="caret-right" className="car" />
               </button>
-              <Permiso ico="bell" t="Notificaciones" d={nativo ? undefined : esIPhone() ? 'No disponible en iPhone' : 'Solo en la app de Android'}
-                estado={nativo ? permNoti : null} onActivar={() => void activarNoti()} />
-              <Permiso ico="footprints" t="Health Connect" d="Para contar los pasos" estado={hayPasos ? a.fuentePasos === 'auto' : null} onActivar={() => void activarPasos()} />
+              {!apple && <Permiso ico="bell" t="Notificaciones" d={nativo ? undefined : 'Solo en la app de Android'}
+                estado={nativo ? permNoti : null} onActivar={() => void activarNoti()} />}
+              {!apple && <Permiso ico="footprints" t="Health Connect" d="Para contar los pasos" estado={hayPasos ? a.fuentePasos === 'auto' : null} onActivar={() => void activarPasos()} />}
               <div className="it">
                 <span className="ico"><Ico n="camera" /></span>
-                <span className="tx"><b>Cámara</b><small>Se pide la primera vez que escaneas o haces una foto</small></span>
+                <span className="tx"><b>Cámara</b><small>{apple ? 'Safari la pide la primera vez que escaneas' : 'Se pide la primera vez que escaneas o haces una foto'}</small></span>
               </div>
             </div>
           </div>

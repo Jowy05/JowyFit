@@ -1,0 +1,60 @@
+/* iPhone (versión web): instrucciones para instalarla, destello de fin de descanso y la muesca. */
+
+/* ---------- Instrucciones de instalación ---------- */
+.ins-capa{z-index:100}
+.ins-hero{padding-bottom:22px}
+.ins-h{font-size:36px}
+.ins-pasos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ins-paso{display:flex;gap:12px;padding:14px 14px 14px 12px;animation:none}
+.ins-n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--go);color:var(--on-go);display:grid;place-items:center;font:700 19px var(--font-display)}
+.ins-tx{flex:1;min-width:0}
+.ins-t{margin:5px 0 0;font-size:18px;line-height:1.25}
+.ins-t b{font-weight:700}
+.ins-d{margin:4px 0 0;color:var(--muted);font-size:15px;line-height:1.35}
+.ins-ico-txt{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;background:var(--blue-t);color:var(--blue);vertical-align:-5px;font-size:17px}
+
+/* Dibujos de Safari: claros y sencillos, con lo que hay que tocar en naranja. */
+.ins-safari,.ins-menu,.ins-anadir,.ins-icono{margin-top:12px}
+.ins-safari{display:flex;align-items:center;gap:10px;height:46px;padding:0 12px;border-radius:23px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);font-size:19px}
+.ins-dir{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;height:32px;border-radius:16px;background:var(--surface);font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden}
+.ins-dir i{font-size:12px;color:var(--muted)}
+.ins-toca{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--go-t);color:var(--go);box-shadow:0 0 0 2px var(--go);font-size:21px;animation:ins-pulso 1.6s ease-in-out infinite}
+@keyframes ins-pulso{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--go) 35%,transparent)}}
+.ins-menu{border-radius:12px;overflow:hidden;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line)}
+.ins-menu-it{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:0 12px;font-size:15px;border-top:1px solid var(--line)}
+.ins-menu-it:first-child{border-top:0}
+.ins-menu-it i{font-size:19px}
+.ins-toca-fila{background:var(--go-t);color:var(--ink);font-weight:600;box-shadow:inset 3px 0 0 var(--go)}
+.ins-toca-fila i{color:var(--go)}
+.ins-anadir{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 12px;border-radius:12px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);font-size:15px}
+.ins-anadir b{font-weight:600;white-space:nowrap}
+.ins-anadir.mac{justify-content:flex-start;gap:16px}
+.ins-toca-txt{flex:none;padding:5px 10px;border-radius:8px;background:var(--go);color:var(--on-go);font-weight:700}
+.apagada{color:var(--muted)}
+.ins-icono{display:inline-flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:500}
+.ins-icono img{width:60px;height:60px;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+@media (prefers-reduced-motion:reduce){.ins-toca{animation:none}}
+
+/* ---------- Fin del descanso sin vibración (iPhone): la pantalla destella ---------- */
+.destello{position:fixed;inset:0;z-index:90;pointer-events:none;display:grid;place-items:center;
+  background:radial-gradient(120% 90% at 50% 45%,color-mix(in srgb,var(--go) 55%,transparent),color-mix(in srgb,var(--go) 22%,transparent));
+  animation:destello 1.8s ease-out both}
+.destello b{padding:14px 22px;border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:var(--pop-sh);font:700 24px var(--font-display);display:flex;align-items:center;gap:10px}
+.destello b i{color:var(--go);font-size:28px}
+@keyframes destello{0%{opacity:0}8%{opacity:1}22%{opacity:.35}36%{opacity:1}50%{opacity:.35}64%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.destello{animation:destello-suave 1.8s both}@keyframes destello-suave{0%,80%{opacity:1}100%{opacity:0}}}
+
+/* ---------- Muesca y barra de estado ---------- */
+/* Escáner: los botones de arriba, por debajo de la muesca (en Android sigue igual: 50 px). */
+.cam-top{padding-top:max(50px,calc(var(--sb-h) + 10px))}
+.cam{padding-bottom:var(--sa-b)}
+/* App instalada en iPhone con el tema claro: la hora y la batería salen en blanco (la barra de estado
+   «black-translucent» siempre es blanca); una franja oscura detrás para que se lean. */
+:root[data-plataforma=apple][data-instalada][data-theme=light] body::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--sb-h);z-index:200;background:#10151C;pointer-events:none}
+
+/* Safari de iPhone acerca la página al tocar un campo con letra de menos de 16 px: nunca menos. */
+:root[data-plataforma=apple] .app :is(input:not([type=checkbox],[type=radio],[type=range]),select,textarea){font-size:max(16px,1em)}
+
+/* El marco de la app nunca se desplaza: con «hidden», Safari lo movía al enfocar un campo (o al llevar un botón a
+   la vista) y asomaba la barra de pestañas escondida debajo del entreno. «clip» no deja desplazarlo. */
+:root[data-plataforma=apple] :is(.app,.screens){overflow:clip}

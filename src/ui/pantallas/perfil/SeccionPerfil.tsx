@@ -1,12 +1,12 @@
 // PER-02 a PER-11 · Secciones del perfil. Cada cambio se guarda al momento.
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { guardarPerfil } from '../../../datos/repos'
 import type { Bascula, Dia, Medicion, Perfil, Zona } from '../../../datos/tipos'
 import { kg, num } from '../../../dominio/calculos'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../../dominio/fechas'
-import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, Vacio } from '../../comp'
+import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, TextoGuardado, Vacio } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { usePerfilCargado } from '../../datos'
@@ -77,22 +77,9 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta }) {
 
 // ---------- piezas comunes ----------
 
-/** Texto que se guarda al salir del campo (no en cada tecla, para no perder el cursor). */
+/** Texto que se guarda solo (al dejar de escribir, al salir del campo y al cerrar la pantalla). */
 function Texto({ valor, onGuardar, placeholder, area, etiqueta }: { valor: string; onGuardar: (v: string) => void; placeholder?: string; area?: boolean; etiqueta?: string }) {
-  const [local, setLocal] = useState(valor)
-  const enfocado = useRef(false)
-  useEffect(() => { if (!enfocado.current) setLocal(valor) }, [valor])
-  const comun = {
-    className: 'inp',
-    value: local,
-    placeholder,
-    'aria-label': etiqueta,
-    onFocus: () => { enfocado.current = true },
-    onBlur: () => { enfocado.current = false; if (local !== valor) onGuardar(local) },
-  }
-  return area
-    ? <textarea {...comun} onChange={e => setLocal(e.target.value)} />
-    : <input {...comun} onChange={e => setLocal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+  return <TextoGuardado valor={valor} onGuardar={v => { if (v !== valor) onGuardar(v) }} placeholder={placeholder} area={area} etiqueta={etiqueta} />
 }
 
 function Grupo({ t, children, ayuda }: { t: ReactNode; children: ReactNode; ayuda?: ReactNode }) {

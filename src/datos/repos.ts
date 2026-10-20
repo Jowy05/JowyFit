@@ -1,4 +1,5 @@
 // Acceso a los datos: valores por defecto y operaciones habituales.
+import { dispositivoApple } from '../plataforma'
 import { db } from './db'
 import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Plantilla } from './tipos'
 import { hoyISO } from '../dominio/fechas'
@@ -54,7 +55,8 @@ export function ajustesPorDefecto(): Ajustes {
     descansoCompuesto: 150,
     descansoAislamiento: 90,
     vibrar: true,
-    sonido: false,
+    // En iPhone no hay vibración ni aviso con el móvil bloqueado: el sonido viene encendido.
+    sonido: dispositivoApple() != null,
     pantallaEncendida: true,
     calentamiento: true,
     avisosSeguridad: true,
@@ -118,11 +120,15 @@ export async function leerPerfil(): Promise<Perfil | undefined> {
   return db.perfil.get('yo')
 }
 
+// Leer y guardar van en una misma transacción: dos cambios a la vez (dos interruptores seguidos, la báscula y la copia
+// al abrir la app) se pisaban y se perdía uno de los dos.
 export async function guardarPerfil(cambios: Partial<Perfil>): Promise<Perfil> {
-  const actual = (await leerPerfil()) ?? perfilPorDefecto()
-  const nuevo = { ...actual, ...cambios, id: 'yo' as const }
-  await db.perfil.put(nuevo)
-  return nuevo
+  return db.transaction('rw', db.perfil, async () => {
+    const actual = (await leerPerfil()) ?? perfilPorDefecto()
+    const nuevo = { ...actual, ...cambios, id: 'yo' as const }
+    await db.perfil.put(nuevo)
+    return nuevo
+  })
 }
 
 export async function leerAjustes(): Promise<Ajustes> {
@@ -134,9 +140,11 @@ export async function leerAjustes(): Promise<Ajustes> {
 }
 
 export async function guardarAjustes(cambios: Partial<Ajustes>): Promise<Ajustes> {
-  const nuevo = { ...(await leerAjustes()), ...cambios, id: 'app' as const }
-  await db.ajustes.put(nuevo)
-  return nuevo
+  return db.transaction('rw', db.ajustes, async () => {
+    const nuevo = { ...(await leerAjustes()), ...cambios, id: 'app' as const }
+    await db.ajustes.put(nuevo)
+    return nuevo
+  })
 }
 
 export async function marcaDe(id: string): Promise<MarcaEjercicio> {
@@ -144,8 +152,10 @@ export async function marcaDe(id: string): Promise<MarcaEjercicio> {
 }
 
 export async function marcar(id: string, cambios: Partial<MarcaEjercicio>) {
-  const m = { ...(await marcaDe(id)), ...cambios, id }
-  await db.marcas.put(m)
+  await db.transaction('rw', db.marcas, async () => {
+    const m = { ...(await marcaDe(id)), ...cambios, id }
+    await db.marcas.put(m)
+  })
 }
 
 /** Asegura que hay ajustes y plantillas iniciales (primera vez que se abre la app). */

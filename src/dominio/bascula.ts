@@ -13,18 +13,27 @@ const MISMA_PESADA_MS = 10 * 60_000
 const valido = { peso: (v: number) => v >= 25 && v <= 300, grasa: (v: number) => v >= 2 && v <= 70 }
 
 export function juntarBascula(pesos: MuestraHC[], grasas: MuestraHC[]): LecturaBascula[] {
-  const t = (m: MuestraHC) => new Date(m.fecha).getTime()
+  const t = (m: { fecha: string }) => new Date(m.fecha).getTime()
   const out: LecturaBascula[] = pesos
     .filter(p => valido.peso(p.valor))
     .map(p => ({ fecha: p.fecha, pesoKg: Math.round(p.valor * 10) / 10, ids: p.id ? [p.id] : [], fuente: p.fuente }))
-  for (const g of grasas.filter(x => valido.grasa(x.valor))) {
-    const cerca = out
-      .filter(l => l.grasaPct == null && Math.abs(new Date(l.fecha).getTime() - t(g)) <= MISMA_PESADA_MS)
-      .sort((a, b) => Math.abs(new Date(a.fecha).getTime() - t(g)) - Math.abs(new Date(b.fecha).getTime() - t(g)))[0]
+  const gs = grasas.filter(x => valido.grasa(x.valor))
+  // Cada grasa con el peso más cercano, empezando por las parejas más juntas. Antes se iban emparejando en el orden
+  // en que llegaban: una grasa de 8 minutos antes se quedaba el peso y la de la misma pesada (a 10 s) iba suelta.
+  const pares: { p: number; g: number; d: number }[] = []
+  out.forEach((l, p) => gs.forEach((g, i) => { const d = Math.abs(t(l) - t(g)); if (d <= MISMA_PESADA_MS) pares.push({ p, g: i, d }) }))
+  pares.sort((a, b) => a.d - b.d)
+  const pareja = new Map<number, number>()
+  const conGrasa = new Set<number>()
+  for (const x of pares) if (!pareja.has(x.g) && !conGrasa.has(x.p)) { pareja.set(x.g, x.p); conGrasa.add(x.p) }
+  const solas: LecturaBascula[] = []
+  gs.forEach((g, i) => {
     const grasaPct = Math.round(g.valor * 10) / 10
-    if (cerca) { cerca.grasaPct = grasaPct; if (g.id) cerca.ids.push(g.id) }
-    else out.push({ fecha: g.fecha, grasaPct, ids: g.id ? [g.id] : [], fuente: g.fuente })
-  }
+    const p = pareja.get(i)
+    if (p != null) { out[p]!.grasaPct = grasaPct; if (g.id) out[p]!.ids.push(g.id) }
+    else solas.push({ fecha: g.fecha, grasaPct, ids: g.id ? [g.id] : [], fuente: g.fuente })
+  })
+  out.push(...solas)
   // Dos apps que escriben la misma pesada (mismo peso, casi a la vez) cuentan como una sola.
   const unicas: LecturaBascula[] = []
   for (const l of out.sort((a, b) => a.fecha.localeCompare(b.fecha))) {

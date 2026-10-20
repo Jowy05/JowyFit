@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { cargarCatalogo } from '../catalogo/catalogo'
 import { db, pedirPersistencia } from '../datos/db'
 import { prepararBase } from '../datos/repos'
-import { alPulsarAtras } from '../plataforma'
+import { alPulsarAtras, marcarPlataforma, prepararSonido } from '../plataforma'
 import { ProveedorAviso } from './aviso'
 import { cx, Ico } from './comp'
 import { letraGuardada } from './tema'
@@ -14,6 +14,13 @@ import { HOJAS, PANTALLAS, precargarPantallas } from './pantallas/registro'
 import { Alta } from './pantallas/alta/Alta'
 import { MiniBarra } from './pantallas/entreno/MiniBarra'
 import { arrancarServicios } from './servicios'
+import { alPedirInstrucciones, ensenarAlEmpezar, Instalar, marcarVistas } from './pantallas/instalar/Instalar'
+import './estilos/ux-iphone.css'
+
+// Apple: estilos propios (barra de estado de la app instalada). En todas partes: el sonido se abre con el primer
+// toque, para que el pitido de fin de descanso suene en iPhone.
+marcarPlataforma()
+prepararSonido()
 
 export type PropsPantalla = { ruta: Ruta }
 
@@ -28,6 +35,10 @@ export function App() {
       .catch(e => setError(String(e?.message ?? e)))
   }, [])
   const perfil = useLiveQuery(() => db.perfil.get('yo'), [], null)
+  // Instrucciones para instalarla (solo Apple sin instalar al empezar; también desde Ajustes).
+  const [instalar, setInstalar] = useState(ensenarAlEmpezar)
+  useEffect(() => alPedirInstrucciones(() => setInstalar(true)), [])
+  const cerrarInstalar = () => { marcarVistas(); setInstalar(false) }
   if (error) return <div className="app"><div className="cargando" style={{ padding: 24, textAlign: 'center' }}>No se pudo abrir la app: {error}</div></div>
   if (!listo || perfil === null) return <div className="app"><div className="cargando">JowyFit</div></div>
   return (
@@ -35,6 +46,7 @@ export function App() {
       <ProveedorNav>
         {perfil?.altaCompleta ? <Marco /> : <MarcoAlta />}
       </ProveedorNav>
+      {instalar && <Instalar alCerrar={cerrarInstalar} conDatos={!!perfil?.altaCompleta} letra={letraGuardada()} />}
     </ProveedorAviso>
   )
 }
@@ -97,6 +109,7 @@ function Marco() {
   const full = !!nav.estado.completa || ruta.p === 'com-scan'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
   useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
+  useEffect(() => { document.body.classList.toggle('con-hoja', !!hoja) }, [hoja])
   useEffect(() => { window.dispatchEvent(new Event('jf-cerrar-aviso')) }, [nav.estado.pestana, ruta.p, hoja?.p])
   const enCurso = !!sesion && !full
 

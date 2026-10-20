@@ -6,6 +6,39 @@ export const esAndroid = (): boolean => Capacitor.getPlatform() === 'android'
 export const esNativo = (): boolean => Capacitor.isNativePlatform()
 export const esIPhone = (): boolean => !esNativo() && /iPhone|iPad|iPod/.test(navigator.userAgent)
 
+export type DispositivoApple = 'iphone' | 'ipad' | 'mac'
+/**
+ * Navegador de Apple (la versión web): iPhone, iPad (también el que se presenta como un Mac) o Safari de Mac.
+ * Nunca en el APK. Es la misma regla que el enrutador de index.html.
+ */
+export function dispositivoApple(): DispositivoApple | null {
+  if (esNativo() || typeof navigator === 'undefined') return null
+  const ua = navigator.userAgent
+  if (/iPhone|iPod/.test(ua)) return 'iphone'
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ipad'
+  if (/Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/.test(ua)) return 'mac'
+  return null
+}
+export const esWebApple = (): boolean => dispositivoApple() !== null
+
+/** Abierta desde la pantalla de inicio (o el Dock), sin las barras del navegador. */
+export function estaInstalada(): boolean {
+  if (esNativo()) return true
+  if ((navigator as Navigator & { standalone?: boolean }).standalone === true) return true
+  try { return matchMedia('(display-mode: standalone)').matches } catch { return false }
+}
+
+/** Hay vibración de verdad: en Android sí; en Safari (iPhone) no existe `navigator.vibrate`. */
+export const puedeVibrar = (): boolean => esNativo() || typeof navigator.vibrate === 'function'
+
+/** Marca la página para los estilos propios de Apple (barra de estado de la app instalada). */
+export function marcarPlataforma() {
+  if (typeof document === 'undefined') return
+  const r = document.documentElement
+  if (esWebApple()) r.dataset.plataforma = 'apple'
+  if (esWebApple() && estaInstalada()) r.dataset.instalada = ''
+}
+
 /** Botón «atrás» de Android. Devuelve una función para dejar de escuchar. */
 export async function alPulsarAtras(fn: () => boolean): Promise<() => void> {
   if (!esNativo()) return () => {}
@@ -28,22 +61,58 @@ export async function alVolverAPrimerPlano(fn: () => void): Promise<() => void> 
   return () => { void h.remove() }
 }
 
-// ---------- vibración ----------
+// ---------- sonido y vibración ----------
 let audio: AudioContext | null = null
+function contextoAudio(): AudioContext | null {
+  try {
+    const C = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!C) return null
+    audio ??= new C()
+    return audio
+  } catch { return null }
+}
+
+let sonidoPreparado = false
+/**
+ * iPhone solo deja sonar a una página si el sonido se «abre» dentro de un toque. Se abre con el primer toque en la
+ * app (un sonido vacío) y se vuelve a abrir si el sistema lo cierra (al bloquear el móvil o cambiar de app):
+ * así el pitido de fin de descanso suena aunque llegue solo, sin tocar nada.
+ */
+export function prepararSonido() {
+  if (sonidoPreparado || typeof window === 'undefined') return
+  sonidoPreparado = true
+  const abrir = () => {
+    const a = contextoAudio()
+    if (!a || a.state === 'running') return
+    void a.resume().catch(() => {})
+    try {
+      const s = a.createBufferSource()
+      s.buffer = a.createBuffer(1, 1, 22050)
+      s.connect(a.destination)
+      s.start(0)
+    } catch { /* sin audio */ }
+  }
+  for (const e of ['touchend', 'click', 'keydown']) window.addEventListener(e, abrir, { capture: true, passive: true })
+}
+
+/** ¿El sonido está abierto (se puede oír ya)? Para las pruebas y para decidir el destello. */
+export const sonidoListo = (): boolean => audio?.state === 'running'
+
 /** Tres pitidos cortos (fin del descanso). Sin archivos de sonido: se generan al momento. */
 export function pitido() {
   try {
-    audio ??= new AudioContext()
-    void audio.resume()
-    const t0 = audio.currentTime + 0.02
+    const a = contextoAudio()
+    if (!a) return
+    void a.resume().catch(() => {})
+    const t0 = a.currentTime + 0.02
     for (let i = 0; i < 3; i++) {
-      const o = audio.createOscillator(), g = audio.createGain()
+      const o = a.createOscillator(), g = a.createGain()
       o.type = 'sine'; o.frequency.value = i === 2 ? 1320 : 880
       const t = t0 + i * 0.22
       g.gain.setValueAtTime(0.0001, t)
       g.gain.exponentialRampToValueAtTime(0.35, t + 0.02)
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16)
-      o.connect(g).connect(audio.destination)
+      o.connect(g).connect(a.destination)
       o.start(t); o.stop(t + 0.18)
     }
   } catch { /* sin audio */ }
@@ -161,6 +230,8 @@ export async function pasosDisponibles(): Promise<boolean> {
 }
 
 export async function pedirPermisoPasos(): Promise<boolean> {
+  // En la web no hay Health Connect: nunca se da el permiso por bueno.
+  if (!esAndroid()) return false
   try {
     const { Health } = await import('@capgo/capacitor-health')
     const r = await Health.requestAuthorization({ read: ['steps'] })
@@ -185,6 +256,8 @@ export async function leerPasos(desde: string, hasta: string): Promise<Record<st
 // ---------- báscula (peso y % de grasa en Health Connect) ----------
 /** Pide leer el peso y la grasa. Devuelve si al menos el peso quedó permitido. */
 export async function pedirPermisoBascula(): Promise<boolean> {
+  // En la web no hay Health Connect: nunca se da el permiso por bueno.
+  if (!esAndroid()) return false
   try {
     const { Health } = await import('@capgo/capacitor-health')
     const r = await Health.requestAuthorization({ read: ['weight', 'bodyFat'] })
@@ -276,6 +349,29 @@ export async function guardarArchivo(nombre: string, bytes: Uint8Array, tipo = '
   return nombre
 }
 
+export type Compartido = 'compartido' | 'cancelado' | 'sin-gesto' | 'no-se-puede'
+/**
+ * Web (sobre todo iPhone): abre el menú Compartir con el archivo («Guardar en Archivos», AirDrop, WhatsApp…).
+ * 'sin-gesto': Safari pide que salga justo después de un toque y se tardó demasiado (hay que tocar otra vez);
+ * 'no-se-puede': este navegador no comparte archivos (se descarga en su lugar).
+ */
+export async function compartirArchivo(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<Compartido> {
+  if (esNativo()) return 'no-se-puede'
+  const n = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
+  if (typeof n.share !== 'function' || typeof File === 'undefined') return 'no-se-puede'
+  const archivo = new File([bytes as BlobPart], nombre, { type: tipo })
+  if (n.canShare && !n.canShare({ files: [archivo] })) return 'no-se-puede'
+  try {
+    await n.share({ files: [archivo], title: nombre })
+    return 'compartido'
+  } catch (e) {
+    const err = (e as Error)?.name
+    if (err === 'AbortError') return 'cancelado'
+    if (err === 'NotAllowedError') return 'sin-gesto'
+    return 'no-se-puede'
+  }
+}
+
 /** Lista las copias guardadas en Documentos/JowyFit (solo Android). */
 export async function copiasGuardadas(): Promise<{ nombre: string; fecha: number; tam: number }[]> {
   if (!esNativo()) return []
@@ -293,33 +389,39 @@ export async function leerCopiaGuardada(nombre: string): Promise<Uint8Array> {
   return Uint8Array.from(bin, c => c.charCodeAt(0))
 }
 
-/** Abre el selector de archivos y devuelve el contenido. */
-export function elegirArchivo(aceptar = '.jowyfit,.json,application/json,application/zip'): Promise<{ nombre: string; bytes: Uint8Array } | null> {
+/**
+ * Un <input type=file> de un solo uso. Va metido en la página (escondido): en iPhone, uno suelto a veces no avisa
+ * al elegir. Si se cierra sin elegir nada (evento «cancel», Safari 16.4 o más), devuelve null.
+ */
+function pedirArchivo(preparar: (i: HTMLInputElement) => void): Promise<File | null> {
   return new Promise(resolve => {
     const i = document.createElement('input')
-    // En Android el selector filtra por tipo de archivo y no conoce «.jowyfit»: la copia salía en gris
-    // y no se podía elegir. Allí se deja elegir cualquier archivo; al importar se comprueba que sea una copia.
-    i.type = 'file'; i.accept = esNativo() ? '' : aceptar
-    i.onchange = async () => {
-      const f = i.files?.[0]
-      resolve(f ? { nombre: f.name, bytes: new Uint8Array(await f.arrayBuffer()) } : null)
-    }
+    i.type = 'file'
+    i.style.display = 'none'
+    preparar(i)
+    let hecho = false
+    const fin = (f: File | null) => { if (hecho) return; hecho = true; i.remove(); resolve(f) }
+    i.addEventListener('change', () => fin(i.files?.[0] ?? null))
+    i.addEventListener('cancel', () => fin(null))
+    document.body.appendChild(i)
     i.click()
   })
 }
 
+/** Abre el selector de archivos y devuelve el contenido. */
+export async function elegirArchivo(aceptar = '.jowyfit,.json,application/json,application/zip'): Promise<{ nombre: string; bytes: Uint8Array } | null> {
+  // En Android el selector filtra por tipo de archivo y no conoce «.jowyfit»: la copia salía en gris
+  // y no se podía elegir. En iPhone pasa lo mismo (Archivos no sabe qué es «.jowyfit»). Allí se deja elegir
+  // cualquier archivo; al importar se comprueba que sea una copia.
+  const f = await pedirArchivo(i => { i.accept = esNativo() || esWebApple() ? '' : aceptar })
+  return f ? { nombre: f.name, bytes: new Uint8Array(await f.arrayBuffer()) } : null
+}
+
 /** Hace una foto (o la elige de la galería) y la devuelve reducida a JPEG. */
-export function hacerFoto(max = 1280): Promise<Blob | null> {
-  return new Promise(resolve => {
-    const i = document.createElement('input')
-    i.type = 'file'; i.accept = 'image/*'; i.setAttribute('capture', 'environment')
-    i.onchange = async () => {
-      const f = i.files?.[0]
-      if (!f) return resolve(null)
-      resolve(await reducir(f, max))
-    }
-    i.click()
-  })
+export async function hacerFoto(max = 1280): Promise<Blob | null> {
+  // En iPhone, sin «capture» sale el menú «Hacer foto · Fototeca · Elegir archivo»: con él solo se podía usar la cámara.
+  const f = await pedirArchivo(i => { i.accept = 'image/*'; if (!esWebApple()) i.setAttribute('capture', 'environment') })
+  return f ? reducir(f, max) : null
 }
 
 export async function reducir(f: Blob, max = 1280): Promise<Blob> {

@@ -1,5 +1,5 @@
 // Componentes comunes con el aspecto del mockup «4 · Ficha».
-import { useCallback, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Ejercicio } from '../catalogo/tipos'
 import { imagen, miniatura } from '../catalogo/catalogo'
 import { siguiente } from '../dominio/pesos'
@@ -204,4 +204,40 @@ export function Seccion({ titulo, accion, onAccion, extra, children, className }
       {children}
     </div>
   )
+}
+
+/**
+ * Campo de texto que se guarda solo: un momento después de dejar de escribir, al salir del campo y al cerrar la
+ * pantalla (antes solo al salir del campo: con «atrás» o cambiando de pestaña se perdía lo escrito).
+ */
+export function TextoGuardado({ valor, onGuardar, area, className = 'inp', placeholder, etiqueta }: {
+  valor: string; onGuardar: (v: string) => void; area?: boolean; className?: string; placeholder?: string; etiqueta?: string
+}) {
+  const [local, setLocal] = useState(valor)
+  const enfocado = useRef(false)
+  const pendiente = useRef<string | null>(null)
+  const temporizador = useRef<number | undefined>(undefined)
+  const guardarRef = useRef(onGuardar)
+  guardarRef.current = onGuardar
+  useEffect(() => { if (!enfocado.current) setLocal(valor) }, [valor])
+  const volcar = () => {
+    window.clearTimeout(temporizador.current)
+    if (pendiente.current != null) { const v = pendiente.current; pendiente.current = null; guardarRef.current(v) }
+  }
+  // Al desmontarse (atrás, otra pestaña), lo que quedara por guardar se guarda.
+  useEffect(() => () => volcar(), [])
+  const cambiar = (v: string) => {
+    setLocal(v)
+    pendiente.current = v
+    window.clearTimeout(temporizador.current)
+    temporizador.current = window.setTimeout(volcar, 700)
+  }
+  const comun = {
+    className, value: local, placeholder, 'aria-label': etiqueta,
+    onFocus: () => { enfocado.current = true },
+    onBlur: () => { enfocado.current = false; volcar() },
+  }
+  return area
+    ? <textarea {...comun} onChange={e => cambiar(e.target.value)} />
+    : <input {...comun} onChange={e => cambiar(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} />
 }

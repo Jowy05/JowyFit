@@ -11,7 +11,7 @@ import { duracion, fechaCorta, hoyISO } from '../../../dominio/fechas'
 import { bloqueNuevo } from '../../../dominio/generador'
 import { desdeBloque } from '../../../dominio/sesion'
 import { mejorMarca, volumen } from '../../../dominio/progresion'
-import { Cab, Chip, cx, Ico, Pantalla, Th, useUnaVez } from '../../comp'
+import { Cab, Chip, cx, Ico, Pantalla, TextoGuardado, Th, useUnaVez } from '../../comp'
 import { Barras, Linea } from '../../graficas'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
@@ -180,8 +180,8 @@ export function Ficha({ ruta }: { ruta: Ruta }) {
           <div className="sec-h"><h2>Mis ajustes y notas</h2><button className="lnk" onClick={() => setEditar(v => !v)}><Ico n="pencil-simple" />{editar ? 'Listo' : 'Escribir'}</button></div>
           {editar ? (
             <div className="fields">
-              <label><span className="lbl fl">Ajustes de máquina</span><input className="inp" defaultValue={m?.ajustes ?? ''} placeholder="Asiento 4 · respaldo 2 · agarre neutro" onBlur={ev => void marcar(e.id, { ajustes: ev.target.value })} /></label>
-              <label><span className="lbl fl">Notas para acordarte</span><textarea className="inp" defaultValue={m?.notas ?? ''} placeholder="Escápulas atrás antes de bajar…" onBlur={ev => void marcar(e.id, { notas: ev.target.value })} /></label>
+              <label><span className="lbl fl">Ajustes de máquina</span><TextoGuardado valor={m?.ajustes ?? ''} placeholder="Asiento 4 · respaldo 2 · agarre neutro" etiqueta="Ajustes de máquina" onGuardar={v => void marcar(e.id, { ajustes: v })} /></label>
+              <label><span className="lbl fl">Notas para acordarte</span><TextoGuardado area valor={m?.notas ?? ''} placeholder="Escápulas atrás antes de bajar…" etiqueta="Notas para acordarte" onGuardar={v => void marcar(e.id, { notas: v })} /></label>
             </div>
           ) : m?.ajustes || m?.notas ? (
             <div className="spec-box">

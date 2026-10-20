@@ -1,0 +1,96 @@
+// Comida en iPhone: Añadir y «¿Cuánto?», crear comida, Mis comidas, escáner escribiendo el código (Open Food
+// Facts simulado) y suplementos.
+import { expect, test } from './ayuda'
+
+test('añadir, «¿Cuánto?», crear comida y Mis comidas', async ({ jf }) => {
+  await jf.deCero('2026-10-13T14:10:00')
+  await jf.alta()
+  await jf.pestana('Comida')
+  await jf.revisar('Comida · día')
+  await jf.pulsar('Añadir', '.dock')
+  await jf.revisar('hoja Añadir')
+  await jf.pulsar('Batido de proteína', '.sheet')
+  await jf.ver('¿Cuánto has tomado?')
+  await jf.pulsar(/^Normal/, '.popup')
+  await jf.ver('Añadido: Batido')
+  // Escribir lo que he comido.
+  await jf.pulsar('Añadir', '.dock')
+  await jf.pulsar('Escribir lo que he comido', '.sheet')
+  await jf.escribir('.nota-r input', 'Menú del día')
+  await jf.pulsar(/^Apuntar$/, '.sheet')
+  await jf.ver('Menú del día')
+  // Editar lo apuntado (hoja de la comida).
+  await jf.pulsar('Menú del día')
+  await jf.ver('Editar', 3000)
+  await jf.revisar('hoja comida')
+  await jf.pulsar('Guardar', '.sheet')
+  // Crear comida: «Guardar y apuntar».
+  await jf.pulsar('Añadir', '.dock')
+  await jf.pulsar('Crear comida nueva', '.sheet')
+  await jf.escribir('.sheet input[aria-label="Nombre de la comida"]', 'Lentejas de mi madre')
+  await jf.revisar('hoja crear comida')
+  await jf.pulsar('Guardar y apuntar', '.sheet')
+  await jf.ver('Apuntado: Lentejas de mi madre')
+  expect((await jf.tabla<{ nombre: string; kcal: number }>('comidas')).find(c => c.nombre === 'Lentejas de mi madre')?.kcal).toBe(600)
+  // Mis comidas: tocar apunta (con «¿Cuánto?»), el lápiz edita.
+  await jf.seg('Mis comidas')
+  await jf.revisar('Mis comidas')
+  await jf.ver('Lentejas de mi madre')
+  await jf.pulsarSel('button[aria-label="Editar Lentejas de mi madre"]')
+  await jf.ver('Guardar cambios')
+  await jf.pulsar('Borrar de Mis comidas', '.sheet')
+  await jf.ver('Borrado de Mis comidas')
+  await jf.seg('Día')
+  // Tu objetivo de energía.
+  await jf.pulsarSel('.card.adj')
+  await jf.listo()
+  await jf.revisar('Tu objetivo de energía')
+})
+
+test('escáner: sin cámara se escribe el código y se busca en Open Food Facts', async ({ page, jf }) => {
+  await jf.deCero('2026-10-13T14:10:00')
+  await jf.alta()
+  await jf.pestana('Comida')
+  await jf.pulsarSel('button[aria-label="Escanear"]')
+  await jf.ver(/Escanear código/i)
+  // Sin linterna en iPhone: el botón no sale.
+  await expect(page.locator('button[aria-label="Linterna"]')).toHaveCount(0)
+  await jf.pulsar(/Escribir el código/)
+  await jf.escribir('.cam-panel input', '8480000123458')
+  await jf.pulsar('Buscar')
+  await jf.ver('Arroz al curry con pollo', 8000)
+  await jf.revisar('escáner encontrado')
+  // Los botones del escáner no quedan bajo la barra de pestañas ni la muesca.
+  const tapa = await jf.js<boolean>(`const tb = document.querySelector('.tabbar').getBoundingClientRect(); const b = [...document.querySelectorAll('.cam-panel button')].map(x => x.getBoundingClientRect()); return b.some(r => r.bottom > tb.top + 1 && tb.top < innerHeight)`)
+  expect(tapa).toBe(false)
+  await jf.pulsar(/^Añadir$/)
+  await jf.ver('Añadido: Arroz al curry con pollo')
+  // Un código que no está → se apunta a mano.
+  await jf.pulsarSel('button[aria-label="Escanear"]')
+  await jf.pulsar(/Escribir el código/)
+  await jf.escribir('.cam-panel input', '1234567890128')
+  await jf.pulsar('Buscar')
+  await jf.ver('No está en la base de datos', 8000)
+  await jf.escribir('.cam-panel input', 'Yogur proteico')
+  await jf.pulsar('Añadir a mano')
+  await jf.ver('Yogur proteico')
+})
+
+test('suplementos con su cantidad y el batido suma proteína', async ({ jf }) => {
+  await jf.deCero('2026-10-13T18:10:00')
+  await jf.alta()
+  const perfil = (await jf.tabla('perfil'))[0]!
+  await jf.meter('perfil', [{ ...perfil, suplementos: ['Creatina', 'Batido de proteína'] }])
+  await jf.page.reload()
+  await jf.ver(/Buenas|Hoy te toca|descansas/, 15000)
+  await jf.pestana('Comida')
+  await jf.ver('Suplementos de hoy')
+  await jf.pulsarSel('button[aria-label="Cambiar cantidad de Creatina"]')
+  await jf.revisar('hoja suplemento')
+  await jf.escribir('.sheet input', '10 g')
+  await jf.pulsar('Guardar', '.sheet')
+  await jf.ver('10 g')
+  await jf.pulsar('Batido de proteína')
+  await jf.ver(/Apuntado: Batido de proteína · \d+ g proteína/)
+  expect((await jf.tabla<{ fecha: string }>('comidas')).filter(c => c.fecha === '2026-10-13')).toHaveLength(1)
+})

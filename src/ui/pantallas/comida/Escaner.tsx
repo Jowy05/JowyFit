@@ -29,6 +29,8 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
   const [escribir, setEscribir] = useState(false)
   const [codigoMano, setCodigoMano] = useState('')
   const [luz, setLuz] = useState(false)
+  // La linterna solo se enseña si la cámara deja encenderla (en iPhone casi nunca).
+  const [hayLuz, setHayLuz] = useState(false)
   const [nombre, setNombre] = useState('')
   const [kcal, setKcal] = useState(250)
   const [prot, setProt] = useState(10)
@@ -62,7 +64,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
         const { abrirCamara } = await import('../../../plataforma/escanerWeb')
         if (cancelado || !video.current) return
         const cam = await abrirCamara(video.current, c => { if (!cancelado) void buscar(c) })
-        if (cancelado) cam.parar(); else camara.current = cam
+        if (cancelado) cam.parar(); else { camara.current = cam; setHayLuz(cam.tieneLinterna) }
       } catch (e) {
         if (!cancelado) setEstado({ e: 'sincamara', motivo: String(e).includes('NotAllowed') ? 'No hay permiso para usar la cámara.' : 'No se ha podido abrir la cámara.' })
       }
@@ -106,7 +108,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
         <div className="cam-top" style={{ position: 'relative' }}>
           <button className="cam-b" aria-label="Cerrar" onClick={() => nav.atras()}><Ico n="x" b /></button>
           <span className="cam-t">Escanear código</span>
-          {enCamara && !esAndroid()
+          {enCamara && !esAndroid() && hayLuz
             ? <button className={cx('cam-b', luz && 'on')} aria-label="Linterna" onClick={async () => { const ok = await camara.current?.linterna(!luz); if (ok) setLuz(!luz); else aviso('Este móvil no deja encender la linterna desde aquí') }}><Ico n="flashlight" b /></button>
             : <span style={{ width: 48 }} />}
         </div>

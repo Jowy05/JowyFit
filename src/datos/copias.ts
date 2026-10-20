@@ -96,13 +96,18 @@ function validarDatos(datos: unknown): Record<string, Fila[]> {
   return d as Record<string, Fila[]>
 }
 
+function comprobarVersion(obj: { version?: unknown }) {
+  if (typeof obj.version === 'number' && obj.version > VERSION) throw new Error('La copia es de una versión más nueva de JowyFit: actualiza la app')
+}
+
 /** Restaura una copia completa (sustituye todo) o importa un perfil en formato JSON sencillo. */
 export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
   if (!bytes || !bytes.length) throw new Error('El archivo está vacío')
   const esZip = bytes[0] === 0x50 && bytes[1] === 0x4b
   if (!esZip) {
     const obj = leerJSON(new TextDecoder().decode(bytes))
-    if (obj?.app === 'JowyFit') { await restaurar(validarDatos(obj.datos), {}); return 'copia' }
+    // La copia sin comprimir (datos.json suelto) también mira la versión: antes una de una versión más nueva entraba sin avisar.
+    if (obj?.app === 'JowyFit') { comprobarVersion(obj); await restaurar(validarDatos(obj.datos), {}); return 'copia' }
     await importarPerfilSencillo(obj)
     return 'perfil'
   }
@@ -116,7 +121,7 @@ export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
   if (!json) throw new Error('El archivo no es una copia de JowyFit')
   const obj = leerJSON(strFromU8(json))
   if (obj?.app !== 'JowyFit') throw new Error('El archivo no es una copia de JowyFit')
-  if (typeof obj.version === 'number' && obj.version > VERSION) throw new Error('La copia es de una versión más nueva de JowyFit: actualiza la app')
+  comprobarVersion(obj)
   await restaurar(validarDatos(obj.datos), ar)
   return 'copia'
 }

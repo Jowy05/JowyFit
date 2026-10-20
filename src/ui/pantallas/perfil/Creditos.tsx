@@ -1,5 +1,6 @@
 // Créditos y aviso legal: de dónde salen los datos, licencias y aviso de salud.
 import type { ReactNode } from 'react'
+import { esNativo } from '../../../plataforma'
 import { Cab, Ico, Pantalla } from '../../comp'
 
 function Enlace({ href, children }: { href: string; children: ReactNode }) {
@@ -8,6 +9,8 @@ function Enlace({ href, children }: { href: string; children: ReactNode }) {
 
 export function Creditos() {
   const privacidad = `${import.meta.env.BASE_URL ?? '/'}privacypolicy.html`
+  // Las piezas que solo lleva la app de Android no se citan en la web (iPhone).
+  const nativo = esNativo()
   return (
     <Pantalla>
       <Cab atras crumb="Ajustes" titulo="Créditos y aviso legal" />
@@ -48,9 +51,9 @@ export function Creditos() {
         <div className="spec-box mt8"><div className="spec">
           <p><span>React, Capacitor, fflate, Workbox</span><b>MIT</b></p>
           <p><span>Dexie (base de datos local)</span><b>Apache 2.0</b></p>
-          <p><span>Escáner: ML Kit (Android)</span><b>Apache 2.0</b></p>
+          {nativo && <p><span>Escáner: ML Kit (Android)</span><b>Apache 2.0</b></p>}
           <p><span>Escáner: zxing-wasm, barcode-detector (web)</span><b>MIT</b></p>
-          <p><span>Pasos: @capgo/capacitor-health</span><b>MPL 2.0</b></p>
+          {nativo && <p><span>Pasos: @capgo/capacitor-health</span><b>MPL 2.0</b></p>}
           <p><span>Iconos Phosphor</span><b>MIT</b></p>
           <p><span>Fuentes Barlow y JetBrains Mono</span><b>SIL OFL 1.1</b></p>
         </div></div>

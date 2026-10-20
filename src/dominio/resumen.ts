@@ -45,7 +45,9 @@ export function resumenSemana(o: {
   const lunes = dias[0]!, domingo = dias[6]!
   const ant = semanaDe(sumarDias(lunes, -1))
   const hechas = o.sesiones.filter(s => s.estado === 'hecha' && dias.includes(s.fecha))
-  const fijasHechas = Math.min(o.fijos, hechas.length)
+  // Los entrenos fijos se cuentan por días (como la racha): la rutina y un entreno libre el mismo martes son un día,
+  // no «2 de 3». Lo que pase de los fijos sale como extra.
+  const fijasHechas = Math.min(o.fijos, new Set(hechas.map(s => s.fecha)).size)
   const extra = Math.max(0, hechas.length - o.fijos)
 
   const cint = (m: Medicion) => m.perimetros?.cintura

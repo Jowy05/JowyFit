@@ -13,7 +13,7 @@ import { estadoHora, propuestaRecorte } from '../../../dominio/tiempos'
 import { esRecord, TEXTO_PARTIDA } from '../../../dominio/progresion'
 import { duracion, formatoHora } from '../../../dominio/fechas'
 import { kg } from '../../../dominio/calculos'
-import { cancelar, pantallaEncendida, pitido, programar, vibrar } from '../../../plataforma'
+import { cancelar, pantallaEncendida, pitido, programar, puedeVibrar, vibrar } from '../../../plataforma'
 import { cx, estilo, Ico, Pantalla, Stepper, Th } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
@@ -59,8 +59,11 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
   // Serie ya hecha que se está corrigiendo (se toca en la lista): ejercicio y posición de la serie.
   const [corr, setCorr] = useState<{ uid: string; n: number } | null>(null)
   const finAvisado = useRef<number | null>(null)
+  // Fin del descanso en un móvil sin vibración (iPhone): la pantalla destella un momento.
+  const [destello, setDestello] = useState(0)
+  const tDestello = useRef<number | undefined>(undefined)
   const tLogro = useRef<number | undefined>(undefined)
-  useEffect(() => { const t = setInterval(() => setAhora(Date.now()), 1000); return () => { clearInterval(t); window.clearTimeout(tLogro.current) } }, [])
+  useEffect(() => { const t = setInterval(() => setAhora(Date.now()), 1000); return () => { clearInterval(t); window.clearTimeout(tLogro.current); window.clearTimeout(tDestello.current) } }, [])
 
   const idx = indiceActual(s)
   const e = idx >= 0 ? s.ejercicios[idx]! : undefined
@@ -78,6 +81,11 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
       const recien = Date.now() - s.descansoHasta < 5000
       if (ajustes.vibrar && recien) void vibrar('fin')
       if (ajustes.sonido && recien) pitido()
+      if (recien && !puedeVibrar()) {
+        setDestello(s.descansoHasta)
+        window.clearTimeout(tDestello.current)
+        tDestello.current = window.setTimeout(() => setDestello(0), 1900)
+      }
       void guardar({ ...s, descansoHasta: undefined })
     }
   }, [resto, s, ajustes.vibrar, ajustes.sonido])
@@ -211,6 +219,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
 
   return (
     <Pantalla full>
+      {destello > 0 && <div key={destello} className="destello" role="status" aria-live="assertive"><b><Ico n="bell-ringing" b />Siguiente serie</b></div>}
       <div className="float">
         {logro && (
           <div className="ach ach-pop show" role="status">

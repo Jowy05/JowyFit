@@ -24,6 +24,7 @@ import { pendientesDeHoy } from './pendientes'
 import { marcarSuplemento } from '../comida/suplementos'
 import { batidoDe, esBatido } from '../../../dominio/comida'
 import { abrirEntreno } from '../entreno/iniciar'
+import { dispositivoApple } from '../../../plataforma'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -354,7 +355,10 @@ function Pendientes() {
   const nav = useNav()
   const perfil = usePerfil()
   const hoy = hoyISO()
-  const lista = useLiveQuery(() => pendientesDeHoy(perfil, hoy), [perfil, hoy]) ?? []
+  // iPhone: sin pasos automáticos ni recordatorios, por la tarde se recuerda apuntar los pasos.
+  const pasosAMano = dispositivoApple() === 'iphone'
+  const tarde = new Date().getHours() >= 18
+  const lista = useLiveQuery(() => pendientesDeHoy(perfil, hoy, { pasosAMano, tarde }), [perfil, hoy, pasosAMano, tarde]) ?? []
   const aviso = useAviso()
   const [ocultos, setOcultos] = useState<string[]>([])
   // Igual que en Comida: el batido se apunta con su proteína y suma al día.
@@ -376,6 +380,7 @@ function Pendientes() {
             if (p.accion === 'peso') nav.hoja('sheet-peso')
             else if (p.accion === 'medir') nav.ir('pro-reg', undefined, 'pro')
             else if (p.accion === 'foto') nav.ir('pro-fotos', undefined, 'pro')
+            else if (p.accion === 'pasos') nav.ir('pro-pasos', undefined, 'pro')
             else void marcar(p.id)
           }}>
             <span className="box"><Ico n="check" b /></span>

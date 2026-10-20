@@ -18,7 +18,9 @@
     "build:android": "tsc --noEmit -p tsconfig.json && vite build --mode android",
     "android": "npm run build:android && npx cap sync android",
     "e2e": "node scripts/e2e/correr.mjs --build",
-    "e2e:dev": "node scripts/e2e/correr.mjs"
+    "e2e:dev": "node scripts/e2e/correr.mjs",
+    "e2e:landing": "node scripts/e2e/landing.mjs --build",
+    "e2e:iphone": "vite build --outDir .cache/dist-iphone --emptyOutDir && playwright test -c scripts/e2e-webkit/playwright.config.ts"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

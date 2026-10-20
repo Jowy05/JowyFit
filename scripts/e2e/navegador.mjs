@@ -29,7 +29,8 @@ export async function abrirNavegador({ puerto = 9555 } = {}) {
     'about:blank',
   ], { stdio: 'ignore' })
   let lista = null
-  for (let i = 0; i < 60 && !lista; i++) {
+  // Hasta 60 s: en la máquina de GitHub, Chrome a veces tarda más de 15 s en abrir la primera vez.
+  for (let i = 0; i < 240 && !lista; i++) {
     try { lista = await (await fetch(`http://127.0.0.1:${puerto}/json`)).json() } catch { await esperar(250) }
   }
   if (!lista) throw new Error('El navegador no arrancó')

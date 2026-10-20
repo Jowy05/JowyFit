@@ -166,20 +166,20 @@ describe('seguridad · zip bomba y archivos raros', () => {
   })
   it('las entradas que no usa la copia no se descomprimen (300 MB de basura no cuestan nada)', async () => {
     const basura = new Uint8Array(100 * MB)
-    const z = zipSync({ 'datos.json': json(copia({ perfil: [perfil()] })), 'basura/0': basura, 'basura/1': basura, 'basura/2': basura }, { level: 9 })
+    const z = zipSync({ 'datos.json': json(copia({ perfil: [perfil()] })), 'basura/0': basura, 'basura/1': basura, 'basura/2': basura }, { level: 1 })
     const antes = process.memoryUsage().arrayBuffers
     const t = performance.now()
     expect(await importar(z)).toBe('copia')
     expect(performance.now() - t).toBeLessThan(3000)
     expect(process.memoryUsage().arrayBuffers - antes).toBeLessThan(50 * MB)
-  })
+  }, 60_000) // fabricar 300 MB de zip tarda: en la máquina de GitHub pasa de los 5 s de siempre
   it('fotos que suman más de 300 MB se rechazan', async () => {
     const grande = new Uint8Array(LIMITES_ZIP.foto - MB)
     const archivos: Record<string, Uint8Array> = {}
     const fotos = []
     for (let i = 0; i < 11; i++) { archivos[`archivos/f${i}.jpg`] = grande; fotos.push({ fecha: '2026-10-01T08:00', pose: 'frente', imagen: { __archivo: `archivos/f${i}.jpg`, tipo: 'image/jpeg' } }) }
-    await rechazada(zipSync({ 'datos.json': json(copia({ perfil: [perfil()], fotos })), ...archivos }, { level: 9 }), /demasiado grande/)
-  })
+    await rechazada(zipSync({ 'datos.json': json(copia({ perfil: [perfil()], fotos })), ...archivos }, { level: 1 }), /demasiado grande/)
+  }, 60_000)
   it('un zip que miente sobre el tamaño de datos.json no se descomprime de más (y se rechaza)', async () => {
     const z = zipSync({ 'datos.json': new Uint8Array(10 * MB).fill(32) }, { level: 9 })
     // El tamaño original del directorio central dice 100 bytes.

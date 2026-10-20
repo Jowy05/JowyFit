@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import { historialEn, sesionesHechas } from '../../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../../catalogo/catalogo'
-import { resumen, terminada } from '../../../dominio/sesion'
+import { resumen } from '../../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { estadoSemana } from '../../../dominio/semana'
 import { kg } from '../../../dominio/calculos'
@@ -25,7 +25,9 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   const ajustes = useAjustes()
   const r = useRutina()
   const s = useLiveQuery(() => db.sesiones.get(Number(ruta.d?.id)), [ruta.d?.id])
-  const [fin] = useState(Date.now())
+  // Hora de fin: ahora, salvo que la última serie quede muy lejos (la app se cerró en el resumen o se guarda
+  // al día siguiente): entonces, poco después de la última serie, para que la duración no salga en horas.
+  const [abierto] = useState(Date.now())
   const [molestia, setMolestia] = useState('')
   const [hayMolestia, setHayMolestia] = useState(false)
   const [nota, setNota] = useState('')
@@ -50,6 +52,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   }, [r?.id, s?.id])
 
   if (!s) return <Pantalla full><div className="cargando">…</div></Pantalla>
+  const ultimaSerie = Math.max(0, ...s.ejercicios.flatMap(e => e.series.map(x => x.ts ?? 0)))
+  const fin = ultimaSerie && abierto - ultimaSerie > 30 * 60_000 ? ultimaSerie + 2 * 60_000 : abierto
   const res = resumen({ ...s, fin })
   const logros = s.ejercicios.flatMap(e => e.series.filter(x => x.record).map(x => ({ e, x })))
   const hoy = hoyISO()
@@ -73,7 +77,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
   return (
     <Pantalla full>
       <Cab className="fin-hd" crumb={<span className="tag ok"><Ico n="flag-checkered" b />Entreno terminado</span>} titulo={s.nombre} sub={`${cap(fechaLarga(s.fecha))}${g ? ` · ${g.nombre}` : ''}`}
-        derecha={!terminada(s) ? <button className="ib" aria-label="Volver al entreno" onClick={() => nav.completa('entreno')}><Ico n="x" /></button> : undefined} />
+        derecha={<button className="ib" aria-label="Volver al entreno" onClick={() => nav.completa('entreno')}><Ico n="x" /></button>} />
       <div className="pg">
         <div className="spec-box"><div className="spec c2">
           {/* Solo lo que importa; sustituidos y saltados, solo si los hay (el horario y el volumen están en Progreso). */}

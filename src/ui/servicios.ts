@@ -6,7 +6,7 @@ import { DIAS, deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
 import { alVolverAPrimerPlano, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
-import { fechaLocal, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
+import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
 
 // Identificadores fijos de los recordatorios (el de fin de descanso es el 9001).
@@ -84,8 +84,13 @@ export async function sincronizarBascula(): Promise<number> {
     const primeraVez = !mediciones.some(m => m.hc?.length)
     const desde = new Date(Date.now() - (primeraVez ? 30 : 14) * 86_400_000)
     const { pesos, grasas } = await leerBascula(desde)
-    const nuevas = lecturasNuevas(juntarBascula(pesos, grasas), mediciones)
+    const lecturas = juntarBascula(pesos, grasas)
+    const nuevas = lecturasNuevas(lecturas, mediciones, a.hcIgnorados)
     if (nuevas.length) await db.mediciones.bulkAdd(nuevas.map(medicionDeLectura))
+    // La grasa que llega más tarde que el peso se añade a su pesada.
+    for (const g of grasaTardia(lecturas, mediciones)) {
+      await db.mediciones.where('id').equals(g.id).modify(m => { m.bascula = { ...m.bascula, grasaPct: g.grasaPct }; m.hc = [...(m.hc ?? []), ...g.ids] })
+    }
     return nuevas.length
   } catch { return 0 }
 }

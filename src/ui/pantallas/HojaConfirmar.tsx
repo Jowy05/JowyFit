@@ -1,4 +1,5 @@
 // Hoja de confirmación para lo irreversible.
+import { useState } from 'react'
 import { db, TABLAS } from '../../datos/db'
 import { guardarAjustes } from '../../datos/repos'
 import { cancelar } from '../../plataforma'
@@ -11,6 +12,7 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
   const aviso = useAviso()
   const d = ruta.d ?? {}
   const unaVez = useUnaVez()
+  const [segunda, setSegunda] = useState(false)
   // Un doble toque hacía dos veces «atrás» (borrar gimnasio o entreno) y sacaba de la pantalla anterior.
   const hacer = unaVez(async () => {
     switch (d.accion) {
@@ -35,9 +37,16 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
         // Si había un descanso en marcha, su notificación (9001) ya no tiene sentido.
         void cancelar([9001])
         nav.hoja(null); nav.completa(null); aviso('Entreno descartado'); return
-      case 'borrar-medicion':
+      case 'borrar-medicion': {
+        const m = await db.mediciones.get(Number(d.id))
         await db.mediciones.delete(Number(d.id))
-        nav.hoja(null); aviso('Medición borrada'); return
+        // Si venía de Health Connect, no se vuelve a traer (si no, reaparecía en la siguiente sincronización).
+        const antes = (await db.ajustes.get('app'))?.hcIgnorados ?? []
+        if (m?.hc?.length) await guardarAjustes({ hcIgnorados: [...antes, ...m.hc].slice(-500) })
+        nav.hoja(null)
+        aviso('Medición borrada', m ? () => { void db.mediciones.put(m); if (m.hc?.length) void guardarAjustes({ hcIgnorados: antes }) } : undefined)
+        return
+      }
       case 'borrar-foto':
         await db.fotos.delete(Number(d.id))
         nav.hoja(null); aviso('Foto borrada'); return
@@ -53,10 +62,13 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta }) {
   return (
     <Hoja titulo={String(d.titulo ?? '¿Seguro?')}>
       {d.texto ? <p className="muted">{String(d.texto)}</p> : null}
-      {d.peligro ? <p className="note bad mt12"><Ico n="warning" /><span>No se puede deshacer.</span></p> : null}
+      {d.peligro ? <p className="note bad mt12"><Ico n="warning" /><span>{segunda ? '¿Seguro del todo? Se borran tus entrenos, comidas, medidas y fotos de este móvil.' : 'No se puede deshacer.'}</span></p> : null}
       <div className="btns mt16">
         <button className="btn gry sm" onClick={() => nav.hoja(null)}>{String(d.no ?? 'Cancelar')}</button>
-        <button className={cx('btn sm', d.peligro ? 'badf' : '')} onClick={() => void hacer()}>{String(d.si ?? 'Sí')}</button>
+        {/* «Borrar todos los datos» pide confirmarlo dos veces: es lo único que no tiene vuelta atrás. */}
+        <button className={cx('btn sm', d.peligro ? 'badf' : '')} onClick={() => { if (d.accion === 'borrar-todo' && !segunda) { setSegunda(true); return } void hacer() }}>
+          {segunda ? 'Sí, borrarlo todo' : String(d.si ?? 'Sí')}
+        </button>
       </div>
     </Hoja>
   )

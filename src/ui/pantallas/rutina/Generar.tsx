@@ -5,12 +5,12 @@ import { db } from '../../../datos/db'
 import type { Rutina } from '../../../datos/tipos'
 import { catalogoCargado, ejercicio } from '../../../catalogo/catalogo'
 import { ES_MAQUINA } from '../../../catalogo/clasificacion'
-import { generarRutina, tiemposReales } from '../../../dominio/generador'
-import { Cab, Ico, Pantalla, useUnaVez } from '../../comp'
+import { cambiosRutina, generarRutina, rutinaDefinitiva, tiemposReales } from '../../../dominio/generador'
+import { Cab, Ico, Interruptor, Pantalla, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos'
-import { abrevDia, capital, filas, listaDias, minutos, nombreEj, SS, SS_EXPLICA } from './comun'
+import { abrevDia, capital, filas, listaDias, minutos, nombreEj, SS, SS_EXPLICA, tituloDia } from './comun'
 
 export function Generar({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -25,25 +25,37 @@ export function Generar({ ruta }: { ruta: Ruta }) {
   const [evitar, setEvitar] = useState<Set<string>>(new Set())
   const calib = useLiveQuery(async () => (definitiva && actual?.id ? (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === actual.id) : []), [definitiva, actual?.id]) ?? []
   const evitados = [...marcas.values()].filter(m => m.odiado || m.duele)
+  // Semana de prueba: la primera rutina siempre; al rehacerla, se mantiene si la actual aún estaba en prueba
+  // (antes «Rehacer» la dejaba como definitiva y se perdía la semana de prueba). Se puede cambiar.
+  const [conPrueba, setConPrueba] = useState<boolean | null>(null)
+  const prueba = !definitiva && (conPrueba ?? (!actual || actual.calibracion))
 
   const propuesta = useMemo<Omit<Rutina, 'id'> | null>(() => {
     const c = catalogoCargado()
     if (!c) return null
     const tiempos = definitiva ? tiemposReales(calib) : undefined
-    return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: !definitiva && !actual, evitar, tiempos, descansos: { compuesto: ajustes.descansoCompuesto, aislamiento: ajustes.descansoAislamiento } })
+    // La definitiva sale de la rutina de prueba (con lo que cambiaste a mano), ajustada a tus tiempos reales.
+    if (definitiva && actual) return rutinaDefinitiva(actual, { perfil, tiempos, compuesto: id => ejercicio(id)?.mecanica === 'compound' })
+    return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: prueba, evitar, tiempos, descansos: { compuesto: ajustes.descansoCompuesto, aislamiento: ajustes.descansoAislamiento } })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // !!actual: la rutina activa llega después del primer cálculo; sin esto, al regenerar con una rutina ya hecha
     // la propuesta salía marcada como «semana de calibración».
-  }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length, !!actual, ajustes.descansoCompuesto, ajustes.descansoAislamiento])
+  }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length, actual?.id, prueba, ajustes.descansoCompuesto, ajustes.descansoAislamiento])
+  const cambios = definitiva && actual && propuesta ? cambiosRutina(actual, propuesta, id => nombreEj(id), tituloDia) : []
 
   // Doble toque: dos rutinas guardadas.
   const unaVez = useUnaVez()
   const guardarPropuesta = async (): Promise<boolean> => {
     if (!propuesta) return false
-    await db.transaction('rw', db.rutinas, async () => {
-      await db.rutinas.toCollection().modify({ activa: false })
-      await db.rutinas.add({ ...propuesta, activa: true })
-    })
+    try {
+      await db.transaction('rw', db.rutinas, async () => {
+        await db.rutinas.toCollection().modify({ activa: false })
+        await db.rutinas.add({ ...propuesta, activa: true })
+      })
+    } catch {
+      aviso('No se ha podido guardar la rutina. Inténtalo otra vez')
+      return false
+    }
     aviso(definitiva ? 'Rutina definitiva guardada' : 'Rutina guardada')
     nav.raiz('rut')
     return true
@@ -91,6 +103,12 @@ export function Generar({ ruta }: { ruta: Ruta }) {
                 </div>
               ))}
             </div>
+            {definitiva && (
+              <div className="why mt12">
+                <p className="lbl">Qué cambia</p>
+                {cambios.length ? cambios.map(t => <p key={t}><Ico n="arrow-right" /><span>{t}</span></p>) : <p><Ico n="check-circle" /><span>Nada que quitar: te da tiempo a todo.</span></p>}
+              </div>
+            )}
             <div className="why mt12">
               <p className="lbl">Por qué</p>
               {propuesta.porque.map(t => <p key={t}><Ico n="check-circle" /><span>{t}</span></p>)}
@@ -100,10 +118,19 @@ export function Generar({ ruta }: { ruta: Ruta }) {
             <p className="note ok mt16"><Ico n="shield-check" /><span>{actual && !definitiva ? <>Si pulsas «Usar esta rutina», <b>sustituye a la que tienes ahora</b>. </> : null}<b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.</span></p>
           </div>
         )}
+        {!definitiva && (
+          <div className="list mt12">
+            <div className="it">
+              <span className="ico"><Ico n="gauge" /></span>
+              <span className="tx"><b>Empezar con una semana de prueba</b><small>3 entrenos con pesos cómodos; luego te propongo la rutina definitiva con tus tiempos reales.</small></span>
+              <Interruptor on={prueba} onCambio={v => setConPrueba(v)} etiqueta="Empezar con una semana de prueba" />
+            </div>
+          </div>
+        )}
         <div className="dock col">
           <button className="btn" onClick={() => void usar()}>Usar esta rutina</button>
           <div className="btns">
-            <button className="btn gry sm" onClick={otra}>Otra variante</button>
+            {!definitiva && <button className="btn gry sm" onClick={otra}>Otra variante</button>}
             <button className="btn ln sm" onClick={() => void ajustar()}>Ajustar a mano</button>
           </div>
         </div>

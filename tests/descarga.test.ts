@@ -71,12 +71,31 @@ describe('propuesta de semana suave', () => {
     const p = propuestaDescarga({ hoy: '2026-10-12', sesiones, ejerciciosRutina: ['a', 'b', 'c'], semanaSuave: null, pospuesta: null, nombre })
     expect(p?.estancados.sort()).toEqual(['a', 'b', 'c'])
   })
+  it('cuenta semanas seguidas: 6 entrenos sueltos tras un parón no proponen semana suave', () => {
+    const sueltos = ['2026-06-02', '2026-06-23', '2026-07-14', '2026-08-04', '2026-08-25', '2026-09-15'].map((f, i) => ses(f, i, {}, { x: [40 + i * 2.5, 8] }))
+    expect(propuestaDescarga({ hoy: '2026-09-21', sesiones: sueltos, ejerciciosRutina: ['x'], semanaSuave: null, pospuesta: null, nombre })).toBeNull()
+  })
   it('«Ahora no» la aplaza una semana; la semana suave reinicia la cuenta', () => {
     const sesiones = martes.map((f, i) => ses(f, i, {}, { x: [40 + i * 2.5, 8] }))
     const base = { hoy: '2026-10-12', sesiones, ejerciciosRutina: ['x'], semanaSuave: null, nombre }
     expect(propuestaDescarga({ ...base, pospuesta: '2026-10-12' })).toBeNull()
-    expect(propuestaDescarga({ ...base, pospuesta: '2026-10-12', hoy: '2026-10-19' })).not.toBeNull()
+    // Siguió entrenando la semana aplazada: a la siguiente se vuelve a proponer.
+    const conSemanaAplazada = [...sesiones, ses('2026-10-13', 6, {}, { x: [55, 8] })]
+    expect(propuestaDescarga({ ...base, sesiones: conSemanaAplazada, pospuesta: '2026-10-12', hoy: '2026-10-19' })).not.toBeNull()
+    // Si esa semana no entrenó, la racha se corta: una semana parado ya es descanso.
+    expect(propuestaDescarga({ ...base, pospuesta: '2026-10-12', hoy: '2026-10-19' })).toBeNull()
     expect(propuestaDescarga({ ...base, pospuesta: null, semanaSuave: '2026-10-12' })).toBeNull()
     expect(propuestaDescarga({ ...base, pospuesta: null, semanaSuave: '2026-09-21', hoy: '2026-10-12' })).toBeNull()
+  })
+})
+
+describe('−10 % al peso más cercano', () => {
+  it('no baja de más con barra ni en máquinas', () => {
+    const barra = Array.from({ length: 40 }, (_, i) => 20 + i * 2.5)
+    // 55 × 0,9 = 49,5 → 50 (antes 47,5, un −14 %).
+    expect(pesoReinicio(55, barra)).toBe(50)
+    expect(pesoReinicio(100, barra)).toBe(90)
+    // Sin un peso por debajo, se queda igual.
+    expect(pesoReinicio(20, barra)).toBe(20)
   })
 })

@@ -16,7 +16,7 @@ import { resumenSemana } from '../../../dominio/resumen'
 import { recordsEn, subidas } from '../../../dominio/tendencias'
 import { kg, num } from '../../../dominio/calculos'
 import type { Sugerencia } from '../../../dominio/progresion'
-import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, Th } from '../../comp'
+import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, Th, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
@@ -358,11 +358,14 @@ function Pendientes() {
   const aviso = useAviso()
   const [ocultos, setOcultos] = useState<string[]>([])
   // Igual que en Comida: el batido se apunta con su proteína y suma al día.
-  const marcar = async (s: string) => {
+  const unaVez = useUnaVez()
+  const marcar = unaVez(async (s: string) => {
+    // Doble toque: no se marca (ni se apunta el batido) dos veces.
+    if (((await db.suplementos.get(hoy))?.tomados ?? []).includes(s)) return
     const deshacer = await marcarSuplemento(perfil, hoy, s)
     if (esBatido(s)) aviso(`Apuntado: ${s} · ${batidoDe(perfil.batido).proteina} g proteína`, () => { deshacer(); setOcultos(o => o.filter(x => x !== s)) })
     setTimeout(() => setOcultos(o => [...o, s]), 700)
-  }
+  })
   const visibles = lista.filter(p => !ocultos.includes(p.id))
   if (!visibles.length) return null
   return (

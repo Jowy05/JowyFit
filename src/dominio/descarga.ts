@@ -4,8 +4,7 @@
 //    (mismos ejercicios, 1 serie menos y −10 % de peso).
 import type { Serie, Sesion } from '../datos/tipos'
 import { epley } from './calculos'
-import { ajustarA } from './pesos'
-import { lunesDe } from './fechas'
+import { lunesDe, sumarDias } from './fechas'
 
 const trabajo = (s: Serie[]) => s.filter(x => x.hecha && !x.calentamiento && x.peso != null && x.reps != null && x.peso > 0 && x.reps > 0)
 
@@ -37,10 +36,16 @@ export function estancado(hechos: { series: Serie[] }[]): boolean {
   return Math.max(...ultimas.map(h => mejor1RM(h.series))) <= base * 1.01
 }
 
-/** Peso para volver a empezar tras un estancamiento: −10 %, a un peso que exista. */
+/**
+ * Peso para volver a empezar tras un estancamiento (o en la semana suave): −10 %, al peso que exista más cercano
+ * por debajo del actual (antes se redondeaba siempre hacia abajo: 55 kg bajaba a 47,5, un −14 %).
+ */
 export function pesoReinicio(peso: number, lista: number[]): number {
   const objetivo = peso * 0.9
-  const p = lista.length ? ajustarA(lista, objetivo, true) : Math.floor(objetivo / 2.5) * 2.5
+  const menores = lista.length ? lista.filter(v => v > 0 && v < peso - 1e-9) : []
+  const p = lista.length
+    ? (menores.length ? menores.reduce((m, v) => (Math.abs(v - objetivo) < Math.abs(m - objetivo) ? v : m)) : peso)
+    : Math.round(objetivo / 2.5) * 2.5
   return p > 0 && p < peso ? p : peso
 }
 
@@ -76,7 +81,10 @@ export function propuestaDescarga(o: {
   if (estancados.length >= 3) {
     return { motivo: `${estancados.length} ejercicios llevan ${SESIONES_ESTANCADO} sesiones sin mejorar (${estancados.slice(0, 3).map(o.nombre).join(', ')}…)`, estancados }
   }
-  const semanas = new Set(normales.filter(s => lunesDe(s.fecha) < lunes).map(s => lunesDe(s.fecha))).size
+  // Semanas seguidas con entreno, contando hacia atrás desde la pasada (6 sesiones sueltas tras un parón no cuentan).
+  const conEntreno = new Set(normales.filter(s => lunesDe(s.fecha) < lunes).map(s => lunesDe(s.fecha)))
+  let semanas = 0
+  for (let w = sumarDias(lunes, -7); conEntreno.has(w); w = sumarDias(w, -7)) semanas++
   if (semanas >= SEMANAS_SIN_DESCARGA) return { motivo: `Llevas ${semanas} semanas seguidas entrenando`, estancados }
   return null
 }

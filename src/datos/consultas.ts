@@ -55,7 +55,8 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
   const lista = pesosPara(e?.material ?? null, reg, g)
   const s = sugerir(ultimas, objetivo, reg, lista)
   // 3 sesiones con el mismo peso sin mejorar: se baja un 10 % para volver a subir (sin contar la calibración).
-  if (reg === 'peso' && s.peso != null && s.accion !== 'subir' && s.accion !== 'primera') {
+  // Con mancuernas o kettlebell también (antes solo con barra y máquinas: nunca bajaban al estancarse).
+  if ((reg === 'peso' || reg === 'mancuerna') && s.peso != null && s.accion !== 'subir' && s.accion !== 'primera') {
     const sinCalibrar = historialEn(todas.filter(x => !x.calibracion), id, excluir)
     if (estancado(sinCalibrar)) {
       const p = pesoReinicio(s.peso, lista)

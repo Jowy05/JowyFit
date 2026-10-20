@@ -429,10 +429,60 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   }
 }
 
+/**
+ * Rutina definitiva tras la semana de prueba: la MISMA rutina (con los cambios que hiciste a mano), con el
+ * esfuerzo normal en vez del cómodo de la prueba y ajustada a lo que tardas de verdad en cada ejercicio.
+ * Antes se generaba otra desde cero y se perdían los cambios hechos durante la semana de prueba.
+ */
+export function rutinaDefinitiva(actual: Omit<Rutina, 'id'>, o: { perfil: Perfil; tiempos?: Map<string, { serie: number; descanso: number }>; compuesto: (id: string) => boolean }): Omit<Rutina, 'id'> {
+  const rpe = o.perfil.nivel === 'empiezo' ? 7 : 8
+  const normal = minutosValidos(o.perfil.minutosNormal, 60)
+  const corta = Math.min(normal, minutosValidos(o.perfil.minutosCorta, Math.min(45, normal)))
+  const dias = actual.dias.map(d => {
+    const bloques = d.bloques.map(b => ({ ...b, rpe: b.rpe === 7 ? rpe : b.rpe }))
+    // Lo primero y los multiarticulares pesan más: se recortan antes los accesorios del final.
+    const prioridades = new Map(bloques.map((b, i) => [b.uid, i < 2 && o.compuesto(b.ejercicio) ? 1 : o.compuesto(b.ejercicio) ? 2 : 3]))
+    const minutos = d.opcional ? Math.max(normal, 45) : normal
+    return { ...d, bloques: ajustarATiempo(bloques, prioridades, minutos, corta, { tiempos: o.tiempos }) }
+  })
+  // Sin el id de la rutina de prueba: la definitiva es una rutina nueva (con él, guardarla fallaba sin decir nada).
+  const { id: _, ...base } = actual as Rutina
+  return {
+    ...base,
+    creada: new Date().toISOString(),
+    activa: true,
+    calibracion: false,
+    dias,
+    porque: [
+      'Es tu rutina de la semana de prueba, con los cambios que hiciste.',
+      `Esfuerzo normal (${rpe} de 10): ya conoces los ejercicios y tus pesos.`,
+      ...(o.tiempos?.size ? ['Ajustada a lo que tardas de verdad en cada ejercicio, para que quepa en tu tiempo.'] : []),
+    ],
+  }
+}
+
+/** Qué cambia entre dos rutinas, en frases cortas («Martes: Curl en polea, fuera»). */
+export function cambiosRutina(antes: Pick<Rutina, 'dias'>, despues: Pick<Rutina, 'dias'>, nombre: (id: string) => string, dia: (d: DiaRutina) => string): string[] {
+  const out: string[] = []
+  for (const d of despues.dias) {
+    const a = antes.dias.find(x => x.letra === d.letra)
+    if (!a) continue
+    const partes: string[] = []
+    const quitados = a.bloques.filter(b => !d.bloques.some(x => x.uid === b.uid))
+    if (quitados.length) partes.push(`${quitados.map(b => nombre(b.ejercicio)).join(', ')}, fuera`)
+    const menos = d.bloques.filter(b => { const v = a.bloques.find(x => x.uid === b.uid); return v && b.series < v.series })
+    if (menos.length) partes.push(`una serie menos en ${menos.map(b => nombre(b.ejercicio)).join(', ')}`)
+    if (partes.length) out.push(`${dia(d)}: ${partes.join(' · ')}`)
+  }
+  return out
+}
+
 /** Tiempos reales por ejercicio a partir de entrenos hechos (semana de calibración). */
-export function tiemposReales(sesiones: { ejercicios: { ejercicio: string; series: { hecha: boolean; calentamiento: boolean; ts?: number }[] }[] }[]): Map<string, { serie: number; descanso: number }> {
+export function tiemposReales(sesiones: { ejercicios: { ejercicio: string; superserie?: string; series: { hecha: boolean; calentamiento: boolean; ts?: number }[] }[] }[]): Map<string, { serie: number; descanso: number }> {
   const acc = new Map<string, number[]>()
   for (const s of sesiones) for (const e of s.ejercicios) {
+    // En «dos seguidos» el ciclo ya incluye la serie del compañero: usarlo como descanso contaba ~2 min de más por par.
+    if (e.superserie) continue
     const ts = e.series.filter(x => x.hecha && !x.calentamiento && x.ts).map(x => x.ts!).sort((a, b) => a - b)
     for (let i = 1; i < ts.length; i++) {
       const ciclo = (ts[i]! - ts[i - 1]!) / 1000

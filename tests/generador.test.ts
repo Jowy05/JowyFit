@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { catalogoReal, hayCatalogo, perfilEjemplo } from './ayuda'
-import { claveMovimiento, duracionDia, generarRutina, mismoMovimiento, patronGenerador, plantillas } from '../src/dominio/generador'
+import { cambiosRutina, claveMovimiento, duracionDia, generarRutina, mismoMovimiento, patronGenerador, plantillas, rutinaDefinitiva, tiemposReales } from '../src/dominio/generador'
 import { gimnasioNuevo } from '../src/datos/repos'
 import type { Dia, MarcaEjercicio, Perfil } from '../src/datos/tipos'
 import { ejercicio } from '../src/catalogo/catalogo'
@@ -181,5 +181,50 @@ describe.skipIf(!hayCatalogo)('mismo movimiento: nunca dos variantes del mismo e
       }
     }
     expect(dias).toBeGreaterThan(100)
+  })
+})
+
+describe('tiempos reales de la semana de prueba', () => {
+  const series = (ts: number[]) => ts.map(t => ({ hecha: true, calentamiento: false, ts: t * 1000 }))
+  it('mide el descanso entre series de un ejercicio suelto', () => {
+    const t = tiemposReales([{ ejercicios: [{ ejercicio: 'press', series: series([0, 160, 320]) }] }])
+    expect(t.get('press')).toEqual({ serie: 40, descanso: 120 })
+  })
+  it('no usa los «dos seguidos»: su ciclo ya incluye la serie del compañero', () => {
+    const t = tiemposReales([{ ejercicios: [{ ejercicio: 'curl', superserie: 'b2', series: series([0, 175, 350]) }] }])
+    expect(t.has('curl')).toBe(false)
+  })
+})
+
+describe.skipIf(!hayCatalogo)('rutina definitiva tras la semana de prueba', () => {
+  const c = hayCatalogo ? catalogoReal() : null
+  const gym = { ...gimnasioNuevo(), id: 1 }
+  const perfil = perfilEjemplo()
+  const prueba = c ? generarRutina({ perfil, gimnasio: gym, marcas: new Map(), ejercicios: c.ejercicios, calibracion: true }) : null
+  const compuesto = (id: string) => ejercicio(id)?.mecanica === 'compound'
+
+  it('parte de la rutina de prueba, con sus cambios hechos a mano, y quita la prueba', () => {
+    // Un cambio a mano durante la semana de prueba: otro ejercicio en el primer hueco del día A.
+    const cambiada = structuredClone(prueba!)
+    cambiada.dias[0]!.bloques[0]!.ejercicio = 'leg-press'
+    const def = rutinaDefinitiva(cambiada, { perfil, compuesto })
+    expect(def.calibracion).toBe(false)
+    expect(rutinaDefinitiva({ ...cambiada, id: 4 } as typeof cambiada, { perfil, compuesto })).not.toHaveProperty('id')
+    expect(def.dias[0]!.bloques[0]!.ejercicio).toBe('leg-press')
+    // El esfuerzo cómodo de la prueba (7) pasa al normal.
+    expect(def.dias.flatMap(d => d.bloques).every(b => b.rpe !== 7 || perfil.nivel === 'empiezo')).toBe(true)
+  })
+  it('si tardas más de lo previsto, recorta lo de menos prioridad y lo dice', () => {
+    // Descansos reales larguísimos en todos los ejercicios: no cabe todo.
+    const lentos = new Map(prueba!.dias.flatMap(d => d.bloques).map(b => [b.ejercicio, { serie: 60, descanso: 240 }]))
+    const def = rutinaDefinitiva(prueba!, { perfil, tiempos: lentos, compuesto })
+    for (const d of def.dias.filter(x => !x.opcional)) expect(duracionDia(d.bloques, false, { tiempos: lentos }) / 60).toBeLessThanOrEqual(perfil.minutosNormal)
+    const cambios = cambiosRutina(prueba!, def, id => id, d => d.letra)
+    expect(cambios.length).toBeGreaterThan(0)
+    // Los dos primeros multiarticulares de cada día se quedan.
+    for (const d of def.dias) {
+      const principales = prueba!.dias.find(x => x.letra === d.letra)!.bloques.slice(0, 2).filter(b => compuesto(b.ejercicio))
+      for (const b of principales) expect(d.bloques.some(x => x.uid === b.uid)).toBe(true)
+    }
   })
 })

@@ -8,13 +8,20 @@ import { hoyISO } from '../../../dominio/fechas'
 import { Hoja, Ico, Stepper, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
-import { usePerfil } from '../../datos'
+import { usePerfilCargado } from '../../datos'
+import type { Perfil } from '../../../datos/tipos'
 
 export function HojaSuplemento({ ruta }: { ruta: Ruta }) {
+  // El formulario se monta con el perfil ya cargado: con el de por defecto, «Guardar» pisaba el batido con 24 g.
+  const perfil = usePerfilCargado()
+  const s = String(ruta.d?.nombre ?? '')
+  if (!perfil) return <Hoja titulo={s}><p className="muted">Cargando…</p></Hoja>
+  return <Formulario perfil={perfil} s={s} />
+}
+
+function Formulario({ perfil, s }: { perfil: Perfil; s: string }) {
   const nav = useNav()
   const aviso = useAviso()
-  const perfil = usePerfil()
-  const s = String(ruta.d?.nombre ?? '')
   const batido = esBatido(s)
   const [dosis, setDosis] = useState(perfil.dosisSuplementos?.[s] ?? '')
   const [b, setB] = useState(batidoDe(perfil.batido))

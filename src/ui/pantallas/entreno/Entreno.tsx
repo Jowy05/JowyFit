@@ -82,9 +82,13 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
     }
   }, [resto, s, ajustes.vibrar, ajustes.sonido])
 
-  // Fin del entreno
+  // Fin del entreno: al hacer la última serie se pasa al resumen. Solo en ese momento: si se vuelve desde el
+  // resumen (para corregir una serie o añadir otro ejercicio), el entreno se queda abierto.
+  const yaTerminada = useRef(s.ejercicios.length > 0 && terminada(s))
   useEffect(() => {
-    if (s.ejercicios.length && terminada(s)) nav.completa('ses-fin', { id: s.id })
+    const ahora = s.ejercicios.length > 0 && terminada(s)
+    if (ahora && !yaTerminada.current) nav.completa('ses-fin', { id: s.id })
+    yaTerminada.current = ahora
   }, [s, nav])
 
   const hora = estadoHora(s, ahora)
@@ -107,6 +111,15 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
             <p className="muted">Cámbialo por otro o sáltalo para seguir.</p>
             <button className="btn mt12" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx })}><Ico n="swap" b />Cambiar ejercicio</button>
             <button className="btn gry sm mt8" onClick={() => void guardar(saltar(s, idx))}>Saltarlo</button>
+          </div>
+        ) : s.ejercicios.length > 0 && terminada(s) ? (
+          // Todo hecho y vuelto desde el resumen: se puede corregir en la Lista, añadir otro ejercicio o terminar.
+          <div className="card pd empty">
+            <span className="empty-ic"><Ico n="check" /></span>
+            <h3 className="h3">Has hecho todos los ejercicios</h3>
+            <p className="muted">Para corregir una serie, toca «Lista». Si quieres, añade otro ejercicio.</p>
+            <button className="btn mt12" onClick={() => nav.completa('ses-fin', { id: s.id })}><Ico n="flag-checkered" b />Terminar entreno</button>
+            <button className="btn gry sm mt8" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-anadir' })}><Ico n="plus" b />Añadir ejercicio</button>
           </div>
         ) : (
           <div className="card pd empty">

@@ -60,7 +60,18 @@ export async function vibrar(tipo: 'corta' | 'fin' = 'corta') {
 }
 
 // ---------- pantalla encendida ----------
-let wakeLock: { release: () => Promise<void> } | null = null
+type Bloqueo = { release: () => Promise<void>; addEventListener?: (e: 'release', f: () => void) => void }
+let wakeLock: Bloqueo | null = null
+let quiereEncendida = false
+// En la web (iPhone) el sistema suelta el bloqueo al bloquear el móvil o cambiar de app: al volver se pide otra vez.
+let escuchaVisible = false
+async function pedirBloqueo() {
+  const wl = (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<Bloqueo> } }).wakeLock
+  if (!wl || wakeLock) return
+  const b = await wl.request('screen')
+  wakeLock = b
+  b.addEventListener?.('release', () => { if (wakeLock === b) wakeLock = null })
+}
 export async function pantallaEncendida(on: boolean) {
   try {
     if (esNativo()) {
@@ -68,9 +79,13 @@ export async function pantallaEncendida(on: boolean) {
       if (on) await KeepAwake.keepAwake(); else await KeepAwake.allowSleep()
       return
     }
-    const wl = (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock
-    if (on && wl && !wakeLock) wakeLock = await wl.request('screen')
-    if (!on && wakeLock) { await wakeLock.release(); wakeLock = null }
+    quiereEncendida = on
+    if (!escuchaVisible) {
+      escuchaVisible = true
+      document.addEventListener('visibilitychange', () => { if (quiereEncendida && document.visibilityState === 'visible') void pedirBloqueo().catch(() => {}) })
+    }
+    if (on) await pedirBloqueo()
+    if (!on && wakeLock) { const b = wakeLock; wakeLock = null; await b.release() }
   } catch { /* no soportado */ }
 }
 
@@ -95,7 +110,20 @@ async function crearCanales(ln: typeof import('@capacitor/local-notifications').
   await ln.createChannel({ id: 'recordatorios', name: 'Recordatorios', description: 'Dormir, pesarse, suplementos, copias…', importance: 3, visibility: 1, vibration: true }).catch(() => {})
 }
 
-export async function programar(avisos: Aviso[], borrarIds: number[] = []) {
+// Todas las llamadas de notificaciones van en fila: si «Saltar» (cancelar) llegaba antes de que terminara de
+// programarse el aviso de descanso, el aviso quedaba puesto y el reloj vibraba en mitad de la serie.
+let fila: Promise<unknown> = Promise.resolve()
+function enFila<T>(f: () => Promise<T>): Promise<T> {
+  const r = fila.then(f, f)
+  fila = r.catch(() => {})
+  return r
+}
+
+export function programar(avisos: Aviso[], borrarIds: number[] = []): Promise<void> {
+  return enFila(() => programarYa(avisos, borrarIds))
+}
+
+async function programarYa(avisos: Aviso[], borrarIds: number[]) {
   if (!esNativo()) return
   const { LocalNotifications } = await import('@capacitor/local-notifications')
   if (borrarIds.length) await LocalNotifications.cancel({ notifications: borrarIds.map(id => ({ id })) })
@@ -115,10 +143,12 @@ export async function programar(avisos: Aviso[], borrarIds: number[] = []) {
   })
 }
 
-export async function cancelar(ids: number[]) {
-  if (!esNativo() || !ids.length) return
-  const { LocalNotifications } = await import('@capacitor/local-notifications')
-  await LocalNotifications.cancel({ notifications: ids.map(id => ({ id })) })
+export function cancelar(ids: number[]): Promise<void> {
+  return enFila(async () => {
+    if (!esNativo() || !ids.length) return
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await LocalNotifications.cancel({ notifications: ids.map(id => ({ id })) })
+  })
 }
 
 // ---------- pasos (Health Connect en Android) ----------

@@ -25,7 +25,15 @@ export function juntarBascula(pesos: MuestraHC[], grasas: MuestraHC[]): LecturaB
     if (cerca) { cerca.grasaPct = grasaPct; if (g.id) cerca.ids.push(g.id) }
     else out.push({ fecha: g.fecha, grasaPct, ids: g.id ? [g.id] : [], fuente: g.fuente })
   }
-  return out.sort((a, b) => a.fecha.localeCompare(b.fecha))
+  // Dos apps que escriben la misma pesada (mismo peso, casi a la vez) cuentan como una sola.
+  const unicas: LecturaBascula[] = []
+  for (const l of out.sort((a, b) => a.fecha.localeCompare(b.fecha))) {
+    const igual = unicas.find(u => u.pesoKg != null && l.pesoKg != null && Math.abs(u.pesoKg - l.pesoKg) < 0.15
+      && Math.abs(new Date(u.fecha).getTime() - new Date(l.fecha).getTime()) <= MISMA_PESADA_MS)
+    if (igual) { igual.ids.push(...l.ids); if (igual.grasaPct == null && l.grasaPct != null) igual.grasaPct = l.grasaPct }
+    else unicas.push(l)
+  }
+  return unicas
 }
 
 /** Fecha y hora local «AAAA-MM-DDTHH:MM», como guarda la app las mediciones. */
@@ -39,8 +47,8 @@ export function fechaLocal(iso: string): string {
  * Las pesadas que aún no están en la app. Una ya está si se trajo antes (mismo id de Health Connect) o si ese
  * mismo día hay una medición con el mismo peso (o la misma grasa, si solo trae grasa): la apuntaste a mano.
  */
-export function lecturasNuevas(lecturas: LecturaBascula[], mediciones: Medicion[]): LecturaBascula[] {
-  const vistos = new Set(mediciones.flatMap(m => m.hc ?? []))
+export function lecturasNuevas(lecturas: LecturaBascula[], mediciones: Medicion[], ignorados: string[] = []): LecturaBascula[] {
+  const vistos = new Set([...mediciones.flatMap(m => m.hc ?? []), ...ignorados])
   return lecturas.filter(l => {
     if (l.ids.some(id => vistos.has(id))) return false
     const dia = fechaLocal(l.fecha).slice(0, 10)
@@ -48,6 +56,22 @@ export function lecturasNuevas(lecturas: LecturaBascula[], mediciones: Medicion[
     if (l.pesoKg != null) return !ese.some(m => m.pesoKg != null && Math.abs(m.pesoKg - l.pesoKg!) < 0.15)
     return !ese.some(m => m.bascula?.grasaPct != null && Math.abs(m.bascula.grasaPct - l.grasaPct!) < 0.15)
   })
+}
+
+/**
+ * La grasa que llegó a Health Connect después de traer el peso (la báscula la sincroniza más tarde): se añade a la
+ * pesada que ya está en la app. Devuelve qué medición completar, con qué grasa y con qué ids nuevos.
+ */
+export function grasaTardia(lecturas: LecturaBascula[], mediciones: Medicion[]): { id: number; grasaPct: number; ids: string[] }[] {
+  const out: { id: number; grasaPct: number; ids: string[] }[] = []
+  for (const l of lecturas) {
+    if (l.grasaPct == null) continue
+    const m = mediciones.find(x => x.id != null && x.hc?.some(id => l.ids.includes(id)))
+    if (!m || m.bascula?.grasaPct != null) continue
+    const nuevos = l.ids.filter(id => !m.hc!.includes(id))
+    if (nuevos.length) out.push({ id: m.id!, grasaPct: l.grasaPct, ids: nuevos })
+  }
+  return out
 }
 
 /** La medición que se guarda: báscula de casa, con el peso, la grasa y de dónde viene. */

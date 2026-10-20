@@ -305,6 +305,8 @@ export type Ajustes = {
   fuentePasos: 'auto' | 'manual'
   /** Peso y % de grasa de la báscula: se traen solos de Health Connect o se apuntan a mano. */
   fuenteBascula?: 'auto' | 'manual'
+  /** Pesadas de Health Connect que se borraron en la app: no se vuelven a traer. */
+  hcIgnorados?: string[]
   noti: {
     dormir: boolean
     pesarse: boolean

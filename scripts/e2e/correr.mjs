@@ -194,10 +194,25 @@ escenario('entreno completo', async () => {
   }
   if (vueltas >= 80) throw new Error('No se llega al final del entreno')
   await ver('Entreno terminado')
+  // Desde el resumen se puede volver al entreno (antes no: te devolvía al resumen al instante).
+  await t('pulsarSel', 'button[aria-label="Volver al entreno"]')
+  await ver('Has hecho todos los ejercicios')
+  await esperar(800)
+  await ver('Has hecho todos los ejercicios')
+  await pulsar('Terminar entreno')
+  await ver('Entreno terminado')
   await pulsar('Guardar')
   await ver(/Entreno de hoy hecho|hecho/i, 8000)
   const n = await js(`return (await new Promise(r=>{const q=indexedDB.open('jowyfit');q.onsuccess=()=>{const tx=q.result.transaction('sesiones');const g=tx.objectStore('sesiones').getAll();g.onsuccess=()=>r(g.result)}})).filter(s=>s.estado==='hecha').length`)
   if (n !== 1) throw new Error(`Sesiones hechas: ${n}`)
+  // Un entreno ya guardado se corrige tocando la serie.
+  await pestana('Rutina')
+  await pulsar(/Entreno de hoy hecho/)
+  await ver('Toca una serie para corregirla')
+  await t('pulsarSel', '.ux-det-serie')
+  await t('pulsarSel', '.ux-corr-f [aria-label="Repeticiones"] button[aria-label="Más"]')
+  await pulsar('Guardar cambio')
+  await ver('Serie corregida')
   await pestana('Progreso')
   await seg('Fuerza')
   await ver('Historial')
@@ -472,6 +487,37 @@ escenario('semana: dos entrenos, progresión y día perdido', async () => {
   await ver(/entrenos/i)
 })
 
+escenario('semana de prueba completa: 3 entrenos y rutina definitiva', async () => {
+  await deCero('2026-10-13T05:20:00') // martes: A
+  await alta()
+  await hacerEntreno()
+  await irA('2026-10-15T05:20:00') // jueves: B
+  await hacerEntreno()
+  await irA('2026-10-16T05:20:00') // viernes: C, el tercero de la semana de prueba
+  await pulsar('Empezar rutina')
+  await pulsar('Empezar', '.sheet')
+  await ver('Hecho', 8000)
+  let vueltas = 0
+  while (!(await t('hay', 'Entreno terminado')) && vueltas++ < 90) {
+    if (await t('hay', /Saltar/)) await pulsar(/^Saltar$/).catch(() => {})
+    await ponerPesoSiFalta()
+    await pulsar(/^Hecho$/)
+    await esperar(120)
+  }
+  await ver('Semana de prueba terminada')
+  await pulsar('Guardar')
+  // Se propone la definitiva: la misma rutina, con lo que cambia y sin «Otra variante».
+  await ver('Tu rutina definitiva', 8000)
+  await ver('Qué cambia')
+  await noVer('Otra variante')
+  await pulsar('Usar esta rutina')
+  await ver('Definitiva', 8000)
+  const rutinas = await tabla('rutinas')
+  const activa = rutinas.find(r => r.activa)
+  if (!activa || activa.calibracion) throw new Error('La rutina activa sigue en semana de prueba')
+  if (rutinas.length !== 2) throw new Error('Debería haber 2 rutinas (la de prueba y la definitiva): ' + rutinas.length)
+})
+
 escenario('rutina: regenerar, biblioteca y gimnasio', async () => {
   await deCero('2026-10-14T18:00:00')
   await alta()
@@ -480,8 +526,11 @@ escenario('rutina: regenerar, biblioteca y gimnasio', async () => {
   await pulsar('Editar plan')
   await pulsar('Rehacer la rutina desde cero')
   await pulsar('Ver la rutina nueva', '.sheet')
+  // Rehacerla durante la semana de prueba la mantiene en prueba (antes pasaba a «Definitiva»).
+  await ver('Empezar con una semana de prueba')
   await pulsar('Usar esta rutina')
   await ver('Cuerpo completo', 6000)
+  await ver('Semana de prueba')
   await pestana('Rutina')
   await seg('Ejercicios')
   await t('escribir', 'input[type=search]', 'press banca')
@@ -529,7 +578,10 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   for (let i = 0; i < 40 && !archivo; i++) { await esperar(250); archivo = fsx.readdirSync(DESCARGAS).find(f => f.endsWith('.jowyfit')) }
   if (!archivo) throw new Error('No se descargó la copia')
   await pulsar('Borrar todos los datos')
-  await pulsar('Borrar todo', '.sheet').catch(() => {}) // la app se recarga sola
+  // Se confirma dos veces: la primera solo cambia el botón a «Sí, borrarlo todo».
+  await pulsar(/^Borrar todo/, '.sheet')
+  await ver('Sí, borrarlo todo')
+  await pulsar('Sí, borrarlo todo', '.sheet').catch(() => {}) // la app se recarga sola
   await esperar(2500)
   await ver('Tu fuerza y tu comida', 10000)
   archivoParaElegir = path.join(DESCARGAS, archivo)
@@ -590,6 +642,8 @@ escenario('semana suave tras 6 semanas', async () => {
   await ver('¿Semana suave?', 8000)
   await pulsar('Ahora no')
   await noVer('¿Semana suave?')
+  // Sigue entrenando la semana aplazada (si no, la racha se corta y ya no hace falta semana suave).
+  await meter('sesiones', [{ ...sesiones[sesiones.length - 1], id: id++, fecha: '2026-10-20', inicio: new Date(2026, 9, 20, 5, 30).getTime() }])
   await irA('2026-10-26T09:00:00') // la semana siguiente vuelve a salir
   await ver('¿Semana suave?', 8000)
   await pulsar('Sí, esta semana')
@@ -658,8 +712,10 @@ escenario('comida: suplementos con su cantidad y el batido suma proteína', asyn
   await ver('Apuntado: Batido de proteína · 30 g proteína')
   let hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-13')
   if (hoy.length !== 1 || hoy[0].proteina !== 30) throw new Error('El batido no suma su proteína: ' + JSON.stringify(hoy))
+  // Pasado el bloqueo contra el doble toque (400 ms), se desmarca.
+  await esperar(700)
   await pulsar('Batido de proteína')
-  await esperar(400)
+  await esperar(500)
   hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-13')
   if (hoy.length !== 0) throw new Error('Al desmarcar el batido no se quita')
 })

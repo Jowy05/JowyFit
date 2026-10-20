@@ -48,6 +48,8 @@ export async function iniciarEntreno(o: { letra?: string; version?: 'normal' | '
     const sug = await sugerenciasDia(base, g)
     const pesoDe = (id: string, peso: number | null) => {
       if (!suave || peso == null || peso <= 0) return peso
+      // Si ya tocaba bajar por estancamiento (−10 %), la semana suave no vuelve a bajar encima (antes salía −24 %).
+      if (sug.get(id)?.accion === 'bajar') return peso
       const e = ejercicio(id)
       return pesoReinicio(peso, pesosPara(e?.material ?? null, e ? tipoRegistro(e) : 'peso', g))
     }

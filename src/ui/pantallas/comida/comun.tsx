@@ -12,10 +12,11 @@ import { useNav } from '../../nav'
 type Vista = 'com' | 'com-plant'
 
 /** Solo dos pestañas: el día y «Mis comidas» (que ya incluye los productos escaneados). */
-export function CabComida({ vista, crumb }: { vista: Vista; crumb: string }) {
+export function CabComida({ vista, crumb, fecha }: { vista: Vista; crumb: string; fecha?: string }) {
   const nav = useNav()
+  // Si se está viendo otro día, lo escaneado se apunta en ese día (antes iba siempre a hoy).
   return (
-    <Cab crumb={crumb} titulo="Comida" derecha={<button className="ib" aria-label="Escanear" onClick={() => nav.ir('com-scan')}><Ico n="barcode" /></button>}>
+    <Cab crumb={crumb} titulo="Comida" derecha={<button className="ib" aria-label="Escanear" onClick={() => nav.ir('com-scan', fecha ? { fecha } : undefined)}><Ico n="barcode" /></button>}>
       <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: 'Día' }, { v: 'com-plant', t: 'Mis comidas' }]} />
     </Cab>
   )

@@ -6,7 +6,7 @@ import { objetivosEnergia, totalesComida } from '../../../datos/consultas'
 import type { Comida } from '../../../datos/tipos'
 import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, picoteoDeSemana, textoRacion } from '../../../dominio/comida'
 import { DIAS, MESES_CORTOS, deISO, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../../dominio/fechas'
-import { Barra, cx, Ico, Pantalla, Seccion } from '../../comp'
+import { Barra, cx, Ico, Pantalla, Seccion, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
@@ -46,11 +46,14 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
     aviso(`Borrado: ${c.nombre}`, () => { void db.comidas.add(c) })
   }
   // El batido, al marcarlo, se apunta con su proteína (suma al día); al desmarcarlo, se quita.
-  const alternarSuplemento = async (s: string) => {
-    if (tomados.includes(s)) { await desmarcarSuplemento(fecha, s); return }
+  // Con un doble toque metía dos batidos o lo marcaba y desmarcaba: una vez, y leyendo lo tomado de la base de datos.
+  const unaVez = useUnaVez()
+  const alternarSuplemento = unaVez(async (s: string) => {
+    const yaTomado = ((await db.suplementos.get(fecha))?.tomados ?? []).includes(s)
+    if (yaTomado) { await desmarcarSuplemento(fecha, s); return }
     const deshacer = await marcarSuplemento(perfil, fecha, s)
     if (esBatido(s)) aviso(`Apuntado: ${s} · ${batidoDe(perfil.batido).proteina} g proteína`, deshacer)
-  }
+  })
   const verDia = (n: number) => setFecha(f => sumarDias(f, n))
   // Redondeado: las raciones P/G dejan decimales y salía «Faltan 112.6 g».
   const faltan = energia ? Math.max(0, Math.round(energia.proteina - tot.proteina)) : 0
@@ -60,7 +63,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
 
   return (
     <Pantalla>
-      <CabComida vista="com" crumb="Lo aproximado vale" />
+      <CabComida vista="com" crumb="Lo aproximado vale" fecha={fecha} />
       <div className="pg">
         <div className="daysel">
           <button className="ib" aria-label="Día anterior" onClick={() => verDia(-1)}><Ico n="caret-left" /></button>

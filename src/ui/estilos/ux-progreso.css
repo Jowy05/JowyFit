@@ -53,3 +53,7 @@
 /* Fuerza → Series por grupo: número y palabra («poco», «bien», «mucho»). */
 .hbars.fza-grupos>div{grid-template-columns:72px minmax(0,1fr) 22px 58px;gap:8px}
 .fza-grupos .tag{justify-content:center;height:20px;font-size:10.5px}
+
+/* Detalle de un entreno: las series se tocan para corregirlas. */
+.ux-det-serie{cursor:pointer}
+.ux-det-serie:active td{background:var(--raised)}

@@ -5,9 +5,10 @@ import { guardarPerfil } from '../../../datos/repos'
 import type { DiaRutina, Perfil } from '../../../datos/tipos'
 import { DIAS, horaActual, minutosDe } from '../../../dominio/fechas'
 import { duracionDia } from '../../../dominio/generador'
-import { programar } from '../../../plataforma'
+import { esNativo, permisoNotificaciones, programar } from '../../../plataforma'
 import { cx, Hoja, Ico, Interruptor, useUnaVez } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
+import { useAviso } from '../../aviso'
 import { usePerfilCargado, useRutina, useSesionEnCurso } from '../../datos'
 import { abrirEntreno, iniciarEntreno } from './iniciar'
 
@@ -38,6 +39,7 @@ export function HojaEmpezar({ ruta }: { ruta: Ruta }) {
 function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; perfil: Perfil; corta: boolean }) {
   const nav = useNav()
   const unaVez = useUnaVez()
+  const aviso = useAviso()
   // «Normal» marcada por defecto (antes salía marcada la hora de salida, que parecía un entreno más largo).
   const [modo, setModo] = useState<'normal' | 'corta'>(empezarCorta ? 'corta' : 'normal')
   // La hora de salida es la del perfil (coche o andando, según lo que tenga elegido); aquí solo se ve y se cambia.
@@ -54,6 +56,8 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
   const noDa = disponibles > 0 && modo === 'normal' && disponibles < normal - 3 && corta < normal
   // Un doble toque en «Empezar» crearía dos entrenos en curso.
   const empezar = unaVez(async () => {
+    // Sin permiso de notificaciones no llega el aviso de fin de descanso (ni al reloj): se pide al empezar.
+    if (esNativo() && !(await permisoNotificaciones(true))) aviso('Sin permiso de notificaciones: no te avisaremos al acabar el descanso (actívalo en Ajustes)')
     if (hora !== horaPerfil) await guardarPerfil({ horaLimite: { ...perfil.horaLimite, [perfil.transporte]: hora } })
     const id = await iniciarEntreno({ letra: dia.letra, version: modo, horaLimite: hora })
     if (calentar) {

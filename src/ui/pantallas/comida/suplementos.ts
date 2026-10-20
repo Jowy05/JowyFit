@@ -6,7 +6,8 @@ import { batidoDe, esBatido, franjaPorHora } from '../../../dominio/comida'
 import { horaActual, hoyISO } from '../../../dominio/fechas'
 
 /** ¿Hay un batido apuntado a mano ese día (desde Añadir, no desde el suplemento)? */
-export const batidoAMano = (comidas: { nombre: string; suplemento?: string }[]) => comidas.some(c => !c.suplemento && /batido|prote/i.test(c.nombre))
+// Solo un batido de verdad: «Yogur proteico» o «Barrita proteica» no cuentan.
+export const batidoAMano = (comidas: { nombre: string; suplemento?: string }[]) => comidas.some(c => !c.suplemento && /batido/i.test(c.nombre))
 
 /** Lo marca como tomado (y apunta el batido). Devuelve cómo deshacerlo. */
 export async function marcarSuplemento(perfil: Perfil, fecha: string, s: string): Promise<() => void> {

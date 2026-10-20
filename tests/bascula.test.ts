@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fechaLocal, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../src/dominio/bascula'
+import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../src/dominio/bascula'
 import type { Medicion } from '../src/datos/tipos'
 
 const iso = (s: string) => new Date(s).toISOString()
@@ -42,5 +42,23 @@ describe('báscula por Health Connect', () => {
     expect(nombreFuente('com.ejemplo.balanza')).toBe('Balanza')
     expect(nombreFuente('Mi báscula')).toBe('Mi báscula')
     expect(nombreFuente(undefined)).toBe('tu báscula')
+  })
+  it('lo borrado en la app no se vuelve a traer', () => {
+    const l = juntarBascula([{ fecha: iso('2026-10-15T08:00:00'), valor: 92, id: 'p9' }], [])
+    expect(lecturasNuevas(l, [], ['p9'])).toHaveLength(0)
+    expect(lecturasNuevas(l, [])).toHaveLength(1)
+  })
+  it('la grasa que llega después se añade a su pesada', () => {
+    const l = juntarBascula([{ fecha: iso('2026-10-13T08:00:00'), valor: 79.1, id: 'p1' }], [{ fecha: iso('2026-10-13T08:00:30'), valor: 24.2, id: 'g1' }])
+    const ya: Medicion[] = [{ id: 7, fecha: '2026-10-13T08:00', origen: 'casa', pesoKg: 79.1, hc: ['p1'] }]
+    expect(lecturasNuevas(l, ya)).toHaveLength(0)
+    expect(grasaTardia(l, ya)).toEqual([{ id: 7, grasaPct: 24.2, ids: ['g1'] }])
+    // Si ya tenía grasa, no se toca.
+    expect(grasaTardia(l, [{ ...ya[0]!, bascula: { grasaPct: 24 } }])).toEqual([])
+  })
+  it('la misma pesada escrita por dos apps cuenta una vez', () => {
+    const l = juntarBascula([{ fecha: iso('2026-10-13T08:00:00'), valor: 79.1, id: 'a' }, { fecha: iso('2026-10-13T08:00:05'), valor: 79.1, id: 'b' }], [])
+    expect(l).toHaveLength(1)
+    expect(l[0]!.ids).toEqual(['a', 'b'])
   })
 })

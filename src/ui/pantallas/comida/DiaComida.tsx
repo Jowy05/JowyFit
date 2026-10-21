@@ -74,7 +74,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
           <button className={cx('ib', esHoy && 'dim')} aria-label="Día siguiente" onClick={() => esHoy ? aviso('Mañana aún no ha llegado') : verDia(1)}><Ico n="caret-right" /></button>
         </div>
 
-        <div className="card pd tot">
+        <div className="card pd tot" data-tour="proteina">
           <div className="row jb">
             <span className="lbl">Proteína {esHoy ? 'de hoy' : 'del día'}</span>
             <span className="small okc">{energia ? faltan ? `Faltan ${faltan} g` : '¡Conseguida!' : ''}</span>
@@ -185,7 +185,7 @@ export function DiaComida({ ruta }: { ruta?: Ruta }) {
         </div>
 
         <div className="dock">
-          <button className="btn xl" onClick={() => nav.hoja('sheet-add', { fecha })}><Ico n="plus" b />Añadir</button>
+          <button className="btn xl" data-tour="comida-anadir" onClick={() => nav.hoja('sheet-add', { fecha })}><Ico n="plus" b />Añadir</button>
         </div>
       </div>
     </Pantalla>

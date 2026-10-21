@@ -172,6 +172,98 @@ await prueba('No pide nada a otros sitios', async () => {
   return js(`return performance.getEntriesByType('resource').map(r => r.name).filter(u => /^https?:/.test(u) && !u.startsWith(location.origin)).map(u => 'pide ' + u)`)
 })
 
+// ---------------------------------------------------------------- demo (/Demo)
+/** Estado de la demo: paso, título, recuadro y tarjeta. */
+const DEMO = `
+  const f = document.querySelector('[data-foco]'), t = document.querySelector('[data-tarjeta]'), fin = document.querySelector('[data-final]')
+  const rf = f.getBoundingClientRect(), rt = t.getBoundingClientRect()
+  return {
+    n: document.querySelector('[data-n]').textContent, titulo: document.querySelector('[data-titulo]').textContent,
+    texto: document.querySelector('[data-texto]').textContent, barras: document.querySelectorAll('.d-barra').length,
+    foco: getComputedStyle(f).opacity === '1', tapa: !t.hidden && getComputedStyle(f).opacity === '1' && !(rt.bottom < rf.top + 4 || rt.top > rf.bottom - 4 || rt.right < rf.left + 4 || rt.left > rf.right - 4),
+    final: !fin.hidden, cta: [...fin.querySelectorAll('.d-cta')].filter(a => getComputedStyle(a).display !== 'none').map(a => a.getAttribute('href')),
+    ancho: document.documentElement.scrollWidth, alto: document.documentElement.scrollHeight,
+  }`
+const tecla = async k => { await cdp.enviar('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: k === ' ' ? 'Space' : k, windowsVirtualKeyCode: k === ' ' ? 32 : k === 'ArrowRight' ? 39 : 37 }); await cdp.enviar('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code: k === ' ' ? 'Space' : k, windowsVirtualKeyCode: k === ' ' ? 32 : k === 'ArrowRight' ? 39 : 37 }) }
+
+await prueba('Landing: «Ver la demo» en la cabecera y en el cierre, a /Demo', async () => {
+  await pantalla(390, 844)
+  await abrir('?plataforma=otro')
+  const enlaces = await js(`return [...document.querySelectorAll('a.boton-demo')].map(a => a.getAttribute('href'))`)
+  return enlaces.length === 2 && enlaces.every(h => h === 'Demo') ? [] : [`enlaces: ${JSON.stringify(enlaces)}`]
+})
+
+for (const [plat, pasos, cta] of [['android', 12, APK], ['apple', 17, APP]]) {
+  await prueba(`Demo ${plat}: ${pasos} pasos con su recuadro, flechas, pausa y final con su botón`, async () => {
+    const fallos = []
+    await pantalla(1366, 820)
+    await abrir(`Demo.html?plataforma=${plat}`)
+    await esperar(900)
+    let d = await js(DEMO)
+    if (d.barras !== pasos) fallos.push(`pasos: ${d.barras}`)
+    if (d.n !== `1 de ${pasos}`) fallos.push(`empieza en ${d.n}`)
+    if (!d.foco) fallos.push('el primer paso no señala nada')
+    // Pausa: no avanza sola.
+    await tecla(' ')
+    await esperar(7500)
+    d = await js(DEMO)
+    if (d.n !== `1 de ${pasos}`) fallos.push(`en pausa ha avanzado a ${d.n}`)
+    const vistos = new Set()
+    for (let k = 0; k < pasos; k++) {
+      d = await js(DEMO)
+      vistos.add(d.titulo)
+      if (!d.foco && !d.final) { await esperar(900); d = await js(DEMO) }
+      if (!d.foco) fallos.push(`sin recuadro en «${d.titulo}»`)
+      if (d.titulo.length > 34 || d.texto.length > 125) fallos.push(`texto largo en «${d.titulo}»`)
+      if (k < pasos - 1) { await tecla('ArrowRight'); await esperar(700) }
+    }
+    if (vistos.size !== pasos) fallos.push(`títulos repetidos: ${vistos.size} de ${pasos}`)
+    await tecla('ArrowLeft'); await esperar(500)
+    d = await js(DEMO)
+    if (d.n !== `${pasos - 1} de ${pasos}`) fallos.push(`atrás va a ${d.n}`)
+    await tecla('ArrowRight'); await esperar(300); await tecla('ArrowRight'); await esperar(600)
+    d = await js(DEMO)
+    if (!d.final) fallos.push('no sale el final')
+    if (JSON.stringify(d.cta) !== JSON.stringify([cta])) fallos.push(`botón del final: ${JSON.stringify(d.cta)}`)
+    // Android no promete nada de iPhone y al revés.
+    const todo = await js(`return [...document.querySelectorAll('.d-barra')].map(b => b.getAttribute('aria-label')).join(' ')`)
+    if (plat === 'android' && /pendientes|pantalla de inicio|a mano/i.test(todo)) fallos.push('Android enseña cosas de iPhone')
+    return fallos
+  })
+}
+
+await prueba('Demo en el móvil: captura a pantalla completa, sin scroll y la tarjeta nunca tapa lo señalado', async () => {
+  const fallos = []
+  for (const [plat, alto] of [['apple', 664], ['android', 860]]) {
+    await pantalla(390, alto)
+    await abrir(`Demo.html?plataforma=${plat}`)
+    await esperar(600)
+    await tecla(' ')
+    const total = (await js(DEMO)).barras
+    for (let k = 0; k < total; k++) {
+      await esperar(1000)
+      const d = await js(DEMO)
+      if (d.tapa) fallos.push(`${plat}: la tarjeta tapa «${d.titulo}»`)
+      if (d.ancho > 390 || d.alto > alto + 1) fallos.push(`${plat}: se sale (${d.ancho}×${d.alto}) en «${d.titulo}»`)
+      await tecla('ArrowRight')
+    }
+  }
+  return fallos
+})
+
+await prueba('Demo: no pide nada a otros sitios y la plataforma se cambia con las pestañas', async () => {
+  await pantalla(1366, 820)
+  await abrir('Demo.html?plataforma=android')
+  await js(`document.querySelector('[data-plat="apple"]').click()`)
+  await esperar(900)
+  const d = await js(DEMO)
+  const fuera = await js(`return performance.getEntriesByType('resource').map(r => r.name).filter(u => /^https?:/.test(u) && !u.startsWith(location.origin))`)
+  const f = []
+  if (d.barras !== 17 || d.n !== '1 de 17') f.push(`al cambiar a iPhone: ${d.barras} pasos, ${d.n}`)
+  for (const u of fuera) f.push('pide ' + u)
+  return f
+})
+
 const bien = resultados.filter(r => !r.fallos.length).length
 const mal = resultados.length - bien
 console.log(`\n${bien} bien, ${mal} mal`)

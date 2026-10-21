@@ -38,6 +38,8 @@ function appComoIndex(activo: boolean): Plugin {
       if (!activo) return
       const desde = path.resolve(salida, 'app.html')
       if (fs.existsSync(desde)) fs.renameSync(desde, path.resolve(salida, 'index.html'))
+      // Las capturas de la landing y de la demo (public/) no pintan nada dentro del APK.
+      for (const d of ['landing', 'demo']) fs.rmSync(path.resolve(salida, d), { recursive: true, force: true })
     },
   }
 }
@@ -117,7 +119,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         // Todo dentro de la app: también el catálogo de ejercicios y sus imágenes.
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,json,wasm}'],
-        globIgnores: ['**/Phosphor*.svg'],
+        // La landing y la demo no hacen falta para usar la app sin conexión (y pesan).
+        globIgnores: ['**/Phosphor*.svg', 'landing/**', 'demo/**', 'Demo.html'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: 'index.html',
         // La versión nueva entra sola y controla la página desde la primera visita (sin conexión al momento).
@@ -132,7 +135,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: (mode === 'android'
         ? { app: path.resolve('app.html') }
-        : { index: path.resolve('index.html'), app: path.resolve('app.html') }) as Record<string, string>,
+        : { index: path.resolve('index.html'), app: path.resolve('app.html'), demo: path.resolve('Demo.html') }) as Record<string, string>,
     },
   },
   test: {

@@ -14,6 +14,9 @@ export const RELOJ = `(() => {
 })();`
 
 export const AYUDANTE = `(() => {
+  // El aviso «¿Te enseño cómo funciona?» saldría en cada prueba (empiezan de cero): se da por ofrecido,
+  // salvo en las pruebas del tutorial (sessionStorage.__e2e_tutorial).
+  try { if (!sessionStorage.getItem('__e2e_tutorial')) localStorage.setItem('jf-tutorial-ofrecido', '1') } catch {}
   const dormir = ms => new Promise(r => setTimeout(r, ms))
   const limpio = s => (s || '').replace(/\\s+/g, ' ').trim()
   const visible = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden' }

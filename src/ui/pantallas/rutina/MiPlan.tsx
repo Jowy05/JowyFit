@@ -54,7 +54,7 @@ export function MiPlan() {
       <CabRutina actual="rut" crumb={crumb} />
       <div className="pg">
         <div className="sec">
-          <div className="spec-box">
+          <div className="spec-box" data-tour="rutina">
             <div className="spec-h mt8">
               <h2 className="h3">{r.estructura}</h2>
               {r.calibracion ? <span className="tag warn"><Ico n="gauge" b />Semana de prueba</span> : <span className="tag ok"><Ico n="check" b />Definitiva</span>}

@@ -42,6 +42,8 @@ export type AccionNav =
   | { t: 'minimizar' }
   | { t: 'restaurar' }
   | { t: 'raiz'; pestana: Pestana }
+  /** Vuelve a un estado guardado (el tutorial deja la app como la encontró). */
+  | { t: 'poner'; estado: EstadoNav }
 
 export function reducirNav(s: EstadoNav, a: AccionNav): EstadoNav {
   switch (a.t) {
@@ -76,6 +78,8 @@ export function reducirNav(s: EstadoNav, a: AccionNav): EstadoNav {
       return s.completa ? { ...s, completa: null, hoja: null, minimizada: s.completa } : s
     case 'restaurar':
       return s.minimizada ? { ...s, completa: s.minimizada, minimizada: null, hoja: null } : s
+    case 'poner':
+      return a.estado
   }
 }
 
@@ -104,6 +108,7 @@ type Nav = {
   completa: (p: string | null, d?: Record<string, unknown>) => void
   minimizar: () => void
   restaurar: () => void
+  poner: (estado: EstadoNav) => void
   actual: Ruta
 }
 
@@ -120,10 +125,11 @@ export function ProveedorNav({ children, inicial }: { children: ReactNode; inici
   const completa = useCallback((p: string | null, datos?: Record<string, unknown>) => d({ t: 'completa', ruta: p ? { p, d: datos } : null }), [])
   const minimizar = useCallback(() => d({ t: 'minimizar' }), [])
   const restaurar = useCallback(() => d({ t: 'restaurar' }), [])
+  const poner = useCallback((e: EstadoNav) => d({ t: 'poner', estado: e }), [])
   const pila = estado.pilas[estado.pestana]
   const actual = estado.completa ?? pila[pila.length - 1]!
-  const valor = useMemo<Nav>(() => ({ estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, actual }),
-    [estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, actual])
+  const valor = useMemo<Nav>(() => ({ estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, poner, actual }),
+    [estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, poner, actual])
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }
 

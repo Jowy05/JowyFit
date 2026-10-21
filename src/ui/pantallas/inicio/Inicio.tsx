@@ -75,7 +75,7 @@ export function Inicio() {
         titulo={`${saludo()}${perfil.nombre ? `, ${perfil.nombre}` : ''}`}
         derecha={<button className="ib" aria-label="Ajustes" onClick={() => nav.ir('aju')}><Ico n="gear" /></button>}
       >
-        <div className="week mt12" role="list">
+        <div className="week mt12" role="list" data-tour="semana">
           {semana.map((e, i) => (
             <button key={e.fecha} role="listitem" className={cx('wd', e.hoy ? 'today' : e.estado === 'plan' ? 'plan' : e.estado === 'opcional' ? 'opt' : 'off')} onClick={() => aviso(describe(e))}>
               <span>{DIAS_CORTOS[i]}</span>
@@ -99,7 +99,7 @@ export function Inicio() {
       <div className="pg">
         <SemanaSuave rutina={rutina ?? null} />
 
-        <Seccion titulo="Hoy te toca" accion={tarjeta.tipo === 'hoy' ? 'Ver día' : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('rut-dia', { letra: tarjeta.dia.letra }, 'rut')}>
+        <Seccion tour="hoy" titulo="Hoy te toca" accion={tarjeta.tipo === 'hoy' ? 'Ver día' : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('rut-dia', { letra: tarjeta.dia.letra }, 'rut')}>
           <TarjetaHoy t={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre == null ? undefined : recortar(gym.nombre, LARGO.nombre)} />
         </Seccion>
 
@@ -109,7 +109,7 @@ export function Inicio() {
         {/* Los accesos rápidos, a mano: antes había que bajar tres pantallas para llegar a «+ Comer o beber». */}
         <div className="sec">
           {/* Comida y picoteo abrían la misma hoja: un solo botón (no hay que decidir si un café es comida o picoteo). */}
-          <div className="qa-row ux-qa3">
+          <div className="qa-row ux-qa3" data-tour="atajos">
             <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy })}><Ico n="fork-knife" /><span>+ Comer o beber</span></button>
             <button className="qa" onClick={() => nav.ir('com-scan', undefined, 'com')}><Ico n="barcode" /><span>Escanear</span></button>
             <button className="qa" onClick={() => nav.hoja('sheet-peso')}><Ico n="scales" /><span>+ Peso</span></button>
@@ -118,7 +118,7 @@ export function Inicio() {
 
         {guia && <PrimerosPasos g={guia} />}
 
-        <Seccion titulo="Hoy en números" accion="Comida" onAccion={() => nav.pestana('com')}>
+        <Seccion tour="numeros" titulo="Hoy en números" accion="Comida" onAccion={() => nav.pestana('com')}>
           <div className="grid2">
             <div className="card kpi span2">
               <div className="row jb">
@@ -373,7 +373,7 @@ function Pendientes() {
   const visibles = lista.filter(p => !ocultos.includes(p.id))
   if (!visibles.length) return null
   return (
-    <Seccion titulo="Pendientes de hoy" extra={<span className="lbl">{visibles.length}</span>}>
+    <Seccion tour="pendientes" titulo="Pendientes de hoy" extra={<span className="lbl">{visibles.length}</span>}>
       <div className="list">
         {visibles.map(p => (
           <button key={p.id} className={cx('it todo', p.hecho && 'done')} onClick={() => {

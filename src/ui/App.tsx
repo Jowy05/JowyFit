@@ -1,5 +1,5 @@
 // Armazón de la app: carga inicial, alta de usuario, pestañas, hojas y mini barra de entreno.
-import { Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, type ComponentType } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cargarCatalogo } from '../catalogo/catalogo'
 import { db, pedirPersistencia } from '../datos/db'
@@ -16,6 +16,7 @@ import { MiniBarra } from './pantallas/entreno/MiniBarra'
 import { arrancarServicios } from './servicios'
 import { alPedirInstrucciones, ensenarAlEmpezar, Instalar, marcarVistas } from './pantallas/instalar/Instalar'
 import { PantallaRescate, RedSeguridad } from './Rescate'
+import { alLanzarTutorial, marcarTutorialOfrecido, Tutorial, tutorialOfrecido } from './tutorial/Tutorial'
 import './estilos/ux-iphone.css'
 
 // Apple: estilos propios (barra de estado de la app instalada). En todas partes: el sonido se abre con el primer
@@ -78,9 +79,16 @@ function Marco() {
   const [letra, setLetra] = useState(letraGuardada())
   const estado = useRef(nav.estado)
   estado.current = nav.estado
+  // Tutorial: se lanza desde la hoja de bienvenida o desde Ajustes. Mientras dura, «atrás» lo cierra.
+  const [tutorial, setTutorial] = useState(false)
+  const enTutorial = useRef(false)
+  enTutorial.current = tutorial
+  const cerrarTutorial = useCallback(() => setTutorial(false), [])
+  useEffect(() => alLanzarTutorial(() => setTutorial(true)), [])
 
   useEffect(() => {
     const manejar = () => {
+      if (enTutorial.current) { setTutorial(false); return true }
       const que = queHaceAtras(estado.current)
       if (que === 'preguntar-entreno') nav.hoja('sheet-salir-entreno')
       else if (que === 'atras') nav.atras()
@@ -100,6 +108,20 @@ function Marco() {
   }, [])
 
   useEffect(() => arrancarServicios(), [])
+
+  // La primera vez, con Inicio ya a la vista, se ofrece el tutorial (una sola vez; luego está en Ajustes).
+  // En Apple, si están saliendo las instrucciones para instalarla, se espera a que se cierren.
+  const libre = nav.estado.pestana === 'ini' && !nav.estado.hoja && !nav.estado.completa && !tutorial
+  useEffect(() => {
+    if (!libre || tutorialOfrecido()) return
+    const t = window.setInterval(() => {
+      if (document.getElementById('instalar')) return
+      window.clearInterval(t)
+      marcarTutorialOfrecido()
+      nav.hoja('sheet-tutorial')
+    }, 1500)
+    return () => window.clearInterval(t)
+  }, [libre, nav])
   // Con Inicio ya pintado, se trae el código del resto de pantallas sin estorbar.
   useEffect(() => { const t = window.setTimeout(precargarPantallas, 1200); return () => window.clearTimeout(t) }, [])
 
@@ -143,6 +165,7 @@ function Marco() {
           </RedSeguridad>
         </>
       )}
+      {tutorial && <Tutorial alCerrar={cerrarTutorial} />}
     </div>
   )
 }

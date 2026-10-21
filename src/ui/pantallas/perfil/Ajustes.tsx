@@ -17,6 +17,7 @@ import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil } from '../../datos'
 import { guardarLetra, guardarTema, letraGuardada, temaGuardado, type Letra, type PreferenciaTema } from '../../tema'
 import { activarBascula, comprobarSalud, conectarSalud, copiaCompartiendo, hacerCopiaAhora, reprogramarNotificaciones, sincronizarPasos, type CopiaPreparada } from '../../servicios'
+import { lanzarTutorial } from '../../tutorial/Tutorial'
 import { abrirInstrucciones } from '../instalar/Instalar'
 import { diasTxt } from './textos'
 
@@ -222,7 +223,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
         {apple ? null : !esAndroid() ? (
           <p className="note plain"><Ico n="watch" /><span><b>Solo en la app de Android:</b> los pasos y el peso se apuntan a mano.</span></p>
         ) : hayPasos ? (
-          <div className="list">
+          <div className="list" data-tour="reloj">
             <div className="it col">
               <span className="row"><span className="ico"><Ico n="heartbeat" /></span><span className="tx"><b>Health Connect</b><small>{conectado
                 ? `Conectado: ${conectadoTodo ? 'pasos, peso y grasa' : a.fuentePasos === 'auto' ? 'pasos' : 'peso y grasa'}. Se actualiza solo al abrir la app.`
@@ -234,7 +235,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
             </div>
           </div>
         ) : (
-          <div className="list">
+          <div className="list" data-tour="reloj">
             <div className="it col">
               <span className="row"><span className="ico"><Ico n="heartbeat" /></span><span className="tx"><b>Health Connect no está listo en este móvil</b><small>En Android 14 o más viene con el móvil: Ajustes → Seguridad y privacidad → Privacidad → Health Connect. En Android 13 o menos, se instala desde Google Play.</small></span></span>
               <button className="btn ln sm w100" onClick={() => void abrirHealthConnect().then(ok => { if (!ok) aviso('No se ha podido abrir: búscalo en los ajustes del móvil o en Google Play') })}>Abrir Health Connect</button>
@@ -246,7 +247,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
         {apple && (
           <>
             <p className="grp-t">{apple === 'mac' ? 'App en el Dock' : 'App en la pantalla de inicio'}</p>
-            <div className="list">
+            <div className="list" data-tour="instalar">
               <button className="it" onClick={abrirInstrucciones}>
                 <span className="ico"><Ico n={apple === 'mac' ? 'desktop' : 'device-mobile'} /></span>
                 <span className="tx"><b>{apple === 'mac' ? 'Cómo ponerla en el Dock' : 'Cómo ponerla en la pantalla de inicio'}</b><small>{estaInstalada() ? 'Ya la tienes instalada · ver los pasos' : 'Se abre como una app, a pantalla completa y sin internet'}</small></span>
@@ -258,7 +259,7 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
 
         {/* ---------- Informe en PDF: arriba, junto a la copia (se busca aquí para enseñar o guardar los datos) ---------- */}
         <p className="grp-t">Informe en PDF</p>
-        <div className="list">
+        <div className="list" data-tour="informe">
           <button className="it" onClick={() => nav.hoja('sheet-informe')}>
             <span className="ico"><Ico n="file-pdf" /></span>
             <span className="tx"><b>Informe en PDF</b><small>Tus entrenos, tu comida y tu cuerpo en un PDF para guardar o enseñar</small></span>
@@ -266,10 +267,20 @@ export function Ajustes({ ruta }: { ruta: Ruta }) {
           </button>
         </div>
 
+        {/* ---------- Ayuda: el tutorial, siempre a mano ---------- */}
+        <p className="grp-t">Ayuda</p>
+        <div className="list" data-tour="tutorial">
+          <button className="it" onClick={lanzarTutorial}>
+            <span className="ico"><Ico n="hand-pointing" /></span>
+            <span className="tx"><b>Ver el tutorial</b><small>Un paseo rápido por la app: qué hace cada pantalla</small></span>
+            <Ico n="caret-right" className="car" />
+          </button>
+        </div>
+
         {/* ---------- Copia de seguridad ---------- */}
         <p className="grp-t" ref={refDatos} id="aju-datos">Copia de seguridad</p>
         <p className="note ok"><Ico n="device-mobile-camera" /><span><b>Todo se guarda en este móvil.</b> Una copia de vez en cuando te sirve si cambias de móvil o se borra algo.</span></p>
-        <div className="list mt8">
+        <div className="list mt8" data-tour="copia">
           <button className="it" disabled={ocupado} onClick={() => void copiaAhora()}>
             <span className="ico"><Ico n="floppy-disk" /></span>
             <span className="tx"><b>{copiaLista ? 'Guardar la copia' : 'Hacer copia ahora'}</b><small>{copiaLista

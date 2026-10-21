@@ -45,7 +45,7 @@ async function abrir(motor, nombre) {
   await ctx.route(/images\.openfoodfacts\.org/, route => { v.off.push(route.request().url()); return route.fulfill({ contentType: 'image/png', body: PNG }) })
   await ctx.route(/seguimiento\.invalid/, route => { v.espia.push(route.request().url()); return route.abort() })
   // En Safari la app enseña al empezar cómo instalarla: ya vistas (la prueba no va de eso).
-  await ctx.addInitScript(() => { try { localStorage.setItem('jf-instalar-visto', '2026-10-20T00:00:00.000Z') } catch { /* nada */ } })
+  await ctx.addInitScript(() => { try { localStorage.setItem('jf-instalar-visto', '2026-10-20T00:00:00.000Z'); localStorage.setItem('jf-tutorial-ofrecido', '1') } catch { /* nada */ } })
   const page = await ctx.newPage()
   page.on('console', m => {
     const t = m.text()

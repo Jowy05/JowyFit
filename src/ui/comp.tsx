@@ -193,9 +193,9 @@ export function Dato({ k, v, onClick }: { k: ReactNode; v: ReactNode; onClick?: 
   return <p onClick={onClick}><span>{k}</span><b>{v}</b></p>
 }
 
-export function Seccion({ titulo, accion, onAccion, extra, children, className }: { titulo: ReactNode; accion?: ReactNode; onAccion?: () => void; extra?: ReactNode; children: ReactNode; className?: string }) {
+export function Seccion({ titulo, accion, onAccion, extra, children, className, tour }: { titulo: ReactNode; accion?: ReactNode; onAccion?: () => void; extra?: ReactNode; children: ReactNode; className?: string; /** Ancla del tutorial. */ tour?: string }) {
   return (
-    <div className={cx('sec', className)}>
+    <div className={cx('sec', className)} data-tour={tour}>
       <div className="sec-h">
         <h2>{titulo}</h2>
         {accion && <button className="lnk" onClick={onAccion}>{accion} <Ico n="caret-right" /></button>}

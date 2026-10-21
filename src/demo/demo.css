@@ -1,0 +1,131 @@
+/* Demo (/Demo): mismo aire que la landing (noche, morado del icono, Barlow) y un móvil con las capturas. */
+:root {
+  --n0: #0A0E13; --n1: #10151C; --n2: #18202A; --n-line: #2B394A;
+  --n-ink: #F3F6FA; --n-sub: #C9D4E0; --n-muted: #A9B8C9; --n-acc: #B98CFF;
+  --go: #7F26FB; --go-hover: #8F42FF; --go-press: #6A12E6; --on-go: #FFFFFF;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-disp: "Barlow Semi Condensed", "Barlow", system-ui, sans-serif;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--n-ink); font: 17px/1.5 var(--f-body); -webkit-font-smoothing: antialiased;
+  background: radial-gradient(90% 70% at 30% 40%, rgba(127, 38, 251, .22) 0%, rgba(127, 38, 251, 0) 60%), linear-gradient(180deg, #0A0E13 0%, #0E131A 55%, #150E22 100%);
+  background-attachment: fixed;
+}
+a { color: var(--n-acc); }
+button { font: inherit; }
+:focus-visible { outline: 3px solid var(--n-acc); outline-offset: 3px; border-radius: 10px; }
+[hidden] { display: none !important; }
+[data-plataforma='android'] .solo-apple, [data-plataforma='apple'] .solo-android { display: none !important; }
+
+/* Cabecera */
+.d-cab { max-width: 1120px; margin: 0 auto; padding: max(14px, env(safe-area-inset-top)) 20px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.d-marca { display: inline-flex; align-items: center; gap: 10px; color: var(--n-ink); text-decoration: none; font: 700 20px var(--f-disp); letter-spacing: .01em; }
+.d-marca img { border-radius: 9px; display: block; }
+.d-volver { color: var(--n-sub); font-weight: 500; font-size: 15px; text-decoration: none; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(243, 246, 250, .16); }
+.d-volver:hover { background: rgba(243, 246, 250, .06); }
+
+.d-main { max-width: 1120px; margin: 0 auto; padding: 18px 20px 40px; }
+.d-intro { text-align: center; }
+.d-titulillo { margin: 0; font: 700 13px var(--f-disp); letter-spacing: .14em; text-transform: uppercase; color: var(--n-acc); }
+.d-intro h1 { margin: 4px 0 0; font: 800 clamp(32px, 6vw, 52px)/1.04 var(--f-disp); letter-spacing: -.02em; }
+.d-plat { display: inline-flex; gap: 4px; margin-top: 14px; padding: 4px; border-radius: 14px; background: rgba(243, 246, 250, .06); border: 1px solid rgba(243, 246, 250, .12); }
+.d-plat button { min-height: 40px; padding: 0 18px; border: 0; border-radius: 10px; background: none; color: var(--n-sub); font-weight: 600; cursor: pointer; }
+.d-plat button[aria-selected='true'] { background: var(--go); color: var(--on-go); }
+
+/* Escena: móvil + tarjeta */
+.d-escena { display: grid; justify-items: center; gap: 18px; margin-top: 18px; }
+.d-movil {
+  --w: min(74vw, calc((100dvh - 330px) * 390 / 844), 330px);
+  margin: 0; width: var(--w); padding: calc(var(--w) * .035); border-radius: calc(var(--w) * .15); background: #0B0F14;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10), 0 0 0 1px #000, 0 40px 80px -24px rgba(0, 0, 0, .65), 0 0 120px -10px rgba(127, 38, 251, .35);
+}
+.d-pantalla { position: relative; aspect-ratio: 390 / 844; border-radius: calc(var(--w) * .12); overflow: hidden; background: #F2F4F7; }
+.d-cap { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .32s var(--ease); }
+.d-cap.ver { opacity: 1; }
+/* El foco: hueco en un velo (sombra enorme) con el borde morado; se apaga mientras cambia la pantalla. */
+.d-foco {
+  position: absolute; border-radius: 3.5%/1.6%; pointer-events: none; opacity: 0;
+  box-shadow: 0 0 0 2px var(--go), 0 0 0 5px rgba(127, 38, 251, .35), 0 0 0 200vmax rgba(8, 6, 18, .55);
+  transition: opacity .25s var(--ease), left .35s var(--ease), top .35s var(--ease), width .35s var(--ease), height .35s var(--ease);
+}
+.d-foco.visible { opacity: 1; }
+
+.d-tarjeta, .d-final {
+  width: min(100%, 460px); background: rgba(24, 32, 42, .92); border: 1px solid var(--n-line); border-radius: 22px; padding: 18px 18px 14px;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, .7);
+}
+.d-cap-n { margin: 0; font: 700 12.5px var(--f-disp); letter-spacing: .1em; text-transform: uppercase; color: var(--n-acc); }
+.d-tarjeta h2 { margin: 4px 0 0; font: 700 clamp(22px, 3.2vw, 28px)/1.15 var(--f-disp); letter-spacing: -.01em; }
+.d-texto { margin: 6px 0 0; color: var(--n-sub); font-size: 17px; line-height: 1.45; min-height: 3em; }
+.d-barras { display: flex; gap: 4px; margin-top: 14px; }
+.d-barra { flex: 1; height: 16px; padding: 6px 0; border: 0; background: none; cursor: pointer; }
+.d-barra i { display: block; height: 4px; border-radius: 4px; background: rgba(243, 246, 250, .16); position: relative; overflow: hidden; }
+.d-barra i::after { content: ''; position: absolute; inset: 0; width: var(--lleno, 0%); background: var(--go); border-radius: 4px; }
+.d-barra.hecha i::after { --lleno: 100%; }
+.d-barra.actual i::after { animation: inherit; }
+@keyframes d-llenar { from { width: 0; } to { width: 100%; } }
+.d-barra.actual i::after { width: 0; animation-name: d-llenar; animation-duration: inherit; animation-timing-function: linear; animation-fill-mode: forwards; animation-play-state: inherit; }
+
+.d-controles { display: flex; gap: 8px; margin-top: 10px; }
+.d-b { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 14px; cursor: pointer; font-weight: 600; }
+.d-b svg { width: 20px; height: 20px; }
+.d-b-sec { background: var(--n2); color: var(--n-ink); border: 1px solid rgba(243, 246, 250, .22); }
+.d-b-sec:hover { background: #1F2935; }
+.d-b-play { flex: 1; background: var(--go); color: var(--on-go); border: 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 10px 24px -10px rgba(127, 38, 251, .7); }
+.d-b-play:hover { background: var(--go-hover); }
+.d-b-play .i-play, .d-b-play[data-estado='pausa'] .i-pausa { display: none; }
+.d-b-play[data-estado='pausa'] .i-play { display: block; }
+.d-teclas { margin: 10px 0 0; font-size: 13px; color: var(--n-muted); text-align: center; }
+@media (hover: none) { .d-teclas { display: none; } }
+
+.d-final { text-align: center; padding: 24px 20px 20px; }
+.d-final img { display: block; margin: 0 auto 12px; border-radius: 22px; box-shadow: 0 10px 30px rgba(127, 38, 251, .45); }
+.d-final h2 { margin: 0; font: 800 30px/1.1 var(--f-disp); }
+.d-final p { margin: 8px 0 18px; color: var(--n-sub); }
+.d-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border-radius: 16px; text-decoration: none;
+  background: var(--go); color: var(--on-go); font: 700 19px var(--f-disp); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 12px 28px -10px rgba(127, 38, 251, .6);
+}
+.d-cta:hover { background: var(--go-hover); }
+.d-cta svg { width: 22px; height: 22px; }
+.d-otra { width: 100%; margin-top: 10px; }
+
+/* Escritorio: el móvil a la izquierda y la tarjeta al lado */
+@media (min-width: 880px) {
+  .d-main { padding-top: 28px; }
+  .d-escena { grid-template-columns: auto minmax(0, 460px); justify-content: center; align-items: center; gap: 56px; margin-top: 28px; }
+  .d-movil { --w: min(340px, calc((100dvh - 250px) * 390 / 844)); }
+  .d-tarjeta, .d-final { padding: 24px 24px 18px; }
+}
+.d-otro-movil { display: none; }
+
+/* Móvil: la captura a pantalla completa, como la app de verdad, y la tarjeta encima o debajo de lo señalado. */
+@media (max-width: 640px) {
+  body { overflow: hidden; height: 100dvh; background: #F2F4F7; }
+  .d-cab { position: fixed; top: 0; left: 0; right: 0; z-index: 6; max-width: none; padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: rgba(10, 14, 19, .92); backdrop-filter: blur(10px); }
+  .d-marca { font-size: 18px; }
+  .d-marca img { width: 30px; height: 30px; }
+  .d-volver { padding: 6px 10px; font-size: 14px; }
+  .d-main { padding: 0; }
+  .d-intro { display: none; }
+  .d-escena { position: fixed; inset: 0; margin: 0; display: block; }
+  .d-movil { --w: 100vw; position: absolute; inset: 0; width: auto; padding: 0; border-radius: 0; background: #F2F4F7; box-shadow: none; overflow: hidden; }
+  .d-pantalla { position: absolute; left: 0; top: 0; aspect-ratio: auto; border-radius: 0; overflow: visible; transition: transform .35s var(--ease); }
+  .d-tarjeta { position: fixed; left: 10px; right: 10px; width: auto; z-index: 5; padding: 14px 14px 10px; border-radius: 18px; background: rgba(24, 32, 42, .97); }
+  .d-tarjeta[data-donde='abajo'] { bottom: max(10px, env(safe-area-inset-bottom)); }
+  .d-tarjeta[data-donde='arriba'] { top: calc(var(--cab, 56px) + 10px); }
+  .d-tarjeta h2 { font-size: 21px; }
+  .d-texto { font-size: 15.5px; min-height: 0; }
+  .d-barras { margin-top: 10px; }
+  .d-controles { margin-top: 6px; }
+  .d-b { min-height: 44px; }
+  .d-otro-movil { display: block; width: 100%; margin-top: 6px; min-height: 36px; border: 0; background: none; color: var(--n-acc); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .d-final { position: fixed; left: 12px; right: 12px; top: 50%; transform: translateY(-50%); width: auto; z-index: 5; box-shadow: 0 0 0 200vmax rgba(8, 6, 18, .6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .d-cap, .d-foco, .d-pantalla { transition: none; }
+}

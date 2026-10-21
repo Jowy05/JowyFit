@@ -5,6 +5,8 @@ import type { Ruta } from '../nav'
 import { Inicio } from './inicio/Inicio'
 import { HojaPeso } from './inicio/HojaPeso'
 import { HojaConfirmar } from './HojaConfirmar'
+// El tutorial ya va en el arranque (App lo pinta): su hoja de bienvenida, sin carga aparte.
+import { HojaOfertaTutorial } from '../tutorial/Tutorial'
 
 type P = ComponentType<{ ruta: Ruta }>
 type Modulo = Record<string, unknown>
@@ -120,4 +122,5 @@ export const HOJAS: Record<string, P> = {
   'sheet-trote': HojaTrote,
   'sheet-confirmar': HojaConfirmar,
   'sheet-informe': HojaInforme,
+  'sheet-tutorial': HojaOfertaTutorial,
 }

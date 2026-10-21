@@ -24,7 +24,7 @@ export function CabProgreso({ actual, crumb, derecha, children }: { actual: Pest
   const nav = useNav()
   return (
     <Cab crumb={crumb} titulo="Progreso" derecha={derecha}>
-      <Seg valor={actual} onCambio={v => { if (v !== actual) nav.reemplazar(v) }} opciones={PESTANAS} />
+      <div data-tour="progreso"><Seg valor={actual} onCambio={v => { if (v !== actual) nav.reemplazar(v) }} opciones={PESTANAS} /></div>
       {children}
     </Cab>
   )

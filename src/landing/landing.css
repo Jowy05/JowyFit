@@ -156,6 +156,19 @@ h1 {
 .boton-sec .ico { font-size: 1.375rem; }
 .boton-sec:hover { background: var(--acc-tint); }
 .boton-sec:focus-visible { outline-color: var(--link); }
+/* «Ver la demo»: botón secundario sobre fondo de noche (cabecera y cierre). */
+.boton-demo {
+  display: inline-flex; align-items: center; gap: 12px; min-height: 52px; margin-top: 12px; padding: 6px 20px 6px 6px; border-radius: 999px;
+  color: var(--n-ink); text-decoration: none; font-weight: 600; font-size: 1.0625rem;
+  background: rgba(243, 246, 250, .06); border: 1px solid rgba(243, 246, 250, .22); transition: background 160ms var(--ease-estandar), border-color 160ms var(--ease-estandar);
+}
+.boton-demo:hover { background: rgba(127, 38, 251, .16); border-color: rgba(185, 140, 255, .55); }
+.boton-demo small { font-size: .9375rem; font-weight: 500; color: var(--n-sub); }
+.bd-play { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--go); color: #FFFFFF; box-shadow: 0 6px 18px -6px rgba(127, 38, 251, .8); }
+.bd-play .ico { font-size: 1.125rem; }
+.botones .boton-demo { margin-top: 0; align-self: center; }
+.hero-cta > .boton-go, .hero-cta > .boton-demo { vertical-align: middle; }
+@media (min-width: 600px) { .hero-cta > .boton-demo { margin: 0 0 0 10px; } }
 .botones-sec { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 
 /* Debajo del botón */

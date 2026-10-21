@@ -1,8 +1,8 @@
 // Piezas que se repiten en el PDF (§2 del diseño): páginas con su cabecera y pie, el flujo que pasa de página
 // cuando un bloque no cabe, títulos, notas, fichas, tablas (Fitdays y de lista), chips de esfuerzo y el logo.
-import type { PDFDocument } from 'pdf-lib'
+import type { PDFDocument, PDFImage } from 'pdf-lib'
 import type { Informe, TonoInforme } from '../dominio/informe'
-import { ALTO_A4, ANCHO_A4, C, Lienzo, MM, type Ancla, type Fuentes, type Peso, type Trozo } from './lienzo'
+import { ALTO_A4, ANCHO_A4, C, ESTILO, Lienzo, MM, fondoCab, fondoCasilla, letraCab, type Ancla, type Fuentes, type Peso, type Trozo } from './lienzo'
 
 type PdfLib = typeof import('pdf-lib')
 
@@ -16,7 +16,10 @@ export const FONDO = 283.6
 export const ARRIBA = 19.1
 
 /** Color de cada tono del informe. */
-export const TONO: Record<TonoInforme, string> = { ok: C.verde, warn: C.ambar, bad: C.rojo, gris: C.gris, tinta: C.tinta, oro: C.oro, azul: C.facil }
+export const TONO: Record<TonoInforme, string> = {
+  get ok() { return C.verde }, get warn() { return C.ambar }, get bad() { return C.rojo }, get gris() { return C.gris },
+  get tinta() { return C.tinta }, get oro() { return C.oro }, get azul() { return C.facil },
+}
 
 /** Mezcla un color con blanco (fondo de chips y etiquetas). */
 export function claro(hex: string, a: number): string {
@@ -43,13 +46,17 @@ export class Maqueta {
   portada(): { l: Lienzo; y: number } {
     const l = this.nueva()
     const cab = this.inf.cabecera
-    l.texto(IZQ, 20, cab.titulo, { tam: 25, peso: 'negrita', color: C.titulo })
+    if (ESTILO.portada === 'franja') l.rect(0, 0, ANCHO_A4, 3.2, ESTILO.acento)
+    l.texto(IZQ, 20, cab.titulo, { tam: ESTILO.titulos === 'times' ? 27 : 25, peso: 'titulo', color: C.titulo })
     const wMarca = l.ancho('JowyFit', 15)
     l.texto(DER, 18.6, 'JowyFit', { tam: 15, color: C.titulo, anc: 'end' })
     logo(l, DER - wMarca - 2 - 8, 12.4, 8)
     // Banda: los datos repartidos de lado a lado; lo último, más pequeño y en gris.
     const y0 = 25, h = 7.7
-    l.rect(IZQ, y0, ANCHO, h, C.banda)
+    if (ESTILO.portada === 'rayas') {
+      l.linea(IZQ, y0, DER, y0, C.titulo, 0.5)
+      l.linea(IZQ, y0 + h, DER, y0 + h, C.linea, 0.25)
+    } else l.rect(IZQ, y0, ANCHO, h, C.banda)
     const items: Trozo[][] = []
     if (cab.nombre) items.push([{ t: 'Nombre: ' }, { t: cab.nombre, peso: 'negrita' }])
     if (cab.sexo) items.push([{ t: cab.sexo }])
@@ -64,14 +71,14 @@ export class Maqueta {
     const ws = anchos()
     const libre = ANCHO - 8 - ws.reduce((a, b) => a + b, 0) - wUlt()
     const hueco = libre / Math.max(1, items.length)
-    let x = IZQ + 4
+    let x = IZQ + (ESTILO.portada === 'rayas' ? 0 : 4)
     const base = y0 + h / 2 + 1.1
     items.forEach((it, i) => {
       let xx = x
       for (const tr of it) xx += l.texto(xx, base, tr.t, { tam, peso: tr.peso, color: C.titulo })
       x += ws[i]! + hueco
     })
-    l.texto(DER - 4, base, ultimo, { tam: tam - 1.5, color: C.gris, anc: 'end' })
+    l.texto(DER - (ESTILO.portada === 'rayas' ? 0 : 4), base, ultimo, { tam: tam - 1.5, color: C.gris, anc: 'end' })
     return { l, y: y0 + h + 3 }
   }
 
@@ -79,6 +86,7 @@ export class Maqueta {
   corrida(): Lienzo {
     const l = this.nueva()
     const cab = this.inf.cabecera
+    if (ESTILO.portada === 'franja') l.rect(0, 0, ANCHO_A4, 1.6, ESTILO.acento)
     logo(l, IZQ, 10.9, 5)
     const x = IZQ + 6.5
     const w1 = l.texto(x, 14.9, 'JowyFit', { tam: 9.5, peso: 'negrita', color: C.titulo })
@@ -162,11 +170,13 @@ export const altoH2 = (margen: number) => margen + 4.2 + 2.9 + 2.1
 /** Título de sección (13,5 pt) con un subtítulo pequeño al lado y la raya fina debajo. Devuelve su alto. */
 export function h2(l: Lienzo, x: number, y: number, w: number, texto: string, sub: string | null = null, margen = 4.2): number {
   const base = y + margen + 4.2
-  let tam = 13.5
-  while (tam > 11 && l.ancho(texto, tam, 'negrita') > w) tam -= 0.5
-  const wt = l.texto(x, base, l.cortar(texto, w, tam, 'negrita'), { tam, peso: 'negrita', color: C.titulo })
+  let tam = ESTILO.titulos === 'times' ? 15 : 13.5
+  const sangria = adorno(l, x, base, tam, ESTILO.h2)
+  const wDisp = w - sangria
+  while (tam > 11 && l.ancho(texto, tam, 'titulo') > wDisp) tam -= 0.5
+  const wt = sangria + l.texto(x + sangria, base, l.cortar(texto, wDisp, tam, 'titulo'), { tam, peso: 'titulo', color: C.titulo })
   if (sub && w - wt - 2.2 > 12) l.texto(x + wt + 2.2, base, l.cortar(sub, w - wt - 2.2, 7), { tam: 7, color: C.gris })
-  l.linea(x, base + 2.9, x + w, base + 2.9, C.linea, 0.25)
+  raya(l, x, base + 2.9, w, wt)
   return altoH2(margen)
 }
 
@@ -175,10 +185,26 @@ export const altoH3 = (margen: number) => margen + 3.6 + 2.3 + 1.8
 /** Título del lateral (11,5 pt). */
 export function h3(l: Lienzo, x: number, y: number, w: number, texto: string, sub: string | null = null, margen = 3.6): number {
   const base = y + margen + 3.6
-  const wt = l.texto(x, base, texto, { tam: 11.5, peso: 'negrita', color: C.titulo })
+  const tam = ESTILO.titulos === 'times' ? 13 : 11.5
+  const sangria = adorno(l, x, base, tam, ESTILO.h2)
+  const wt = sangria + l.texto(x + sangria, base, l.cortar(texto, w - sangria, tam, 'titulo'), { tam, peso: 'titulo', color: C.titulo })
   if (sub) l.texto(x + wt + 2, base, l.cortar(sub, w - wt - 2, 7), { tam: 7, color: C.gris })
-  l.linea(x, base + 2.3, x + w, base + 2.3, C.linea, 0.25)
+  raya(l, x, base + 2.3, w, wt)
   return altoH3(margen)
+}
+
+/** Adorno delante de un título según el estilo (barrita o cuadrito de color). Devuelve cuánto se corre el texto. */
+function adorno(l: Lienzo, x: number, base: number, tam: number, tipo: typeof ESTILO.h2): number {
+  const alto = tam * 0.3528 * 0.74
+  if (tipo === 'barra') { l.rect(x, base - alto, 1.1, alto + 0.2, ESTILO.acento); return 2.8 }
+  if (tipo === 'cuadro') { const t = alto * 0.52; l.rect(x, base - alto / 2 - t / 2, t, t, ESTILO.acento, 0.3); return t + 2 }
+  return 0
+}
+
+/** Raya debajo de un título: fina, o fina con un tramo grueso de color bajo el texto («gruesa»). */
+function raya(l: Lienzo, x: number, y: number, w: number, wTexto: number) {
+  l.linea(x, y, x + w, y, C.linea, 0.25)
+  if (ESTILO.h2 === 'gruesa') l.rect(x, y - 0.45, Math.min(w, wTexto), 0.9, ESTILO.acento)
 }
 
 const INTER_NOTA = 6.8 * 0.3528 * 1.35
@@ -218,8 +244,13 @@ export function tituloGrafica(l: Lienzo, x: number, y: number, w: number, texto:
 
 // ---------------------------------------------------------------- logo, chips y flechas
 
-/** El logo de la app (cuadrado naranja con la mancuerna de public/icono.svg), dibujado con rectángulos. */
+let ICONO: PDFImage | null = null
+/** El icono de la app ya metido en el PDF (o null para volver al dibujado). */
+export function ponerIcono(img: PDFImage | null) { ICONO = img }
+
+/** El logo de la app: el icono (PNG) si está; si no, el cuadrado de color con la mancuerna, dibujado con rectángulos. */
 export function logo(l: Lienzo, x: number, y: number, t: number) {
+  if (ICONO) { l.imagen(ICONO, x, y, t, t); return }
   const s = t / 512
   l.rect(x, y, t, t, C.logo, 112 * s)
   for (const [rx, ry, rw, rh, rr] of [[128, 241, 256, 30, 10], [116, 168, 44, 176, 14], [76, 204, 34, 104, 12], [352, 168, 44, 176, 14], [402, 204, 34, 104, 12]] as const) {
@@ -276,7 +307,9 @@ export function fichas(l: Lienzo, x: number, y: number, w: number, fs: Ficha[], 
   const wf = (w - gap * (fs.length - 1)) / fs.length
   fs.forEach((f, i) => {
     const fx = x + i * (wf + gap)
-    l.rect(fx, y, wf, h, C.celda, 1.5)
+    if (ESTILO.fichas === 'relleno') l.rect(fx, y, wf, h, C.celda, 1.5)
+    else if (ESTILO.fichas === 'borde') l.marco(fx, y, wf, h, ESTILO.borde, 0.3, 1.5)
+    else { l.marco(fx, y, wf, h, ESTILO.borde, 0.3); l.rect(fx, y, wf, 0.9, ESTILO.acento) }
     const pad = 2.5, ancho = wf - 2 * pad
     l.texto(fx + pad, y + 4.3, l.cortar(f.etq.toUpperCase(), ancho, 6.5, 'negrita'), { tam: 6.5, peso: 'negrita', color: C.gris, espaciado: 0.3 })
     const tam = f.txt ? 10.5 : 14
@@ -349,14 +382,21 @@ export function anchosDe(cols: Columna[], w: number): Columna[] {
 export function cabeceraTabla(l: Lienzo, x: number, y: number, cols: Columna[], compacta: boolean): number {
   const h = altoCabecera(compacta)
   const wTotal = cols.reduce((s, c) => s + c.w, 0)
-  l.rect(x, y, wTotal, h, C.cab)
+  if (ESTILO.cabTabla === 'raya') l.linea(x, y + h - 0.2, x + wTotal, y + h - 0.2, C.titulo, 0.45)
+  else l.rect(x, y, wTotal, h, fondoCab())
+  const vs = ESTILO.versalitas
+  const o = { tam: vs ? 6.4 : 7.5, color: letraCab(), peso: (vs ? 'negrita' : 'normal') as Peso, espaciado: vs ? 0.25 : 0 }
   let cx = x
   for (const c of cols) {
     const base = y + h / 2 + 0.95
-    const t = l.cortar(c.t, c.w - 3.2, 7.5)
-    if (c.der) l.texto(cx + c.w - 1.6, base, t, { tam: 7.5, color: C.blanco, anc: 'end' })
-    else if (c.centro) l.texto(cx + c.w / 2, base, t, { tam: 7.5, color: C.blanco, anc: 'middle' })
-    else l.texto(cx + 1.6, base, t, { tam: 7.5, color: C.blanco })
+    // En mayúsculas ocupan más: antes de cortar con «…», se quita el espaciado y se encoge un poco la letra.
+    const oc = { ...o }
+    const txt = vs ? c.t.toUpperCase() : c.t
+    if (vs) while (oc.tam > 5.4 && l.ancho(txt, oc.tam, oc.peso, oc.espaciado) > c.w - 3.2) { oc.espaciado = 0; oc.tam -= 0.2 }
+    const t = l.cortar(txt, c.w - 3.2, oc.tam, oc.peso)
+    if (c.der) l.texto(cx + c.w - 1.6, base, t, { ...oc, anc: 'end' })
+    else if (c.centro) l.texto(cx + c.w / 2, base, t, { ...oc, anc: 'middle' })
+    else l.texto(cx + 1.6, base, t, oc)
     cx += c.w
   }
   return h
@@ -370,8 +410,8 @@ export function filaTabla(l: Lienzo, x: number, y: number, cols: Columna[], fila
   if (fila.estilo === 'total') {
     l.linea(x, y + 0.15, x + wTotal, y + 0.15, C.titulo, 0.3)
   } else {
-    if (par) l.rect(x, y, wTotal, h, C.celda)
-    l.linea(x, y + h - 0.1, x + wTotal, y + h - 0.1, C.rejilla, 0.2)
+    if (par && ESTILO.cebra) l.rect(x, y, wTotal, h, C.celda)
+    l.linea(x, y + h - 0.1, x + wTotal, y + h - 0.1, ESTILO.cebra ? C.rejilla : C.linea, 0.2)
   }
   const base = y + h / 2 + 1
   let cx = x
@@ -448,14 +488,18 @@ export const altoFitdays = (filas: number, fila = FD_FILA) => FD_CAB + filas * (
 export function tablaFitdays(l: Lienzo, x: number, y: number, anchos: number[], titulos: string[], filas: FilaFitdays[], FD_FILA = 6.5): number {
   let cx = x
   anchos.forEach((w, i) => {
-    l.rect(cx, y, w, FD_CAB, C.cab)
-    if (titulos[i]) l.texto(cx + w / 2, y + FD_CAB / 2 + 1, l.cortar(titulos[i]!, w - 2, 8), { tam: 8, color: C.blanco, anc: 'middle' })
+    if (ESTILO.cabTabla === 'raya') l.linea(cx, y + FD_CAB - 0.2, cx + w, y + FD_CAB - 0.2, C.titulo, 0.45)
+    else l.rect(cx, y, w, FD_CAB, fondoCab())
+    const vs = ESTILO.versalitas
+    if (titulos[i]) l.texto(cx + w / 2, y + FD_CAB / 2 + 1, l.cortar(vs ? titulos[i]!.toUpperCase() : titulos[i]!, w - 2, vs ? 6.6 : 8, vs ? 'negrita' : 'normal'), { tam: vs ? 6.6 : 8, peso: vs ? 'negrita' : 'normal', espaciado: vs ? 0.25 : 0, color: letraCab(), anc: 'middle' })
     cx += w + FD_HUECO
   })
   filas.forEach((f, k) => {
     const yy = y + FD_CAB + FD_HUECO + k * (FD_FILA + FD_HUECO)
     const base = yy + FD_FILA / 2 + 1.1
-    l.rect(x, yy, anchos[0]!, FD_FILA, C.celdaEtq)
+    casilla(l, x, yy, anchos[0]!, FD_FILA, C.celdaEtq)
+    // Abiertas: una raya fina debajo de cada fila, de lado a lado.
+    if (ESTILO.casillas === 'rayas') l.linea(x, yy + FD_FILA + FD_HUECO / 2, x + anchos.reduce((s, w) => s + w, 0) + FD_HUECO * (anchos.length - 1), yy + FD_FILA + FD_HUECO / 2, C.linea, 0.2)
     const wEtq = anchos[0]! - 3
     if (l.ancho(f.etq, 8.5) <= wEtq) l.texto(x + 1.8, base, f.etq, { tam: 8.5, color: C.titulo })
     else {
@@ -471,7 +515,7 @@ export function tablaFitdays(l: Lienzo, x: number, y: number, anchos: number[], 
       if (col >= anchos.length - 1) break
       const junta = cel != null && typeof cel === 'object' && 'junta' in cel
       const w = junta ? anchos[col]! + FD_HUECO + anchos[col + 1]! : anchos[col]!
-      l.rect(xx, yy, w, FD_FILA, C.celda)
+      casilla(l, xx, yy, w, FD_FILA, C.celda)
       if (junta) l.texto(xx + w / 2, base, l.cortar((cel as { junta: string }).junta, w - 2, 8.5), { tam: 8.5, anc: 'middle' })
       else if (cel != null) {
         const o = typeof cel === 'string' ? { t: cel } : (cel as Exclude<Celda, string | null>)
@@ -482,10 +526,15 @@ export function tablaFitdays(l: Lienzo, x: number, y: number, anchos: number[], 
       col += junta ? 2 : 1
     }
     const we = anchos[anchos.length - 1]!
-    l.rect(xx, yy, we, FD_FILA, C.celda)
+    casilla(l, xx, yy, we, FD_FILA, C.celda)
     l.texto(xx + we / 2, base, l.cortar(f.evaluacion.texto, we - 2, 8.5, 'negrita'), { tam: 8.5, peso: 'negrita', color: f.evaluacion.color, anc: 'middle' })
   })
   return altoFitdays(filas.length, FD_FILA)
+}
+
+function casilla(l: Lienzo, x: number, y: number, w: number, h: number, color: string) {
+  const c = fondoCasilla(color)
+  if (c) l.rect(x, y, w, h, c)
 }
 
 // ---------------------------------------------------------------- caja de consejo

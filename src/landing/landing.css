@@ -8,13 +8,13 @@ html[data-plataforma='apple'] .solo-otro, html[data-plataforma='otro'] .solo-app
   color-scheme: light dark;
   /* Noche (igual en los dos modos) */
   --n0: #0A0E13; --n1: #10151C; --n2: #18202A; --n-line: #2B394A;
-  --n-ink: #F3F6FA; --n-sub: #C9D4E0; --n-muted: #B4C2D2; --n-link: #4FB3F0; --n-ok: #7CC242; --n-acc: #FF9A52;
+  --n-ink: #F3F6FA; --n-sub: #C9D4E0; --n-muted: #B4C2D2; --n-link: #4FB3F0; --n-ok: #7CC242; --n-acc: #B98CFF;
   /* Acción: el botón naranja va siempre sobre la noche */
-  --go: #FF7A1A; --go-hover: #FF8F3D; --go-press: #E8650A; --on-go: #1A0C02; --focus: #4FB3F0;
+  --go: #7F26FB; --go-hover: #8F42FF; --go-press: #6A12E6; --on-go: #FFFFFF; --focus: #4FB3F0;
   /* Día (modo claro) */
   --bg: #F6F4F0; --bg-alt: #EEEAE3; --surface: #FFFFFF; --line: #DDD7CD;
-  --ink: #16202B; --muted: #44546A; --acc: #A3470A; --acc-tint: #FFF1E4; --link: #0A639F; --ok: #2A6E12;
-  --halo: rgba(255, 122, 26, .20);
+  --ink: #16202B; --muted: #44546A; --acc: #6A1BD6; --acc-tint: #F2E9FF; --link: #0A639F; --ok: #2A6E12;
+  --halo: rgba(127, 38, 251, .20);
   --card-sh: 0 1px 2px rgba(22, 32, 43, .05), 0 8px 24px -12px rgba(22, 32, 43, .14);
   /* Letras */
   --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -32,8 +32,8 @@ html[data-plataforma='apple'] .solo-otro, html[data-plataforma='otro'] .solo-app
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #10151C; --bg-alt: #141B24; --surface: #18202A; --line: #2B394A;
-    --ink: #F3F6FA; --muted: #A9B8C9; --acc: #FF9A52; --acc-tint: rgba(255, 122, 26, .14);
-    --link: #6CC3F5; --ok: #7CC242; --halo: rgba(255, 122, 26, .16); --card-sh: none;
+    --ink: #F3F6FA; --muted: #A9B8C9; --acc: #B98CFF; --acc-tint: rgba(127, 38, 251, .18);
+    --link: #6CC3F5; --ok: #7CC242; --halo: rgba(127, 38, 251, .16); --card-sh: none;
   }
 }
 @media (min-width: 600px) { :root { --gut: 32px; } }
@@ -82,16 +82,16 @@ h3 { font-family: var(--f-disp); font-weight: 700; font-size: clamp(1.375rem, 1.
 .noche a:not([class]) { color: var(--n-link); }
 .noche :focus-visible { outline-color: var(--n-link); }
 .dia :focus-visible { outline-color: var(--link); }
-.noche-hero { background: linear-gradient(180deg, #0A0E13 0%, #0E131A 55%, #1A1410 100%); overflow: hidden; }
+.noche-hero { background: linear-gradient(180deg, #0A0E13 0%, #0E131A 55%, #150E22 100%); overflow: hidden; }
 .noche-hero::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; z-index: 2;
-  background: linear-gradient(90deg, transparent, rgba(255, 181, 71, .6) 50%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(185, 140, 255, .6) 50%, transparent);
 }
 
 /* ---------- Cabecera ---------- */
 .cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; position: relative; z-index: 3; padding-top: env(safe-area-inset-top); }
 .marca { display: inline-flex; align-items: center; gap: 10px; color: var(--n-ink); text-decoration: none; font-family: var(--f-disp); font-weight: 800; font-size: 1.5rem; min-height: 48px; }
-.marca-logo { width: 36px; height: 36px; }
+.marca-logo { width: 36px; height: 36px; display: block; }
 .boton-letra {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 2px 0; padding: 0 14px;
   font: 600 1rem/1 var(--f-body); color: var(--n-ink); background: transparent; border: 1px solid rgba(243, 246, 250, .28); border-radius: 12px; cursor: pointer;
@@ -123,14 +123,14 @@ h1 {
   min-height: 64px; padding: 0 28px; width: 100%; max-width: 420px;
   background: var(--go); color: var(--on-go); border: 0; border-radius: 14px; text-decoration: none;
   font-family: var(--f-disp); font-weight: 700; font-size: 1.375rem; letter-spacing: .01em; line-height: 1.1; text-align: center;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(26, 12, 2, .22), 0 12px 28px -10px rgba(255, 122, 26, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(30, 6, 70, .25), 0 12px 28px -10px rgba(127, 38, 251, .55);
   transition: background-color 150ms ease-out, transform 220ms var(--ease-rebote);
   -webkit-tap-highlight-color: transparent;
 }
 .boton-go .ico { font-size: 1.625rem; }
 .boton-go::after { /* sombra de hover: se anima su opacidad, no la sombra */
   content: ''; position: absolute; inset: 0; z-index: -2; border-radius: inherit; opacity: 0;
-  box-shadow: 0 14px 32px -6px rgba(255, 122, 26, .5); transition: opacity 180ms var(--ease-estandar);
+  box-shadow: 0 14px 32px -6px rgba(127, 38, 251, .5); transition: opacity 180ms var(--ease-estandar);
 }
 .boton-go::before { /* brillo que pasa una vez */
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; transform: translateX(-130%);
@@ -250,11 +250,11 @@ h1 {
 /* Hero: móvil delante del sol */
 .hero-visual { --w: clamp(248px, 72vw, 320px); position: relative; display: grid; justify-items: center; padding-bottom: 8px; }
 .hero-visual .movil { --w: inherit; }
-.movil-hero { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10), 0 0 0 1px #000, 0 40px 80px -24px rgba(0, 0, 0, .65), 0 0 120px -10px rgba(255, 122, 26, .32); }
+.movil-hero { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10), 0 0 0 1px #000, 0 40px 80px -24px rgba(0, 0, 0, .65), 0 0 120px -10px rgba(127, 38, 251, .32); }
 .sol {
   position: absolute; left: 50%; top: 58%; width: min(140vw, 760px); aspect-ratio: 1; border-radius: 50%; z-index: 0; pointer-events: none;
   transform: translate(-50%, -50%); opacity: .9;
-  background: radial-gradient(closest-side, #FFE2A8 0%, #FFB547 16%, #FF7A1A 40%, rgba(255, 122, 26, .38) 60%, rgba(255, 122, 26, 0) 100%);
+  background: radial-gradient(closest-side, #EFE4FF 0%, #C9A6FF 16%, #7F26FB 40%, rgba(127, 38, 251, .38) 60%, rgba(127, 38, 251, 0) 100%);
 }
 .movil-parallax, .movil-entrada { position: relative; z-index: 1; }
 .capas { position: relative; }
@@ -270,7 +270,7 @@ h1 {
   font: 500 3.6cqw/1.3 var(--f-body); transform: translateY(-150%); opacity: 0;
 }
 .aviso b { display: block; font-weight: 600; font-size: 3.9cqw; }
-.aviso-logo { width: 9cqw; height: 9cqw; flex: none; }
+.aviso-logo { width: 9cqw; height: 9cqw; flex: none; display: block; }
 
 .reloj {
   position: absolute; z-index: 2; right: calc(50% - var(--w) / 2 - 40px); top: calc(var(--w) * 1.74); width: 78px; height: 92px;
@@ -464,10 +464,10 @@ h1 {
 .cierre h2 { margin: 40px 0 28px; }
 .sol-logo {
   width: 120px; height: 120px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
-  background: radial-gradient(circle at 50% 40%, #FFB547 0%, #FF7A1A 55%, #C2410C 100%);
-  box-shadow: 0 0 0 12px rgba(255, 122, 26, .12), 0 0 0 28px rgba(255, 122, 26, .06), 0 0 120px rgba(255, 122, 26, .45);
+  border-radius: 24%;
+  box-shadow: 0 0 0 12px rgba(127, 38, 251, .12), 0 0 0 28px rgba(127, 38, 251, .06), 0 0 120px rgba(127, 38, 251, .45);
 }
-.sol-logo svg { width: 62%; height: auto; }
+.sol-logo img { width: 100%; height: 100%; display: block; }
 .cierre .linea-version { margin-top: 10px; }
 @media (min-width: 600px) { .sol-logo { width: 160px; height: 160px; } }
 @media (min-width: 900px) { .cierre { padding-block: 112px; } }

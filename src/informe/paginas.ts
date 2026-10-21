@@ -7,7 +7,7 @@ import {
   type Informe, type MesInforme, type PasosInforme, type ResumenInforme, type SemanaInforme, type SerieCuerpo, type TuDiaInforme,
 } from '../dominio/informe'
 import { ejeDe, ejeHolgado, etiquetasFechas, filasZonas, altoZonas, grafica, indiceDia, type BarraGrafica, type EtiquetaX, type FilaZonas } from './graficas'
-import { C, partirRico, type Lienzo } from './lienzo'
+import { C, fondoCab, letraCab, partirRico, type Lienzo } from './lienzo'
 import {
   ANCHO, Flujo, IZQ, TONO, altoConsejo, claro, altoFichas, altoFitdays, altoH2, altoH3, altoNota, altoTabla, chip, chipEsfuerzo, consejo, etiqueta,
   fichas, fraseConNegrita, h2, h3, kv, nota, tabla, tablaFitdays, tablaPartida, tituloGrafica, FILA_KV, type Columna, type Ficha, type FilaTabla, type Maqueta,
@@ -200,9 +200,9 @@ function casillasSemana(f: Flujo, r: ResumenInforme, objetivoPasos: number | nul
     const w = (f.w - col - gap * cs.length) / cs.length
     const X = (i: number) => f.x + col + gap + i * (w + gap)
     cs.forEach((c, i) => {
-      l.rect(X(i), y0, w, hCab, C.cab)
-      l.texto(X(i) + w / 2, y0 + 3.6, c.inicial, { tam: 8, peso: 'negrita', color: C.blanco, anc: 'middle' })
-      l.texto(X(i) + w / 2, y0 + 6.7, fechaCorta(c.fecha), { tam: 5.8, color: C.blanco, anc: 'middle' })
+      l.rect(X(i), y0, w, hCab, fondoCab())
+      l.texto(X(i) + w / 2, y0 + 3.6, c.inicial, { tam: 8, peso: 'negrita', color: letraCab(), anc: 'middle' })
+      l.texto(X(i) + w / 2, y0 + 6.7, fechaCorta(c.fecha), { tam: 5.8, color: letraCab(), anc: 'middle' })
     })
     let yy = y0 + hCab
     for (const fl of filas) {
@@ -224,7 +224,7 @@ function lateral(f: Flujo, inf: Informe) {
     const y0 = y + h3(l, f.x, y, f.w, 'Puntuación del periodo', null, m)
     if (!p) { l.texto(f.x, y0 + 4, 'Aún no hay ninguna semana con datos.', { tam: 8, color: C.gris }); return }
     // «/100» justo detrás del número, con su ancho real en Helvetica-Bold (con «62» se montaba sobre el 2).
-    const wn = l.texto(f.x - 0.4, y0 + 13.4, String(p.valor), { tam: 40, peso: 'negrita', color: C.titulo })
+    const wn = l.texto(f.x - 0.4, y0 + 13.4, String(p.valor), { tam: 40, peso: 'titulo', color: C.titulo })
     l.texto(f.x - 0.4 + wn + 1.2, y0 + 13.4, '/100 puntos', { tam: 14, color: C.titulo })
     chip(l, f.x, y0 + 15.6, p.palabra, TONO[p.tono])
     nota(l, f.x, y0 + 21.5, f.w, p.nota)
@@ -1030,10 +1030,10 @@ export function paginaTuDia(maq: Maqueta, t: TuDiaInforme) {
       for (const [cx, colorN, n, dir, txt] of cols) {
         // Un 0 siempre en gris: no hay nada mejor ni peor que contar.
         const color = n ? colorN : C.grisSuave
-        const wn = l.ancho(String(n), 22, 'negrita')
+        const wn = l.ancho(String(n), 22, 'titulo')
         const x0 = f.x + cx - (wn + 5.2) / 2
         l.flecha(x0, cy + 0.4, dir, color, 1.9)
-        l.texto(x0 + 5.2, cy + 1.9, String(n), { tam: 22, peso: 'negrita', color })
+        l.texto(x0 + 5.2, cy + 1.9, String(n), { tam: 22, peso: 'titulo', color })
         l.texto(f.x + cx, cy + 6.2, txt, { tam: 6.8, color: C.gris, anc: 'middle' })
       }
     }

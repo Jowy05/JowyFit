@@ -3,7 +3,7 @@
 // Se dibujan sobre el Lienzo en mm; las medidas son las de la maqueta (.cache/pdf-maqueta/generar-maqueta.mjs).
 import { num } from '../dominio/calculos'
 import { MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../dominio/fechas'
-import { C, type Ancla, type Lienzo } from './lienzo'
+import { C, ESTILO, fondoCab, fondoCasilla, letraCab, type Ancla, type Lienzo } from './lienzo'
 
 export type Eje = { min: number; max: number; marcas: number[] }
 
@@ -240,22 +240,24 @@ export function filasZonas(l: Lienzo, x: number, y: number, o: { w: number; fila
   const fh = 10.5, hh = 5.5, gap = 0.6
   const pista0 = x + col + 1.5, pista1 = x + w - 2
   const pw = pista1 - pista0
-  l.rect(x, y, col, hh, C.cab)
+  l.rect(x, y, col, hh, fondoCab())
   let acc = 0
   nombres.forEach((nm, i) => {
     const xa = pista0 + acc * pw, wa = anchos[i]! * pw
     // La primera y la última caja llegan hasta donde llegan las filas de debajo.
     const desde = i === 0 ? x + col + 0.5 : xa, hasta = i === nombres.length - 1 ? x + w : xa + wa - 0.5
-    l.rect(desde, y, hasta - desde, hh, i === 1 ? C.cab : C.zonaClara)
-    l.texto(xa + wa / 2, y + hh - 1.6, nm, { tam: 7.5, color: i === 1 ? C.blanco : C.titulo, anc: 'middle' })
+    l.rect(desde, y, hasta - desde, hh, i === 1 ? fondoCab() : C.zonaClara)
+    l.texto(xa + wa / 2, y + hh - 1.6, nm, { tam: 7.5, color: i === 1 ? letraCab() : C.titulo, anc: 'middle' })
     acc += anchos[i]!
   })
   o.filas.forEach((f, k) => {
     const yy = y + hh + gap + k * (fh + gap)
-    l.rect(x, yy, col, fh, C.celdaEtq)
+    const fEtq = fondoCasilla(C.celdaEtq), fPista = fondoCasilla(C.celda)
+    if (fEtq) l.rect(x, yy, col, fh, fEtq)
+    if (ESTILO.casillas === 'rayas') l.linea(x, yy + fh + gap / 2, x + w, yy + fh + gap / 2, C.linea, 0.2)
     const etq = l.partir(f.etq, col - 3, 8)
     etq.slice(0, 2).forEach((t, j) => l.texto(x + 2, yy + fh / 2 + 1 + (j - (Math.min(2, etq.length) - 1) / 2) * 3.3, t, { tam: 8, color: C.titulo }))
-    l.rect(x + col + 0.5, yy, w - col - 0.5, fh, C.celda)
+    if (fPista) l.rect(x + col + 0.5, yy, w - col - 0.5, fh, fPista)
     const [a, b] = f.cortes, [mn, mx] = f.dominio
     const tramo: [number, number][] = [[mn, a], [a, b], [b, mx]]
     const X = (v: number) => {

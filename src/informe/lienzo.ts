@@ -1,6 +1,6 @@
 // Dibujo del PDF en milímetros con el origen arriba a la izquierda (como la maqueta), sobre pdf-lib.
 // Las formas van como trazos SVG (pdf-lib les da la vuelta al eje y); el texto, con la Helvetica estándar.
-import type { PDFFont, PDFPage } from 'pdf-lib'
+import type { PDFFont, PDFImage, PDFPage } from 'pdf-lib'
 import { textoPdf } from './texto'
 
 type PdfLib = typeof import('pdf-lib')
@@ -13,15 +13,99 @@ export const ALTO_A4 = 297
 export const PT = 25.4 / 72
 
 /** Paleta del diseño (§2), sacada de tokens.css en tema claro. El PDF siempre sale en claro. */
-export const C = {
+const PALETA = {
   tinta: '#16202B', titulo: '#3D4752', gris: '#6B7785', grisSuave: '#9AA5B1', linea: '#D9E0E8', rejilla: '#E8ECF1',
   banda: '#E9ECF0', celda: '#F3F5F8', celdaEtq: '#E9EDF1', cab: '#3B4654',
   azul: '#0A74B9', azulSuave: '#CFE3F2', naranja: '#EE6A0E', logo: '#FF7A1A', verde: '#3F8F1E', ambar: '#B7790B', rojo: '#C93A32', oro: '#A97D12',
   zonaClara: '#E3E7EC', normal: '#E6EAEF', facil: '#5E9FD0', blanco: '#FFFFFF',
   fondoNaranja: '#FDF1E9', fondoAzul: '#E7F1F8', fondoVerde: '#E9F2E4',
-} as const
+}
+export type Color = keyof typeof PALETA
+/** Colores en uso: los de la paleta con los cambios del estilo elegido (ver `aplicarEstilo`). */
+export const C: Record<Color, string> = { ...PALETA }
 
-export type Peso = 'normal' | 'negrita' | 'cursiva'
+/**
+ * Estilo del informe: la misma maqueta y los mismos datos con otra estética. «clasico» es el de siempre;
+ * los demás cambian la paleta, la letra de los títulos y cómo se dibujan cabeceras de tabla, fichas, títulos y portada.
+ */
+export type Estilo = {
+  /** Letra de los títulos: Helvetica negrita o Times negrita. */
+  titulos: 'helvetica' | 'times'
+  /** Cabecera de tabla: banda oscura con letra blanca, banda clara con letra de color o solo una raya debajo. */
+  cabTabla: 'oscura' | 'clara' | 'raya'
+  /** Filas alternas con fondo. */
+  cebra: boolean
+  /** Fichas: fondo gris, solo borde o borde con una franja de color arriba. */
+  fichas: 'relleno' | 'borde' | 'franja'
+  /** Títulos de sección: raya fina debajo, barrita de color a la izquierda, cuadrito de color delante o raya gruesa. */
+  h2: 'raya' | 'barra' | 'cuadro' | 'gruesa'
+  /** Primera página: banda gris de datos, franja de color arriba o datos entre dos rayas. */
+  portada: 'banda' | 'franja' | 'rayas'
+  /** Color de acento (barras, franjas, cuadritos). */
+  acento: string
+  /** Letra de las cabeceras de tabla claras y de raya. */
+  cabTexto: string
+  /** Fondo de las cabeceras claras. */
+  cabFondo: string
+  /** Borde de fichas y cajas. */
+  borde: string
+  /** Etiquetas de las cabeceras de tabla en mayúsculas pequeñas. */
+  versalitas: boolean
+  /** Tablas de resumen y zonas: casillas grises con huecos blancos o abiertas, con solo rayas entre filas. */
+  casillas: 'grises' | 'rayas'
+}
+export type NombreEstilo = 'clasico' | 'nordico' | 'editorial' | 'energia' | 'clinico'
+/** El que usa la app (elegido por el usuario el 21/10/2026). */
+export const ESTILO_POR_DEFECTO: NombreEstilo = 'clinico'
+
+const CLASICO: Estilo = { titulos: 'helvetica', cabTabla: 'oscura', cebra: true, fichas: 'relleno', h2: 'raya', portada: 'banda', acento: PALETA.naranja, cabTexto: PALETA.blanco, cabFondo: PALETA.cab, borde: PALETA.linea, versalitas: false, casillas: 'grises' }
+
+export const ESTILOS: Record<NombreEstilo, { nombre: string; idea: string; estilo: Estilo; colores: Partial<Record<Color, string>> }> = {
+  clasico: { nombre: 'Clásico', idea: 'El de ahora: bandas oscuras y fichas grises, al estilo de un informe de báscula.', estilo: CLASICO, colores: {} },
+  nordico: {
+    nombre: 'Nórdico',
+    idea: 'Minimalista y con aire: sin bandas oscuras, tablas con rayas finas, fichas con borde y un verde azulado de acento.',
+    estilo: { titulos: 'helvetica', cabTabla: 'raya', cebra: false, fichas: 'borde', h2: 'cuadro', portada: 'rayas', acento: '#0F766E', cabTexto: '#5B6573', cabFondo: '#EEF2F4', borde: '#E3E7EC', versalitas: true, casillas: 'rayas' },
+    colores: { tinta: '#1D2530', titulo: '#1D2530', gris: '#6B7280', grisSuave: '#A3ACB8', linea: '#E3E7EC', rejilla: '#EEF1F4', banda: '#F6F8FA', celda: '#F6F8FA', celdaEtq: '#EEF2F4', cab: '#1D2530', naranja: '#0F766E', azul: '#0F766E', fondoNaranja: '#EAF5F3' },
+  },
+  editorial: {
+    nombre: 'Editorial',
+    idea: 'Como una revista: títulos con letra de imprenta (Times), azul marino, tonos crema y un acento terracota.',
+    estilo: { titulos: 'times', cabTabla: 'oscura', cebra: true, fichas: 'relleno', h2: 'gruesa', portada: 'rayas', acento: '#A4462A', cabTexto: '#14213D', cabFondo: '#EFE8DC', borde: '#DDD4C6', versalitas: true, casillas: 'grises' },
+    colores: { tinta: '#1C2430', titulo: '#14213D', gris: '#6E6A62', grisSuave: '#A7A196', linea: '#DDD4C6', rejilla: '#ECE6DC', banda: '#F4EFE7', celda: '#F8F5EF', celdaEtq: '#EFE8DC', cab: '#14213D', naranja: '#A4462A', azul: '#2E5A88', fondoNaranja: '#F7ECE6', zonaClara: '#ECE6DC', normal: '#EFE9E0' },
+  },
+  energia: {
+    nombre: 'Energía',
+    idea: 'Deportivo y con la marca: naranja de JowyFit, gris carbón, franja naranja arriba y fichas con su raya de color.',
+    estilo: { titulos: 'helvetica', cabTabla: 'oscura', cebra: true, fichas: 'franja', h2: 'barra', portada: 'franja', acento: '#EA580C', cabTexto: '#FFFFFF', cabFondo: '#27272A', borde: '#E4E4E7', versalitas: false, casillas: 'grises' },
+    colores: { tinta: '#18181B', titulo: '#18181B', gris: '#6B6B73', grisSuave: '#A1A1AA', linea: '#E4E4E7', rejilla: '#EFEFF1', banda: '#F4F4F5', celda: '#F7F7F8', celdaEtq: '#EDEDEF', cab: '#27272A', naranja: '#EA580C', azul: '#0369A1', fondoNaranja: '#FFF1E8' },
+  },
+  clinico: {
+    nombre: 'Clínico',
+    idea: 'Como un informe médico, con el morado de la marca: cabeceras claras con letra morada, fichas con borde y mucho blanco.',
+    estilo: { titulos: 'helvetica', cabTabla: 'clara', cebra: true, fichas: 'borde', h2: 'raya', portada: 'franja', acento: '#7F26FB', cabTexto: '#4C1D95', cabFondo: '#EFE7FE', borde: '#E3D8F7', versalitas: true, casillas: 'rayas' },
+    colores: { tinta: '#1D1A2B', titulo: '#3B0F86', gris: '#67627A', grisSuave: '#A8A2BC', linea: '#E3D8F7', rejilla: '#EFE9FA', banda: '#F5F0FE', celda: '#FAF7FF', celdaEtq: '#F1EAFE', cab: '#43207F', naranja: '#7F26FB', logo: '#7F26FB', azul: '#2D7FC1', fondoNaranja: '#F4ECFF' },
+  },
+}
+
+/** Estilo en uso (lo cambia `aplicarEstilo` al empezar cada PDF). */
+export const ESTILO: Estilo = { ...CLASICO }
+
+/** Fondo y letra de las cabeceras (de tabla y de rejilla) según el estilo. */
+export const fondoCab = () => (ESTILO.cabTabla === 'oscura' ? C.cab : ESTILO.cabFondo)
+export const letraCab = () => (ESTILO.cabTabla === 'oscura' ? C.blanco : ESTILO.cabTexto)
+/** Fondo de una casilla de las tablas de resumen y zonas (sin fondo si el estilo las quiere abiertas). */
+export const fondoCasilla = (color: string) => (ESTILO.casillas === 'rayas' ? null : color)
+
+/** Pone la paleta y el estilo elegidos (o los de siempre). */
+export function aplicarEstilo(nombre: NombreEstilo = 'clasico') {
+  const e = ESTILOS[nombre] ?? ESTILOS.clasico
+  Object.assign(C, PALETA, e.colores)
+  Object.assign(ESTILO, e.estilo)
+}
+
+/** «titulo»: la letra de los títulos del estilo (Helvetica o Times, en negrita). */
+export type Peso = 'normal' | 'negrita' | 'cursiva' | 'titulo'
 export type Ancla = 'start' | 'middle' | 'end'
 export type OpcTexto = { tam?: number; color?: string; peso?: Peso; anc?: Ancla; espaciado?: number }
 export type Fuentes = Record<Peso, PDFFont>
@@ -199,6 +283,11 @@ export class Lienzo extends Medidor {
       this.rect(x, cy + 0.25 * t, 2.2 * t, 0.42 * t, color)
     } else this.triangulo(x + 1.1 * t, cy, 1.05 * t, dir === 'sube', color)
     return 2.2 * t
+  }
+
+  /** Imagen (PNG ya metido en el documento) en mm, con (x, y) arriba a la izquierda. */
+  imagen(img: PDFImage, x: number, y: number, w: number, h: number) {
+    this.pagina.drawImage(img, { x: x * MM, y: (ALTO_A4 - y - h) * MM, width: w * MM, height: h * MM })
   }
 
   /** Texto con su línea base en `y`. Devuelve el ancho en mm. */

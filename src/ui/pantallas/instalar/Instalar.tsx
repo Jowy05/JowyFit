@@ -123,7 +123,7 @@ export function Instalar({ alCerrar, conDatos, letra }: { alCerrar: () => void; 
       <section className="screen" data-full="" id="instalar">
         <div className="alt">
           <div className="alt-hero ins-hero">
-            <div className="brand"><span className="brand-ic"><Ico n="barbell" b /></span><span>JOWYFIT</span></div>
+            <div className="brand"><img className="brand-img" src={`${import.meta.env.BASE_URL}iconos/icono-192.png`} alt="" width={48} height={48} /><span>JOWYFIT</span></div>
             <h1 className="alt-h ins-h" id="ins-titulo">Ponla en {donde}</h1>
             <p className="alt-p">Así JowyFit se abre como una app de tu {nombre}: a pantalla completa, al momento y sin internet.</p>
           </div>

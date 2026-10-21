@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
   plugins: {
     LocalNotifications: {
       smallIcon: 'ic_stat_jowyfit',
-      iconColor: '#FF7A1A',
+      iconColor: '#7F26FB',
     },
     SplashScreen: {
       launchShowDuration: 600,

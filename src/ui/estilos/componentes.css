@@ -322,7 +322,7 @@ button.card.row{display:flex}
 .alt{display:flex;flex-direction:column;min-height:100%}
 .alt-hero{margin-top:calc(-1 * var(--sb-h));padding:calc(var(--sb-h) + 44px) 20px 28px;background:var(--hd)}
 .brand{display:flex;align-items:center;gap:10px;font:700 22px var(--font-display);letter-spacing:.16em}
-.brand-ic{width:42px;height:42px;border-radius:8px;background:var(--go);color:var(--on-go);display:grid;place-items:center;font-size:24px;letter-spacing:0}
+.brand-img{width:48px;height:48px;display:block;filter:drop-shadow(0 4px 10px rgba(127,38,251,.28))}
 .alt-h{font-size:40px;margin-top:30px;line-height:1.02;letter-spacing:-.01em}
 .alt-p{color:var(--muted);font-size:17px;margin-top:12px;line-height:1.4}
 .alt-h2{font-size:32px;margin-top:4px}

@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       // Se registra a mano en main.tsx: solo en la versión web (en el APK todo va dentro y no hace falta).
       injectRegister: false,
-      includeAssets: ['icono.svg', 'iconos/*.png'],
+      includeAssets: ['iconos/*.png'],
       manifest: {
         name: 'JowyFit',
         short_name: 'JowyFit',

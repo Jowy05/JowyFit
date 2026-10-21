@@ -206,7 +206,7 @@ async function programarYa(avisos: Aviso[], borrarIds: number[]) {
     notifications: avisos.map(a => ({
       id: a.id, title: a.titulo, body: a.texto, isExactNotification: exacta,
       schedule: a.repetirCada ? { on: a.repetirCada === 'day' ? { hour: a.cuando.getHours(), minute: a.cuando.getMinutes() } : { weekday: a.cuando.getDay() + 1, hour: a.cuando.getHours(), minute: a.cuando.getMinutes() }, allowWhileIdle: true } : { at: a.cuando, allowWhileIdle: true },
-      smallIcon: 'ic_stat_jowyfit', iconColor: '#FF7A1A',
+      smallIcon: 'ic_stat_jowyfit', iconColor: '#7F26FB',
       channelId: a.id === ID_DESCANSO ? 'descanso' : 'recordatorios',
     })),
   })

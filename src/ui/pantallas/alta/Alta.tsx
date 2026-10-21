@@ -228,7 +228,7 @@ export function Alta() {
     <section className="screen" data-full="">
       <div className="alt">
         <div className="alt-hero">
-          <div className="brand"><span className="brand-ic"><Ico n="barbell" b /></span><span>JOWYFIT</span></div>
+          <div className="brand"><img className="brand-img" src={`${import.meta.env.BASE_URL}iconos/icono-192.png`} alt="" width={48} height={48} /><span>JOWYFIT</span></div>
           <h1 className="alt-h">Tu fuerza y tu comida, en una ficha clara.</h1>
           <p className="alt-p">Ves qué toca hoy y con qué peso, apuntas cada serie en segundos y el domingo sabes si vas bien.</p>
         </div>

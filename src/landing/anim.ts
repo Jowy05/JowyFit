@@ -1,5 +1,5 @@
 // Movimiento de la landing: revelado al hacer scroll, contadores, la maqueta del hero (capturas reales que se
-// encadenan), la ayuda al tocar «Descargar» y la barra fija del móvil. Sin librerías; solo transform y opacity.
+// encadenan), el aviso «Descarga empezada» al tocar «Descargar» y la barra fija del móvil. Sin librerías; solo transform y opacity.
 // Con «reducir movimiento» no se mueve nada solo, y sin JS todo se ve igual (el CSS por defecto es el estado final).
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -173,19 +173,12 @@ function maquetaHero() {
   Promise.all([listas, espera]).then(() => { if (estado === 'jugando' && !anims.length) crear(3) })
 }
 
-/** Al tocar «Descargar»: el texto cambia un momento y aparece la ayuda contra el aviso de Chrome. */
-function ayudaDescarga() {
-  const ayuda = $('[data-ayuda]')
-  if (!ayuda) return
+/** Al tocar «Descargar»: el texto cambia un momento a «Descarga empezada». */
+function descargaEmpezada() {
   const ocupados = new WeakSet<Element>()
   for (const a of $$<HTMLAnchorElement>('[data-apk], [data-apk-barra]')) {
     a.addEventListener('click', () => {
       // No se impide nada: la descarga sigue su curso normal.
-      const sitio = a.closest('.barra-fija') ?? a.closest('.hero-cta, .botones')
-      if (sitio?.classList.contains('barra-fija')) sitio.prepend(ayuda)
-      else if (sitio?.classList.contains('botones')) sitio.after(ayuda)
-      else if (sitio) a.after(ayuda)
-      requestAnimationFrame(() => ayuda.classList.add('abierta'))
       if (ocupados.has(a) || !a.querySelector('.boton-txt')) return
       ocupados.add(a)
       a.classList.add('descargando')
@@ -234,7 +227,7 @@ function relojBloque() {
 }
 
 export function arrancar() {
-  ayudaDescarga()
+  descargaEmpezada()
   if (!('IntersectionObserver' in window)) return
   document.documentElement.classList.add('anim')
   revelar()

@@ -2,34 +2,135 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0E0A18" />
     <title>JowyFit · Privacidad</title>
+    <link rel="icon" href="iconos/icono-64.png" type="image/png" />
     <style>
-      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #10151c; color: #e7eef6; max-width: 720px }
-      h1 { font-size: 24px } h2 { font-size: 18px; margin-top: 24px } a { color: #4fb3f0 }
+      /* Sin nada de fuera (la política de seguridad no lo deja): letra del sistema y dibujos en línea. */
+      :root {
+        --fondo: #F6F4FB; --superficie: #FFFFFF; --linea: #E4DCF3; --tinta: #1B1529; --suave: #5E5772;
+        --morado: #7F26FB; --morado-texto: #6416D6; --morado-tinte: #F1E8FF; --verde: #2F7D17; --verde-tinte: #E9F4E3;
+        --sombra: 0 1px 2px rgba(27, 21, 41, .05), 0 10px 30px -18px rgba(76, 29, 149, .35);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fondo: #0E0A18; --superficie: #171124; --linea: #2C2340; --tinta: #F2EEFA; --suave: #B4AAC8;
+          --morado: #9B5BFF; --morado-texto: #C3A2FF; --morado-tinte: rgba(127, 38, 251, .16); --verde: #8BD06A; --verde-tinte: rgba(124, 194, 66, .12);
+          --sombra: none;
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0; background: var(--fondo); color: var(--tinta);
+        font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--morado-texto); text-underline-offset: 3px; }
+      a:focus-visible { outline: 3px solid var(--morado); outline-offset: 3px; border-radius: 4px; }
+      .contenedor { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+
+      /* Cabecera */
+      .cabecera { background: radial-gradient(120% 140% at 0% 0%, #4C1D95 0%, #2A0F5C 45%, #0E0A18 100%); color: #F7F3FF; padding: max(20px, env(safe-area-inset-top)) 0 56px; }
+      .marca { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 700; font-size: 18px; letter-spacing: .01em; }
+      .marca img { width: 36px; height: 36px; border-radius: 9px; display: block; }
+      .titulillo { margin: 40px 0 6px; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #C9A6FF; }
+      h1 { margin: 0; font-size: clamp(32px, 7vw, 46px); line-height: 1.08; letter-spacing: -.02em; }
+      .entradilla { margin: 14px 0 0; font-size: 19px; color: #DCD2F0; max-width: 36em; }
+      .garantias { list-style: none; margin: 24px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+      .garantias li { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px 7px 10px; border-radius: 999px; background: rgba(255, 255, 255, .09); border: 1px solid rgba(255, 255, 255, .16); font-size: 15px; font-weight: 600; }
+      .garantias svg { width: 17px; height: 17px; color: #B6F28E; flex: none; }
+
+      /* Contenido */
+      main { margin-top: -28px; padding-bottom: 48px; }
+      .tarjeta { background: var(--superficie); border: 1px solid var(--linea); border-radius: 20px; padding: 22px 22px 8px; margin-bottom: 14px; box-shadow: var(--sombra); }
+      .tarjeta h2 { display: grid; grid-template-columns: 40px 1fr; column-gap: 14px; row-gap: 6px; align-items: center; margin: 0 0 12px; font-size: 20px; line-height: 1.25; letter-spacing: -.01em; }
+      .tarjeta h2:has(.etiqueta) .ico { grid-row: span 2; align-self: start; }
+      .tarjeta p { margin: 0 0 14px; color: var(--tinta); }
+      .tarjeta p.suave { color: var(--suave); }
+      .ico { width: 40px; height: 40px; border-radius: 12px; background: var(--morado-tinte); color: var(--morado-texto); display: grid; place-items: center; flex: none; }
+      .ico svg { width: 22px; height: 22px; }
+      .destacada { border-color: color-mix(in srgb, var(--morado) 45%, var(--linea)); }
+      .etiqueta { grid-column: 2; justify-self: start; display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: var(--morado-tinte); color: var(--morado-texto); white-space: nowrap; }
+      .no-sale { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: var(--verde-tinte); color: var(--tinta); }
+      .no-sale svg { width: 20px; height: 20px; color: var(--verde); flex: none; margin-top: 3px; }
+      code { font: 15px/1 ui-monospace, "Cascadia Mono", Menlo, monospace; background: var(--morado-tinte); color: var(--morado-texto); padding: 2px 6px; border-radius: 6px; }
+
+      .pie { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--linea); display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; color: var(--suave); font-size: 15px; }
+      @media (max-width: 520px) {
+        body { font-size: 16px; }
+        .tarjeta { padding: 18px 16px 4px; border-radius: 18px; }
+        .tarjeta h2 { font-size: 18px; }
+      }
     </style>
   </head>
   <body>
-    <h1>Privacidad de JowyFit</h1>
-    <p>JowyFit guarda todos tus datos <b>solo en este móvil</b>: entrenos, comidas, medidas, fotos de progreso y tu perfil. No hay cuentas, ni servidores propios, ni anuncios, ni analíticas. Nadie más recibe tus datos.</p>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="i-ok" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-movil" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 18.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-codigo" viewBox="0 0 24 24"><path d="M4 5v14M7 5v14M10.5 5v14M14 5v14M16.5 5v14M20 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-corazon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 12h2.5l1.5-2.5 2 5 1.5-2.5H17"/></symbol>
+      <symbol id="i-camara" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.5-2h5L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+      <symbol id="i-campana" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-copia" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m-2.5-2.5L12 16l2.5-2.5"/></symbol>
+      <symbol id="i-escudo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3l7 3v5.5c0 4.4-3 7.8-7 9.5-4-1.7-7-5.1-7-9.5V6z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2.2 2.2L15.5 10"/></symbol>
+    </svg>
 
-    <h2>Lo único que sale del móvil: el escáner de comida</h2>
-    <p>Cuando escaneas (o escribes) un código de barras, la app pregunta por ese código a <b>Open Food Facts</b>, una lista pública y gratuita de alimentos, para saber sus calorías y su proteína. Lo que se envía es el número del código; como en cualquier conexión a internet, Open Food Facts ve también la dirección IP desde la que llega la consulta.</p>
-    <p>Si el producto tiene foto, la foto se carga de los servidores de Open Food Facts (images.openfoodfacts.org) cada vez que se enseña ese producto en la app. La app no carga imágenes de ningún otro sitio.</p>
-    <p>No se envía nada más: ni tu nombre, ni tu peso, ni lo que comes.</p>
+    <header class="cabecera">
+      <div class="contenedor">
+        <a class="marca" href="./"><img src="iconos/icono-64.png" width="36" height="36" alt="" />JowyFit</a>
+        <p class="titulillo">Privacidad</p>
+        <h1>Tus datos se quedan en tu móvil.</h1>
+        <p class="entradilla">JowyFit guarda todos tus datos <b>solo en este móvil</b>: entrenos, comidas, medidas, fotos de progreso y tu perfil. Nadie más recibe tus datos.</p>
+        <ul class="garantias" aria-label="Lo que no tiene JowyFit">
+          <li><svg aria-hidden="true"><use href="#i-ok"/></svg>Sin cuentas</li>
+          <li><svg aria-hidden="true"><use href="#i-ok"/></svg>Sin servidores propios</li>
+          <li><svg aria-hidden="true"><use href="#i-ok"/></svg>Sin anuncios</li>
+          <li><svg aria-hidden="true"><use href="#i-ok"/></svg>Sin analíticas</li>
+        </ul>
+      </div>
+    </header>
 
-    <h2>Datos de salud (Health Connect, solo en Android)</h2>
-    <p>Solo si tú lo activas, JowyFit lee de Health Connect tus <b>pasos</b> y el <b>peso</b> y el <b>% de grasa</b> que guarde tu báscula, para enseñártelos en la app. No escribe nada en Health Connect y no comparte esos datos con nadie: se quedan en el móvil como el resto.</p>
-    <p>Puedes retirar el permiso cuando quieras desde los ajustes de Health Connect. En iPhone no se usa Health Connect: los pasos y el peso los apuntas tú.</p>
+    <main class="contenedor">
+      <section class="tarjeta destacada" aria-labelledby="t-escaner">
+        <h2 id="t-escaner"><span class="ico"><svg aria-hidden="true"><use href="#i-codigo"/></svg></span>Lo único que sale del móvil: el escáner de comida<span class="etiqueta">Internet</span></h2>
+        <p>Cuando escaneas (o escribes) un código de barras, la app pregunta por ese código a <b>Open Food Facts</b>, una lista pública y gratuita de alimentos, para saber sus calorías y su proteína. Lo que se envía es el número del código; como en cualquier conexión a internet, Open Food Facts ve también la dirección IP desde la que llega la consulta.</p>
+        <p>Si el producto tiene foto, la foto se carga de los servidores de Open Food Facts (<code>images.openfoodfacts.org</code>) cada vez que se enseña ese producto en la app. La app no carga imágenes de ningún otro sitio.</p>
+        <p class="no-sale"><svg aria-hidden="true"><use href="#i-escudo"/></svg><span>No se envía nada más: ni tu nombre, ni tu peso, ni lo que comes.</span></p>
+      </section>
 
-    <h2>Cámara y fotos</h2>
-    <p>La cámara se usa para escanear códigos de barras y, si quieres, para hacer fotos de progreso o de tus comidas. Esas fotos se guardan solo en el móvil.</p>
+      <section class="tarjeta" aria-labelledby="t-salud">
+        <h2 id="t-salud"><span class="ico"><svg aria-hidden="true"><use href="#i-corazon"/></svg></span>Datos de salud (Health Connect)<span class="etiqueta">Solo Android</span></h2>
+        <p>Solo si tú lo activas, JowyFit lee de Health Connect tus <b>pasos</b> y el <b>peso</b> y el <b>% de grasa</b> que guarde tu báscula, para enseñártelos en la app. No escribe nada en Health Connect y no comparte esos datos con nadie: se quedan en el móvil como el resto.</p>
+        <p class="suave">Puedes retirar el permiso cuando quieras desde los ajustes de Health Connect. En iPhone no se usa Health Connect: los pasos y el peso los apuntas tú.</p>
+      </section>
 
-    <h2>Avisos</h2>
-    <p>Los avisos (fin del descanso, recordatorios) se programan en el propio móvil. No pasan por ningún servidor.</p>
+      <section class="tarjeta" aria-labelledby="t-camara">
+        <h2 id="t-camara"><span class="ico"><svg aria-hidden="true"><use href="#i-camara"/></svg></span>Cámara y fotos</h2>
+        <p>La cámara se usa para escanear códigos de barras y, si quieres, para hacer fotos de progreso o de tus comidas. Esas fotos se guardan solo en el móvil.</p>
+      </section>
 
-    <h2>Copias de seguridad</h2>
-    <p>Las copias se guardan como un archivo en tu móvil. Tú decides dónde guardarlas después (por ejemplo, mandártelas por correo o subirlas a tu nube): a partir de ahí las trata ese servicio.</p>
+      <section class="tarjeta" aria-labelledby="t-avisos">
+        <h2 id="t-avisos"><span class="ico"><svg aria-hidden="true"><use href="#i-campana"/></svg></span>Avisos</h2>
+        <p>Los avisos (fin del descanso, recordatorios) se programan en el propio móvil. No pasan por ningún servidor.</p>
+      </section>
+
+      <section class="tarjeta" aria-labelledby="t-copias">
+        <h2 id="t-copias"><span class="ico"><svg aria-hidden="true"><use href="#i-copia"/></svg></span>Copias de seguridad</h2>
+        <p>Las copias se guardan como un archivo en tu móvil. Tú decides dónde guardarlas después (por ejemplo, mandártelas por correo o subirlas a tu nube): a partir de ahí las trata ese servicio.</p>
+      </section>
+
+      <section class="tarjeta" aria-labelledby="t-resumen">
+        <h2 id="t-resumen"><span class="ico"><svg aria-hidden="true"><use href="#i-movil"/></svg></span>En resumen</h2>
+        <p>No hay cuentas, ni servidores propios, ni anuncios, ni analíticas. Si borras la app, tus datos se borran con ella: haz antes una copia si los quieres guardar.</p>
+      </section>
+
+      <footer class="pie">
+        <span>JowyFit · Política de privacidad · actualizada el 21 de octubre de 2026</span>
+        <a href="./">Volver a JowyFit</a>
+      </footer>
+    </main>
   </body>
 </html>

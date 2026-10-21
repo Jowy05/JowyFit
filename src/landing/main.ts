@@ -10,6 +10,7 @@ import './landing.css'
 import { version } from '../../package.json'
 import { arrancar } from './anim'
 import { APK } from './apk'
+import { t, textos } from './i18n'
 
 const raiz = document.documentElement
 
@@ -28,23 +29,24 @@ function letra() {
 }
 
 /** Línea bajo el botón: «Para Android 8 o superior · 27 MB · actualizada el 20 de octubre de 2026 · Novedades».
- *  El tamaño y la fecha salen de apk.ts, y solo si son de la versión de package.json (MAYOR.MENOR.PARCHE). */
+ *  El tamaño y la fecha salen de apk.ts, y solo si son de la versión de package.json (MAYOR.MENOR.PARCHE).
+ *  La fecha, en el formato largo del idioma de la página. */
 function lineaVersion() {
-  const datos = ['Para Android 8 o superior']
+  const datos = [t('version.android')]
   if (APK.version === version) {
-    datos.push(`${Math.max(1, Math.round(APK.bytes / 1e6))} MB`)
+    datos.push(t('version.tamano', { mb: Math.max(1, Math.round(APK.bytes / 1e6)) }))
     const fecha = new Date(`${APK.fecha}T12:00:00`)
-    if (!Number.isNaN(fecha.getTime())) datos.push('actualizada el ' + new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }).format(fecha))
+    if (!Number.isNaN(fecha.getTime())) datos.push(t('version.fecha', { fecha: new Intl.DateTimeFormat(textos.locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(fecha) }))
   }
   for (const el of document.querySelectorAll<HTMLElement>('[data-version]')) {
     el.textContent = datos.join(' · ') + ' · '
     const a = document.createElement('a')
     a.href = '#novedades'
     a.dataset.abrir = 'd-novedades'
-    a.textContent = 'Novedades'
+    a.textContent = t('version.novedades')
     el.append(a)
   }
-  for (const el of document.querySelectorAll<HTMLElement>('[data-version-corta]')) el.textContent = `Versión ${version}`
+  for (const el of document.querySelectorAll<HTMLElement>('[data-version-corta]')) el.textContent = t('version.corta', { version })
 }
 
 /** «¿Es seguro instalarla?»: si se conoce la huella SHA-256 del APK publicado (apk.ts), se enseña para comprobarlo. */
@@ -94,7 +96,14 @@ function preguntas() {
   })
 }
 
+/** Idioma: el selector y los textos (si no es castellano). Al cambiar, se repinta lo que escribe el JS: la línea de
+ *  la versión y la huella (sus párrafos se acaban de rehacer con el texto nuevo). */
+function idioma() {
+  textos.alCambiar(() => { lineaVersion(); huella() })
+  textos.iniciar().catch(e => console.error('Landing:', e))
+}
+
 // Cada paso por separado: si uno falla, los demás siguen (antes un fallo dejaba la página a medio arrancar).
-for (const paso of [letra, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, arrancar, huella]) {
+for (const paso of [idioma, letra, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, arrancar, huella]) {
   try { paso() } catch (e) { console.error('Landing:', e) }
 }

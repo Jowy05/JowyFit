@@ -4,11 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0A0E13" />
-    <meta name="description" content="Demo de JowyFit en un minuto: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad." />
+    <meta name="description" data-i18n-attr="content:demo.meta.descripcion" content="Demo de JowyFit en un minuto: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad." />
     <meta name="format-detection" content="telephone=no" />
-    <title>JowyFit · Demo en un minuto</title>
+    <title data-i18n="demo.meta.titulo">JowyFit · Demo en un minuto</title>
     <link rel="icon" href="iconos/icono-64.png" type="image/png" sizes="64x64" />
     <link rel="apple-touch-icon" href="iconos/icono-180.png" />
+    <!--
+      Idioma (antes de pintar, igual en index.html y Demo.html): «?lang=es|ca|en», si no el que eligió la persona
+      (localStorage «jf-idioma-web») y si no el del navegador (el primero que sea en, ca o es); si no, castellano.
+      Fuera del castellano la página se esconde hasta que src/landing/i18n/idioma.ts pone los textos (como mucho 1,5 s),
+      para que no se vea un instante en castellano.
+    -->
+    <script>
+      ;(function () {
+        var vale = /^(es|ca|en)$/, l = null, h = document.documentElement
+        try { l = new URLSearchParams(location.search).get('lang') } catch (e) {}
+        if (!vale.test(l || '')) { l = null; try { l = localStorage.getItem('jf-idioma-web') } catch (e) {} }
+        if (!vale.test(l || '')) {
+          l = 'es'
+          var ls = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']
+          for (var i = 0; i < ls.length; i++) { var c = String(ls[i] || '').toLowerCase().slice(0, 2); if (vale.test(c)) { l = c; break } }
+        }
+        h.setAttribute('lang', l)
+        if (l !== 'es') { h.classList.add('i18n-cargando'); setTimeout(function () { h.classList.remove('i18n-cargando') }, 1500) }
+      })()
+    </script>
+    <style>html.i18n-cargando body { visibility: hidden; }</style>
   </head>
   <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -18,19 +39,34 @@
       <symbol id="d-sigue" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></symbol>
       <symbol id="d-otra" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4"/></symbol>
       <symbol id="d-bajar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
+      <symbol id="d-abajo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></symbol>
+      <symbol id="d-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
       <symbol id="d-flecha" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12h13m-5-6 6 6-6 6"/></symbol>
     </svg>
 
     <header class="d-cab">
       <a class="d-marca" href="./"><img src="iconos/icono-64.png" width="34" height="34" alt="" />JowyFit</a>
-      <a class="d-volver" href="./">Volver a la página</a>
+      <div class="d-cab-der">
+        <!-- Idioma: el código del actual y un menú con los tres (cada uno en su idioma). Lo maneja src/landing/i18n/idioma.ts. -->
+        <div class="d-idioma" data-idioma-selector>
+          <button class="d-idioma-boton" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="d-menu-idioma" aria-label="Idioma: Español" data-idioma-boton>
+            <span data-idioma-codigo>ES</span><svg aria-hidden="true"><use href="#d-abajo"/></svg>
+          </button>
+          <ul class="d-idioma-menu" id="d-menu-idioma" role="menu" hidden>
+            <li role="none"><button type="button" role="menuitemradio" aria-checked="true" lang="es" data-idioma-opcion="es"><span>Español</span><svg aria-hidden="true"><use href="#d-check"/></svg></button></li>
+            <li role="none"><button type="button" role="menuitemradio" aria-checked="false" lang="ca" data-idioma-opcion="ca"><span>Català</span><svg aria-hidden="true"><use href="#d-check"/></svg></button></li>
+            <li role="none"><button type="button" role="menuitemradio" aria-checked="false" lang="en" data-idioma-opcion="en"><span>English</span><svg aria-hidden="true"><use href="#d-check"/></svg></button></li>
+          </ul>
+        </div>
+        <a class="d-volver" href="./" data-i18n="demo.cab.volver">Volver a la página</a>
+      </div>
     </header>
 
     <main class="d-main">
       <div class="d-intro">
-        <p class="d-titulillo">Demo · capturas de la app de verdad</p>
-        <h1>Así funciona JowyFit</h1>
-        <div class="d-plat" role="tablist" aria-label="Qué móvil tienes">
+        <p class="d-titulillo" data-i18n="demo.intro.titulillo">Demo · capturas de la app de verdad</p>
+        <h1 data-i18n="demo.intro.titulo">Así funciona JowyFit</h1>
+        <div class="d-plat" role="tablist" aria-label="Qué móvil tienes" data-i18n-attr="aria-label:demo.intro.plataforma">
           <button type="button" role="tab" data-plat="android" aria-selected="true">Android</button>
           <button type="button" role="tab" data-plat="apple" aria-selected="false">iPhone</button>
         </div>
@@ -51,21 +87,21 @@
           <p class="d-texto" data-texto></p>
           <div class="d-barras" data-barras></div>
           <div class="d-controles">
-            <button type="button" class="d-b d-b-sec" data-atras aria-label="Paso anterior"><svg aria-hidden="true"><use href="#d-atras"/></svg></button>
+            <button type="button" class="d-b d-b-sec" data-atras aria-label="Paso anterior" data-i18n-attr="aria-label:demo.control.atras"><svg aria-hidden="true"><use href="#d-atras"/></svg></button>
             <button type="button" class="d-b d-b-play" data-play aria-label="Pausar"><svg class="i-pausa" aria-hidden="true"><use href="#d-pausa"/></svg><svg class="i-play" aria-hidden="true"><use href="#d-play"/></svg><span data-play-txt>Pausar</span></button>
-            <button type="button" class="d-b d-b-sec" data-sigue aria-label="Paso siguiente"><svg aria-hidden="true"><use href="#d-sigue"/></svg></button>
+            <button type="button" class="d-b d-b-sec" data-sigue aria-label="Paso siguiente" data-i18n-attr="aria-label:demo.control.sigue"><svg aria-hidden="true"><use href="#d-sigue"/></svg></button>
           </div>
-          <p class="d-teclas">Espacio para pausar · flechas para ir y volver</p>
+          <p class="d-teclas" data-i18n="demo.control.teclas">Espacio para pausar · flechas para ir y volver</p>
           <button type="button" class="d-otro-movil" data-cambiar>¿Tienes iPhone? Ver su demo</button>
         </section>
 
         <section class="d-final" data-final hidden aria-labelledby="d-final-t">
           <img src="iconos/icono-192.png" width="88" height="88" alt="" />
-          <h2 id="d-final-t">Tus datos, solo en tu móvil.</h2>
-          <p>Gratis, sin cuentas y sin anuncios. Empieza suave y sigue constante.</p>
-          <a class="d-cta solo-android" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk"><svg aria-hidden="true"><use href="#d-bajar"/></svg>Descargar la app gratis</a>
-          <a class="d-cta solo-apple" href="app.html?instalar=1">Abrir JowyFit gratis<svg aria-hidden="true"><use href="#d-flecha"/></svg></a>
-          <button type="button" class="d-b d-b-sec d-otra" data-otra><svg aria-hidden="true"><use href="#d-otra"/></svg>Verla otra vez</button>
+          <h2 id="d-final-t" data-i18n="demo.final.titulo">Tus datos, solo en tu móvil.</h2>
+          <p data-i18n="demo.final.texto">Gratis, sin cuentas y sin anuncios. Empieza suave y sigue constante.</p>
+          <a class="d-cta solo-android" data-i18n="demo.final.descargar" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk"><svg aria-hidden="true"><use href="#d-bajar"/></svg>Descargar la app gratis</a>
+          <a class="d-cta solo-apple" href="app.html?instalar=1" data-i18n="demo.final.abrir">Abrir JowyFit gratis<svg aria-hidden="true"><use href="#d-flecha"/></svg></a>
+          <button type="button" class="d-b d-b-sec d-otra" data-otra data-i18n="demo.final.otra"><svg aria-hidden="true"><use href="#d-otra"/></svg>Verla otra vez</button>
         </section>
       </div>
     </main>

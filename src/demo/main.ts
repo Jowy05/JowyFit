@@ -7,6 +7,7 @@ import '@fontsource/barlow/latin-600.css'
 import '@fontsource/barlow-semi-condensed/latin-700.css'
 import './demo.css'
 import { ALTO, ANCHO, cajaDe, duracion, guion, type Caja, type Plataforma, type PasoDemo } from './guion'
+import { t, textos } from './i18n'
 
 const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!
 const raiz = document.documentElement
@@ -85,7 +86,7 @@ function pintarBarras() {
     const b = document.createElement('button')
     b.type = 'button'
     b.className = 'd-barra'
-    b.setAttribute('aria-label', `Ir al paso ${k + 1}: ${x.titulo}`)
+    b.setAttribute('aria-label', t('demo.control.barra', { n: k + 1, titulo: t(x.titulo) }))
     b.append(document.createElement('i'))
     b.addEventListener('click', () => ir(k))
     return b
@@ -95,8 +96,17 @@ function pintarBarras() {
 function pintarPlataforma() {
   raiz.dataset.plataforma = plat
   const otro = document.querySelector('[data-cambiar]')
-  if (otro) otro.textContent = plat === 'apple' ? '¿Tienes Android? Ver su demo' : '¿Tienes iPhone? Ver su demo'
+  if (otro) otro.textContent = t(plat === 'apple' ? 'demo.cambiar.android' : 'demo.cambiar.iphone')
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-plat]')) b.setAttribute('aria-selected', String(b.dataset.plat === plat))
+}
+
+/** Los textos del paso actual en la tarjeta (también al cambiar de idioma). */
+function pintarPaso() {
+  const paso = pasos[i]!
+  $('[data-capitulo]').textContent = t(paso.capitulo)
+  $('[data-n]').textContent = t('demo.control.n', { n: i + 1, total: pasos.length })
+  $('[data-titulo]').textContent = t(paso.titulo)
+  $('[data-texto]').textContent = t(paso.texto)
 }
 
 /** Pone el paso k: cambia la captura (fundido), apaga el foco, lo mueve y lo vuelve a encender. */
@@ -109,10 +119,7 @@ function ir(k: number) {
   const paso = pasos[i]!
   const nueva = src(plat, paso.cap)
   foco.classList.remove('visible')
-  $('[data-capitulo]').textContent = paso.capitulo
-  $('[data-n]').textContent = `${i + 1} de ${pasos.length}`
-  $('[data-titulo]').textContent = paso.titulo
-  $('[data-texto]').textContent = paso.texto
+  pintarPaso()
   const actual = imgs[capa]!
   const cambiar = !actual.src.endsWith(nueva)
   const ponerFoco = () => {
@@ -149,7 +156,7 @@ function ir(k: number) {
     r.style.animation = 'none'
   })
   bs[i]?.setAttribute('aria-current', 'step')
-  restante = duracion(paso)
+  restante = duracion(t(paso.titulo), t(paso.texto))
   const relleno = bs[i]?.firstElementChild as HTMLElement | undefined
   if (relleno) {
     void relleno.offsetWidth
@@ -173,11 +180,16 @@ function terminar() {
   ;(final.querySelector('.d-cta:not([hidden])') as HTMLElement | null)?.focus({ preventScroll: true })
 }
 
+function pintarPlay() {
+  const txt = t(jugando ? 'demo.control.pausar' : 'demo.control.seguir')
+  botonPlay.setAttribute('aria-label', txt)
+  $('[data-play-txt]').textContent = txt
+}
+
 function ponerJugando(si: boolean, alFinal = false) {
   jugando = si
   botonPlay.dataset.estado = si ? 'jugando' : 'pausa'
-  botonPlay.setAttribute('aria-label', si ? 'Pausar' : 'Seguir')
-  $('[data-play-txt]').textContent = si ? 'Pausar' : 'Seguir'
+  pintarPlay()
   const relleno = barras.children[i]?.firstElementChild as HTMLElement | undefined
   if (alFinal) return
   if (si) { if (relleno) relleno.style.animationPlayState = 'running'; programar() }
@@ -200,6 +212,15 @@ function cambiarPlataforma(p: Plataforma) {
 }
 
 // ---------------------------------------------------------------- arranque
+// Idioma: el selector y los textos. Al cambiar, se repinta lo que escribe el JS sin parar ni reiniciar el paso.
+textos.alCambiar(() => {
+  pintarPaso()
+  pintarPlataforma()
+  pintarPlay()
+  ;[...barras.children].forEach((b, k) => { const x = pasos[k]; if (x) b.setAttribute('aria-label', t('demo.control.barra', { n: k + 1, titulo: t(x.titulo) })) })
+  if (final.hidden) colocarMovil(cajaDe(plat, pasos[i]!))
+})
+textos.iniciar().catch(e => console.error('Demo:', e))
 pintarPlataforma()
 pintarBarras()
 precargar(plat)

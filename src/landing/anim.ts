@@ -1,6 +1,7 @@
 // Movimiento de la landing: revelado al hacer scroll, contadores, la maqueta del hero (capturas reales que se
 // encadenan), el aviso «Descarga empezada» al tocar «Descargar» y la barra fija del móvil. Sin librerías; solo transform y opacity.
 // Con «reducir movimiento» no se mueve nada solo, y sin JS todo se ve igual (el CSS por defecto es el estado final).
+import { t, textos, type Clave } from './i18n'
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)
@@ -28,25 +29,39 @@ function revelar() {
   alVer([...pendientes], 0.15, el => { el.classList.add('visto'); pendientes.delete(el); barrer() }, '0px 0px -8% 0px')
 }
 
+/** Una cifra con su texto en el idioma de la página: «Más de 600» (data-contar-clave) o solo el número. */
+function cifra(el: HTMLElement, n: number) {
+  const num = new Intl.NumberFormat(textos.locale()).format(n)
+  const clave = el.dataset.contarClave as Clave | undefined
+  return clave ? t(clave, { n: num }) : num
+}
+const contando = new WeakSet<Element>()
+/** Al cambiar de idioma, cada cifra con su texto nuevo (las que se están contando ya lo cogen solas). */
+function cifrasEnSuIdioma() {
+  textos.alCambiar(() => { for (const el of $$('[data-contar]')) if (!contando.has(el)) el.textContent = cifra(el, Number(el.dataset.contar)) })
+}
+
 /** Contadores de datos reales («Más de 600», «2», «3»): de 0 al valor final, una vez. */
 function contadores() {
   if (reduce) return
-  const fmt = new Intl.NumberFormat('es-ES')
   const els = $$('[data-contar]')
   alVer(els, 0.6, el => {
     const fin = Number(el.dataset.contar)
-    const pre = el.dataset.prefijo ?? ''
     const dur = fin > 50 ? 1200 : 600
     const t0 = performance.now() + els.indexOf(el) * 120
     el.style.minWidth = el.offsetWidth + 'px'
-    const paso = (t: number) => {
-      const x = Math.min(1, Math.max(0, (t - t0) / dur))
+    contando.add(el)
+    const paso = (ahora: number) => {
+      const x = Math.min(1, Math.max(0, (ahora - t0) / dur))
       const p = 1 - (1 - x) ** 3
-      el.textContent = pre + fmt.format(Math.round(fin * p))
+      el.textContent = cifra(el, Math.round(fin * p))
       if (x < 1) requestAnimationFrame(paso)
-      else el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 240, easing: 'cubic-bezier(.34,1.56,.64,1)' })
+      else {
+        contando.delete(el)
+        el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 240, easing: 'cubic-bezier(.34,1.56,.64,1)' })
+      }
     }
-    el.textContent = pre + '0'
+    el.textContent = cifra(el, 0)
     requestAnimationFrame(paso)
   })
 }
@@ -127,8 +142,9 @@ function maquetaHero() {
   const pintar = (e: typeof estado) => {
     estado = e
     boton.dataset.estado = e
-    txt.textContent = { inicio: 'Ver la animación', jugando: 'Pausar', pausa: 'Seguir', fin: 'Ver otra vez' }[e]
+    txt.textContent = t(({ inicio: 'anim.ver', jugando: 'anim.pausar', pausa: 'anim.seguir', fin: 'anim.otra' } as const)[e])
   }
+  textos.alCambiar(() => pintar(estado))
   const crear = (vueltas: number) => {
     anims.forEach(a => a.cancel())
     const pistas = plataforma() === 'apple' ? PISTAS : [...PISTAS, ...PISTAS_ANDROID]
@@ -228,6 +244,7 @@ function relojBloque() {
 
 export function arrancar() {
   descargaEmpezada()
+  cifrasEnSuIdioma()
   if (!('IntersectionObserver' in window)) return
   document.documentElement.classList.add('anim')
   revelar()

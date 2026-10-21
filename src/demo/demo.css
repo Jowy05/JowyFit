@@ -27,6 +27,29 @@ button { font: inherit; }
 .d-marca img { border-radius: 9px; display: block; }
 .d-volver { color: var(--n-sub); font-weight: 500; font-size: 15px; text-decoration: none; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(243, 246, 250, .16); }
 .d-volver:hover { background: rgba(243, 246, 250, .06); }
+/* Idioma: al lado de «Volver», con su mismo aspecto; el menú se abre debajo, a la derecha. */
+.d-cab-der { display: flex; align-items: center; gap: 8px; }
+.d-idioma { position: relative; z-index: 7; }
+.d-idioma-boton {
+  display: inline-flex; align-items: center; gap: 4px; color: var(--n-sub); font-weight: 500; font-size: 15px; cursor: pointer;
+  padding: 8px 10px 8px 12px; border-radius: 12px; border: 1px solid rgba(243, 246, 250, .16); background: none;
+}
+.d-idioma-boton:hover, .d-idioma-boton[aria-expanded='true'] { background: rgba(243, 246, 250, .06); }
+.d-idioma-boton svg { width: 16px; height: 16px; transition: transform .2s var(--ease); }
+.d-idioma-boton[aria-expanded='true'] svg { transform: rotate(180deg); }
+.d-idioma-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; min-width: 168px; margin: 0; padding: 6px; list-style: none;
+  background: var(--n2); border: 1px solid var(--n-line); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .7);
+}
+.d-idioma-menu button {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 44px; padding: 0 12px;
+  color: var(--n-ink); font-weight: 500; font-size: 16px; background: none; border: 0; border-radius: 8px; cursor: pointer; text-align: left;
+}
+.d-idioma-menu button:hover { background: rgba(243, 246, 250, .08); }
+.d-idioma-menu button:focus-visible { outline-offset: -3px; }
+.d-idioma-menu svg { width: 18px; height: 18px; color: var(--n-acc); visibility: hidden; }
+.d-idioma-menu button[aria-checked='true'] { font-weight: 600; }
+.d-idioma-menu button[aria-checked='true'] svg { visibility: visible; }
 
 .d-main { max-width: 1120px; margin: 0 auto; padding: 18px 20px 40px; }
 .d-intro { text-align: center; }
@@ -94,12 +117,16 @@ button { font: inherit; }
 .d-cta svg { width: 22px; height: 22px; }
 .d-otra { width: 100%; margin-top: 10px; }
 
-/* Escritorio: el móvil a la izquierda y la tarjeta al lado */
-@media (min-width: 880px) {
+/* Escritorio y tablet: el móvil a la izquierda y la tarjeta al lado (en tablet vertical la tarjeta, debajo, quedaba fuera) */
+@media (min-width: 700px) {
   .d-main { padding-top: 28px; }
   .d-escena { grid-template-columns: auto minmax(0, 460px); justify-content: center; align-items: center; gap: 56px; margin-top: 28px; }
   .d-movil { --w: min(340px, calc((100dvh - 250px) * 390 / 844)); }
   .d-tarjeta, .d-final { padding: 24px 24px 18px; }
+}
+@media (min-width: 700px) and (max-width: 879px) {
+  .d-escena { gap: 24px; }
+  .d-movil { --w: min(290px, calc((100dvh - 250px) * 390 / 844)); }
 }
 .d-otro-movil { display: none; }
 
@@ -110,6 +137,7 @@ button { font: inherit; }
   .d-marca { font-size: 18px; }
   .d-marca img { width: 30px; height: 30px; }
   .d-volver { padding: 6px 10px; font-size: 14px; }
+  .d-idioma-boton { padding: 6px 8px 6px 10px; font-size: 14px; }
   .d-main { padding: 0; }
   .d-intro { display: none; }
   .d-escena { position: fixed; inset: 0; margin: 0; display: block; }
@@ -125,6 +153,12 @@ button { font: inherit; }
   .d-b { min-height: 44px; }
   .d-otro-movil { display: block; width: 100%; margin-top: 6px; min-height: 36px; border: 0; background: none; color: var(--n-acc); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .d-final { position: fixed; left: 12px; right: 12px; top: 50%; transform: translateY(-50%); width: auto; z-index: 5; box-shadow: 0 0 0 200vmax rgba(8, 6, 18, .6); }
+}
+/* Móviles muy estrechos (320 px): el botón de idioma, solo con el código, para que «Volver» no se parta. */
+@media (max-width: 339px) {
+  .d-cab { gap: 8px; }
+  .d-idioma-boton { padding: 6px 10px; }
+  .d-idioma-boton svg { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .d-cap, .d-foco, .d-pantalla { transition: none; }

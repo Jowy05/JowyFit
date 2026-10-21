@@ -100,6 +100,38 @@ h3 { font-family: var(--f-disp); font-weight: 700; font-size: clamp(1.375rem, 1.
 .boton-letra[aria-pressed='true'] { background: rgba(243, 246, 250, .10); border-color: var(--n-ink); }
 .boton-letra:focus-visible { outline-color: var(--n-link); }
 
+/* Idioma: justo al lado de «Letra grande», con su mismo aspecto; el menú se abre debajo, a la derecha. */
+.cab-der { display: flex; align-items: center; gap: 8px; }
+.idioma { position: relative; }
+.boton-idioma { gap: 6px; padding: 0 12px; }
+.boton-idioma .ico { font-size: 1rem; transition: transform .2s var(--ease-estandar); }
+.boton-idioma[aria-expanded='true'] { background: rgba(243, 246, 250, .10); }
+.boton-idioma[aria-expanded='true'] .ico { transform: rotate(180deg); }
+.idioma-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 10; min-width: 176px; margin: 0; padding: 6px; list-style: none;
+  background: var(--n2); border: 1px solid var(--n-line); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .7);
+}
+.idioma-menu[hidden] { display: none; }
+.idioma-menu button {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 44px; padding: 0 12px;
+  font: 500 1rem/1.2 var(--f-body); color: var(--n-ink); background: none; border: 0; border-radius: 8px; cursor: pointer; text-align: left;
+}
+.idioma-menu button:hover { background: rgba(243, 246, 250, .08); }
+.idioma-menu button:focus-visible { outline: 3px solid var(--n-link); outline-offset: -3px; }
+.idioma-menu .ico { font-size: 1.125rem; color: var(--n-acc); visibility: hidden; }
+.idioma-menu button[aria-checked='true'] { font-weight: 600; }
+.idioma-menu button[aria-checked='true'] .ico { visibility: visible; }
+/* En pantallas estrechas no caben los dos botones con su texto: «Letra grande» se queda con el icono «Aa»
+   (su nombre sigue ahí para los lectores de pantalla). Con la letra grande puesta, el corte llega antes. */
+@media (max-width: 419px) {
+  .boton-letra-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .boton-letra:not(.boton-idioma) { padding: 0 12px; }
+}
+@media (max-width: 459px) {
+  html[data-letra='grande'] .boton-letra-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-letra='grande'] .boton-letra:not(.boton-idioma) { padding: 0 12px; }
+}
+
 /* ---------- Hero ---------- */
 .hero { padding: 8px 0 40px; }
 .hero-grid { display: grid; gap: 40px; }
@@ -355,8 +387,9 @@ h1 {
 .movil-dia { --w: clamp(240px, 70vw, 300px); }
 
 /* Así empiezas */
-.dias { list-style: none; padding: 0; margin: 24px 0 32px; display: flex; flex-wrap: wrap; gap: 8px; }
-.dias li { display: grid; place-items: center; width: 40px; height: 48px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font: 600 .9375rem/1 var(--f-num); color: var(--muted); }
+/* Los siete días siempre en una fila: a 360 px se estrechan un poco (en catalán llevan dos letras: Dl, Dt…). */
+.dias { list-style: none; padding: 0; margin: 24px 0 32px; display: flex; gap: 8px; }
+.dias li { display: grid; place-items: center; flex: 0 1 40px; min-width: 0; height: 48px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font: 600 .9375rem/1 var(--f-num); color: var(--muted); }
 .dias .si { background: var(--go); border-color: var(--go); color: var(--on-go); }
 .pasos { list-style: none; padding: 0; margin: 0; display: grid; gap: 24px; }
 .pasos li { position: relative; display: grid; grid-template-columns: 56px 1fr; gap: 16px; align-items: start; }
@@ -403,6 +436,9 @@ h1 {
 .ceros li { position: relative; }
 .ceros .euro { position: absolute; top: 20px; left: calc(50% + .04em); }
 .ceros li:last-child > .rodillo { transform: translateX(-.3em); }
+/* En inglés el símbolo va delante: «€0». */
+html[lang='en'] .ceros .euro { left: auto; right: calc(50% + .04em); }
+html[lang='en'] .ceros li:last-child > .rodillo { transform: translateX(.3em); }
 .rodillo { display: block; height: 1em; overflow: hidden; color: var(--ok); }
 .rodillo > span { display: block; width: 1ch; line-height: 1; transform: translateY(-90%); }
 .cero-pie { font-weight: 600; font-size: 1.0625rem; color: var(--ink); }

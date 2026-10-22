@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estadoInicial, queHaceAtras, reducirNav } from '../src/ui/nav'
+import { estadoInicial, queHaceAtras, reducirNav } from '../src/app/nav'
 
 describe('botón atrás del móvil', () => {
   it('en el entreno pregunta si acabarlo en vez de salir sin más', () => {

@@ -82,14 +82,14 @@ describe('instrucciones para instalarla', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: false }))
   }
   it('en iPhone sin instalar: con ?instalar=1 siempre; si no, solo la primera vez', async () => {
-    const { ensenarAlEmpezar } = await import('../src/ui/pantallas/instalar/Instalar')
+    const { ensenarAlEmpezar } = await import('../src/pantallas/instalar/Instalar')
     navegador({ userAgent: UA.iphone })
     web('https://jowy05.github.io/JowyFit/app.html?instalar=1', true); expect(ensenarAlEmpezar()).toBe(true)
     web('https://jowy05.github.io/JowyFit/app.html', false); expect(ensenarAlEmpezar()).toBe(true)
     web('https://jowy05.github.io/JowyFit/app.html', true); expect(ensenarAlEmpezar()).toBe(false)
   })
   it('nunca si ya está instalada ni fuera de Apple', async () => {
-    const { ensenarAlEmpezar } = await import('../src/ui/pantallas/instalar/Instalar')
+    const { ensenarAlEmpezar } = await import('../src/pantallas/instalar/Instalar')
     web('https://jowy05.github.io/JowyFit/app.html?instalar=1', false)
     navegador({ userAgent: UA.iphone, standalone: true }); expect(ensenarAlEmpezar()).toBe(false)
     navegador({ userAgent: UA.android }); expect(ensenarAlEmpezar()).toBe(false)

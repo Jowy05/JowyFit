@@ -222,7 +222,7 @@ describe('seguridad · la copia automática ya no pisa la de hoy', () => {
       return { ...m, esNativo: () => true, guardarArchivo: async (n: string, b: Uint8Array) => { guardados[n] = b; return n }, copiasGuardadas: async () => Object.keys(guardados).map(nombre => ({ nombre, fecha: 0, tam: 0 })) }
     })
     try {
-      const { hacerCopiaAhora, copiaAutomatica } = await import('../src/ui/servicios')
+      const { hacerCopiaAhora, copiaAutomatica } = await import('../src/app/servicios')
       const { importar: imp } = await import('../src/datos/copias')
       await hacerCopiaAhora()
       const [primera] = Object.keys(guardados)

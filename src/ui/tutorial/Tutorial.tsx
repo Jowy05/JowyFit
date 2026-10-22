@@ -5,11 +5,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { esAndroid, esWebApple, estaInstalada } from '../../plataforma'
-import { cx, Hoja, Ico } from '../comp'
-import { RAIZ, useNav } from '../nav'
+import { cx, Hoja, Ico } from '../componentes'
+import { RAIZ, useNav } from '../../app/nav'
 import { pasosTutorial } from './pasos'
 import { t } from '../../i18n'
-import '../estilos/tutorial.css'
 
 const CLAVE_OFRECIDO = 'jf-tutorial-ofrecido'
 const EVENTO = 'jf-tutorial'

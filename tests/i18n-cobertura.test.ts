@@ -4,7 +4,7 @@
 //
 // Las 8 zonas están traducidas: la parte estricta (faltan / sobran / duplicados) corre siempre (ESTRICTO_SIEMPRE).
 // Además se buscan en los .tsx textos que se pintan sin pasar por t() (ver «textos sin envolver», abajo).
-// Para mirar solo una zona: I18N_SOLO=src/ui/pantallas/inicio (rutas separadas por comas: qué archivos se miran
+// Para mirar solo una zona: I18N_SOLO=src/pantallas/inicio (rutas separadas por comas: qué archivos se miran
 // para «faltan») e I18N_ZONA=inicio (qué diccionario se mira para «sobran»). Más en docs/I18N-APP.md.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -165,10 +165,10 @@ const DOMINIO = /\b[\w-]+(?:\.[\w-]+)*\.(?:io|co|com|org|net)\b/g
 
 /** Excepciones con su motivo: el texto exacto (ya sin lo de arriba) y el archivo. Que sean pocas. */
 const EXCEPCIONES: { archivo: string; texto: string; por: string }[] = [
-  { archivo: 'src/ui/pantallas/perfil/Creditos.tsx', texto: 'Exercise data by ()', por: 'atribución que pide la licencia de RepDB, en inglés tal cual' },
-  { archivo: 'src/ui/pantallas/rutina/Ficha.tsx', texto: 'Exercise data by', por: 'atribución de RepDB (licencia)' },
-  { archivo: 'src/ui/pantallas/rutina/Biblioteca.tsx', texto: 'Exercise data by ()', por: 'atribución de RepDB (licencia)' },
-  { archivo: 'src/ui/pantallas/entreno/HojasEntreno.tsx', texto: 'Exercise data by ()', por: 'atribución de RepDB (licencia)' },
+  { archivo: 'src/pantallas/perfil/Creditos.tsx', texto: 'Exercise data by ()', por: 'atribución que pide la licencia de RepDB, en inglés tal cual' },
+  { archivo: 'src/pantallas/rutina/Ficha.tsx', texto: 'Exercise data by', por: 'atribución de RepDB (licencia)' },
+  { archivo: 'src/pantallas/rutina/Biblioteca.tsx', texto: 'Exercise data by ()', por: 'atribución de RepDB (licencia)' },
+  { archivo: 'src/pantallas/entreno/HojasEntreno.tsx', texto: 'Exercise data by ()', por: 'atribución de RepDB (licencia)' },
 ]
 
 /** Lo que queda de un texto al quitarle lo que no se traduce; si aún tiene letras, falta un t(). */

@@ -4,12 +4,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
 import type { EjercicioSesion, Sesion } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
-import { num } from '../../dominio/calculos'
+import { num, capital, textoSerie } from '../../dominio/formato'
 import { fechaLarga, horaDe } from '../../dominio/fechas'
 import { resumen } from '../../dominio/sesion'
 import { Cab, cx, Ico, Pantalla, Th, Vacio } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
-import { capital, textoSerie } from './comun'
 import { FormCorregir } from '../entreno/Corregir'
 import { t, tc, tk } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -110,7 +109,7 @@ function Ejercicio({ s, idx, e, primero, companero, corrigiendo, onCorregir }: {
                 <tr key={k} className={cx(x.calentamiento && 'muted', 'ux-det-serie')} role="button" tabIndex={0} aria-label={x.calentamiento ? t('Corregir serie de calentamiento') : t('Corregir serie {n}', { n: trabajo })}
                   onClick={() => onCorregir(corrigiendo === pos ? null : pos)}>
                   <td>{x.calentamiento ? t('Calent.') : trabajo}</td>
-                  <td>{textoSerie(x, e.registro)}{x.record && <> <Ico n="trophy" b className="goldc" /></>}</td>
+                  <td>{textoSerie(x, e.registro, 'tabla')}{x.record && <> <Ico n="trophy" b className="goldc" /></>}</td>
                   <td>{x.rpe ?? '—'}</td>
                 </tr>
               )

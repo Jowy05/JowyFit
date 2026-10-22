@@ -1,6 +1,7 @@
 // Doble progresión con esfuerzo (RPE) y récords.
-import type { Serie, TipoRegistro } from '../datos/tipos'
-import { epley, kg } from './calculos'
+import type { Serie, Sesion, TipoRegistro } from '../datos/tipos'
+import { epley } from './calculos'
+import { kg } from './formato'
 import { propio } from './claves'
 import { BARRAS, siguiente } from './pesos'
 import { t, tk } from '../i18n'
@@ -26,8 +27,8 @@ export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; re
   const hechas = ultimas ? trabajo(ultimas) : []
   if (!hechas.length) return { accion: 'primera', peso: null, reps: objetivo.repsMin, ultima: null, texto: t('Primera vez: elige un peso cómodo (esfuerzo 6-7)') }
 
-  // La serie de referencia es la de más peso entre las que tienen peso apuntado. Antes una serie sin
-  // peso contaba como 0 kg y, en las asistidas (pesos negativos), «ganaba» y se perdía el peso.
+  // La serie de referencia es la de más peso entre las que tienen peso apuntado: una sin peso no cuenta como
+  // 0 kg, que en las asistidas (pesos negativos) «ganaría» y se perdería el peso.
   const conPeso = hechas.filter(s => finito(s.peso))
   const top = (conPeso.length ? conPeso : hechas).reduce((a, b) => ((b.peso ?? -Infinity) > (a.peso ?? -Infinity) ? b : a))
   const ultima = { peso: top.peso, reps: top.reps ?? top.segundos ?? null, rpe: top.rpe }
@@ -98,7 +99,7 @@ export function volumen(series: Serie[]): number {
   return trabajo(series).reduce((t, s) => t + Math.max(0, s.peso ?? 0) * (s.reps ?? 0), 0)
 }
 
-// ---------- primera carga a partir de los pesos de referencia del perfil ----------
+// Primera carga a partir de los pesos de referencia del perfil
 
 /** Ejercicio → referencia del perfil que sirve para él (y factor si es una variante algo distinta). */
 const DESDE_REFERENCIA: Record<string, { ref: string; f: number }> = {
@@ -136,7 +137,7 @@ export function desdeReferencia(id: string, referencias: Record<string, string> 
   return { accion: 'primera', peso, reps: objetivo.repsMin, ultima: null, texto: t('Por tu referencia ({ref}): empieza con {peso} kg y ajusta', { ref: referencias![m.ref]!, peso: kg(peso) }) }
 }
 
-// ---------- primera vez sin historial ni referencia: peso de partida ----------
+// Primera vez sin historial ni referencia: peso de partida
 
 export const TEXTO_PARTIDA = tk('Empieza con este y súbelo si va fácil')
 
@@ -152,9 +153,8 @@ function minimoPartida(material: string | null | undefined, registro: TipoRegist
 }
 
 /**
- * Peso con el que empezar la primera vez que se hace un ejercicio, si no hay historial ni referencia:
- * la barra vacía, la mancuerna más ligera razonable o ~10 kg en máquina. Siempre un peso que existe
- * en el gimnasio y nunca 0. Null para peso corporal, tiempo, cardio y asistidos (no cambian).
+ * Peso de partida sin historial ni referencia: la barra vacía, la mancuerna más ligera razonable o ~10 kg en
+ * máquina; siempre uno que exista y nunca 0. Null para peso corporal, tiempo, cardio y asistidos (no cambian).
  */
 export function pesoPartida(material: string | null | undefined, registro: TipoRegistro, lista: number[]): number | null {
   if (registro !== 'peso' && registro !== 'mancuerna') return null
@@ -170,4 +170,25 @@ export function conPartida(s: Sugerencia, material: string | null | undefined, r
   if (s.accion !== 'primera' || s.peso != null) return s
   const peso = pesoPartida(material, registro, lista)
   return peso == null ? s : { ...s, peso, partida: true, texto: t(TEXTO_PARTIDA) }
+}
+
+/** Series hechas de un ejercicio en una sesión terminada. */
+export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
+
+/** Historial de un ejercicio dentro de una lista de sesiones ya leída (más reciente primero). */
+export function historialEn(sesiones: Sesion[], id: string, excluir?: number): Hecho[] {
+  const out: Hecho[] = []
+  for (const s of sesiones) {
+    if (s.id === excluir) continue
+    for (const e of s.ejercicios) {
+      if (e.ejercicio !== id) continue
+      const series = e.series.filter(x => x.hecha)
+      if (series.some(x => !x.calentamiento)) out.push({ sesionId: s.id!, fecha: s.fecha, inicio: s.inicio, series })
+    }
+  }
+  return out
+}
+
+export function bloqueObjetivo(b: { repsMin: number; repsMax: number; rpe: number }) {
+  return { repsMin: b.repsMin, repsMax: b.repsMax, rpe: b.rpe }
 }

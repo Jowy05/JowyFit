@@ -1,7 +1,7 @@
 // RUT-04 · Editar plan
 import { useState } from 'react'
-import { db } from '../../datos/db'
-import type { Bloque, Rutina } from '../../datos/tipos'
+import { guardarRutina } from '../../datos/acciones/rutina'
+import type { Bloque } from '../../datos/tipos'
 import { ejercicio } from '../../catalogo/catalogo'
 import { duracion } from '../../dominio/fechas'
 import { Cab, Chip, estilo, Ico, Pantalla, Stepper, Th, Vacio } from '../../ui/componentes'
@@ -13,10 +13,6 @@ import { nombreEntreno } from '../../dominio/nombres'
 import { t } from '../../i18n'
 
 const RANGOS: [number, number][] = [[5, 8], [6, 10], [8, 12], [10, 15], [12, 20]]
-
-export async function guardarRutina(r: Rutina) {
-  await db.rutinas.put(r)
-}
 
 export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
   const nav = useNav()

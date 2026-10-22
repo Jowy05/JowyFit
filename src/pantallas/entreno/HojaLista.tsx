@@ -2,16 +2,16 @@
 // Solo se mira: sin «Pendiente» repetido, las flechas de orden detrás de «Cambiar orden», y «Terminar entreno»
 // siempre a la vista abajo (es el único sitio para terminar), con «Salir sin terminar» y «Descartar» en pequeño.
 import { Fragment, useState } from 'react'
-import { db } from '../../datos/db'
+import { guardarSesion } from '../../datos/acciones/entreno'
 import type { Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { irA, mover, serieActual } from '../../dominio/sesion'
-import { kg } from '../../dominio/calculos'
+import { kg, textoSerie } from '../../dominio/formato'
 import { cx, Hoja, Ico } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useSesionEnCurso } from '../../datos/hooks'
-import { FormCorregir, valorSerie } from './Corregir'
+import { FormCorregir } from './Corregir'
 import { t, tc } from '../../i18n'
 
 export function HojaLista() {
@@ -24,7 +24,7 @@ export function HojaLista() {
   const [corr, setCorr] = useState<{ uid: string; k: number } | null>(null)
   if (s === undefined) return <Hoja titulo={t('Lista de la sesión')}><p className="muted">{t('Cargando…')}</p></Hoja>
   if (!s) return <Hoja titulo={t('Lista de la sesión')}><p className="muted">{t('No hay entreno en curso.')}</p></Hoja>
-  const guardar = (x: Sesion) => db.sesiones.put(x)
+  const guardar = (x: Sesion) => guardarSesion(x)
   const pendientes = s.ejercicios.filter(e => e.estado === 'pendiente').length
   return (
     <Hoja titulo={t('Lista de la sesión')} sub={ordenar ? t('Sube o baja con las flechas') : t('Toca un ejercicio para ir a él')} className="tall">
@@ -40,7 +40,7 @@ export function HojaLista() {
           const total = e.series.filter(x => !x.calentamiento).length
           const sust = e.ejercicio !== e.planificado
           const estado = e.estado === 'hecho' ? 'done' : e.estado === 'curso' ? 'cur' : e.estado === 'saltado' ? 'skip' : ''
-          // Solo se marca lo que no es «lo normal»: en curso, hecho o saltado. «Pendiente» sobraba (salía en casi todas).
+          // Solo se marca lo que no es «lo normal»: en curso, hecho o saltado. «Pendiente» sobra: saldría en casi todas.
           const tag = { hecho: t('Hecho'), curso: t('En curso'), saltado: t('Saltado'), pendiente: '' }[e.estado]
           const verSeries = e.estado === 'hecho' && abierto === e.uid
           return (
@@ -74,9 +74,9 @@ export function HojaLista() {
                   : <>
                     <p className="small muted">{t('Toca una serie para corregirla')}</p>
                     {e.series.map((x, k) => x.hecha && (
-                      <button key={k} className="set done ux-tocable" onClick={() => setCorr({ uid: e.uid, k })} aria-label={x.calentamiento ? t('Corregir el calentamiento: {valor}', { valor: valorSerie(x, e) }) : t('Corregir la serie {n}: {valor}', { n: e.series.filter(y => !y.calentamiento).indexOf(x) + 1, valor: valorSerie(x, e) })}>
+                      <button key={k} className="set done ux-tocable" onClick={() => setCorr({ uid: e.uid, k })} aria-label={x.calentamiento ? t('Corregir el calentamiento: {valor}', { valor: textoSerie(x, e.registro, 'corto') }) : t('Corregir la serie {n}: {valor}', { n: e.series.filter(y => !y.calentamiento).indexOf(x) + 1, valor: textoSerie(x, e.registro, 'corto') })}>
                         <span className="sn">{x.calentamiento ? tc('calentamiento', 'C') : e.series.filter(y => !y.calentamiento).indexOf(x) + 1}</span>
-                        <span className="sv">{valorSerie(x, e)}</span>
+                        <span className="sv">{textoSerie(x, e.registro, 'corto')}</span>
                         <span className="se"><Ico n="pencil-simple" /></span>
                         {x.record ? <Ico n="trophy" b /> : <Ico n="check" b />}
                       </button>

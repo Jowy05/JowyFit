@@ -1,6 +1,7 @@
 // Entreno en curso: crear la sesión desde un día de la rutina y operaciones puras sobre ella.
 import type { Bloque, DiaRutina, EjercicioSesion, Serie, Sesion, TipoRegistro } from '../datos/tipos'
 import { hoyISO } from './fechas'
+import { esRecord } from './progresion'
 
 export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: 'normal' | 'corta'; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }> }): Sesion {
   const ahora = o.ahora ?? Date.now()
@@ -74,8 +75,8 @@ export function hecha(s0: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps
   e.inicio ??= ahora
   const eraCalentamiento = e.series[i]!.calentamiento
   Object.assign(e.series[i]!, datos, { hecha: true, ts: ahora })
-  // Las siguientes series heredan peso y reps si aún no se tocaron. Una serie de calentamiento
-  // no hereda nada: antes, al marcar «20 kg × 10» de aproximación, todas las series de trabajo pasaban a 20 kg.
+  // Las siguientes series heredan peso y reps si aún no se tocaron, pero no de una de calentamiento:
+  // una aproximación de «20 kg × 10» no pasa las series de trabajo a 20 kg.
   if (!eraCalentamiento) for (const x of e.series.slice(i + 1)) if (!x.hecha && !x.calentamiento) { x.peso = datos.peso; if (e.registro !== 'tiempo') x.reps ??= datos.reps }
   const companero = e.superserie ? s.ejercicios.find(o => o.uid === e.superserie) : undefined
   const terminado = serieActual(e) < 0
@@ -97,6 +98,29 @@ export function hecha(s0: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps
   return { sesion: s, descanso: e.descanso }
 }
 
+/** Descanso tras una serie de calentamiento (segundos). */
+export const DESCANSO_CALENTAMIENTO = 45
+
+/**
+ * «Hecho» en la serie que toca: la marca, mira si es récord frente a `previas` (historial y lo de hoy) y pone el
+ * descanso que sigue (`descansoHasta`) si toca y el entreno no ha terminado. Null si no queda serie por hacer.
+ */
+export function apuntarSerie(s: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>, previas: Serie[], ahora = Date.now()): { sesion: Sesion; record: ReturnType<typeof esRecord> } | null {
+  const e = s.ejercicios[idx]
+  const n = e ? serieActual(e) : -1
+  const actual = e?.series[n]
+  if (!actual) return null
+  const record = actual.calentamiento ? null : esRecord({ ...actual, ...datos, hecha: true }, previas)
+  const r = hecha(s, idx, datos, ahora)
+  const nueva = record ? cambiarSerie(r.sesion, idx, n, { record: true }) : r.sesion
+  const descanso = actual.calentamiento ? DESCANSO_CALENTAMIENTO : r.descanso
+  if (descanso > 0 && !terminada(nueva)) {
+    nueva.descansoHasta = ahora + descanso * 1000
+    nueva.descansoTotal = descanso
+  } else nueva.descansoHasta = undefined
+  return { sesion: nueva, record }
+}
+
 export function cambiarSerie(s0: Sesion, idx: number, n: number, cambios: Partial<Serie>): Sesion {
   const s = clon(s0)
   Object.assign(s.ejercicios[idx]!.series[n]!, cambios)
@@ -104,9 +128,8 @@ export function cambiarSerie(s0: Sesion, idx: number, n: number, cambios: Partia
 }
 
 /**
- * Corrige una serie ya hecha (peso, reps o segundos mal apuntados). Las series siguientes sin hacer que
- * heredaron el peso equivocado pasan al corregido; las que se tocaron a mano se respetan.
- * Una serie sin hacer o fuera de rango no se toca.
+ * Corrige una serie ya hecha. Las siguientes sin hacer que heredaron el peso equivocado pasan al corregido y las
+ * tocadas a mano se respetan. Una serie sin hacer o fuera de rango no se toca.
  */
 export function corregirSerie(s0: Sesion, idx: number, n: number, datos: Pick<Serie, 'peso' | 'reps' | 'segundos'> & { record?: boolean }): Sesion {
   const s = clon(s0)
@@ -128,7 +151,7 @@ export function anadirSerie(s0: Sesion, idx: number): Sesion {
   const s = clon(s0)
   const e = s.ejercicios[idx]!
   const ult = e.series[e.series.length - 1]
-  // Por tiempo va en segundos y sin reps (antes la serie añadida a una plancha salía con «8 reps» y sin segundos).
+  // Por tiempo va en segundos y sin reps.
   const tiempo = e.registro === 'tiempo'
   e.series.push({ n: e.series.length + 1, peso: ult?.peso ?? null, reps: tiempo ? null : ult?.reps ?? e.repsMin, segundos: tiempo ? ult?.segundos ?? e.repsMin : null, rpe: null, calentamiento: false, hecha: false })
   if (e.estado === 'hecho') e.estado = 'curso'
@@ -139,12 +162,19 @@ export function quitarSerie(s0: Sesion, idx: number): Sesion {
   const s = clon(s0)
   const e = s.ejercicios[idx]
   if (!e) return s
-  // La última serie de trabajo sin hacer (antes podía borrar una de calentamiento pendiente).
+  // La última serie de trabajo sin hacer, nunca una de calentamiento pendiente.
   const j = e.series.map(x => !x.hecha && !x.calentamiento).lastIndexOf(true)
   if (j >= 0 && e.series.filter(x => !x.calentamiento).length > 1) e.series.splice(j, 1)
   e.series.forEach((x, k) => (x.n = k + 1))
   if (serieActual(e) < 0 && e.estado === 'curso') { e.estado = 'hecho'; const sig = s.ejercicios.findIndex(o => o.estado === 'pendiente'); if (sig >= 0) s.ejercicios[sig]!.estado = 'curso' }
   return s
+}
+
+/** Añade el calentamiento y vuelve a numerar las series (1, 2, 3…): la pantalla usa `n` para las notas. */
+export function conCalentamiento(s: Sesion, idx: number, series: { peso: number; reps: number }[]): Sesion {
+  const nueva = anadirCalentamiento(s, idx, series)
+  nueva.ejercicios[idx]?.series.forEach((x, k) => { x.n = k + 1 })
+  return nueva
 }
 
 export function anadirCalentamiento(s0: Sesion, idx: number, series: { peso: number; reps: number }[]): Sesion {
@@ -166,8 +196,7 @@ export function sustituir(s0: Sesion, idx: number, nuevo: string, motivo: 'ocupa
   if (registro) e.registro = registro
   const r = e.registro
   for (const x of e.series) if (!x.hecha) {
-    // Al cambiar a un ejercicio por tiempo o de peso corporal, las series pendientes se adaptan
-    // (antes una plancha heredaba «8 reps» y ningún segundo).
+    // Al cambiar a un ejercicio por tiempo o de peso corporal, las series pendientes se adaptan.
     x.peso = r === 'corporal' || r === 'tiempo' || r === 'cardio' ? null : sug?.peso ?? null
     if (r === 'tiempo') { x.segundos = sug?.reps ?? x.segundos ?? 30; x.reps = null }
     else {
@@ -191,7 +220,7 @@ export function irA(s0: Sesion, idx: number): Sesion {
 /** Mueve un ejercicio a otra posición (los no hechos). */
 export function mover(s0: Sesion, desde: number, hasta: number): Sesion {
   const s = clon(s0)
-  // Índices fuera de rango: antes metía un «undefined» en la lista y rompía la sesión.
+  // Con índices fuera de rango no se mueve nada: un «undefined» en la lista rompería la sesión.
   if (desde < 0 || desde >= s.ejercicios.length || !Number.isInteger(desde) || !Number.isInteger(hasta)) return s
   const [e] = s.ejercicios.splice(desde, 1)
   s.ejercicios.splice(Math.max(0, Math.min(hasta, s.ejercicios.length)), 0, e!)
@@ -206,6 +235,16 @@ export function saltar(s0: Sesion, idx: number): Sesion {
   const sig = s.ejercicios.findIndex(o => o.estado === 'pendiente')
   if (sig >= 0 && !s.ejercicios.some(o => o.estado === 'curso')) s.ejercicios[sig]!.estado = 'curso'
   return s
+}
+
+/** Pasa a la versión corta: salta los ejercicios aún pendientes que el día deja fuera en la corta. */
+export function recortarACorta(s: Sesion, dia: DiaRutina | undefined): Sesion {
+  let nueva: Sesion = { ...s, version: 'corta' }
+  for (const b of dia?.bloques ?? []) if (b.fueraEnCorta) {
+    const i = nueva.ejercicios.findIndex(x => x.uid === b.uid && x.estado === 'pendiente')
+    if (i >= 0) nueva = saltar(nueva, i)
+  }
+  return nueva
 }
 
 export function quitarUnaSerie(s0: Sesion, uid: string): Sesion {

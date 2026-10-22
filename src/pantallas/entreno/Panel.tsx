@@ -1,15 +1,15 @@
 // SES-02 · Panel de abajo del entreno: peso, reps y esfuerzo de la serie que toca, o el descanso (SES-03).
 import { useEffect, useRef, useState } from 'react'
-import { db } from '../../datos/db'
+import { guardarSesion } from '../../datos/acciones/entreno'
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { indiceActual, saltar } from '../../dominio/sesion'
 import { duracion } from '../../dominio/fechas'
-import { kg } from '../../dominio/calculos'
+import { kg, textoSerie } from '../../dominio/formato'
 import { cx, estilo, Ico, Stepper } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { etiquetaPeso, etiquetaReps, valorSerie } from './Corregir'
+import { etiquetaPeso, etiquetaReps } from './Corregir'
 import { t, tk } from '../../i18n'
 
 const AYUDA_RPE: Record<number, string> = { 6: tk('6 = te quedaban 4 reps'), 7: tk('7 = te quedaban 3 reps'), 8: tk('8 = te quedaban 2 reps'), 9: tk('9 = te quedaba 1 rep'), 10: tk('10 = no podías ni una más') }
@@ -103,7 +103,7 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
       {ultimaHecha && (
         <div className="pn-tools">
           <button className="tb same" onClick={() => enviar({ peso: ultimaHecha.peso, reps: ultimaHecha.reps, segundos: ultimaHecha.segundos ?? null, rpe: serie.calentamiento ? null : ultimaHecha.rpe })}>
-            <Ico n="copy" /><span>{t('Igual que la anterior')} <small className="ux-igual-d">{t('· apunta {valor}', { valor: valorSerie(ultimaHecha, e) })}</small></span>
+            <Ico n="copy" /><span>{t('Igual que la anterior')} <small className="ux-igual-d">{t('· apunta {valor}', { valor: textoSerie(ultimaHecha, e.registro, 'corto') })}</small></span>
           </button>
         </div>
       )}
@@ -118,8 +118,8 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
       {/* Saltar el ejercicio entero, a la vista. Se recupera desde la lista. */}
       <button className="lnk small ux-saltar-ej" onClick={async () => {
         const antes = s
-        await db.sesiones.put(saltar(s, idx))
-        aviso(t('Saltado: {ejercicio}. Lo recuperas desde la lista', { ejercicio: nombreEjercicio(e.ejercicio) }), () => void db.sesiones.put(antes))
+        await guardarSesion(saltar(s, idx))
+        aviso(t('Saltado: {ejercicio}. Lo recuperas desde la lista', { ejercicio: nombreEjercicio(e.ejercicio) }), () => void guardarSesion(antes))
       }}><Ico n="skip-forward" />{t('Saltar este ejercicio')}</button>
     </div>
   )

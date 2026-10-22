@@ -1,13 +1,14 @@
 // Tareas que corren mientras la app está abierta: recordatorios, pasos y copia automática.
 import { db } from '../datos/db'
 import { exportar, nombreCopia } from '../datos/copias'
-import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
+import { guardarLecturasBascula, guardarPasosAuto } from '../datos/acciones/cuerpo'
+import { guardarAjustes, leerAjustes, leerPerfil, rutinaActiva } from '../datos/repos'
 import { deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
-import { PASOS_POR_KM } from '../dominio/tendencias'
 import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, ID_AVISO, type Aviso } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
+import { decimal } from '../dominio/formato'
 import { regionNumeros, t, tn } from '../i18n'
 
 // Todos los recordatorios: hasta 14 noches antes de entrenar y un día de pesaje por día de la semana.
@@ -23,7 +24,7 @@ function enFecha(fecha: string, hhmm: string): Date {
 /** Vuelve a programar todos los recordatorios según el perfil, la rutina y los ajustes (solo Android). */
 export async function reprogramarNotificaciones(): Promise<void> {
   if (!esNativo()) return
-  const [a, p, r] = await Promise.all([leerAjustes(), leerPerfil(), db.rutinas.filter(x => x.activa).last()])
+  const [a, p, r] = await Promise.all([leerAjustes(), leerPerfil(), rutinaActiva()])
   await cancelar(TODOS)
   if (!p) return
   const avisos: Aviso[] = []
@@ -62,12 +63,7 @@ export async function sincronizarPasos(): Promise<boolean> {
   try {
     const hoy = hoyISO()
     const datos = await leerPasos(sumarDias(hoy, -6), hoy)
-    for (const [fecha, pasos] of Object.entries(datos)) {
-      const prev = await db.pasos.get(fecha)
-      // Health Connect da los pasos andados; el trote apuntado a mano se suma aparte.
-      const trote = prev?.troteKm ? Math.round(prev.troteKm * PASOS_POR_KM) : 0
-      await db.pasos.put({ fecha, pasos: pasos + trote, fuente: 'auto', troteKm: prev?.troteKm })
-    }
+    await guardarPasosAuto(datos)
     return true
   } catch { return false }
 }
@@ -86,11 +82,8 @@ async function sincronizarBascula(): Promise<number> {
     const { pesos, grasas } = await leerBascula(desde)
     const lecturas = juntarBascula(pesos, grasas)
     const nuevas = lecturasNuevas(lecturas, mediciones, a.hcIgnorados)
-    if (nuevas.length) await db.mediciones.bulkAdd(nuevas.map(medicionDeLectura))
     // La grasa que llega más tarde que el peso se añade a su pesada.
-    for (const g of grasaTardia(lecturas, mediciones)) {
-      await db.mediciones.where('id').equals(g.id).modify(m => { m.bascula = { ...m.bascula, grasaPct: g.grasaPct }; m.hc = [...(m.hc ?? []), ...g.ids] })
-    }
+    await guardarLecturasBascula(nuevas.map(medicionDeLectura), grasaTardia(lecturas, mediciones))
     return nuevas.length
   } catch { return 0 }
 }
@@ -133,11 +126,10 @@ export async function comprobarSalud(): Promise<string[]> {
   if (permisos.includes('weight') || permisos.includes('bodyFat')) {
     const { pesos, grasas } = await leerBascula(new Date(Date.now() - 30 * 86_400_000))
     const l = juntarBascula(pesos, grasas).pop()
-    // Solo para probar en el móvil: el número va con la coma o el punto del idioma.
-    const dec = (v: number) => (regionNumeros() === 'en-US' ? String(v) : String(v).replace('.', ','))
+    // Solo para probar en el móvil: el número tal cual llega, con la coma o el punto del idioma.
     lineas.push(l
       ? t('Última pesada: {datos} ({fecha}, {fuente})', {
-        datos: `${l.pesoKg != null ? `${dec(l.pesoKg)} kg` : ''}${l.grasaPct != null ? ` · ${t('{n} % grasa', { n: dec(l.grasaPct) })}` : ''}`,
+        datos: `${l.pesoKg != null ? `${decimal(l.pesoKg)} kg` : ''}${l.grasaPct != null ? ` · ${t('{n} % grasa', { n: decimal(l.grasaPct) })}` : ''}`,
         fecha: fechaLocal(l.fecha).slice(0, 10).split('-').reverse().join('/'),
         fuente: nombreFuente(l.fuente),
       })
@@ -146,10 +138,7 @@ export async function comprobarSalud(): Promise<string[]> {
   return lineas
 }
 
-/**
- * Nombre libre para una copia nueva en Documentos/JowyFit: con la hora y, si ya existe, con «-2», «-3»…
- * Antes era uno por día y la copia automática (tras recuperar otra) pisaba la que se había hecho a mano.
- */
+/** Nombre libre para una copia nueva en Documentos/JowyFit: con la hora y, si ya existe, con «-2», «-3»… */
 async function nombreCopiaLibre(fecha = new Date()): Promise<string> {
   const existentes = esNativo() ? (await copiasGuardadas()).map(c => c.nombre) : []
   return nombreCopia(fecha, existentes)
@@ -179,10 +168,8 @@ export async function hacerCopiaAhora(): Promise<string> {
 
 export type CopiaPreparada = { nombre: string; bytes: Uint8Array }
 /**
- * Web de Apple: la copia se guarda con el menú Compartir («Guardar en Archivos», AirDrop…) y, si el navegador no
- * comparte archivos, se descarga. Si Safari no deja abrir el menú (se tardó en preparar la copia tras el toque),
- * devuelve 'sin-gesto' con la copia ya hecha: se vuelve a llamar con ella al tocar otra vez.
- * La fecha de la última copia solo se apunta si de verdad se ha guardado o enviado.
+ * Web de Apple: se guarda con el menú Compartir o, si no comparte archivos, se descarga. Si Safari no deja abrirlo
+ * (tardó tras el toque), devuelve 'sin-gesto' con la copia hecha para el siguiente toque. La fecha solo se apunta si se guardó.
  */
 export async function copiaCompartiendo(lista?: CopiaPreparada): Promise<{ resultado: 'compartido' | 'descargado' | 'cancelado' | 'sin-gesto'; copia: CopiaPreparada }> {
   const copia = lista ?? { nombre: nombreCopia(), bytes: await exportar() }

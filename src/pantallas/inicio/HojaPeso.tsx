@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
+import { apuntarMedicion } from '../../datos/acciones/cuerpo'
 import type { Bascula, OrigenMedicion } from '../../datos/tipos'
 import { horaActual, hoyISO } from '../../dominio/fechas'
-import { num } from '../../dominio/calculos'
-import { lineaSpark, tendenciaPeso } from '../../dominio/peso'
+import { leerNumero, num } from '../../dominio/formato'
+import { lineaSpark } from '../../ui/graficas'
+import { tendenciaPeso } from '../../dominio/tendencias'
 import { Chip, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -30,10 +32,6 @@ const textoTendencia = (k: number | null) =>
   k == null ? t('Aún pocos datos') : Math.abs(k) < 0.1 ? t('Estable') : t('{n} kg/semana', { n: `${k > 0 ? '+' : '−'}${num(Math.abs(k))}` })
 
 const formato = (v: number) => v.toLocaleString(regionNumeros(), { maximumFractionDigits: 1 })
-const leer = (s: string): number | null => {
-  const v = parseFloat(s.replace(',', '.'))
-  return Number.isFinite(v) ? v : null
-}
 
 export function HojaPeso() {
   const nav = useNav()
@@ -53,9 +51,9 @@ export function HojaPeso() {
     setTexto(formato(ultima?.pesoKg ?? 75))
   }, [mediciones, texto])
   const tend = tendenciaPeso(mediciones ?? [], hoy)
-  const peso = texto == null ? null : leer(texto)
+  const peso = texto == null ? null : leerNumero(texto)
 
-  // − y + van de medio en medio kilo (de 82 a 80 eran 20 toques) y caen en múltiplos de 0,5: 82,3 → + → 82,5.
+  // − y + van de medio en medio kilo y caen en múltiplos de 0,5: 82,3 → + → 82,5.
   const mover = (dir: 1 | -1) => {
     const base = peso ?? 75
     const medios = dir > 0 ? Math.floor(base * 2 + 1e-9) + 1 : Math.ceil(base * 2 - 1e-9) - 1
@@ -66,15 +64,16 @@ export function HojaPeso() {
     if (peso == null || peso < MIN || peso > MAX) { aviso(t('Revisa el peso')); return }
     const datos: Bascula = {}
     for (const c of CAMPOS) {
-      const v = parseFloat((bascula[c.k] ?? '').replace(',', '.'))
-      if (Number.isFinite(v)) datos[c.k] = v
+      const v = leerNumero(bascula[c.k])
+      if (v != null) datos[c.k] = v
+
     }
     const kg = Math.round(peso * 10) / 10
-    const id = await db.mediciones.add({ fecha: `${hoy}T${hora}`, origen, pesoKg: kg, bascula: Object.keys(datos).length ? datos : undefined })
+    const deshacer = await apuntarMedicion({ fecha: `${hoy}T${hora}`, origen, pesoKg: kg, bascula: Object.keys(datos).length ? datos : undefined })
     const nueva = tendenciaPeso([...(mediciones ?? []), { fecha: `${hoy}T${hora}`, origen, pesoKg: kg }], hoy)
     nav.hoja(null)
     const resto = nueva.kgSemana == null ? t('Sigue apuntándolo para ver la tendencia') : t('Tendencia: {tendencia}', { tendencia: textoTendencia(nueva.kgSemana).toLowerCase() })
-    aviso(t('Guardado: {n} kg. {resto}', { n: num(kg), resto }), () => { void db.mediciones.delete(id) })
+    aviso(t('Guardado: {n} kg. {resto}', { n: num(kg), resto }), deshacer)
   })
 
   return (
@@ -118,7 +117,7 @@ export function HojaPeso() {
           <button className="lnk mt12" onClick={() => nav.ir('pro-reg', undefined, 'pro')}>{t('Todos los campos y medidas')} <Ico n="caret-right" /></button>
         </div>
       </details>
-      {/* La tendencia solo cuando ya dice algo (con un solo dato confundía). */}
+      {/* La tendencia solo cuando ya dice algo (con un solo dato confunde). */}
       {tend.kgSemana != null && (
         <div className="card pd mt12 row">
           {tend.puntos.length >= 2

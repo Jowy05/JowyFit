@@ -1,7 +1,7 @@
 // Resumen semanal «¿Voy bien?»: semáforo + frase + cifras.
 import type { Comida, Medicion, PasosDia, Sesion } from '../datos/tipos'
 import { semanaDe, sumarDias } from './fechas'
-import { num } from './calculos'
+import { num } from './formato'
 import { t, tn } from '../i18n'
 
 export type Resumen = {

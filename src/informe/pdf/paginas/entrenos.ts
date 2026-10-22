@@ -1,14 +1,14 @@
 // Entrenos y esfuerzo, progreso de fuerza y mes a mes (Todo, 60 días o más).
-import { kg, num } from '../../../dominio/calculos'
+import { kg, num, fijo } from '../../../dominio/formato'
 import { MESES_CORTOS, fechaCorta, lunesDe } from '../../../dominio/fechas'
 import { t, tc, tn } from '../../../i18n'
 import type { EntrenosInforme, FuerzaInforme, GraficaFuerza, Informe, MesInforme } from '../../calculo/tipos'
-import { diasDe, fijo, formatoSerie } from '../../calculo/comun'
+import { diasDe, formatoSerie } from '../../calculo/comun'
 import { TAM, type Lienzo } from '../lienzo'
 import { altoZonas, ejeDe, ejeHolgado, etiquetasFechas, etiquetasPuntos, filasZonas, grafica, indiceDia, type EtiquetaX, type FilaZonas } from '../graficas'
 import { ANCHO, altoFichas, altoH2, altoNota, chipEsfuerzo, etiqueta, fichas, h2, nota, tituloGrafica, type Ficha, type Flujo, type Maqueta } from '../piezas'
 import { altoTablaDe, tabla, tablaPartida, type Celda, type Columna, type FilaTabla } from '../tablas'
-import { celdaEsfuerzo, colorEsfuerzo, etiquetasSemanas, medirEje, r1, rangoFuerza, tablaResumida } from './comun'
+import { celdaEsfuerzo, colorEsfuerzo, etiquetasSemanas, medirEje, rangoFuerza, tablaResumida } from './comun'
 
 /** «12 h 17 min» → «12 h» + «17 min»; «59 min» → «59» + «min». */
 function partirTiempo(t: string): { grande: string; peque?: string } {
@@ -30,7 +30,7 @@ export function paginaEntrenos(maq: Maqueta, e: EntrenosInforme): Flujo {
     { etq: t('Kg movidos'), grande: num(e.kg, 0), sub: t('peso × repeticiones') },
     { etq: t('Récords'), grande: String(e.records), sub: tn(e.subidas, '{n} subida de peso', '{n} subidas de peso') },
     esf.media != null
-      ? { etq: t('Esfuerzo medio'), grande: r1(esf.media), estado: esf.palabra ? { texto: t(esf.palabra), color: f.l.tono[esf.tono] } : null, sub: esf.pocas ? t('{a} de {b} series (pocas)', { a: esf.marcadas, b: esf.total }) : t('{a} de {b} series', { a: esf.marcadas, b: esf.total }) }
+      ? { etq: t('Esfuerzo medio'), grande: fijo(esf.media), estado: esf.palabra ? { texto: t(esf.palabra), color: f.l.tono[esf.tono] } : null, sub: esf.pocas ? t('{a} de {b} series (pocas)', { a: esf.marcadas, b: esf.total }) : t('{a} de {b} series', { a: esf.marcadas, b: esf.total }) }
       : { etq: t('Esfuerzo medio'), grande: '—', sub: t('sin marcar') },
   ]
   f.bloque(m => altoH2(m) + altoFichas(false) + 3, (l, y, m) => { fichas(l, f.x, y + h2(l, f.x, y, f.w, t('Entrenos'), null, m), f.w, fs) })

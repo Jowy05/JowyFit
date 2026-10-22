@@ -48,9 +48,8 @@ export async function exportar(): Promise<Uint8Array> {
 }
 
 /**
- * Nombre del archivo de la copia, con la fecha y la hora: dos copias del mismo día ya no se pisan (antes, la copia
- * automática tras recuperar otra machacaba la que se había hecho a mano ese día). Si ya existe uno con ese nombre
- * (dos en el mismo minuto), se añade «-2», «-3»…
+ * Nombre del archivo de la copia, con la fecha y la hora: dos copias del mismo día no se pisan.
+ * Si ya existe uno con ese nombre (dos en el mismo minuto), se añade «-2», «-3»…
  */
 export function nombreCopia(fecha = new Date(), existentes?: Iterable<string>): string {
   const d = (n: number) => String(n).padStart(2, '0')
@@ -88,7 +87,7 @@ function leerJSON(texto: string): any {
   }
 }
 
-// Límites al abrir una copia: una «bomba zip» de 400 KB se convertía en 400 MB en memoria.
+// Límites al abrir una copia: una «bomba zip» de 400 KB puede ocupar 400 MB en memoria.
 const MB = 1024 * 1024
 export const LIMITES_ZIP = { archivo: 400 * MB, json: 50 * MB, foto: 30 * MB, total: 300 * MB, entradas: 20_000 }
 
@@ -161,7 +160,7 @@ export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
 async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<string, Uint8Array>) {
   const filas = {} as Record<NombreTabla, Fila[]>
   for (const tb of TABLAS) filas[tb] = (datos[tb] ?? []).map(f => revivir(f, archivos) as Fila)
-  // Fotos cuyo archivo falta o no es una imagen: fuera (la pantalla de fotos fallaba con una foto sin imagen).
+  // Fotos cuyo archivo falta o no es una imagen: fuera (la pantalla de fotos falla con una foto sin imagen).
   filas.fotos = filas.fotos.filter(f => f.imagen instanceof Blob)
   // Lo que falte del perfil y de los ajustes (copias de versiones viejas) se completa con lo de siempre.
   filas.perfil = filas.perfil.map(p => ({ ...perfilPorDefecto(), ...p }))
@@ -175,8 +174,8 @@ async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<st
 }
 
 /**
- * «Borrar todos los datos»: borra la base entera (no tabla a tabla). Así también se reinician los contadores de
- * IndexedDB, que una copia con un id enorme podía dejar agotados para siempre (no se podía apuntar nada más).
+ * «Borrar todos los datos»: borra la base entera (no tabla a tabla) para reiniciar también los contadores de
+ * IndexedDB, que una copia con un id enorme puede dejar agotados (y ya no se podría apuntar nada).
  */
 export async function borrarTodosLosDatos(): Promise<void> {
   try {
@@ -221,8 +220,8 @@ async function importarPerfilSencillo(o: Record<string, any>) {
   await guardarPerfil(cambios)
   for (const m of Array.isArray(o.mediciones) ? o.mediciones : []) {
     if (!m || typeof m !== 'object') continue
-    // Fecha en hora local: «AAAA-MM-DD» → a las 8:00; sin fecha → ahora (antes se usaba la hora UTC,
-    // que de madrugada caía en el día anterior). Una fecha que no es fecha («AAAA-MM-DD» de la plantilla) se descarta.
+    // Fecha en hora local (en UTC, de madrugada cae en el día anterior): «AAAA-MM-DD» → a las 8:00; sin fecha → ahora.
+    // Una fecha que no es fecha («AAAA-MM-DD» de la plantilla) se descarta.
     let fecha: string
     if (m.fecha == null) fecha = ahoraLocal()
     else if (typeof m.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(m.fecha)) fecha = `${m.fecha}T08:00`
@@ -232,7 +231,7 @@ async function importarPerfilSencillo(o: Record<string, any>) {
     const peso = numero(m.peso_kg)
     if (peso != null && peso > 0) med.pesoKg = peso
     const pc = m.perimetros_cm
-    // Antes un bloque de perímetros todo a null se guardaba igualmente como medición vacía.
+    // Un bloque de perímetros todo a null no se guarda como medición vacía.
     const perimetros = pc && typeof pc === 'object' ? soloNumeros({
       cintura: pc.cintura_ombligo, cuello: pc.cuello, cadera: pc.cadera, pecho: pc.pecho,
       brazo: pc.biceps_relajado, brazoContraido: pc.biceps_contraido, muslo: pc.muslo,

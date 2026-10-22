@@ -1,4 +1,4 @@
-// COM-07 · Todos los escaneados, con búsqueda. Ya no es una pestaña: se llega desde «Mis comidas» cuando hay muchos.
+// COM-07 · Todos los escaneados, con búsqueda. No es una pestaña: se llega desde «Mis comidas» cuando hay muchos.
 // Los pendientes se buscan al volver la conexión.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -9,7 +9,8 @@ import { normalizar } from '../../catalogo/catalogo'
 import { Cab, Ico, Pantalla, Vacio, recortar, LARGO } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { Mini, buscarPendientes, kp } from './comun'
+import { Mini, kp } from './comun'
+import { buscarPendientes } from '../../datos/acciones/comida'
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 

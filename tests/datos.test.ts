@@ -6,10 +6,9 @@ import {
   ajustesPorDefecto, gimnasioActivo, gimnasioNuevo, guardarAjustes, guardarPerfil, leerAjustes, leerPerfil, marcaDe, marcar, perfilPorDefecto,
   plantillasIniciales, prepararBase,
 } from '../src/datos/repos'
-import {
-  bloqueObjetivo, comidasDe, gastoDelDia, grasaReciente, historialDe, historialEn, objetivosEnergia, pesoActual, sesionDeHoy, sesionesHechas,
-  sugerenciaPara, totalesComida, ultimaMedicion, ultimasSeries,
-} from '../src/datos/consultas'
+import { comidasDe, gastoDelDia, grasaReciente, historialDe, objetivosEnergia, pesoActual, sesionDeHoy, sesionesHechas, sugerenciaPara, ultimaMedicion, ultimasSeries } from '../src/datos/consultas'
+import { totalesComida } from '../src/dominio/comida'
+import { bloqueObjetivo, historialEn } from '../src/dominio/progresion'
 import { edad, hoyISO, sumarDias } from '../src/dominio/fechas'
 import { objetivos } from '../src/dominio/calculos'
 import type { Comida, EjercicioSesion, Serie, Sesion } from '../src/datos/tipos'

@@ -1,9 +1,9 @@
 // Comida, cuerpo y pasos y gasto, en una página que sigue en la siguiente si no cabe.
-import { conUnidad, num } from '../../../dominio/calculos'
+import { conUnidad, num, fijo } from '../../../dominio/formato'
 import { fechaCorta, lunesDe } from '../../../dominio/fechas'
 import { t, tn } from '../../../i18n'
 import type { ComidaInforme, CuerpoInforme, Informe, PasosInforme, SerieCuerpo } from '../../calculo/tipos'
-import { diasDe, fijo, formatoSerie } from '../../calculo/comun'
+import { diasDe, formatoSerie } from '../../calculo/comun'
 import { TAM, type Lienzo } from '../lienzo'
 import { ejeDe, ejeHolgado, etiquetasFechas, grafica, indiceDia, type BarraGrafica, type EtiquetaX } from '../graficas'
 import { ANCHO, FILA_KV, altoConsejo, altoFichas, altoH2, altoNota, claro, consejo, fichas, h2, kv, nota, tituloGrafica, type Ficha, type Flujo, type Maqueta } from '../piezas'

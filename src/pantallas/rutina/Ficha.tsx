@@ -1,12 +1,13 @@
 // RUT-06 · Ficha de ejercicio: todo lo de RepDB + tu progreso, tus ajustes y tus marcas.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { guardarSesion } from '../../datos/acciones/entreno'
 import { marcar } from '../../datos/repos'
 import { historialDe, sugerenciaPara } from '../../datos/consultas'
 import { catalogoCargado, ejercicio, etiqueta, imagen, imagenMaterial, imagenMusculo, nombreMaterial, nombreMusculo, relacionados } from '../../catalogo/catalogo'
 import { ETIQUETAS_ES, NOMBRE_PATRON, patron, tipoRegistro } from '../../catalogo/clasificacion'
-import { epley, kg, num } from '../../dominio/calculos'
+import { epley } from '../../dominio/calculos'
+import { kg, num } from '../../dominio/formato'
 import { duracion, fechaCorta, hoyISO } from '../../dominio/fechas'
 import { bloqueNuevo } from '../../dominio/generador'
 import { desdeBloque } from '../../dominio/sesion'
@@ -16,7 +17,7 @@ import { Barras, Linea } from '../../ui/graficas'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
-import { guardarRutina } from './EditarPlan'
+import { guardarRutina } from '../../datos/acciones/rutina'
 import { propio } from '../../dominio/claves'
 import { musculoComun, musculosComunes, nombreVisible, tituloDia, zonaComun } from './comun'
 import { t, tc, tk, tn } from '../../i18n'
@@ -42,7 +43,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
   const hist = useLiveQuery(() => (e ? historialDe(e.id) : Promise.resolve([])), [e?.id]) ?? []
   const obj = enPlan?.b ?? { repsMin: 8, repsMax: 12, rpe: 8 }
   const sug = useLiveQuery(() => (e ? sugerenciaPara(e.id, obj, g) : Promise.resolve(undefined)), [e?.id, g, enPlan?.b.uid])
-  // Doble toque en «Al entreno de hoy» o en un día del plan: el ejercicio se añadía dos veces.
+  // Un doble toque en «Al entreno de hoy» o en un día del plan no añade el ejercicio dos veces.
   const unaVez = useUnaVez()
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
     const ej = desdeBloque(b, { peso: sug?.peso ?? null, reps: sug?.reps ?? b.repsMin })
     if (!s.ejercicios.some(x => x.estado === 'curso')) ej.estado = 'curso'
     s.ejercicios.push(ej)
-    await db.sesiones.put(s)
+    await guardarSesion(s)
     aviso(t('Añadido al entreno de hoy'))
   })
   const anadirAlDia = unaVez(async (letra: string) => {

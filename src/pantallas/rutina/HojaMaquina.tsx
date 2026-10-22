@@ -1,6 +1,7 @@
 // RUT-09 · Máquina propia (para lo que no está en el catálogo)
 import { useEffect, useState } from 'react'
 import { db } from '../../datos/db'
+import { guardarMaquinaPropia } from '../../datos/acciones/rutina'
 import type { MaquinaPropia } from '../../datos/tipos'
 import { catalogoCargado, nombreMaterial } from '../../catalogo/catalogo'
 import { hacerFoto } from '../../plataforma'
@@ -26,11 +27,7 @@ export function HojaMaquina({ ruta }: { ruta: Ruta<'sheet-maq'> }) {
   const suma = m.parecida ? (catalogoCargado()?.ejercicios ?? []).filter(e => e.material === m.parecida).length : 0
   const guardar = async () => {
     if (!m.nombre.trim()) { aviso(t('Ponle un nombre')); return }
-    const g = await db.gimnasios.get(gymId)
-    if (!g) return
-    const propias = [...g.propias.filter(x => x.id !== m.id), m]
-    const material = m.parecida && !g.material.includes(m.parecida) ? [...g.material, m.parecida] : g.material
-    await db.gimnasios.put({ ...g, propias, material })
+    if (!(await guardarMaquinaPropia(gymId, m))) return
     nav.hoja(null)
     aviso(t('Máquina propia guardada'))
   }

@@ -5,6 +5,7 @@ import { ejercicio, nombreMaterial, nombreMusculo } from '../../catalogo/catalog
 import type { Ejercicio } from '../../catalogo/tipos'
 import { patron } from '../../catalogo/clasificacion'
 import { DIAS, DIAS_ABREV } from '../../dominio/fechas'
+import { capital } from '../../dominio/formato'
 import { duracionDia } from '../../dominio/generador'
 import { Cab, Ico, Seg } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -26,7 +27,6 @@ export function CabRutina({ actual, crumb, titulo = t('Rutina'), children }: { a
   )
 }
 
-export const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 export const nombreDia = (d: DiaRutina) => (d.dia != null ? capital(DIAS[d.dia]!) : t('Cualquier día'))
 export const minutos = (d: DiaRutina, corta = false) => Math.round(duracionDia(d.bloques, corta) / 60)
 /** Abreviatura del día de la semana (Mar, Jue…; en catalán sin el punto: «Dt»), o la letra si el día no tiene fecha fija. */
@@ -44,10 +44,8 @@ export const SS_EXPLICA = () => t('sin descanso entre los dos')
 /** Nombre para el usuario de lo que el código llama superserie. */
 export const SS = () => t('Dos seguidos')
 
-/**
- * Nombre del ejercicio con el material dicho como en el resto de la app: RepDB llama al material «Polea»
- * pero algunos nombres dicen «Cable» («Jalón de Tríceps en Cable» al lado de su alternativa «Polea»).
- */
+/** Nombre con el material dicho como en el resto de la app: RepDB llama al material «Polea»
+ * pero algunos nombres dicen «Cable» («Jalón de Tríceps en Cable» al lado de su alternativa «Polea»). */
 export function nombreVisible(nombre: string): string {
   // En inglés los nombres vienen de RepDB en inglés: no hay nada que cambiar.
   if (idioma() === 'en') return nombre

@@ -46,7 +46,7 @@ export function plantillas(nDias: number): { estructura: string; dias: Plantilla
     { letra: 'C', nombre: t('Pierna'), huecos: [P('rodilla', 'principal', 1), P('cadera', 'secundario', 1), P('femoral', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
   ]
   const segunda = ppl.map(d => ({ ...d, letra: String.fromCharCode(d.letra.charCodeAt(0) + 3), nombre: t('{nombre} 2', { nombre: d.nombre }) }))
-  // 7 días: el séptimo es un día ligero de brazos, hombros y core (antes se quedaba sin sesión).
+  // 7 días: el séptimo es un día ligero de brazos, hombros y core.
   const septimo: Plantilla = { letra: 'G', nombre: t('Brazos, hombros y core'), huecos: [...BRAZOS(2), ...HOMBROS(3), P('core', 'core', 4)] }
   return { estructura: t('Empuje / Tirón / Pierna · {n} días', { n: nDias }), dias: [...ppl, ...segunda, septimo].slice(0, Math.min(nDias, 7)) }
 }
@@ -80,9 +80,8 @@ const TIRAN = ['latissimus_dorsi', 'rhomboids', 'trapezius', 'posterior_deltoid'
 const PIERNA = ['gluteus_maximus', 'hamstrings', 'quadriceps']
 
 /**
- * Patrón con el que el generador coloca un ejercicio. Igual que `patron` del catálogo, salvo los pesos
- * muertos que RepDB pone en «espalda» sin ningún músculo de tirón (p. ej. «Peso Muerto Rumano con
- * Mancuernas»): son de cadera, no un remo. Antes uno de ellos rellenaba el hueco de remo.
+ * Patrón con el que el generador coloca un ejercicio: el `patron` del catálogo, salvo los pesos muertos que RepDB
+ * pone en «espalda» sin músculo de tirón («Peso Muerto Rumano con Mancuernas»): son de cadera, no un remo.
  */
 export function patronGenerador(e: Ejercicio): Patron {
   const p = patron(e)
@@ -90,7 +89,7 @@ export function patronGenerador(e: Ejercicio): Patron {
   return p
 }
 
-// El patrón de cada ejercicio no cambia: se calcula una vez (antes se recalculaba para todo el catálogo en cada hueco).
+// El patrón de cada ejercicio no cambia: se calcula una vez.
 const cachePatron = new WeakMap<Ejercicio, Patron>()
 function patronDe(e: Ejercicio): Patron {
   let p = cachePatron.get(e)
@@ -98,12 +97,8 @@ function patronDe(e: Ejercicio): Patron {
   return p
 }
 
-// ── Mismo movimiento ──────────────────────────────────────────────────────────
-// Dos ejercicios son «el mismo movimiento» si su nombre, quitando el material y las palabras de relleno,
-// coincide («Peso Muerto Rumano» = «Peso Muerto Rumano con Mancuernas» = «… en Máquina Smith»), o si uno
-// es el otro con algo más detrás y la parte común tiene al menos dos palabras («Peso muerto» y «Peso muerto
-// rumano»; «Press de banca» y «Press de banca con agarre cerrado»). Una sola palabra común («Curl», «Remo»)
-// no basta: un curl de martillo y uno con barra pueden ir el mismo día.
+// Mismo movimiento: igual nombre sin material ni relleno («Peso Muerto Rumano» = «… con Mancuernas»), o uno es el
+// otro con algo más y comparten 2+ palabras («Press de banca» y «… con agarre cerrado»). Una sola («Curl») no basta.
 const MATERIAL_EN_NOMBRE = /\b(?:con|en|sobre)\s+(?:la\s+|el\s+|una\s+|un\s+)?(?:maquina\s+de\s+barra\s+guiada|barra\s+guiada|barra\s+(?:z|ez|hexagonal|trap|recta)|barra|(?:doble|dos)\s+mancuernas?|mancuernas?|(?:dos\s+)?pesas?\s+rusas?|kettlebells?|cable|poleas?|bandas?(?:\s+elasticas?)?|trx|landmine|discos?|maquina(?:\s+smith)?(?:\s+de\s+(?:discos|predicador))?|multipower|smith)\b/g
 const LADO = /\b(?:a\s+un\s+brazo|a\s+una\s+mano|unilateral)\b/g
 const RELLENO = new Set(['de', 'del', 'la', 'el', 'en', 'con', 'y', 'a', 'al', 'los', 'las', 'trasera', 'biceps'])
@@ -295,8 +290,8 @@ export function ajustarATiempo(bloques: Bloque[], prioridades: Map<string, numbe
 }
 
 /**
- * Patrones parecidos para cuando el gimnasio no tiene nada para un hueco (p. ej. sin material no hay
- * remos: antes el día de «Tirón» se quedaba solo con una plancha). Solo se usan si el patrón propio está vacío.
+ * Patrones parecidos para cuando el gimnasio no tiene nada para un hueco (sin material no hay remos y el día de
+ * «Tirón» se quedaría solo con una plancha). Solo se usan si el patrón propio está vacío.
  */
 const RESPALDO: Partial<Record<Patron, Patron[]>> = {
   rodilla: ['cuadriceps', 'cadera', 'gluteo'],
@@ -445,9 +440,8 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
 }
 
 /**
- * Rutina definitiva tras la semana de prueba: la MISMA rutina (con los cambios que hiciste a mano), con el
+ * Rutina definitiva tras la semana de prueba: la misma rutina, sin perder los cambios hechos a mano, con el
  * esfuerzo normal en vez del cómodo de la prueba y ajustada a lo que tardas de verdad en cada ejercicio.
- * Antes se generaba otra desde cero y se perdían los cambios hechos durante la semana de prueba.
  */
 export function rutinaDefinitiva(actual: Omit<Rutina, 'id'>, o: { perfil: Perfil; tiempos?: Map<string, { serie: number; descanso: number }>; compuesto: (id: string) => boolean }): Omit<Rutina, 'id'> {
   const rpe = o.perfil.nivel === 'empiezo' ? 7 : 8
@@ -460,7 +454,7 @@ export function rutinaDefinitiva(actual: Omit<Rutina, 'id'>, o: { perfil: Perfil
     const minutos = d.opcional ? Math.max(normal, 45) : normal
     return { ...d, bloques: ajustarATiempo(bloques, prioridades, minutos, corta, { tiempos: o.tiempos }) }
   })
-  // Sin el id de la rutina de prueba: la definitiva es una rutina nueva (con él, guardarla fallaba sin decir nada).
+  // Sin el id de la rutina de prueba: la definitiva es una rutina nueva (con él, guardarla falla sin decir nada).
   const { id: _, ...base } = actual as Rutina
   return {
     ...base,
@@ -496,7 +490,7 @@ export function cambiosRutina(antes: Pick<Rutina, 'dias'>, despues: Pick<Rutina,
 export function tiemposReales(sesiones: { ejercicios: { ejercicio: string; superserie?: string; series: { hecha: boolean; calentamiento: boolean; ts?: number }[] }[] }[]): Map<string, { serie: number; descanso: number }> {
   const acc = new Map<string, number[]>()
   for (const s of sesiones) for (const e of s.ejercicios) {
-    // En «dos seguidos» el ciclo ya incluye la serie del compañero: usarlo como descanso contaba ~2 min de más por par.
+    // En «dos seguidos» el ciclo ya incluye la serie del compañero: usarlo como descanso contaría ~2 min de más por par.
     if (e.superserie) continue
     const ts = e.series.filter(x => x.hecha && !x.calentamiento && x.ts).map(x => x.ts!).sort((a, b) => a - b)
     for (let i = 1; i < ts.length; i++) {

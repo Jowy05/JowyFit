@@ -5,7 +5,7 @@ import { GRUPOS_MATERIAL } from '../../catalogo/clasificacion'
 import type { Gimnasio, Tramo } from '../../datos/tipos'
 import { mancuernasDisponibles } from '../../dominio/pesos'
 import { cx, Ico, Stepper, LARGO } from '../../ui/componentes'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { t, tn } from '../../i18n'
 
 /** Claves de material que usa algún ejercicio (las demás no aportan nada). */

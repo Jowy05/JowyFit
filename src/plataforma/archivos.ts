@@ -99,7 +99,6 @@ function pedirArchivo(preparar: (i: HTMLInputElement) => void): Promise<File | n
   })
 }
 
-/** Abre el selector de archivos y devuelve el contenido. */
 export async function elegirArchivo(aceptar = '.jowyfit,.json,application/json,application/zip'): Promise<{ nombre: string; bytes: Uint8Array } | null> {
   // Ni el selector de Android ni Archivos de iPhone conocen «.jowyfit»: con el filtro la copia sale en gris.
   // Allí se deja elegir cualquier archivo; al importar se comprueba que sea una copia.

@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
 import { guardarPerfil } from '../../datos/repos'
 import type { Bascula, Dia, Medicion, Perfil, Zona } from '../../datos/tipos'
-import { kg, num } from '../../dominio/calculos'
+import { kg, num } from '../../dominio/formato'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, FilaInterruptor, Ico, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -77,8 +77,6 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta<'per-sec'> }) {
   )
 }
 
-// ---------- piezas comunes ----------
-
 /** Texto que se guarda solo (al dejar de escribir, al salir del campo y al cerrar la pantalla). */
 function Texto({ valor, onGuardar, placeholder, area, etiqueta, max }: { valor: string; onGuardar: (v: string) => void; placeholder?: string; area?: boolean; etiqueta?: string; max?: number }) {
   return <TextoGuardado valor={valor} onGuardar={v => { if (v !== valor) onGuardar(v) }} placeholder={placeholder} area={area} etiqueta={etiqueta} max={max} />
@@ -94,7 +92,7 @@ function Grupo({ titulo, children, ayuda }: { titulo: ReactNode; children: React
   )
 }
 
-// ---------- PER-02 · Datos personales ----------
+// PER-02 · Datos personales
 function Datos({ p, guardar }: Props) {
   return (
     <div className="fields mt16">
@@ -114,7 +112,7 @@ function Datos({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-03 · Cuerpo y composición ----------
+// PER-03 · Cuerpo y composición
 // Nombres con tk(): se traducen al pintarlos (las unidades kg, %, kcal pasan por t() sin cambiar).
 const PERIMETROS: [keyof NonNullable<Medicion['perimetros']>, string][] = [
   ['cintura', tk('Cintura')], ['cuello', tk('Cuello')], ['cadera', tk('Cadera')], ['pecho', tk('Pecho')], ['brazo', tk('Brazo relajado')], ['brazoContraido', tk('Brazo contraído')], ['muslo', tk('Muslo')],
@@ -172,7 +170,7 @@ function Cuerpo() {
   )
 }
 
-// ---------- PER-04 · Objetivos ----------
+// PER-04 · Objetivos
 // Se guardan en castellano (como lo que escribe el usuario) y se pintan con t().
 const SUGERENCIAS = [tk('Quitar barriga'), tk('Press de banca'), tk('Dominadas'), tk('Fuerza general'), tk('Abdominales'), tk('Cardio')]
 
@@ -246,7 +244,7 @@ function Objetivos({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-05 · Salud ----------
+// PER-05 · Salud
 function Salud({ p, guardar }: Props) {
   const nav = useNav()
   const evitados = useLiveQuery(() => db.marcas.filter(m => !!m.odiado || !!m.duele).count(), []) ?? 0
@@ -271,7 +269,7 @@ function Salud({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-06 · Experiencia ----------
+// PER-06 · Experiencia
 function Experiencia({ p, guardar }: Props) {
   return (
     <>
@@ -300,7 +298,7 @@ function Experiencia({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-07 · Preferencias de entreno ----------
+// PER-07 · Preferencias de entreno
 function Preferencias({ p, guardar }: Props) {
   return (
     <div className="fields mt16">
@@ -319,7 +317,7 @@ function Preferencias({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-09 · Alimentación y suplementos ----------
+// PER-09 · Alimentación y suplementos
 // Son claves (dosis, avisos, Comida): se guardan en castellano y se pintan con t().
 const SUPLEMENTOS_BASE: string[] = [tk('Creatina'), tk('Batido de proteína')]
 
@@ -348,7 +346,7 @@ function Alimentacion({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-10 · Estilo de vida ----------
+// PER-10 · Estilo de vida
 function Vida({ p, guardar }: Props) {
   const detalle: Record<Perfil['trabajo'], string> = { sentado: t('Oficina, estudiar, conducir'), depie: t('Tienda, camarero, profesor'), fisico: t('Obra, almacén, reparto a pie') }
   return (
@@ -366,7 +364,7 @@ function Vida({ p, guardar }: Props) {
   )
 }
 
-// ---------- PER-11 · Seguimiento ----------
+// PER-11 · Seguimiento
 function Seguimiento({ p, guardar }: Props) {
   const dia = (d: Dia) => guardar({ diasPesaje: alternar(p.diasPesaje, d).sort((a, b) => a - b) })
   return (

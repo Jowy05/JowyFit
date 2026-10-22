@@ -13,9 +13,8 @@ function contextoAudio(): AudioContext | null {
 
 let sonidoPreparado = false
 /**
- * iPhone solo deja sonar a una página si el sonido se «abre» dentro de un toque. Se abre con el primer toque en la
- * app (un sonido vacío) y se vuelve a abrir si el sistema lo cierra (al bloquear el móvil o cambiar de app):
- * así el pitido de fin de descanso suena aunque llegue solo, sin tocar nada.
+ * iPhone solo deja sonar a una página si el sonido se «abre» dentro de un toque: se abre en el primer toque (un sonido
+ * vacío) y otra vez si el sistema lo cierra, para que el pitido de fin de descanso suene sin tocar nada.
  */
 export function prepararSonido() {
   if (sonidoPreparado || typeof window === 'undefined') return

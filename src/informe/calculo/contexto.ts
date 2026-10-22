@@ -55,14 +55,6 @@ export const leerPeso = (m: Medicion) => m.pesoKg
 export const leerCintura = (m: Medicion) => m.perimetros?.cintura
 export const leerGrasaBascula = (m: Medicion) => m.bascula?.grasaPct
 
-/** % de grasa en una fecha como la app: el de la báscula de los 4 meses anteriores o, si no, el de la cinta. */
-export function grasaEn(c: Pick<Ctx, 'ms' | 'marina'>, fecha: string): (PuntoFecha & { fuente: 'bascula' | 'medidas' }) | null {
-  const b = ultimoValor(c.ms, leerGrasaBascula, fecha)
-  if (b && b.fecha >= sumarDias(fecha, -120)) return { ...b, fuente: 'bascula' }
-  const m = c.marina.filter(x => x.fecha <= fecha).at(-1)
-  return m ? { ...m, fuente: 'medidas' } : null
-}
-
 export function contexto(e: EntradaInforme, r: RangoInforme): Ctx {
   const p: PerfilInforme = { ...PERFIL_VACIO, ...(e.perfil ?? {}) }
   const ms = [...e.mediciones].sort((a, b) => a.fecha.localeCompare(b.fecha))

@@ -1,5 +1,5 @@
 // Anexo «una a una»: cada serie de cada entreno y cada comida de cada día.
-import { kg, num } from '../../../dominio/calculos'
+import { kg, num } from '../../../dominio/formato'
 import { t, tc } from '../../../i18n'
 import { fechaDia } from '../../calculo/comun'
 import { tonoProteinaDia } from '../../calculo/resumen'

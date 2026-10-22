@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
-import { ajustesPorDefecto, perfilPorDefecto } from './repos'
+import { ajustesPorDefecto, gimnasioActivo, perfilPorDefecto, rutinaActiva } from './repos'
 import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Rutina, Sesion } from './tipos'
 
 /**
@@ -32,20 +32,12 @@ export function useGimnasios(): Gimnasio[] {
 }
 
 export function useGimnasio(): Gimnasio | undefined {
-  return useLiveQuery(async () => {
-    const a = await db.ajustes.get('app')
-    if (a?.gimnasioActivo != null) {
-      const g = await db.gimnasios.get(a.gimnasioActivo)
-      if (g) return g
-    }
-    return db.gimnasios.toCollection().first()
-  }, [])
+  return useLiveQuery(gimnasioActivo, [])
 }
 
+/** undefined = cargando · null = no hay */
 export function useRutina(): Rutina | undefined | null {
-  // undefined = cargando · null = no hay
-  const r = useLiveQuery(async () => (await db.rutinas.filter(x => x.activa).last()) ?? null, [])
-  return r
+  return useLiveQuery(async () => (await rutinaActiva()) ?? null, [])
 }
 
 export function useSesionEnCurso(): Sesion | undefined | null {

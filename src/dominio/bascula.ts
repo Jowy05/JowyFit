@@ -1,8 +1,8 @@
-// Peso y % de grasa de la báscula que llegan por Health Connect (la app de la báscula los escribe allí).
-// Health Connect da el peso y la grasa por separado: aquí se juntan los de la misma pesada y se quitan
-// los que ya están en la app (traídos antes o apuntados a mano), para no tener la misma medida dos veces.
+// Peso y % de grasa de la báscula que llegan por separado por Health Connect: se juntan los de la misma pesada
+// y se quitan los que ya están en la app (traídos antes o apuntados a mano), para no tener la misma medida dos veces.
 import type { Medicion } from '../datos/tipos'
 import { t } from '../i18n'
+import { capital } from './formato'
 
 /** Un dato suelto de Health Connect: cuándo (ISO), el valor, su id y la app que lo escribió. */
 type MuestraHC = { fecha: string; valor: number; id?: string; fuente?: string }
@@ -19,8 +19,8 @@ export function juntarBascula(pesos: MuestraHC[], grasas: MuestraHC[]): LecturaB
     .filter(p => valido.peso(p.valor))
     .map(p => ({ fecha: p.fecha, pesoKg: Math.round(p.valor * 10) / 10, ids: p.id ? [p.id] : [], fuente: p.fuente }))
   const gs = grasas.filter(x => valido.grasa(x.valor))
-  // Cada grasa con el peso más cercano, empezando por las parejas más juntas. Antes se iban emparejando en el orden
-  // en que llegaban: una grasa de 8 minutos antes se quedaba el peso y la de la misma pesada (a 10 s) iba suelta.
+  // Cada grasa con el peso más cercano, empezando por las parejas más juntas: en el orden de llegada, una grasa
+  // de 8 minutos antes se quedaría el peso y la de la misma pesada (a 10 s) iría suelta.
   const pares: { p: number; g: number; d: number }[] = []
   out.forEach((l, p) => gs.forEach((g, i) => { const d = Math.abs(ms(l) - ms(g)); if (d <= MISMA_PESADA_MS) pares.push({ p, g: i, d }) }))
   pares.sort((a, b) => a.d - b.d)
@@ -107,5 +107,5 @@ export function nombreFuente(fuente?: string): string {
   if (conocida) return conocida[1]
   if (!fuente.includes('.')) return fuente
   const ult = fuente.split('.').pop()!
-  return ult.charAt(0).toUpperCase() + ult.slice(1)
+  return capital(ult)
 }

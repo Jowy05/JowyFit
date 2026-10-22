@@ -1,7 +1,6 @@
-// Gráficas vectoriales del PDF (§4 del diseño): una gráfica de líneas o barras con ejes redondos, bandas,
-// rayas de objetivo fuera del área de dibujo y marcas (último dato, récord); y las filas de zonas al estilo Fitdays.
+// Gráficas vectoriales del PDF (§4 del diseño): líneas o barras con ejes redondos, bandas, objetivo y marcas, y filas de zonas.
 // Se dibujan sobre el Lienzo en mm; las medidas son las de la maqueta (.cache/pdf-maqueta/generar-maqueta.mjs).
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { DIAS_CORTOS, MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../../dominio/fechas'
 import { t } from '../../i18n'
 import { TAM, type Ancla, type Lienzo } from './lienzo'
@@ -58,9 +57,8 @@ type OpcGrafica = {
 }
 
 /**
- * Eje de una gráfica pequeña de líneas (fuerza, peso, grasa, cintura): con un rango mínimo para que un cambio pequeño
- * no parezca un salto enorme (de 11 a 12 kg), y medio paso de eje por debajo del valor más bajo (que no caiga en la raya)
- * y por encima del más alto (que su número no se salga por arriba).
+ * Eje de una gráfica pequeña de líneas: un rango mínimo para que un cambio pequeño no parezca un salto (de 11 a 12 kg)
+ * y medio paso de margen bajo el valor más bajo y sobre el más alto, para que no caigan en la raya ni se salgan.
  */
 export function ejeHolgado(valores: number[], rangoMin: number, marcasDeseadas = 3): Eje {
   const vs = valores.filter(Number.isFinite)
@@ -208,9 +206,8 @@ function sinPisarse(xs: EtiquetaX[], pos: (i: number) => number, medir: Medir): 
 }
 
 /**
- * Etiquetas del eje x para días seguidos: la primera, la última y alguna en medio, medidas para que no se pisen.
- * Una semana: cada día («X 14») o, si no caben, solo la letra («X»). Hasta 2 meses: cada 7 días («21 sep», «28 sep»…);
- * con más: el primer día de cada mes («oct», «nov»…, y el año en enero), a saltos iguales.
+ * Etiquetas del eje x para días seguidos, sin pisarse: en una semana, cada día («X 14») o solo la letra («X»);
+ * hasta 2 meses, cada 7 días («21 sep»); con más, el primer día de cada mes («oct», y el año en enero).
  */
 export function etiquetasFechas(dias: string[], anchoMm: number, o: { medir?: Medir; barras?: boolean } = {}): EtiquetaX[] {
   const medir = o.medir ?? estimar, barras = !!o.barras
@@ -268,18 +265,15 @@ export function etiquetasPuntos(fechas: string[], anchoMm: number, medir: Medir)
   return sinPisarse([e(0), e(n - 1)], pos, medir) ? [e(0), e(n - 1)] : [e(n - 1)]
 }
 
-/** Índice de una fecha dentro de los días del periodo. */
 export const indiceDia = (inicio: string, fecha: string) => diasEntre(inicio, fecha)
 
 export type FilaZonas = { etq: string; valor: number; texto: string; cortes: [number, number]; dominio: [number, number]; palabra: string; tono: string }
 
-/** Altura de las filas de zonas. */
 export const altoZonas = (filas: number) => 5.5 + 0.6 + filas * (10.5 + 0.6)
 
 /**
- * Filas de zonas (Bajo / Estándar / Alto o Poco / Bien / Mucho): la escala es por tramos para que cada zona ocupe
- * siempre lo mismo. Cada fila sombrea sus zonas (la sana en claro de la marca, las otras en gris), marca el valor con
- * un punto y encima escribe el número y la palabra de la app en su color; debajo, solo los límites entre zonas.
+ * Filas de zonas (Bajo / Estándar / Alto o Poco / Bien / Mucho): escala por tramos para que cada zona ocupe lo mismo;
+ * la sana en claro de la marca y las otras en gris, el valor con un punto, su número y palabra encima y los límites debajo.
  */
 export function filasZonas(l: Lienzo, x: number, y: number, o: { w: number; filas: FilaZonas[]; nombres?: string[]; anchos?: number[]; col?: number }) {
   const nombres = o.nombres ?? [t('Bajo'), t('Estándar'), t('Alto')]

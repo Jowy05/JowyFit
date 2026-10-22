@@ -1,18 +1,16 @@
 // Ayudantes del informe: formatos de número y fecha, el esfuerzo de las series y la fuerza de un ejercicio.
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
-import { conUnidad, kg, num } from '../../dominio/calculos'
+import { conSigno, conUnidad, fijo, kg, num } from '../../dominio/formato'
 import { DIAS_ABREV, MESES, MESES_CORTOS, deISO, diaSemana, fechaCorta, sumarDias } from '../../dominio/fechas'
 import { hechasAsc, pesoMaximo, repsMaximas, seriesDe } from '../../dominio/tendencias'
-import { regionNumeros, t, tc, tk } from '../../i18n'
+import { t, tc, tk } from '../../i18n'
 import type { EsfuerzoInforme, PalabraEsfuerzo, TonoInforme, UnidadFuerza } from './tipos'
 
-export const MENOS = '–'
 export const r1 = (v: number) => Math.round(v * 10) / 10
 export const suma = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 export const media = (xs: number[]) => (xs.length ? suma(xs) / xs.length : null)
 export const dia10 = (f: string) => f.slice(0, 10)
 export const entre = (f: string, a: string, b: string) => f >= a && f <= b
-export const capital = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
 export const anio = (f: string) => deISO(f).getFullYear()
 export const trabajo = (s: Serie[]) => s.filter(x => x.hecha && !x.calentamiento)
 export const conRpe = (s: Serie[]) => trabajo(s).filter(x => x.rpe != null && Number.isFinite(x.rpe))
@@ -23,20 +21,6 @@ export function mediana(xs: number[]): number | null {
   const s = [...xs].sort((a, b) => a - b)
   const m = s.length >> 1
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2
-}
-
-/** «+1,5», «–0,7», «0» (con el menos tipográfico del PDF). */
-export function conSigno(n: number, f: (v: number) => string = v => num(v)): string {
-  const v = f(Math.abs(n))
-  if (n === 0 || /^0([,.]0*)?$/.test(v)) return '0'
-  return n > 0 ? `+${v}` : `${MENOS}${v}`
-}
-
-/** Número con un número fijo de decimales: «79,0», «–0,03». */
-export function fijo(v: number, d = 1): string {
-  const f = 10 ** d
-  const r = Math.round(v * f) / f
-  return (r === 0 ? 0 : r).toLocaleString(regionNumeros(), { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 
 /** Formato común de una serie: si algún valor lleva decimal, todos lo llevan («79,0» junto a «80,1»). */

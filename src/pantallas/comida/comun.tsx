@@ -1,12 +1,10 @@
 // Piezas compartidas de la pestaña Comida.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { db } from '../../datos/db'
-import type { Comida, Plantilla } from '../../datos/tipos'
-import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, buscarOFF, imagenOFF, conRacion, escalarMacros, factorRacion, franjaPorHora, tipoRacion, type Macros, type Racion } from '../../dominio/comida'
+import type { Comida } from '../../datos/tipos'
+import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, imagenOFF, conRacion, escalarMacros, factorRacion, tipoRacion, type Macros, type Racion } from '../../dominio/comida'
 import { t } from '../../i18n'
-import { num } from '../../dominio/calculos'
-import { horaActual } from '../../dominio/fechas'
+import { num } from '../../dominio/formato'
 import { Cab, cx, Ico, recortar, Seg } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 
@@ -15,7 +13,7 @@ type Vista = 'com' | 'com-plant'
 /** Solo dos pestañas: el día y «Mis comidas» (que ya incluye los productos escaneados). */
 export function CabComida({ vista, crumb, fecha }: { vista: Vista; crumb: string; fecha?: string }) {
   const nav = useNav()
-  // Si se está viendo otro día, lo escaneado se apunta en ese día (antes iba siempre a hoy).
+  // Si se está viendo otro día, lo escaneado se apunta en ese día, no hoy.
   return (
     <Cab crumb={crumb} titulo={t('Comida')} derecha={<button className="ib" aria-label={t('Escanear')} onClick={() => nav.ir('com-scan', fecha ? { fecha } : undefined)}><Ico n="barcode" /></button>}>
       <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: t('Día') }, { v: 'com-plant', t: t('Mis comidas') }]} />
@@ -27,7 +25,7 @@ export function CabComida({ vista, crumb, fecha }: { vista: Vista; crumb: string
 export function Mini({ nombre, tipo, foto, imagen, className }: { nombre: string; tipo?: string; foto?: Blob; imagen?: string; className?: string }) {
   const url = useUrlBlob(foto)
   const a = aspecto(recortar(nombre, 200), tipo)
-  // Imágenes de fuera, solo las de Open Food Facts (una copia ajena podía meter un «píxel espía»).
+  // Imágenes de fuera, solo las de Open Food Facts (una copia ajena puede meter un «píxel espía»).
   const src = url ?? imagenOFF(imagen)
   if (src) return <span className={cx('fp', className)} style={{ background: '#fff' }}><img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></span>
   return <span className={cx('fp', a.fp, className)}><Ico n={a.icono} b /></span>
@@ -43,22 +41,6 @@ export function useUrlBlob(b?: Blob): string | null {
     return () => URL.revokeObjectURL(u)
   }, [b])
   return url
-}
-
-/** Apunta una comida y devuelve cómo deshacerlo. */
-export async function apuntar(c: Omit<Comida, 'id' | 'hora' | 'franja'> & { hora?: string; franja?: Comida['franja'] }): Promise<() => void> {
-  const hora = c.hora ?? horaActual()
-  const id = await db.comidas.add({ ...c, hora, franja: c.franja ?? franjaPorHora(hora) } as Comida)
-  return () => { void db.comidas.delete(id) }
-}
-
-/** Apunta una plantilla en la ración elegida (un picoteo guarda la bolsa entera; una comida, el plato) y cuenta un uso más. */
-export async function apuntarPlantilla(p: Plantilla, r: Racion, fecha: string, franja?: Comida['franja']): Promise<() => void> {
-  const v = conRacion(p, r, p.tipo)
-  const tipo: Comida['tipo'] = p.tipo === 'comida' ? 'plantilla' : p.tipo
-  const deshacer = await apuntar({ fecha, franja, nombre: p.nombre, ...v, racion: r, tipo, plantillaId: p.id, codigo: p.codigo, foto: p.foto })
-  if (p.id != null) await db.plantillas.update(p.id, { usos: p.usos + 1 })
-  return () => { deshacer(); if (p.id != null) void db.plantillas.update(p.id, { usos: p.usos }) }
 }
 
 /** Fila deslizable: hacia la izquierda enseña «Borrar». */
@@ -104,20 +86,6 @@ export const kp = (kcal: number, prot: number, cafeina?: number) =>
     ? t('{kcal} kcal · {mg} mg cafeína', { kcal: Math.round(kcal), mg: Math.round(cafeina) })
     : t('{kcal} kcal · {g} g proteína', { kcal: Math.round(kcal), g: Math.round(prot) })
 
-/** Busca en Open Food Facts los códigos escaneados sin conexión. Devuelve cuántos encontró. */
-export async function buscarPendientes(): Promise<number> {
-  const pend = await db.productos.filter(p => !!p.pendiente).toArray()
-  let n = 0
-  for (const [i, p] of pend.entries()) {
-    // Open Food Facts permite unas 15 consultas por minuto: una cada 4,5 s.
-    if (i) await new Promise(r => setTimeout(r, 4500))
-    const r = await buscarOFF(p.codigo)
-    if (r.estado === 'offline') break
-    if (r.estado === 'encontrado') { await db.productos.put(r.producto); n++ }
-  }
-  return n
-}
-
 /** Algo que se va a apuntar: lo guardado (el plato, o la bolsa entera si es picoteo) y qué hacer con la ración elegida. */
 export type ParaElegir = { nombre: string; base: { kcal: number; proteina: number; cafeina?: number } & Macros; tipo?: string; elegir: (r: Racion) => void }
 
@@ -127,10 +95,8 @@ export function baseDeApuntada(c: Comida): ParaElegir['base'] {
   return { kcal: c.kcal * f, proteina: c.proteina * f, cafeina: c.cafeina ? c.cafeina * f : undefined, ...escalarMacros(c, f) }
 }
 
-/**
- * Ventana «¿Cuánto?» al tocar cualquier cosa para apuntarla: tres botones grandes (Poco · Normal · Mucho) con lo que
- * suma cada uno. Se pinta encima de todo (también de la hoja de Añadir). Tocar fuera o «Cancelar» la cierra.
- */
+/** «¿Cuánto?» al tocar algo para apuntarlo: Poco · Normal · Mucho, con lo que suma cada uno.
+ * Se pinta encima de todo (también de la hoja de Añadir); tocar fuera o «Cancelar» la cierra. */
 export function ElegirCuanto({ x, onCerrar }: { x: ParaElegir | null; onCerrar: () => void }) {
   if (!x) return null
   const tipo = tipoRacion(x.tipo)

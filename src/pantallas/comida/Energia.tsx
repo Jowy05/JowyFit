@@ -1,9 +1,10 @@
 // COM-08 · Tu objetivo de energía: arriba solo los dos números y el porqué; la fórmula, plegada.
-// El consejo de la quincena ya no se repite aquí: está en la tarjeta «Cómo vas» del Día.
+// El consejo de la quincena no va aquí: está en la tarjeta «Cómo vas» del Día.
 import { useLiveQuery } from 'dexie-react-hooks'
 import { objetivosEnergia } from '../../datos/consultas'
 import { guardarAjustes } from '../../datos/repos'
-import { FACTOR_ACTIVIDAD, num } from '../../dominio/calculos'
+import { FACTOR_ACTIVIDAD } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { Cab, Ico, Pantalla } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'

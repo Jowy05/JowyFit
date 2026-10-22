@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
+import { activarRutina } from '../../datos/acciones/rutina'
 import type { Rutina } from '../../datos/tipos'
 import { catalogoCargado, ejercicio } from '../../catalogo/catalogo'
 import { ES_MAQUINA } from '../../catalogo/clasificacion'
@@ -10,7 +11,8 @@ import { Cab, FilaInterruptor, Ico, Pantalla, useUnaVez } from '../../ui/compone
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos/hooks'
-import { abrevDia, capital, filas, listaDias, minutos, nombreEj, SS, SS_EXPLICA, tituloDia } from './comun'
+import { abrevDia, filas, listaDias, minutos, nombreEj, SS, SS_EXPLICA, tituloDia } from './comun'
+import { capital } from '../../dominio/formato'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -30,8 +32,7 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
   const [evitar, setEvitar] = useState<Set<string>>(new Set())
   const calib = useLiveQuery(async () => (definitiva && actual?.id ? (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === actual.id) : []), [definitiva, actual?.id]) ?? []
   const evitados = [...marcas.values()].filter(m => m.odiado || m.duele)
-  // Semana de prueba: la primera rutina siempre; al rehacerla, se mantiene si la actual aún estaba en prueba
-  // (antes «Rehacer» la dejaba como definitiva y se perdía la semana de prueba). Se puede cambiar.
+  // Semana de prueba: la primera rutina siempre; al rehacerla, se mantiene si la actual aún estaba en prueba. Se puede cambiar.
   const [conPrueba, setConPrueba] = useState<boolean | null>(null)
   const prueba = !definitiva && (conPrueba ?? (!actual || actual.calibracion))
 
@@ -46,15 +47,12 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
   }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length, actual?.id, prueba, ajustes.descansoCompuesto, ajustes.descansoAislamiento])
   const cambios = definitiva && actual && propuesta ? cambiosRutina(actual, propuesta, id => nombreEj(id), tituloDia) : []
 
-  // Doble toque: dos rutinas guardadas.
+  // Un doble toque no guarda dos rutinas.
   const unaVez = useUnaVez()
   const guardarPropuesta = async (): Promise<boolean> => {
     if (!propuesta) return false
     try {
-      await db.transaction('rw', db.rutinas, async () => {
-        await db.rutinas.toCollection().modify({ activa: false })
-        await db.rutinas.add({ ...propuesta, activa: true })
-      })
+      await activarRutina(propuesta)
     } catch {
       aviso(t('No se ha podido guardar la rutina. Inténtalo otra vez'))
       return false

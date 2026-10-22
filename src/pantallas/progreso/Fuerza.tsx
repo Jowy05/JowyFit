@@ -5,7 +5,7 @@ import { db } from '../../datos/db'
 import { sesionesHechas } from '../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { patron } from '../../catalogo/clasificacion'
-import { kg, num } from '../../dominio/calculos'
+import { kg, num } from '../../dominio/formato'
 import { fechaCorta, hoyISO, MESES, semanaDe, sumarDias } from '../../dominio/fechas'
 import { resumen } from '../../dominio/sesion'
 import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, nivelSeries, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../dominio/tendencias'
@@ -139,7 +139,7 @@ export function Fuerza() {
         <div className="sec">
           <div className="sec-h"><h2>{t('Por ejercicio')}</h2></div>
           <div className="card pd">
-            {/* En varias filas (en una tira que se salía de la pantalla no se veía que había más). */}
+            {/* En varias filas: en una sola tira, que se sale de la pantalla, no se ve que hay más. */}
             <div className="chips fza-chips">
               {(todosEj ? ids : ids.slice(0, MAX_CHIPS).concat(id && ids.indexOf(id) >= MAX_CHIPS ? [id] : [])).map(x => (
                 <Chip key={x} on={x === id} onClick={() => setElegido(x)}>{nombreEjercicio(x)}</Chip>

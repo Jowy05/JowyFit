@@ -2,12 +2,14 @@
 // suplementos, «lo de ayer» y recientes con datos vacíos) y los cálculos de energía.
 import { describe, expect, it } from 'vitest'
 import {
-  CLAVES_MACROS, FRANJAS, NOMBRE_FRANJA, NOMBRE_MACRO, PISTA_RACION, URL_OFF, aspecto, avisoCafeina, buscarOFF, codigoValido, conRacion, deAyer,
-  dosisDe, dosisPorDefecto, esBatido, escalarMacros, franjaPorHora, leerOFF, macros100, notaPorTamano, picoteoDeSemana, porRacion, recientes,
+  CLAVES_MACROS, FRANJAS, NOMBRE_MACRO, PISTA_RACION, URL_OFF, aspecto, avisoCafeina, buscarOFF, codigoValido, conRacion, deAyer,
+  dosisDe, dosisPorDefecto, esBatido, escalarMacros, franjaPorHora, leerOFF, macros100, nombreFranja, notaPorTamano, picoteoDeSemana, porRacion, recientes,
   soloMacros, tamanoDe, tipoRacion,
 } from '../src/dominio/comida'
-import { DEFICIT, FACTOR_ACTIVIDAD, basalMifflin, cinturaAltura, epley, gastoDiario, grasaMarina, imc, kcalEntreno, kg, num, objetivos } from '../src/dominio/calculos'
-import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
+import { DEFICIT, FACTOR_ACTIVIDAD, basalMifflin, cinturaAltura, epley, gastoDiario, grasaMarina, imc, kcalEntreno, objetivos } from '../src/dominio/calculos'
+import { kg, num } from '../src/dominio/formato'
+import { lineaSpark } from '../src/ui/graficas'
+import { tendenciaPeso } from '../src/dominio/tendencias'
 import type { Comida, Medicion, Producto } from '../src/datos/tipos'
 
 const comida = (fecha: string, x: Partial<Comida> = {}): Comida => ({ fecha, hora: '14:00', franja: 'comida', nombre: 'x', kcal: 500, proteina: 30, racion: 'N', tipo: 'plantilla', ...x })
@@ -51,7 +53,7 @@ describe('miniatura de cada comida (aspecto)', () => {
 describe('franjas, raciones y macros: constantes y casos límite', () => {
   it('franjas en orden y con nombre', () => {
     expect(FRANJAS.map(f => f.v)).toEqual(['desayuno', 'comida', 'merienda', 'cena'])
-    for (const f of FRANJAS) expect(NOMBRE_FRANJA[f.v]).toBe(f.t)
+    expect(FRANJAS.map(f => nombreFranja(f.v))).toEqual(['Desayuno', 'Comida', 'Merienda', 'Cena'])
   })
   it('franja en los bordes exactos (5:00, 11:00, 16:30, 19:30) y con una hora mal escrita', () => {
     expect(franjaPorHora('04:59')).toBe('cena')

@@ -1,16 +1,15 @@
 // SES-02 herramientas · SES-07 discos · SES-08 calentamiento · instrucciones · nota de serie
 import { useState, type ReactElement } from 'react'
-import { db } from '../../datos/db'
+import { guardarSesion } from '../../datos/acciones/entreno'
 import { ejercicio, imagen } from '../../catalogo/catalogo'
 import { BARRAS, calentamiento, discosPorLado, pesosBarra, pesosPara } from '../../dominio/pesos'
-import { anadirSerie, cambiarSerie, quitarSerie, saltar, serieActual } from '../../dominio/sesion'
+import { anadirSerie, cambiarSerie, conCalentamiento, quitarSerie, saltar, serieActual } from '../../dominio/sesion'
 import type { Serie, Sesion } from '../../datos/tipos'
-import { conUnidad, kg, num } from '../../dominio/calculos'
+import { conUnidad, kg, num } from '../../dominio/formato'
 import { Chip, cx, Hoja, Ico, Interruptor, Stepper, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio, useSesionEnCurso } from '../../datos/hooks'
-import { conCalentamiento } from './iniciar'
 import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -27,7 +26,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
   // Se abre con el botón «Más»: se titula igual. A la vista, lo de todos los días; lo raro, plegado en «Otras opciones».
   const n = serieActual(e)
   const serie = n >= 0 ? e.series[n] : undefined
-  const guardar = (x: Sesion) => db.sesiones.put(x)
+  const guardar = (x: Sesion) => guardarSesion(x)
   const numSerie = serie && !serie.calentamiento ? e.series.filter(x => !x.calentamiento).indexOf(serie) + 1 : 0
   const conCalent = e.registro === 'peso' || e.registro === 'mancuerna'
   return (
@@ -44,7 +43,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
           if (nueva.ejercicios[idx]!.series.length === e.series.length) { aviso(t('Queda una sola serie: no se puede quitar')); return }
           await guardar(nueva); nav.hoja(null); aviso(t('Serie quitada'), () => void guardar(antes))
         }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>{t('Quitar una serie')}</b></span></button>}
-        <button className="it" onClick={async () => { const antes = s; await db.sesiones.put(saltar(s, idx)); nav.hoja(null); aviso(t('Saltado: lo verás en la lista'), () => void db.sesiones.put(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>{t('Saltar este ejercicio')}</b><small>{t('Puedes recuperarlo desde la lista')}</small></span></button>
+        <button className="it" onClick={async () => { const antes = s; await guardarSesion(saltar(s, idx)); nav.hoja(null); aviso(t('Saltado: lo verás en la lista'), () => void guardarSesion(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>{t('Saltar este ejercicio')}</b><small>{t('Puedes recuperarlo desde la lista')}</small></span></button>
       </div>
       <details className="fold mt16">
         <summary><Ico n="dots-three-circle" className="blue" />{t('Otras opciones')}<Ico n="caret-down" /></summary>
@@ -155,7 +154,7 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta<'sheet-cal'> }) {
         : <p className="muted">{t('Pon antes el peso de trabajo.')}</p>}
       <p className="small muted mt8">{t('Descansa lo justo entre ellas: 45-60 s.')}</p>
       <button className={cx('btn mt16', (ya || empezado || !series.length) && 'off')} disabled={ya || empezado || !series.length}
-        onClick={async () => { await db.sesiones.put(conCalentamiento(s, idx, series)); nav.hoja(null); aviso(t('Calentamiento añadido')) }}>
+        onClick={async () => { await guardarSesion(conCalentamiento(s, idx, series)); nav.hoja(null); aviso(t('Calentamiento añadido')) }}>
         {ya ? t('Ya está añadido') : empezado ? t('Ya has empezado este ejercicio') : !series.length && trabajo > 0 ? t('No hace falta') : t('Añadir a la lista')}
       </button>
     </Hoja>
@@ -197,7 +196,7 @@ function FormNotaSerie({ s, idx, n, serie }: { s: Sesion; idx: number; n: number
     <Hoja titulo={t('Nota de la serie')} sub={titulo}>
       <textarea className="inp" autoFocus aria-label={t('Nota de la serie')} maxLength={LARGO.nota} value={texto} onChange={e => setTexto(e.target.value)} placeholder={t('Molestia en el hombro, agarre falló…')} />
       <div className="chips mt8">{[t('Molestia'), t('Me ha costado'), t('Muy fácil'), t('Mal agarre')].map(x => <Chip key={x} onClick={() => setTexto(v => (v ? `${v}. ${x}` : x))}>{x}</Chip>)}</div>
-      <button className="btn mt16" onClick={async () => { const x = structuredClone(s); x.ejercicios[idx]!.series[n]!.nota = texto; await db.sesiones.put(x); nav.hoja(null); aviso(t('Nota guardada')) }}>{t('Guardar')}</button>
+      <button className="btn mt16" onClick={async () => { const x = structuredClone(s); x.ejercicios[idx]!.series[n]!.nota = texto; await guardarSesion(x); nav.hoja(null); aviso(t('Nota guardada')) }}>{t('Guardar')}</button>
     </Hoja>
   )
 }

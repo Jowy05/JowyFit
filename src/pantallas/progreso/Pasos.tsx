@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
+import { guardarPasos, sumarTrote } from '../../datos/acciones/cuerpo'
 import { guardarAjustes, guardarPerfil } from '../../datos/repos'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../dominio/fechas'
 import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../dominio/tendencias'
 import { esAndroid, esIPhone, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
@@ -59,7 +60,7 @@ export function Pasos() {
 
   const manual = <ApuntarPasos hoy={hoy} />
 
-  // El objetivo diario se cambia aquí mismo (antes estaba escondido en Perfil → Preferencias).
+  // El objetivo diario se cambia aquí mismo.
   const objetivoEditable = (
     <div className="card pd mt8">
       <button type="button" className="row jb w100 pasos-obj" onClick={() => setEditaObjetivo(v => !v)} aria-expanded={editaObjetivo}>
@@ -158,8 +159,7 @@ function ApuntarPasos({ hoy }: { hoy: string }) {
   const [pasos, setPasos] = useState<number | null>(null)
   const valor = pasos ?? actual?.pasos ?? 0
   const guardar = async () => {
-    const prev = await db.pasos.get(fecha)
-    await db.pasos.put({ fecha, pasos: Math.max(0, Math.round(valor)), fuente: 'manual', troteKm: prev?.troteKm })
+    await guardarPasos(fecha, valor)
     setPasos(null)
     aviso(fecha === hoy ? t('Pasos guardados · hoy: {n}', { n: num(valor, 0) }) : t('Pasos guardados · ayer: {n}', { n: num(valor, 0) }))
   }
@@ -177,8 +177,6 @@ function ApuntarPasos({ hoy }: { hoy: string }) {
   )
 }
 
-// ---------- hoja: trote o carrera ----------
-
 export function HojaTrote() {
   const nav = useNav()
   const aviso = useAviso()
@@ -189,20 +187,13 @@ export function HojaTrote() {
   const valor = modo === 'km' ? km : min
   const equivalen = pasosEquivalentes(valor, modo)
 
-  // Doble toque: el trote se sumaba dos veces a los pasos del día.
+  // Un doble toque no suma el trote dos veces a los pasos del día.
   const anadir = unaVez(async () => {
     if (equivalen <= 0) { aviso(t('Pon cuántos kilómetros o minutos')); return }
-    const hoy = hoyISO()
-    const prev = await db.pasos.get(hoy)
     const kmTrote = modo === 'km' ? km : Math.round((equivalen / PASOS_POR_KM) * 10) / 10
-    await db.pasos.put({ fecha: hoy, pasos: (prev?.pasos ?? 0) + equivalen, fuente: prev?.fuente ?? 'manual', troteKm: Math.round(((prev?.troteKm ?? 0) + kmTrote) * 10) / 10 })
+    const deshacer = await sumarTrote(hoyISO(), equivalen, kmTrote)
     nav.hoja(null)
-    aviso(t('Añadido: trote de {cuanto} (≈ {n} pasos)', { cuanto: modo === 'km' ? `${num(km)} km` : `${min} min`, n: num(equivalen, 0) }), () => {
-      void (async () => {
-        if (prev) await db.pasos.put(prev)
-        else await db.pasos.delete(hoy)
-      })()
-    })
+    aviso(t('Añadido: trote de {cuanto} (≈ {n} pasos)', { cuanto: modo === 'km' ? `${num(km)} km` : `${min} min`, n: num(equivalen, 0) }), deshacer)
   })
 
   return (

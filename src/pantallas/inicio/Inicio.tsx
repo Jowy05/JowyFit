@@ -1,12 +1,12 @@
 // INI-01 · Inicio
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
-import { gastoDelDia, objetivosEnergia, totalesComida } from '../../datos/consultas'
+import { gastoDelDia, objetivosEnergia } from '../../datos/consultas'
+import { totalesComida } from '../../dominio/comida'
 import { basalHastaAhora } from '../../dominio/energia'
 import { DIAS, DIAS_ABREV, DIAS_CORTOS, deISO, diaMes, diaSemana, formatoHora, hoyISO, numeroSemana, saludo, semanaDe, sumarDias } from '../../dominio/fechas'
 import { estadoSemana, tarjetaHoy, type EstadoDia } from '../../dominio/semana'
-import { num } from '../../dominio/calculos'
-import { capital } from '../../dominio/formato'
+import { capital, num } from '../../dominio/formato'
 import { nombreEntreno } from '../../dominio/nombres'
 import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, LARGO, recortar } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -48,8 +48,7 @@ export function Inicio() {
   const tot = totalesComida(comidas)
   const d = deISO(hoy)
   const nSemana = ajustes.inicio ? numeroSemana(ajustes.inicio, hoy) : 1
-  // Mientras se ve la guía «Primeros pasos» no salen «Pendientes de hoy» ni la tarjeta de pasos:
-  // eran dos listas de casillas casi iguales y una meta de pasos que nadie había pedido.
+  // Mientras se ve la guía «Primeros pasos» no salen «Pendientes de hoy» ni la tarjeta de pasos (dos listas casi iguales).
   const guia = usePrimerosPasos(tarjeta)
   const conGuia = guia !== null
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { FRANJAS, NOMBRE_RACION, batidoDe, dosisDe, esBatido, kcalBatido, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
-import { lineaSpark, tendenciaPeso } from '../src/dominio/peso'
+import { FRANJAS, NOMBRE_RACION, nombreFranja, batidoDe, dosisDe, esBatido, kcalBatido, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
+import { lineaSpark } from '../src/ui/graficas'
+import { tendenciaPeso } from '../src/dominio/tendencias'
 import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
 
 const comida = (fecha: string, x: Partial<Comida> = {}): Comida => ({ fecha, hora: '14:00', franja: 'comida', nombre: 'x', kcal: 500, proteina: 30, racion: 'N', tipo: 'plantilla', ...x })
@@ -157,7 +158,7 @@ describe('nota rápida y Mis comidas', () => {
     expect(TAMANOS_NOTA.map(t => t.t)).toEqual(['Poco', 'Normal', 'Mucho'])
     expect(textoRacion('N')).toBe('')
     expect(textoRacion('G')).toBe('mucho')
-    expect(FRANJAS.find(f => f.v === 'merienda')!.t).toBe('Merienda')
+    expect(nombreFranja(FRANJAS.find(f => f.v === 'merienda')!.v)).toBe('Merienda')
   })
   it('reconoce el tamaño de una comida guardada', () => {
     expect(tamanoDe(600, 25, 'comida')).toBe('normal')

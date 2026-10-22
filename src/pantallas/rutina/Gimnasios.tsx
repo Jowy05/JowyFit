@@ -1,8 +1,8 @@
 // RUT-07 · Gimnasios
-import { db } from '../../datos/db'
-import { gimnasioNuevo, guardarAjustes } from '../../datos/repos'
+import { crearGimnasio } from '../../datos/acciones/rutina'
+import { guardarAjustes } from '../../datos/repos'
 import { mancuernasDisponibles } from '../../dominio/pesos'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -18,10 +18,10 @@ export function Gimnasios() {
   const a = useAjustes()
   const r = useRutina()
   const activo = a.gimnasioActivo ?? lista[0]?.id
-  // Doble toque: dos gimnasios nuevos y dos editores abiertos uno encima de otro.
+  // Un doble toque no crea dos gimnasios ni abre dos editores uno encima de otro.
   const unaVez = useUnaVez()
   const nuevo = unaVez(async () => {
-    const id = await db.gimnasios.add(gimnasioNuevo(t('Gimnasio {n}', { n: lista.length + 1 })))
+    const id = await crearGimnasio(t('Gimnasio {n}', { n: lista.length + 1 }))
     nav.ir('rut-gym-edit', { id })
   })
   const activar = async (id: number, nombre: string) => {

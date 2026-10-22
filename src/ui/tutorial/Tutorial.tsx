@@ -1,7 +1,5 @@
-// Tutorial de la app («recorrido guiado»): oscurece la pantalla menos lo que se explica y una tarjeta lo cuenta.
-// Reglas (docs de recorridos guiados): cada paso FIJA la pantalla que necesita (así da igual ir adelante o atrás),
-// el foco se apaga mientras algo se mueve, las anclas son atributos `data-tour` y al cerrar la app vuelve a como
-// estaba. Se ofrece una vez al entrar (hoja «¿Te enseño cómo funciona?») y se puede lanzar desde Ajustes.
+// Tutorial («recorrido guiado»): oscurece todo menos lo que se explica. Cada paso fija su pantalla (da igual ir adelante
+// o atrás), el foco se apaga mientras algo se mueve, las anclas son `data-tour` y al cerrar la app vuelve a como estaba.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { esAndroid, esWebApple, estaInstalada } from '../../plataforma'

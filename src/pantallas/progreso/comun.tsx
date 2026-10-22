@@ -1,11 +1,8 @@
 // Piezas compartidas de la pestaña Progreso.
 import { useEffect, useState, type ReactNode } from 'react'
-import { db } from '../../datos/db'
-import { sesionesHechas } from '../../datos/consultas'
-import type { Foto, Medicion, Meta, OrigenMedicion, Perfil, Serie, EjercicioSesion } from '../../datos/tipos'
-import { kg } from '../../dominio/calculos'
+import type { Foto, Medicion, Meta, OrigenMedicion } from '../../datos/tipos'
+import { capital } from '../../dominio/formato'
 import { deISO, MESES } from '../../dominio/fechas'
-import { grasaPorMedidas, hitosDominadas, pesoMaximo, seriesDe, ultimoValor } from '../../dominio/tendencias'
 import { Cab, Seg } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { t, tk } from '../../i18n'
@@ -31,7 +28,6 @@ export function CabProgreso({ actual, crumb, derecha, children }: { actual: Pest
   )
 }
 
-export const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** «13/10» para el eje de las gráficas (en inglés, «10/13»). */
 export function fechaPunto(iso: string): string {
@@ -71,15 +67,6 @@ export const PERIMETROS: { k: Perimetro; t: string; corto: string }[] = [
   { k: 'muslo', t: tk('Muslo'), corto: tk('muslo') },
 ]
 
-/** Texto de una serie: «47,5 × 8», «asist. 15 kg × 6», «45 s», «10 reps». */
-export function textoSerie(x: Serie, registro: EjercicioSesion['registro']): string {
-  if (registro === 'tiempo') return `${x.segundos ?? x.reps ?? 0} s`
-  if (registro === 'cardio') return x.segundos ? `${Math.round(x.segundos / 60)} min` : `${x.reps ?? 0} min`
-  if (registro === 'corporal' || x.peso == null) return t('{n} reps', { n: x.reps ?? 0 })
-  if (registro === 'asistido') return t('asist. {peso} × {reps}', { peso: kg(Math.abs(x.peso)), reps: x.reps ?? 0 })
-  return `${kg(x.peso)} × ${x.reps ?? 0}`
-}
-
 /** URLs temporales para las fotos (Blob); se liberan al cambiar la lista o al salir. */
 export function useUrlsFotos(fotos: Foto[]): Map<number, string> {
   const [urls, setUrls] = useState<Map<number, string>>(new Map())
@@ -94,8 +81,6 @@ export function useUrlsFotos(fotos: Foto[]): Map<number, string> {
   return urls
 }
 
-// ---------- metas ----------
-
 export const TIPOS_META: { v: Meta['tipo']; t: string; unidad: string; paso: number; icono: string }[] = [
   { v: 'cintura', t: tk('Cintura'), unidad: 'cm', paso: 0.5, icono: 'ruler' },
   { v: 'ejercicio', t: tk('Ejercicio'), unidad: 'kg', paso: 2.5, icono: 'barbell' },
@@ -105,29 +90,3 @@ export const TIPOS_META: { v: Meta['tipo']; t: string; unidad: string; paso: num
   { v: 'libre', t: tk('Otra'), unidad: '', paso: 1, icono: 'flag' },
 ]
 
-/**
- * % de grasa más reciente: el de la medida más nueva, sea de la báscula o de la cinta (cintura y cuello).
- * Antes ganaba siempre la cinta, aunque fuera de hace meses y la báscula de hoy (y en Inicio era al revés).
- */
-export function grasaActual(ms: Medicion[], p: Perfil): number | null {
-  const marina = grasaPorMedidas(ms, p.sexo, p.alturaCm).at(-1) ?? null
-  const bascula = ultimoValor(ms, m => m.bascula?.grasaPct) ?? null
-  if (marina && bascula) return bascula.fecha >= marina.fecha ? bascula.valor : marina.valor
-  return (bascula ?? marina)?.valor ?? null
-}
-
-/** Valor actual de una meta leyendo la base de datos (null si no se puede saber). */
-export async function valorActualMeta(tipo: Meta['tipo'], ejercicioId: string | undefined, perfil: Perfil): Promise<number | null> {
-  if (tipo === 'libre') return null
-  if (tipo === 'ejercicio' || tipo === 'dominadas') {
-    const ses = await sesionesHechas()
-    if (tipo === 'dominadas') return hitosDominadas(ses).estrictas
-    if (!ejercicioId) return null
-    const pesos = ses.map(s => pesoMaximo(seriesDe(s, ejercicioId))).filter((v): v is number => v != null)
-    return pesos.length ? Math.max(...pesos) : null
-  }
-  const ms = await db.mediciones.toArray()
-  if (tipo === 'cintura') return ultimoValor(ms, m => m.perimetros?.cintura)?.valor ?? null
-  if (tipo === 'peso') return ultimoValor(ms, m => m.pesoKg)?.valor ?? null
-  return grasaActual(ms, perfil)
-}

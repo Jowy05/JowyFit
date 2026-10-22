@@ -80,14 +80,14 @@ describe('t() y compañía', () => {
 
 describe('números', () => {
   it('castellano y catalán con coma (y sin punto de miles con 4 cifras); inglés con punto decimal y coma de miles', async () => {
-    const { num, kg } = await import('../src/dominio/calculos')
+    const { num, kg } = await import('../src/dominio/formato')
     expect(num(1234.5)).toBe('1234,5')
     expect(num(12345.5)).toBe('12.345,5')
     expect(kg(47.5)).toBe('47,5')
     for (const [i, mil, diezmil] of [['ca', '1234,5', '12.345,5'], ['en', '1,234.5', '12,345.5']] as const) {
       vi.resetModules()
       conIdioma(i)
-      const c = await import('../src/dominio/calculos')
+      const c = await import('../src/dominio/formato')
       expect(c.num(1234.5)).toBe(mil)
       expect(c.num(12345.5)).toBe(diezmil)
       expect(c.num(-0.04)).toBe('0')
@@ -145,13 +145,13 @@ describe('fechas en cada idioma', () => {
 
 describe('unidades y nombres guardados', () => {
   it('el % va pegado solo en inglés', async () => {
-    let c = await import('../src/dominio/calculos')
+    let c = await import('../src/dominio/formato')
     expect(c.conUnidad('26,3', '%')).toBe('26,3 %')
     expect(c.conUnidad('75', 'kg')).toBe('75 kg')
     expect(c.conUnidad('3', '')).toBe('3')
     vi.resetModules()
     conIdioma('en')
-    c = await import('../src/dominio/calculos')
+    c = await import('../src/dominio/formato')
     expect(c.conUnidad('26.3', '%')).toBe('26.3%')
     expect(c.conUnidad('75', 'kg')).toBe('75 kg')
   })

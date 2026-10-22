@@ -1,7 +1,5 @@
-// Textos del PDF: la Helvetica estándar del PDF (codificación WinAnsi) no tiene flechas, estrellas, «≥» ni emojis.
-// Todo lo que se escribe pasa por textoPdf(): lo que tiene equivalente se cambia y lo demás se quita
-// (las flechas, estrellas y puntos se dibujan aparte). Diseño: docs/INFORME-PDF-DISENO.md §2.
-// El catalán y el inglés caben: à è é í ï ò ó ú ü ç, el punto volado de «l·l» y las comillas “ ” son de WinAnsi.
+// La Helvetica estándar del PDF (WinAnsi) no tiene flechas, estrellas, «≥» ni emojis: todo pasa por textoPdf(), que
+// cambia lo que tiene equivalente y quita lo demás (se dibuja aparte). El catalán y el inglés caben en WinAnsi (§2).
 import { tc } from '../../i18n'
 
 /** Los caracteres de WinAnsi que no están en Latin-1 (0x80-0x9F). */

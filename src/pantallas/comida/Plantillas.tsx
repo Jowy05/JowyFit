@@ -1,6 +1,5 @@
-// COM-05 · Mis comidas: lo que comes a menudo (más usado primero) y, debajo, lo escaneado.
-// Antes eran dos pestañas («Plantillas» y «Productos»); para quien lee poco, todo es «cosas que como».
-// Tocar una fila la APUNTA hoy (con «Deshacer»); para cambiarla, el lápiz de la derecha.
+// COM-05 · Mis comidas: lo que comes a menudo (más usado primero) y, debajo, lo escaneado; todo junto, «cosas que como».
+// Tocar una fila la apunta hoy (con «Deshacer»); para cambiarla, el lápiz de la derecha.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
@@ -10,7 +9,8 @@ import type { Plantilla } from '../../datos/tipos'
 import { Ico, Pantalla, useUnaVez, Vacio, recortar } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { CabComida, ElegirCuanto, Mini, apuntarPlantilla, buscarPendientes, kp, type ParaElegir } from './comun'
+import { CabComida, ElegirCuanto, Mini, kp, type ParaElegir } from './comun'
+import { apuntarPlantilla, buscarPendientes } from '../../datos/acciones/comida'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -32,7 +32,7 @@ export function Plantillas() {
     if (hayPendientes && navigator.onLine) void buscarPendientes().then(n => { if (n) aviso(tn(n, 'Encontrado 1 producto pendiente', 'Encontrados {n} productos pendientes')) })
   }, [hayPendientes, aviso])
   const nueva = () => nav.hoja('sheet-plant', {})
-  // Un doble toque apuntaba dos veces.
+  // Evita apuntarlo dos veces con un doble toque.
   const unaVez = useUnaVez()
   const apuntarHoy = unaVez(async (p: Plantilla, r: Racion) => {
     setElegir(null)

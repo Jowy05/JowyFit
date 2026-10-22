@@ -3,18 +3,17 @@ import type { Comida, Franja, Medicion, Plantilla, Producto } from '../datos/tip
 import { t, tc, tk } from '../i18n'
 import { propio } from './claves'
 import { minutosDe } from './fechas'
+import { leerNumero } from './formato'
 import { consejoQuincenal, tipoConsejo } from './resumen'
 import { datosQuincena as numerosQuincena } from './tendencias'
 
-// En castellano (para las cuentas y el informe); lo que se pinta va con nombreFranja().
-export const FRANJAS: { v: Franja; t: string; icono: string }[] = [
-  { v: 'desayuno', t: 'Desayuno', icono: 'sun-horizon' },
-  { v: 'comida', t: 'Comida', icono: 'sun' },
-  { v: 'merienda', t: 'Merienda', icono: 'cookie' },
-  { v: 'cena', t: 'Cena', icono: 'moon' },
+/** Las franjas en orden, con su icono; el nombre sale de nombreFranja(). */
+export const FRANJAS: { v: Franja; icono: string }[] = [
+  { v: 'desayuno', icono: 'sun-horizon' },
+  { v: 'comida', icono: 'sun' },
+  { v: 'merienda', icono: 'cookie' },
+  { v: 'cena', icono: 'moon' },
 ]
-
-export const NOMBRE_FRANJA: Record<Franja, string> = { desayuno: 'Desayuno', comida: 'Comida', merienda: 'Merienda', cena: 'Cena' }
 
 /** El momento del día en el idioma de la app. «Comida» lleva contexto: la pestaña es otra cosa (ca «Dinar», en «Lunch»). */
 export function nombreFranja(f: Franja): string {
@@ -77,9 +76,8 @@ export function conRacion(base: { kcal: number; proteina: number; cafeina?: numb
 }
 
 /**
- * ¿Alguna de las palabras empieza una palabra del nombre? Antes se buscaban en cualquier sitio y «chocolate»
- * (por «cola»), «aguacate» (por «agua») o «panceta» salían como bebida o como pan; y «té» no casaba nunca
- * (\b no funciona tras una letra con tilde). `entera` obliga a que la palabra acabe ahí.
+ * ¿Alguna de las palabras empieza una palabra del nombre? Así «chocolate» no es bebida por «cola» ni «aguacate» por
+ * «agua» (\b no sirve: falla tras una letra con tilde, como en «té»). `entera` obliga a que la palabra acabe ahí.
  */
 function empieza(n: string, palabras: string, entera = false): boolean {
   return new RegExp(`(?:^|[^\\p{L}])(?:${palabras})${entera ? '(?![\\p{L}])' : ''}`, 'u').test(n)
@@ -101,7 +99,7 @@ export function aspecto(nombre: string, tipo?: string): { fp: string; icono: str
   return { fp: 'f-cu', icono: 'bowl-food' }
 }
 
-// ---------- Open Food Facts ----------
+// Open Food Facts
 type NutrimentosOFF = Record<string, number | string | undefined>
 type ProductoOFF = {
   product_name?: string; product_name_es?: string; generic_name_es?: string; brands?: string
@@ -109,14 +107,15 @@ type ProductoOFF = {
 }
 
 const n = (v: unknown): number | null => {
-  const x = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : typeof v === 'number' ? v : NaN
-  return Number.isFinite(x) ? x : null
+  if (typeof v === 'string') return leerNumero(v)
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+
 }
 const r1 = (v: number | null) => (v == null ? null : Math.round(v * 10) / 10)
 
 /**
  * La imagen de un producto solo se pinta si es https de Open Food Facts (images.openfoodfacts.org…). Cualquier otra
- * (de una copia ajena o de una respuesta manipulada) se descarta: servía de «píxel espía» para saber cuándo usas la app.
+ * (de una copia ajena o de una respuesta manipulada) se descarta: serviría de «píxel espía» para saber cuándo usas la app.
  */
 export function imagenOFF(u: unknown): string | undefined {
   if (typeof u !== 'string' || u.length > 2000) return undefined
@@ -146,7 +145,7 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
   const nombre = (txt(p.product_name_es) || txt(p.product_name) || txt(p.generic_name_es)).trim()
   return {
     codigo,
-    // Recortados: un nombre enorme congelaba las listas al pintarlas.
+    // Recortados: un nombre enorme congela las listas al pintarlas.
     nombre: (nombre || t('Producto {codigo}', { codigo })).slice(0, 150),
     marca: (typeof p.brands === 'string' ? p.brands : '').split(',')[0]!.trim().slice(0, 80),
     imagen: imagenOFF(p.image_front_small_url) ?? imagenOFF(p.image_front_url),
@@ -211,7 +210,7 @@ export function porRacion(p: Producto): { kcal: number; proteina: number; cafein
 /** Código de barras válido (EAN-8, EAN-13, UPC-A/E). */
 export const codigoValido = (c: string) => /^\d{8,14}$/.test(c.trim())
 
-// ---------- picoteo, bebidas y cafeína ----------
+// Picoteo, bebidas y cafeína
 const esEnergetica = (c: Comida) => c.tipo === 'bebida' && (c.cafeina ?? 0) >= 80 && c.kcal >= 50
 
 export function picoteoDeSemana(comidas: Comida[], dias: string[]) {
@@ -235,11 +234,10 @@ export function ordenarPlantillas(ps: Plantilla[]): Plantilla[] {
   return [...ps].sort((a, b) => b.usos - a.usos || a.nombre.localeCompare(b.nombre, 'es'))
 }
 
-// ---------- ajuste quincenal ----------
+// Ajuste quincenal
 type Quincena = { consejo: string; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
 
-/** Compara los últimos 14 días con los 14 anteriores y da un consejo por tendencias. */
-/** Consejo quincenal con tono y etiqueta. Los números salen de `tendencias.datosQuincena`, la misma cuenta que usa Progreso. */
+/** Consejo quincenal (14 días frente a los 14 anteriores) con tono y etiqueta. Los números salen de `tendencias.datosQuincena`, la misma cuenta que usa Progreso. */
 export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas: Comida[]; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }): Quincena {
   const base = numerosQuincena({ domingo: o.hoy, mediciones: o.mediciones, comidas: o.comidas })
   const r1 = (v: number | null) => (v == null ? null : Math.round(v * 10) / 10)
@@ -257,7 +255,7 @@ export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas:
   return { consejo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? t('Vas bien') : t('Un ajuste'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
 }
 
-// ---------- «Lo de ayer» y «Recientes» al añadir ----------
+// «Lo de ayer» y «Recientes» al añadir
 
 /** Lo que se apuntó ayer en esa franja (para repetirlo de un toque). */
 export function deAyer(comidas: Comida[], ayer: string, franja: Franja): Comida[] {
@@ -282,7 +280,7 @@ export function recientes(comidas: Comida[], antesDe: string, plantillas: { nomb
   return out
 }
 
-// ---------- «Escribir lo que he comido» y «Crear comida nueva»: «Poco · Normal · Mucho» ----------
+// «Escribir lo que he comido» y «Crear comida nueva»: «Poco · Normal · Mucho».
 // Las claves internas siguen siendo ligera/normal/abundante; lo que se ve son las mismas palabras que las raciones.
 export type TamanoNota = 'ligera' | 'normal' | 'abundante'
 export const TAMANOS_NOTA: { v: TamanoNota; t: string }[] = [
@@ -314,7 +312,7 @@ export function escaneadosSueltos<P extends { codigo: string }>(productos: P[], 
   return productos.filter(p => !ya.has(p.codigo))
 }
 
-// ---------- suplementos ----------
+// Suplementos
 /** El batido de proteína se apunta como comida (suma proteína al día); el resto solo se marca. */
 // También en catalán e inglés, por si el suplemento se escribe así.
 export const esBatido = (s: string) => /prote|batido|batut|shake/i.test(s)
@@ -326,7 +324,7 @@ export function dosisPorDefecto(s: string): string {
 }
 /** La cantidad que toma (la suya o la habitual). */
 export const dosisDe = (dosis: Record<string, string> | undefined, s: string) => {
-  // Solo la dosis guardada de verdad: «constructor» o «toString» devolvían funciones de JavaScript y Comida fallaba.
+  // Solo la dosis guardada de verdad: «constructor» o «toString» devuelven funciones de JavaScript y Comida falla.
   const v = propio(dosis, s)
   return (typeof v === 'string' ? v.trim() : '') || dosisPorDefecto(s)
 }
@@ -334,3 +332,10 @@ export const dosisDe = (dosis: Record<string, string> | undefined, s: string) =>
 export const batidoDe = (b: { proteina: number; kcal: number } | undefined) => b ?? { proteina: 24, kcal: 120 }
 /** kcal aproximadas de un batido a partir de su proteína (la proteína en polvo da unas 5 kcal por gramo con lo demás). */
 export const kcalBatido = (proteina: number) => Math.round(proteina * 5)
+
+export function totalesComida(lista: Comida[]) {
+  return lista.reduce((suma, c) => ({ kcal: suma.kcal + c.kcal, proteina: suma.proteina + c.proteina, cafeina: suma.cafeina + (c.cafeina ?? 0) }), { kcal: 0, proteina: 0, cafeina: 0 })
+}
+
+/** ¿Hay un batido apuntado a mano ese día (desde Añadir, no desde el suplemento)? «Yogur proteico» o «Barrita» no cuentan. */
+export const batidoAMano = (comidas: { nombre: string; suplemento?: string }[]) => comidas.some(c => !c.suplemento && /batido/i.test(c.nombre))

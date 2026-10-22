@@ -1,30 +1,27 @@
 // SES-02 · Entreno en curso (con SES-03 descanso, SES-06 hora límite y SES-09 récord)
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
 import { marcaDe } from '../../datos/repos'
 import { historialDe } from '../../datos/consultas'
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
 import { ejercicio, etiqueta, nombreEjercicio } from '../../catalogo/catalogo'
 import { ES_MAQUINA, patron } from '../../catalogo/clasificacion'
 import { calentamiento as aproximacion, pesosPara } from '../../dominio/pesos'
-import { cambiarSerie, hecha, indiceActual, quitarUnaSerie, saltar, serieActual, terminada } from '../../dominio/sesion'
+import { conCalentamiento, indiceActual, quitarUnaSerie, saltar, serieActual, terminada } from '../../dominio/sesion'
 import { estadoHora, propuestaRecorte } from '../../dominio/tiempos'
-import { esRecord, TEXTO_PARTIDA } from '../../dominio/progresion'
+import { TEXTO_PARTIDA } from '../../dominio/progresion'
 import { formatoHora } from '../../dominio/fechas'
-import { kg } from '../../dominio/calculos'
-import { cancelar, ID_AVISO, pantallaEncendida, pitido, programar, puedeVibrar, vibrar } from '../../plataforma'
+import { kg, textoSerieEnCurso } from '../../dominio/formato'
+import { pantallaEncendida, pitido, puedeVibrar, vibrar } from '../../plataforma'
 import { cx, Ico, Pantalla, Th } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useGimnasio, useSesionEnCurso } from '../../datos/hooks'
-import { conCalentamiento } from './iniciar'
+import { alargarDescanso, apuntarHecha, descansoCumplido, guardarSesion, pasarACorta, quitarDescanso } from '../../datos/acciones/entreno'
 import { FormCorregir } from './Corregir'
 import { Panel } from './Panel'
 import { t, tc } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
-
-async function guardar(s: Sesion) { await db.sesiones.put(s) }
 
 export function Entreno() {
   const nav = useNav()
@@ -86,7 +83,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
         window.clearTimeout(tDestello.current)
         tDestello.current = window.setTimeout(() => setDestello(0), 1900)
       }
-      void guardar({ ...s, descansoHasta: undefined })
+      void descansoCumplido(s)
     }
   }, [resto, s, ajustes.vibrar, ajustes.sonido])
 
@@ -134,19 +131,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
 
   const hecho = async (datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>) => {
     if (!actual) return
-    const eraCalent = actual.calentamiento
-    const previas = [...hist.flatMap(h => h.series), ...e.series.filter(x => x.hecha)]
-    const rec = !eraCalent ? esRecord({ ...actual, ...datos, hecha: true }, previas) : null
-    const r = hecha(s, idx, datos)
-    let nueva = r.sesion
-    if (rec) nueva = cambiarSerie(nueva, idx, n, { record: true })
-    const descanso = eraCalent ? 45 : r.descanso
-    if (descanso > 0 && !terminada(nueva)) {
-      nueva.descansoHasta = Date.now() + descanso * 1000
-      nueva.descansoTotal = descanso
-      void programar([{ id: ID_AVISO.descanso, titulo: t('Descanso terminado'), texto: t('{ejercicio} · siguiente serie', { ejercicio: nombreEjercicio(nueva.ejercicios[indiceActual(nueva)]?.ejercicio) }), cuando: new Date(nueva.descansoHasta) }], [ID_AVISO.descanso])
-    } else nueva.descansoHasta = undefined
-    await guardar(nueva)
+    const rec = await apuntarHecha(s, idx, datos, [...hist.flatMap(h => h.series), ...e.series.filter(x => x.hecha)])
     if (ajustes.vibrar) void vibrar('corta')
     if (rec) {
       setLogro({ texto: rec.tipo === 'peso' ? t('Nuevo récord de peso') : t('Récord de repeticiones'), nombre: ej.nombre, valor: `${kg(datos.peso)} kg × ${datos.reps}` })
@@ -156,25 +141,13 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
   }
   // La ficha está en la pestaña Rutina: hay que minimizar el entreno (sigue en la mini barra) para verla.
   const verFicha = () => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }
-  const saltarDescanso = async () => { await guardar({ ...s, descansoHasta: undefined }); void cancelar([ID_AVISO.descanso]) }
-  const masTiempo = async () => {
-    if (!s.descansoHasta) return
-    const hasta = s.descansoHasta + 15000
-    await guardar({ ...s, descansoHasta: hasta, descansoTotal: (s.descansoTotal ?? 0) + 15 })
-    void programar([{ id: ID_AVISO.descanso, titulo: t('Descanso terminado'), texto: t('Siguiente serie'), cuando: new Date(hasta) }], [ID_AVISO.descanso])
-  }
+  const saltarDescanso = () => quitarDescanso(s)
+  const masTiempo = () => alargarDescanso(s)
   const aplicarRecorte = async () => {
     if (!recorte || !hora) return
-    if (recorte.tipo === 'serie') { await guardar(quitarUnaSerie(s, recorte.uid)); aviso(t('Hecho: 1 serie menos')) }
+    if (recorte.tipo === 'serie') { await guardarSesion(quitarUnaSerie(s, recorte.uid)); aviso(t('Hecho: 1 serie menos')) }
     else {
-      const r = await db.rutinas.get(s.rutinaId ?? -1)
-      const dia = r?.dias.find(d => d.letra === s.letra)
-      let nueva: Sesion = { ...s, version: 'corta' }
-      for (const b of dia?.bloques ?? []) if (b.fueraEnCorta) {
-        const i = nueva.ejercicios.findIndex(x => x.uid === b.uid && x.estado === 'pendiente')
-        if (i >= 0) nueva = saltar(nueva, i)
-      }
-      await guardar(nueva)
+      await pasarACorta(s)
       aviso(t('Pasado a la versión corta'))
     }
     setRecorteVisto(hora.minutosTarde + 3)
@@ -270,7 +243,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
           </p>
         )}
         {sugeridas.length > 0 && (
-          <button className="set wu" onClick={() => void guardar(conCalentamiento(s, idx, sugeridas))}>
+          <button className="set wu" onClick={() => void guardarSesion(conCalentamiento(s, idx, sugeridas))}>
             <span className="sn">{tc('calentamiento', 'C')}</span><span className="sv">{t('Añadir calentamiento sugerido')}</span><span className="se">{sugeridas.map(c => `${kg(c.peso)}×${c.reps}`).join(' · ')}</span><Ico n="plus" b />
           </button>
         )}
@@ -280,9 +253,9 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
           const fin = x.record ? <Ico n="trophy" b /> : x.hecha ? <Ico n="check" b /> : cur ? <Ico n="caret-down" b /> : <Ico n="circle" />
           // Una serie ya hecha se toca para corregirla (reps o peso mal apuntados con las prisas).
           if (x.hecha) return (
-            <button key={x.n} className={cx('set done ux-tocable', x.record && 'rec', kCorr === pos && 'ux-corr')} onClick={() => setCorr({ uid: e.uid, n: pos })} aria-label={t('Corregir la serie {n}: {valor}', { n: k + 1, valor: textoSerie(x, e, false) })}>
+            <button key={x.n} className={cx('set done ux-tocable', x.record && 'rec', kCorr === pos && 'ux-corr')} onClick={() => setCorr({ uid: e.uid, n: pos })} aria-label={t('Corregir la serie {n}: {valor}', { n: k + 1, valor: textoSerieEnCurso(x, e) })}>
               <span className="sn">{k + 1}</span>
-              <span className="sv">{textoSerie(x, e, false)}</span>
+              <span className="sv">{textoSerieEnCurso(x, e)}</span>
               <span className="se"><Ico n="pencil-simple" /></span>
               {fin}
             </button>
@@ -290,7 +263,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
           return (
             <p key={x.n} className={cx('set', x.record && 'rec', cur && 'cur')}>
               <span className="sn">{k + 1}</span>
-              <span className="sv">{textoSerie(x, e, cur)}</span>
+              <span className="sv">{textoSerieEnCurso(x, e)}</span>
               <span className="se">{cur ? t('ahora') : ''}</span>
               {fin}
             </p>
@@ -326,7 +299,7 @@ function SinEjercicio({ s, e, idx, ahora }: { s: Sesion; e?: EjercicioSesion; id
             <h3 className="h3">{t('Este ejercicio ya no está en el catálogo')}</h3>
             <p className="muted">{t('Cámbialo por otro o sáltalo para seguir.')}</p>
             <button className="btn mt12" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx })}><Ico n="swap" b />{t('Cambiar ejercicio')}</button>
-            <button className="btn gry sm mt8" onClick={() => void guardar(saltar(s, idx))}>{t('Saltarlo')}</button>
+            <button className="btn gry sm mt8" onClick={() => void guardarSesion(saltar(s, idx))}>{t('Saltarlo')}</button>
           </div>
         ) : s.ejercicios.length > 0 && terminada(s) ? (
           // Todo hecho y vuelto desde el resumen: se puede corregir en la Lista, añadir otro ejercicio o terminar.
@@ -349,11 +322,4 @@ function SinEjercicio({ s, e, idx, ahora }: { s: Sesion; e?: EjercicioSesion; id
       </div>
     </Pantalla>
   )
-}
-
-function textoSerie(x: Serie, e: EjercicioSesion, cur: boolean): string {
-  if (e.registro === 'tiempo') return x.hecha ? `${x.segundos ?? x.reps} s` : `${e.repsMin}-${e.repsMax} s`
-  if (e.registro === 'corporal' || x.peso == null) return x.hecha ? t('{n} reps', { n: String(x.reps) }) : t('{n} reps', { n: `${e.repsMin}-${e.repsMax}` })
-  const p = e.registro === 'asistido' ? t('asist. {n} kg', { n: kg(Math.abs(x.peso)) }) : `${kg(x.peso)} kg`
-  return x.hecha ? `${p} × ${x.reps}` : `${p} × ${cur ? `${e.repsMin}-${e.repsMax}` : `${e.repsMin}-${e.repsMax}`}`
 }

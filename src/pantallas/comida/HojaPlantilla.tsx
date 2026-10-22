@@ -1,7 +1,5 @@
-// COM-06 · Crear/editar una comida de «Mis comidas» (antes «plantilla»). Se escribe lo que trae el plato entero
-// (o la bolsa entera, si es picoteo) y debajo se ve cuánto es «Poco · Normal · Mucho» al apuntarla:
-// plato → ⅓ · el plato · plato y medio; picoteo → ⅓ · la mitad · todo.
-// Siempre se puede apuntar a la vez que se guarda, y borrar si ya existía.
+// COM-06 · Crear/editar una comida de «Mis comidas» (en el código, plantilla): lo que trae el plato o la bolsa entera.
+// Debajo, «Poco · Normal · Mucho» al apuntarla: plato → ⅓ · el plato · plato y medio; picoteo → ⅓ · la mitad · todo.
 import { useEffect, useState } from 'react'
 import { db } from '../../datos/db'
 import type { Plantilla } from '../../datos/tipos'
@@ -12,7 +10,8 @@ import { hacerFoto } from '../../plataforma'
 import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { LineaMacros, apuntarPlantilla, useUrlBlob } from './comun'
+import { LineaMacros, useUrlBlob } from './comun'
+import { apuntarPlantilla, borrarPlantilla, guardarPlantilla } from '../../datos/acciones/comida'
 
 /** Lo que trae por defecto cada tipo, para quien no sabe los números: un plato normal, una bolsa de picoteo, una lata. */
 const POR_DEFECTO = { comida: { kcal: 600, proteina: 25 }, picoteo: { kcal: 300, proteina: 4 }, bebida: { kcal: 100, proteina: 0 } } as const
@@ -31,7 +30,7 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
   // Si aún no se han tocado los números, al cambiar de tipo se ponen los de ese tipo.
   const [tocados, setTocados] = useState(id != null)
   const fotoUrl = useUrlBlob(p?.foto)
-  // Una comida nueva no tiene id: con un doble toque en «Guardar» se creaban dos.
+  // Una comida nueva no tiene id: un doble toque en «Guardar» crearía dos.
   const unaVez = useUnaVez()
   useEffect(() => {
     // Las comidas de partida se guardan en castellano: al editarlas, el nombre sale (y se guarda) en el idioma de la app.
@@ -52,7 +51,7 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
   const guardar = unaVez(async () => {
     const x = limpia()
     if (!x) return
-    await db.plantillas.put(x)
+    await guardarPlantilla(x)
     nav.hoja(null)
     // Crear no es apuntar: el aviso lo dice para que nadie crea que ya está en el Día.
     aviso(id == null ? t('Creada «{nombre}» (aún sin apuntar)', { nombre: x.nombre }) : t('Cambios guardados'))
@@ -60,7 +59,7 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
   const guardarYApuntar = unaVez(async () => {
     const x = limpia()
     if (!x) return
-    const nuevoId = await db.plantillas.put(x)
+    const nuevoId = await guardarPlantilla(x)
     const fecha = fechaRuta ?? hoyISO()
     // Como en Añadir: la comida va a la franja elegida (o la suya); el picoteo y la bebida de hoy, a la de la hora.
     const franja = fecha !== hoyISO() ? franjaRuta
@@ -73,10 +72,9 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
   })
   const borrar = async () => {
     if (p.id == null) return
-    const copia = p
-    await db.plantillas.delete(p.id)
+    const deshacer = await borrarPlantilla({ ...p, id: p.id })
     nav.hoja(null)
-    aviso(t('Borrado de Mis comidas: {nombre}', { nombre: p.nombre }), () => { void db.plantillas.put(copia) })
+    aviso(t('Borrado de Mis comidas: {nombre}', { nombre: p.nombre }), deshacer)
   }
   const foto = async () => { const f = await hacerFoto(600); if (f) cambia({ foto: f }) }
 

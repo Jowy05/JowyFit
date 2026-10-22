@@ -6,9 +6,11 @@ import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAjustes, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { useAviso } from '../../ui/aviso'
-import { abrevDia, CabRutina, capital, duracionPlan, filas, listaDias, minutos, nombreDia, nombreEj, SS, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
+import { abrevDia, CabRutina, duracionPlan, filas, listaDias, minutos, nombreDia, nombreEj, SS, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
+import { capital } from '../../dominio/formato'
 import { nombreEntreno, nombreEstructura } from '../../dominio/nombres'
-import { abrirEntreno, iniciarEntreno } from '../entreno/iniciar'
+import { abrirEntreno } from '../entreno/iniciar'
+import { iniciarEntreno } from '../../datos/acciones/entreno'
 import { t, tn } from '../../i18n'
 
 /** Lo que añade el CSS tras las series de lo que se quita con prisa (va en data-cut para poder traducirlo). */
@@ -27,7 +29,7 @@ export function MiPlan() {
   const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === r.id && s.letra !== 'L').length), [r?.id]) ?? 0
   const unaVez = useUnaVez()
 
-  // Si hoy ya se entrenó, la tarjeta de hoy lo dice (antes seguía con «Empezar rutina» y parecía que no se había guardado).
+  // Si hoy ya se entrenó, la tarjeta de hoy lo dice: con «Empezar rutina» parecería que no se guardó.
   // Va antes de los return: los hooks siempre en el mismo orden.
   const hechoHoy = useLiveQuery(async () => (await db.sesiones.where('fecha').equals(hoyISO()).toArray()).find(s => s.estado === 'hecha'), [])
   if (r === undefined) return <Pantalla><CabRutina actual="rut" crumb={crumb} /></Pantalla>
@@ -42,7 +44,7 @@ export function MiPlan() {
 
   const fijos = r.dias.filter(d => !d.opcional)
   const opc = r.dias.filter(d => d.opcional)
-  // Doble toque: dos entrenos libres en curso. Y «restaurar» no abría nada si la app se había cerrado a mitad.
+  // Un doble toque no abre dos entrenos libres; abrirEntreno sirve aunque la app se cerrara a mitad.
   const libre = unaVez(async () => {
     if (enCurso) { aviso(t('Ya tienes un entreno en curso')); abrirEntreno(nav); return }
     await iniciarEntreno({ libre: true })
@@ -67,7 +69,7 @@ export function MiPlan() {
             <div className="spec">
               <p><span>{t('Días')}</span><b className="ux-rut-wrap">{conDia.length ? capital(listaDias(conDia)) : t('{n} a la semana', { n: fijos.length })}</b></p>
               {opc[0]?.dia != null && <p><span>{t('Día extra')}</span><b className="ux-rut-wrap">{t('{dia}, si te apetece · ~{min} min', { dia: nombreDia(opc[0]), min: minutos(opc[0]) })}</b></p>}
-              {/* Mismo rango que al crear la rutina («48-55 min»): antes aquí ponía solo el máximo y en Inicio el del día. */}
+              {/* Mismo rango que al crear la rutina («48-55 min»). */}
               <p><span>{t('Duración')}</span><b>{duracionPlan(r)}</b></p>
             </div>
           </div>

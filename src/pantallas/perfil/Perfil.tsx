@@ -5,7 +5,8 @@ import { db } from '../../datos/db'
 import { perfilPorDefecto } from '../../datos/repos'
 import { objetivosEnergia, ultimaMedicion } from '../../datos/consultas'
 import type { Perfil as TPerfil } from '../../datos/tipos'
-import { cinturaAltura, grasaMarina, imc, kg, num } from '../../dominio/calculos'
+import { cinturaAltura, grasaMarina, imc } from '../../dominio/calculos'
+import { capital, kg, num } from '../../dominio/formato'
 import { veredictoCinturaAltura, veredictoGrasa, veredictoImc } from '../../dominio/tendencias'
 import { edad } from '../../dominio/fechas'
 import { Cab, cx, Ico, Pantalla } from '../../ui/componentes'
@@ -193,4 +194,3 @@ function resumen(s: ClaveSeccion, p: TPerfil, n: Numeros | undefined): string {
   }
 }
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

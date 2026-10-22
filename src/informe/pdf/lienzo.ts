@@ -96,7 +96,6 @@ const ESTILOS: Record<NombreEstilo, { nombre: string; idea: string; estilo: Esti
   },
 }
 
-/** Colores y estilo de un PDF: cada PDF lleva los suyos. */
 export type Tema = { c: Paleta; estilo: Estilo }
 
 export function temaDe(nombre: NombreEstilo): Tema {
@@ -104,7 +103,6 @@ export function temaDe(nombre: NombreEstilo): Tema {
   return { c: { ...PALETA, ...e.colores }, estilo: { ...e.estilo } }
 }
 
-/** Color de cada tono del informe. */
 const tonos = (c: Paleta): Record<TonoInforme, string> => ({ ok: c.verde, warn: c.ambar, bad: c.rojo, gris: c.gris, tinta: c.tinta, oro: c.oro, azul: c.facil })
 
 /** «titulo»: la letra de los títulos del estilo (Helvetica o Times, en negrita). */

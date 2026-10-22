@@ -1,6 +1,5 @@
-// Todo lo que cambia entre Android (Capacitor) y el navegador / iPhone (PWA) pasa por aquí.
-// Cada función funciona en los dos sitios: en la web hace lo que puede o no hace nada.
-// Se importa siempre desde este índice (las pruebas lo sustituyen entero con vi.doMock).
+// Todo lo que cambia entre Android (Capacitor) y el navegador / iPhone (PWA) pasa por aquí; en la web, cada función
+// hace lo que puede o nada. Se importa siempre desde este índice (las pruebas lo sustituyen entero con vi.doMock).
 export * from './dispositivo'
 export * from './sonido'
 export * from './avisos'

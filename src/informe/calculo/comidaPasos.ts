@@ -1,14 +1,14 @@
 // Comida, pasos y gasto del periodo.
 import type { Comida, Franja } from '../../datos/tipos'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { NOMBRE_RACION, nombreFranja } from '../../dominio/comida'
 import { basalDia, kcalPasos, kcalSesion, zancada } from '../../dominio/energia'
 import { lunesDe, sumarDias } from '../../dominio/fechas'
-import { ultimoValor } from '../../dominio/tendencias'
+import { ultimoValor, grasaEn } from '../../dominio/tendencias'
 import { t, tn } from '../../i18n'
 import type { ComidaFila, ComidaInforme, DiaComidaInforme, GastoDiaInforme, PasosInforme } from './tipos'
 import { agrupar, entre, media, r1, suma, unico } from './comun'
-import { edadEn, grasaEn, leerPeso, type Ctx } from './contexto'
+import { edadEn, leerPeso, type Ctx } from './contexto'
 import { evaluarProteina, tonoProteinaDia } from './resumen'
 
 export function filaComida(x: Comida): ComidaFila {
@@ -89,7 +89,7 @@ export function gastoEnDia(c: Pick<Ctx, 'ms' | 'marina' | 'p' | 'pasos' | 'todas
   const peso = ultimoValor(c.ms, leerPeso, fecha)?.valor
   const e = edadEn(c.p.nacimiento, fecha)
   if (peso == null || !(c.p.alturaCm > 0) || e == null) return null
-  const g = grasaEn(c, fecha)
+  const g = grasaEn(c.ms, c.marina, fecha)
   const b = basalDia({ pesoKg: peso, alturaCm: c.p.alturaCm, edad: e, sexo: c.p.sexo, grasaPct: g?.valor })
   const d = c.pasos.find(x => x.fecha === fecha)
   const pasos = d ? kcalPasos(d.pasos, peso, c.p.alturaCm, d.troteKm ?? 0) : 0

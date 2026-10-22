@@ -88,8 +88,8 @@ export type Logro = { ejercicio: string; fecha: string; sesionId?: number; peso:
 
 /** Récords (series marcadas como récord), uno por ejercicio y sesión, más recientes primero. */
 export function logros(sesiones: Sesion[]): Logro[] {
-  // Resumen acumulado por ejercicio (peso máximo y reps máximas por peso). Antes se copiaba y se
-  // recorría todo el historial en cada sesión (cuadrático: ~55 ms con 3 años de entrenos en cada render).
+  // Resumen acumulado por ejercicio (peso máximo y reps máximas por peso): recorrer todo el historial en cada
+  // sesión es cuadrático (~55 ms con 3 años de entrenos en cada render).
   const historial = new Map<string, { maxPeso: number; repsPorPeso: Map<number, number> }>()
   const out: Logro[] = []
   for (const s of hechasAsc(sesiones)) {
@@ -126,7 +126,7 @@ export function recordsEn(sesiones: Sesion[], dias: string[]): number {
     .reduce((suma, s) => suma + s.ejercicios.reduce((a, e) => a + trabajo(e.series).filter(x => x.record).length, 0), 0)
 }
 
-// ---------- series por grupo muscular ----------
+// Series por grupo muscular
 
 // n: nombre en castellano (también es la clave del grupo); se traduce al pintarlo con t(g.n).
 export const GRUPOS_MUSCULARES: { n: string; patrones: string[]; zona: [number, number] }[] = [
@@ -157,7 +157,7 @@ export function seriesPorGrupo(sesiones: Sesion[], dias: string[], patronDe: (id
   return GRUPOS_MUSCULARES.map(g => ({ n: g.n, v: cuenta.get(g.n) ?? 0, zona: g.zona }))
 }
 
-// ---------- medidas del cuerpo ----------
+// Medidas del cuerpo
 
 type Lector = (m: Medicion) => number | undefined
 
@@ -219,6 +219,42 @@ export function grasaPorMedidas(ms: Medicion[], sexo: Perfil['sexo'], alturaCm: 
   return out
 }
 
+/** Días que vale el % de grasa de la báscula: más viejo, manda la cinta. */
+export const DIAS_GRASA_BASCULA = 120
+
+export type GrasaEnFecha = PuntoFecha & { fuente: 'bascula' | 'medidas' }
+
+/**
+ * La regla del % de grasa (Inicio, Energía, Metas y el informe): el de la báscula de los 120 días anteriores a `fecha`
+ * o, si no hay, el último de la cinta (cintura y cuello) hasta esa fecha. `marina` es grasaPorMedidas(ms, …).
+ */
+export function grasaEn(ms: Medicion[], marina: PuntoFecha[], fecha: string): GrasaEnFecha | null {
+  const b = ultimoValor(ms, m => m.bascula?.grasaPct, fecha)
+  if (b && b.fecha >= sumarDias(fecha, -DIAS_GRASA_BASCULA)) return { ...b, fuente: 'bascula' }
+  const m = marina.filter(x => x.fecha <= fecha).at(-1)
+  return m ? { ...m, fuente: 'medidas' } : null
+}
+
+/** % de grasa en una fecha (hoy, normalmente) con la regla de grasaEn. */
+export function grasaActual(ms: Medicion[], p: Pick<Perfil, 'sexo' | 'alturaCm'>, fecha: string): number | null {
+  return grasaEn(ms, grasaPorMedidas(ms, p.sexo, p.alturaCm), fecha)?.valor ?? null
+}
+
+/** Pendiente del peso en kg/semana con los últimos 30 días (lo que pesa un día suelto importa poco). */
+export function tendenciaPeso(ms: Medicion[], hoy: string, dias = 30): { kgSemana: number | null; puntos: number[] } {
+  const pts = ms
+    .filter(m => m.pesoKg != null && diasEntre(m.fecha.slice(0, 10), hoy) <= dias && diasEntre(m.fecha.slice(0, 10), hoy) >= 0)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .map(m => ({ x: -diasEntre(m.fecha.slice(0, 10), hoy), y: m.pesoKg! }))
+  const puntos = pts.map(p => p.y)
+  if (pts.length < 2 || pts[pts.length - 1]!.x - pts[0]!.x < 5) return { kgSemana: null, puntos }
+  const mx = pts.reduce((a, p) => a + p.x, 0) / pts.length
+  const my = pts.reduce((a, p) => a + p.y, 0) / pts.length
+  const num = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0)
+  const den = pts.reduce((a, p) => a + (p.x - mx) ** 2, 0)
+  return { kgSemana: den ? Math.round((num / den) * 7 * 10) / 10 : null, puntos }
+}
+
 /** Datos para el consejo quincenal: las dos semanas que terminan en `domingo`. */
 export function datosQuincena(o: { domingo: string; mediciones: Medicion[]; comidas: Comida[] }) {
   const inicio = sumarDias(o.domingo, -13)
@@ -240,7 +276,7 @@ export function datosQuincena(o: { domingo: string; mediciones: Medicion[]; comi
   }
 }
 
-// ---------- metas ----------
+// Metas
 
 /** Progreso (0 a 1) desde el valor inicial hasta el objetivo, sirve para metas que bajan o suben. */
 export function progresoMeta(inicio: number | null | undefined, actual: number | null, objetivo: number): number {
@@ -258,7 +294,7 @@ export function faltaMeta(inicio: number | null | undefined, actual: number | nu
   return Math.max(0, baja ? actual - objetivo : objetivo - actual)
 }
 
-// ---------- dominadas ----------
+// Dominadas
 
 const DOMINADA = /(pull-?ups?|chin-?ups?)/
 const NO_ESTRICTA = /(assisted|negative|band|australian|inverted|jumping|kipping|scapular)/
@@ -306,7 +342,7 @@ export function hitosDominadas(sesiones: Sesion[]): { hitos: Hito[]; estrictas: 
   return { hitos, estrictas: max, hay }
 }
 
-// ---------- pasos ----------
+// Pasos
 
 export const PASOS_POR_KM = 1300
 export const PASOS_POR_MINUTO = 160
@@ -316,7 +352,7 @@ export function pasosEquivalentes(valor: number, modo: 'km' | 'min'): number {
   return Math.round((Math.max(0, valor) * (modo === 'km' ? PASOS_POR_KM : PASOS_POR_MINUTO)) / 10) * 10
 }
 
-// ---------- mini gráfica ----------
+// Mini gráfica
 
 /** Puntos «x,y» de una línea pequeña (sparkline) dentro de un lienzo w × h. */
 export function puntosSpark(valores: number[], w = 120, h = 40, margen = 4): { x: number; y: number }[] {
@@ -329,7 +365,7 @@ export function puntosSpark(valores: number[], w = 120, h = 40, margen = 4): { x
   }))
 }
 
-// ---------- palabras para quien no sabe de números (Progreso y Perfil) ----------
+// Palabras para quien no sabe de números (Progreso y Perfil)
 
 export type Tono = 'ok' | 'warn' | 'bad'
 
@@ -408,8 +444,7 @@ export function estadoPicoteo(dias: number, anterior: number, hayComidas: boolea
 }
 
 /**
- * Parte la frase del semáforo en líneas cortas y cambia «1/3 entrenos» por palabras:
- * «Vas al día: 1 de 3 entrenos» (semana en curso), «Entrenos: 3 de 3» o «Te faltan entrenos: 1 de 3».
+ * Parte la frase del semáforo en líneas cortas y cambia «1/3 entrenos» por palabras («Vas al día: 1 de 3 entrenos»).
  * Con `bien` y `mal` (los de resumenSemana, ya traducidos) no se trocea la frase: así vale en cualquier idioma.
  */
 export function lineasSemaforo(o: { frase: string; semaforo: 'verde' | 'ambar' | 'rojo'; entrenos: number; fijos: number; esperados?: number; enCurso: boolean; bien?: string[]; mal?: string[] }): string[] {

@@ -1,9 +1,8 @@
 // «Tu día» (Hoy o Ayer): lo de ese día contra lo normal, en una sola página.
-import { kg, num } from '../../../dominio/calculos'
+import { kg, num, fijo } from '../../../dominio/formato'
 import { fechaCorta } from '../../../dominio/fechas'
 import { t } from '../../../i18n'
 import type { FilaHoyNormal, TonoInforme, TuDiaInforme } from '../../calculo/tipos'
-import { fijo } from '../../calculo/comun'
 import { nombreEnFrase } from '../../calculo/contexto'
 import { TAM, partirRico, type Lienzo } from '../lienzo'
 import { ejeHolgado, grafica } from '../graficas'

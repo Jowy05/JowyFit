@@ -1,6 +1,5 @@
-// Instrucciones para instalar la app en la pantalla de inicio (solo en los navegadores de Apple).
-// Salen al empezar si la app se abre en Safari sin instalar (sobre todo desde la landing, con «?instalar=1»),
-// y otra vez desde Perfil → Ajustes. En Android (APK) y ya instalada, nunca al empezar.
+// Instrucciones para instalar la app en la pantalla de inicio, solo en los navegadores de Apple.
+// Salen al empezar en Safari sin instalar (sobre todo desde la landing, con «?instalar=1») y desde Perfil → Ajustes.
 import type { ReactNode } from 'react'
 import { dispositivoApple, estaInstalada, type DispositivoApple } from '../../plataforma'
 import { cx, Ico } from '../../ui/componentes'

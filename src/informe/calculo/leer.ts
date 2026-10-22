@@ -1,5 +1,6 @@
 // Lee de la base lo que necesita el informe en PDF (las tablas enteras: el periodo se recorta en el cálculo).
 import { db } from '../../datos/db'
+import { rutinaActiva } from '../../datos/repos'
 import { cargarCatalogo, ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { patron } from '../../catalogo/clasificacion'
 import type { CatalogoInforme, Informe, PeriodoInforme, RangoInforme, SeccionesInforme, TablasInforme } from './tipos'
@@ -13,7 +14,7 @@ export async function tablasInforme(): Promise<TablasInforme> {
     db.ajustes.get('app'),
     db.mediciones.toArray(),
     db.sesiones.toArray(),
-    db.rutinas.filter(r => r.activa).last(),
+    rutinaActiva(),
     db.comidas.toArray(),
     db.suplementos.toArray(),
     db.pasos.toArray(),

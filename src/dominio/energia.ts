@@ -41,10 +41,8 @@ function segundosSerie(e: Sesion['ejercicios'][number], seg?: number | null): nu
 export type GastoEntreno = { hecho: number; plan: number; saltado: number }
 
 /**
- * kcal de un entreno, sin contar el reposo: (MET − 1) × kg × tiempo de cada serie con su descanso.
- * «plan» es lo que habría gastado haciendo todas las series; «saltado», lo que no se ha hecho
- * de los ejercicios saltados (lo que falta de uno en curso no cuenta como saltado).
- * El calentamiento cuenta a la mitad; el cardio, por sus minutos.
+ * kcal de un entreno sin el reposo: (MET − 1) × kg × tiempo de cada serie con su descanso; calentamiento a la mitad
+ * y cardio por sus minutos. «plan»: todas las series; «saltado»: lo no hecho de los saltados (no el que está en curso).
  */
 export function kcalSesion(s: Sesion, pesoKg: number, met: (id: string) => number | null | undefined): GastoEntreno {
   let hecho = 0, plan = 0, saltado = 0

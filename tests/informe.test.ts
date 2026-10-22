@@ -4,10 +4,8 @@ process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import type { Ajustes, Comida, DiaRutina, EjercicioSesion, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../src/datos/tipos'
 import type { CatalogoInforme, EntradaInforme, Informe, PeriodoInforme } from '../src/informe/calculo/tipos'
-import {
-  conSigno, diasDe, esfuerzoDe, etiquetaSemana, fechaDia, lista, mediaEsfuerzo, mediana, mesAnio, minutosSesion, palabraEsfuerzo, pctCambio,
-  queDiceEsfuerzo, serieFuerza, textoDuracion, textoFuerza, textoPct, unidadFuerza, valorFuerza, zonaEsfuerzo,
-} from '../src/informe/calculo/comun'
+import { diasDe, esfuerzoDe, etiquetaSemana, fechaDia, lista, mediaEsfuerzo, mediana, mesAnio, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, serieFuerza, textoDuracion, textoFuerza, textoPct, unidadFuerza, valorFuerza, zonaEsfuerzo } from '../src/informe/calculo/comun'
+import { conSigno } from '../src/dominio/formato'
 import { etiquetaPeriodo, hayDatosEn, primerDato, rangoInforme } from '../src/informe/calculo/periodo'
 import { edadEn, objetivosInforme } from '../src/informe/calculo/contexto'
 import { palabraPuntuacion, puntuacionDe } from '../src/informe/calculo/semanas'

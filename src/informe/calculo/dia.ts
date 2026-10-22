@@ -1,15 +1,12 @@
 // «Tu día» (Hoy o Ayer): lo de ese día contra lo normal de las últimas semanas.
 import type { Perfil, Serie, Sesion } from '../../datos/tipos'
-import { conUnidad, kg, num } from '../../dominio/calculos'
+import { conUnidad, kg, num, capital, conSigno, fijo } from '../../dominio/formato'
 import { fechaCorta, sumarDias } from '../../dominio/fechas'
 import { ejerciciosHechos, hechasAsc, logros, seriesDe, ultimoValor } from '../../dominio/tendencias'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t, tn } from '../../i18n'
 import type { Comparacion, Direccion, FilaHoyNormal, Juicio, TonoInforme, TuDiaInforme } from './tipos'
-import {
-  agrupar, capital, conRpe, conSigno, dia10, entre, fijo, lista, media, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, r1,
-  serieFuerza, suma, textoDuracion, textoFuerza, textoPct, textoSerie, trabajo, unico, unidadFuerza, valorFuerza,
-} from './comun'
+import { agrupar, conRpe, dia10, entre, lista, media, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, r1, serieFuerza, suma, textoDuracion, textoFuerza, textoPct, textoSerie, trabajo, unico, unidadFuerza, valorFuerza } from './comun'
 import { estadosDias, leerCintura, leerGrasaBascula, leerPeso, nombreDe, nombreEnFrase, type Ctx } from './contexto'
 import { filaComida, gastoEnDia, totalDe } from './comidaPasos'
 

@@ -3,9 +3,8 @@ import { t } from '../i18n'
 import { esNativo } from './dispositivo'
 
 /**
- * Identificadores fijos de los avisos. «dormir» y «pesarse» son el primero de una serie (uno por entreno o por día
- * de pesaje). El del descanso sirve también para el calentamiento: va por su propio canal, con vibración, para que
- * llegue al reloj.
+ * «dormir» y «pesarse» son el primero de una serie (uno por entreno o por día de pesaje).
+ * El del descanso sirve también para el calentamiento: va por su propio canal, con vibración, para que llegue al reloj.
  */
 export const ID_AVISO = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700, descanso: 9001 } as const
 

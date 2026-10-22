@@ -40,7 +40,7 @@ export function App() {
   const [instalar, setInstalar] = useState(ensenarAlEmpezar)
   useEffect(() => alPedirInstrucciones(() => setInstalar(true)), [])
   const cerrarInstalar = () => { marcarVistas(); setInstalar(false) }
-  // Antes solo decía «No se pudo abrir la app» y no había salida: ahora se puede recuperar una copia o borrar los datos.
+  // Si no abre, hay salida: recuperar una copia o borrar los datos.
   if (error) return <PantallaRescate detalle={t('No se pudo abrir la app: {error}', { error })} />
   if (!listo || perfil === null) return <div className="app"><div className="cargando">JowyFit</div></div>
   return (

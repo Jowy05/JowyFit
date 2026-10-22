@@ -9,7 +9,7 @@ import { objetivosEnergia } from '../../datos/consultas'
 import type { Ajustes as TAjustes } from '../../datos/tipos'
 import { useCatalogo } from '../../catalogo/catalogo'
 import { duracion } from '../../dominio/fechas'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { capacidades, estaInstalada, permisoNotificaciones } from '../../plataforma'
 import { cx, Cab, Elegir, FilaInterruptor, Ico, Interruptor, Pantalla, Stepper } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -65,7 +65,6 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
 
   const guardar = (c: Partial<TAjustes>) => { void guardarAjustes(c) }
 
-  // ---------- apariencia ----------
   const cambiarTema = (x: PreferenciaTema) => { guardarTema(x); setTema(x) }
   const cambiarLetra = (l: Letra) => {
     guardarLetra(l)
@@ -73,14 +72,12 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
     window.dispatchEvent(new Event('jf-letra'))
   }
 
-  // ---------- comida ----------
   const manual = a.kcalManual != null || a.proteinaManual != null
   const ponerManual = (m: 'auto' | 'manual') => {
     if (m === 'auto') { guardar({ kcalManual: null, proteinaManual: null }); aviso(t('Objetivo automático')); return }
     guardar({ kcalManual: a.kcalManual ?? auto?.kcal ?? 2000, proteinaManual: a.proteinaManual ?? auto?.proteina ?? 140 })
   }
 
-  // ---------- notificaciones ----------
   const cambiarNoti = async (c: Partial<Noti>) => {
     const activa = Object.values(c).some(v => v === true)
     if (activa && !permNoti) {
@@ -106,7 +103,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
     <Pantalla>
       <Cab atras crumb={t('Perfil')} titulo={t('Ajustes')} />
       <div className="pg">
-        {/* ---------- Apariencia: lo primero, para leer bien todo lo demás ---------- */}
+        {/* Apariencia, lo primero: para leer bien todo lo demás. */}
         <p className="grp-t">{t('Apariencia')}</p>
         <div className="list">
           <div className="it col">
@@ -132,7 +129,6 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
           </div>
         </div>
 
-        {/* ---------- Recordatorios ---------- */}
         {!cap.apple && <p className="grp-t">{t('Recordatorios')}</p>}
         {cap.apple ? null : cap.recordatorios ? (
           <div className="list">
@@ -148,10 +144,10 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
           <p className="note plain"><Ico n="device-mobile" /><span>{tr('<b>Solo en la app de Android:</b> los recordatorios se ven dentro de la app.', { b: x => <b>{x}</b> })}</span></p>
         )}
 
-        {/* ---------- Reloj y báscula: Health Connect, a la vista ---------- */}
+        {/* Reloj y báscula (Health Connect), a la vista. */}
         <RelojYBascula salud={salud} />
 
-        {/* ---------- Apple: cómo tenerla en la pantalla de inicio (las instrucciones del arranque, otra vez) ---------- */}
+        {/* Apple: cómo tenerla en la pantalla de inicio (las instrucciones del arranque, otra vez). */}
         {cap.instalar && (
           <>
             <p className="grp-t">{cap.instalar === 'dock' ? t('App en el Dock') : t('App en la pantalla de inicio')}</p>
@@ -165,7 +161,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
           </>
         )}
 
-        {/* ---------- Informe en PDF: arriba, junto a la copia (se busca aquí para enseñar o guardar los datos) ---------- */}
+        {/* Informe en PDF arriba, junto a la copia: aquí se busca para enseñar o guardar los datos. */}
         <p className="grp-t">{t('Informe en PDF')}</p>
         <div className="list" data-tour="informe">
           <button className="it" onClick={() => nav.hoja('sheet-informe')}>
@@ -175,7 +171,6 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
           </button>
         </div>
 
-        {/* ---------- Ayuda: el tutorial, siempre a mano ---------- */}
         <p className="grp-t">{t('Ayuda')}</p>
         <div className="list" data-tour="tutorial">
           <button className="it" onClick={lanzarTutorial}>
@@ -185,14 +180,12 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
           </button>
         </div>
 
-        {/* ---------- Copia de seguridad ---------- */}
         <CopiaDeSeguridad refTitulo={refDatos} />
 
-        {/* ---------- Más ajustes: lo técnico, plegado (los valores por defecto ya sirven) ---------- */}
+        {/* Más ajustes: lo técnico, plegado (los valores por defecto ya sirven). */}
         <details className="fold mt24 aju-mas" open={masAbierto} onToggle={e => setMasAbierto(e.currentTarget.open)}>
           <summary><Ico n="sliders-horizontal" className="blue" /><span className="tx"><b>{t('Más ajustes')}</b><small>{t('Entreno, comida, pasos y permisos')}</small></span><Ico n="caret-down" /></summary>
           <div className="in">
-            {/* ---------- Entreno ---------- */}
             <p className="grp-t">{t('Entreno')}</p>
             <div className="list">
               {/* Sin vibración (iPhone): no se ofrece; al acabar el descanso destella la pantalla. */}
@@ -211,7 +204,6 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
               <FilaInterruptor titulo={t('Avisos de seguridad')} d={t('En banca y sentadilla con barra')} on={a.avisosSeguridad} onCambio={v => guardar({ avisosSeguridad: v })} />
             </div>
 
-            {/* ---------- Comida ---------- */}
             <p className="grp-t" ref={refComida}>{t('Comida')}</p>
             <div className="list">
               <FilaInterruptor titulo={t('Mostrar calorías')} d={t('La proteína se ve siempre')} on={a.mostrarKcal} onCambio={v => guardar({ mostrarKcal: v })} />
@@ -240,7 +232,6 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
 
             <PasosYBascula salud={salud} />
 
-            {/* ---------- Gimnasios y permisos ---------- */}
             <p className="grp-t">{t('Gimnasios y permisos')}</p>
             <div className="list">
               <button className="it" onClick={() => nav.ir('rut-gym', undefined, 'rut')}>
@@ -259,7 +250,6 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
           </div>
         </details>
 
-        {/* ---------- Créditos y acerca de ---------- */}
         <p className="grp-t">{t('Créditos y aviso legal')}</p>
         <div className="list">
           <button className="it" onClick={() => nav.ir('creditos')}>
@@ -270,7 +260,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
         </div>
         <p className="small muted mt8 center">{t('JowyFit {version} · {n} ejercicios', { version: paquete.version, n: catalogo ? catalogo.ejercicios.length.toLocaleString(regionNumeros()) : '—' })}</p>
 
-        {/* ---------- Borrar todo: al final y aparte ---------- */}
+        {/* Borrar todo: al final y aparte. */}
         <div className="list aju-borrar">
           <button className="it danger" onClick={borrarTodo}>
             <span className="ico"><Ico n="trash" /></span>

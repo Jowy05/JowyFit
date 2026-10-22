@@ -12,7 +12,8 @@ import { hacerFoto } from '../../plataforma'
 import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, recortar, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { ElegirCuanto, Mini, apuntar, apuntarPlantilla, baseDeApuntada, kp, useUrlBlob, type ParaElegir } from './comun'
+import { ElegirCuanto, Mini, baseDeApuntada, kp, useUrlBlob, type ParaElegir } from './comun'
+import { apuntar, apuntarPlantilla } from '../../datos/acciones/comida'
 
 /** Comidas guardadas a la vista antes de «Ver todas». */
 const MAX_COMIDAS = 5
@@ -70,7 +71,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta<'sheet-add'> }) {
   const listo = (txt: string, deshacer: () => void) => { setElegir(null); nav.hoja(null); aviso(t('Añadido: {nombre}', { nombre: txt }), deshacer) }
   // Tocar cualquier cosa abre «¿Cuánto?» (Poco · Normal · Mucho); se apunta lo que se elija.
   const [elegir, setElegir] = useState<ParaElegir | null>(null)
-  // Los botones de un toque (picoteo, bebida, Mis comidas) apuntaban dos veces con un doble toque.
+  // Los botones de un toque (picoteo, bebida, Mis comidas) no apuntan dos veces con un doble toque.
   const unaVez = useUnaVez()
 
   const usar = unaVez(async (p: Plantilla, r: Racion) => {

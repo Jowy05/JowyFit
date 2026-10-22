@@ -7,10 +7,8 @@ import { t } from '../../i18n'
 
 type Pendiente = { id: string; titulo: string; detalle: string; icono: string; accion: 'peso' | 'medir' | 'foto' | 'suplemento' | 'pasos'; hecho?: boolean }
 
-/**
- * `pasosAMano` + `tarde`: en iPhone no hay recordatorios ni pasos automáticos; por la tarde (desde las 18 h), si hoy
- * no hay pasos apuntados, se recuerda apuntarlos (se miran en la app Salud).
- */
+/** `pasosAMano` + `tarde`: en iPhone no hay recordatorios ni pasos automáticos; desde las 18 h, si hoy no hay pasos
+ * apuntados, se recuerda apuntarlos (se miran en la app Salud). */
 export async function pendientesDeHoy(p: Perfil, hoy: string, o: { pasosAMano?: boolean; tarde?: boolean } = {}): Promise<Pendiente[]> {
   const out: Pendiente[] = []
   const mediciones = await db.mediciones.toArray()

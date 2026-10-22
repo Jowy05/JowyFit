@@ -2,20 +2,19 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
-import { objetivosEnergia, totalesComida } from '../../datos/consultas'
+import { objetivosEnergia } from '../../datos/consultas'
 import type { Comida } from '../../datos/tipos'
-import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, nombreFranja, picoteoDeSemana, textoRacion } from '../../dominio/comida'
+import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, nombreFranja, picoteoDeSemana, textoRacion, totalesComida, batidoAMano } from '../../dominio/comida'
 import { DIAS, deISO, diaMes, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../dominio/fechas'
-import { num } from '../../dominio/calculos'
+import { capital, num } from '../../dominio/formato'
 import { t, tn } from '../../i18n'
 import { Barra, cx, Ico, Pantalla, Seccion, useUnaVez, recortar } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
 import { CabComida, Deslizable, Mini } from './comun'
-import { batidoAMano, desmarcarSuplemento, marcarSuplemento } from './suplementos'
+import { desmarcarSuplemento, marcarSuplemento, borrarComida } from '../../datos/acciones/comida'
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export function DiaComida() {
   const nav = useNav()
@@ -44,11 +43,10 @@ export function DiaComida() {
   const tomados = supl?.tomados ?? []
 
   const borrar = async (c: Comida) => {
-    await db.comidas.delete(c.id!)
-    aviso(t('Borrado: {nombre}', { nombre: t(c.nombre) }), () => { void db.comidas.add(c) })
+    aviso(t('Borrado: {nombre}', { nombre: t(c.nombre) }), await borrarComida(c))
   }
   // El batido, al marcarlo, se apunta con su proteína (suma al día); al desmarcarlo, se quita.
-  // Con un doble toque metía dos batidos o lo marcaba y desmarcaba: una vez, y leyendo lo tomado de la base de datos.
+  // Un doble toque no mete dos batidos ni lo desmarca: una sola vez, leyendo lo tomado de la base de datos.
   const unaVez = useUnaVez()
   const alternarSuplemento = unaVez(async (s: string) => {
     const yaTomado = ((await db.suplementos.get(fecha))?.tomados ?? []).includes(s)
@@ -57,7 +55,7 @@ export function DiaComida() {
     if (esBatido(s)) aviso(t('Apuntado: {nombre} · {n} g proteína', { nombre: t(s), n: batidoDe(perfil.batido).proteina }), deshacer)
   })
   const verDia = (n: number) => setFecha(f => sumarDias(f, n))
-  // Redondeado: las raciones P/G dejan decimales y salía «Faltan 112.6 g».
+  // Redondeado: las raciones P/G dejan decimales («Faltan 112.6 g»).
   const faltan = energia ? Math.max(0, Math.round(energia.proteina - tot.proteina)) : 0
   // La cafeína se enseña si hoy hay o si se ha tomado en las últimas semanas.
   const conCafeina = tot.cafeina > 0 || recientes.some(c => (c.cafeina ?? 0) > 0)
@@ -163,7 +161,7 @@ export function DiaComida() {
           </Seccion>
         )}
 
-        {/* Una sola tarjeta: el consejo de la quincena y el picoteo de la semana (antes eran dos seguidas). */}
+        {/* Una sola tarjeta: el consejo de la quincena y el picoteo de la semana. */}
         <div className="sec">
           <button className="card pd adj" onClick={() => nav.ir('com-energia')}>
             <span className="row jb">

@@ -2,24 +2,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
-import { sesionesHechas } from '../../datos/consultas'
+import { borrarMeta, guardarMeta } from '../../datos/acciones/cuerpo'
+import { sesionesHechas, valorActualMeta } from '../../datos/consultas'
 import type { Medicion, Meta, Perfil, Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
-import { kg, num } from '../../dominio/calculos'
+import { kg, num } from '../../dominio/formato'
 import { fechaCorta, hoyISO } from '../../dominio/fechas'
-import { ejerciciosHechos, faltaMeta, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../dominio/tendencias'
+import { ejerciciosHechos, faltaMeta, grasaActual, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../dominio/tendencias'
 import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfil } from '../../datos/hooks'
-import { CabProgreso, grasaActual, mesAno, TIPOS_META, valorActualMeta } from './comun'
+import { CabProgreso, mesAno, TIPOS_META } from './comun'
 import { t } from '../../i18n'
 
 function actualDe(m: Meta, ms: Medicion[], ses: Sesion[], perfil: Perfil): number | null {
   switch (m.tipo) {
     case 'cintura': return ultimoValor(ms, x => x.perimetros?.cintura)?.valor ?? null
     case 'peso': return ultimoValor(ms, x => x.pesoKg)?.valor ?? null
-    case 'grasa': return grasaActual(ms, perfil)
+    case 'grasa': return grasaActual(ms, perfil, hoyISO())
     case 'dominadas': return hitosDominadas(ses).estrictas
     case 'ejercicio': {
       if (!m.ejercicio) return null
@@ -107,7 +108,7 @@ export function Objetivos() {
   )
 }
 
-// ---------- hoja: crear o editar una meta ----------
+// Hoja para crear o editar una meta.
 
 export function HojaMeta({ ruta }: { ruta: Ruta<'sheet-meta'> }) {
   const id = ruta.d?.id ?? null
@@ -156,7 +157,7 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
   const [hecha, setHecha] = useState(!!meta?.hecha)
   const info = TIPOS_META.find(x => x.v === tipo)!
   const unaVez = useUnaVez()
-  // Solo vale la última propuesta: si se cambia de tipo rápido, una respuesta vieja pisaba el objetivo del tipo nuevo.
+  // Solo vale la última propuesta: si se cambia de tipo rápido, una respuesta vieja pisaría el objetivo del tipo nuevo.
   const ultimaPropuesta = useRef(0)
 
   // Al crear, propone un objetivo razonable a partir del valor actual.
@@ -174,7 +175,7 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
   }
   const cambiarEj = (e: string) => { setEj(e); if (!meta) proponer('ejercicio', e) }
 
-  // Una meta nueva no tiene id: con un doble toque se creaban dos.
+  // Una meta nueva no tiene id: un doble toque crearía dos.
   const guardar = unaVez(async () => {
     if (tipo === 'ejercicio' && !ej) { aviso(t('Elige un ejercicio')); return }
     const mismoValor = meta && meta.tipo === tipo && (tipo !== 'ejercicio' || meta.ejercicio === ej)
@@ -187,17 +188,16 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
       inicio, hecha,
     }
     if (meta?.id != null) nueva.id = meta.id
-    await db.metas.put(nueva)
+    await guardarMeta(nueva)
     nav.hoja(null)
     aviso(meta ? t('Meta guardada') : t('Meta creada'))
   })
 
   const borrar = async () => {
     if (meta?.id == null) return
-    const copia = { ...meta }
-    await db.metas.delete(meta.id)
+    const deshacer = await borrarMeta({ ...meta, id: meta.id })
     nav.hoja(null)
-    aviso(t('Meta borrada'), () => void db.metas.put(copia))
+    aviso(t('Meta borrada'), deshacer)
   }
 
   return (

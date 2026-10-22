@@ -2,8 +2,9 @@
 import { useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
+import { apuntarMedicion } from '../../datos/acciones/cuerpo'
 import type { Bascula, Medicion, OrigenMedicion } from '../../datos/tipos'
-import { num } from '../../dominio/calculos'
+import { leerNumero, num } from '../../dominio/formato'
 import { fechaCorta, horaActual, hoyISO } from '../../dominio/fechas'
 import { ultimoValor, type PuntoFecha } from '../../dominio/tendencias'
 import { Cab, Chip, cx, Ico, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
@@ -33,10 +34,6 @@ const CAMPOS_BASCULA: { k: keyof Bascula; t: string; u: string }[] = [
 /** Punto de partida del primer + o − si nunca se midió (se ve «—» hasta tocarlo). */
 const POR_DEFECTO: Record<Campo, number> = { peso: 75, cintura: 90, cuello: 38, cadera: 100, pecho: 100, brazo: 32, brazoContraido: 34, muslo: 56 }
 
-const leerNumero = (s: string | undefined) => {
-  const n = parseFloat((s ?? '').replace(',', '.'))
-  return Number.isFinite(n) ? n : null
-}
 const signo = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${num(Math.abs(n))}`
 
 /** Dibujo de cómo medir una sola parte (cintura en la pantalla; cuello dentro de «Más medidas»). */
@@ -97,7 +94,7 @@ export function Registrar() {
   const pesoAGuardar = sinPeso ? null : tocado('peso') ? valores.peso ?? null : otrosTocados ? null : ultimos?.v.peso?.valor ?? null
   const origenFinal: OrigenMedicion = origen ?? (pesoAGuardar != null || basculaRellena ? 'casa' : 'cinta')
 
-  // Doble toque: dos mediciones iguales y dos «atrás».
+  // Un doble toque no guarda dos mediciones iguales ni hace dos «atrás».
   const guardar = unaVez(async () => {
     const perimetros: NonNullable<Medicion['perimetros']> = {}
     for (const p of PERIMETROS) if (tocado(p.k) && valores[p.k] != null) perimetros[p.k] = valores[p.k]
@@ -112,7 +109,7 @@ export function Registrar() {
     if (peso != null) m.pesoKg = peso
     if (Object.keys(perimetros).length) m.perimetros = perimetros
     if (Object.keys(bascula).length) m.bascula = bascula
-    await db.mediciones.add(m)
+    await apuntarMedicion(m)
     const antes = ultimos?.v.cintura?.valor
     const delta = perimetros.cintura != null && antes != null ? perimetros.cintura - antes : null
     aviso(delta != null && delta !== 0 ? t('Medidas guardadas · cintura {n} cm', { n: signo(delta) }) : t('Medidas guardadas'))

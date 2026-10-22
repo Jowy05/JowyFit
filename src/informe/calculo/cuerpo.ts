@@ -1,16 +1,14 @@
 // Cuerpo: peso, grasa y cintura, sus zonas, el control de peso, las metas y los indicadores de la báscula.
 import type { Medicion, Meta, Perfil } from '../../datos/tipos'
-import { cinturaAltura, conUnidad, imc, kg, num } from '../../dominio/calculos'
+import { cinturaAltura, imc } from '../../dominio/calculos'
+import { conUnidad, kg, num, MENOS, conSigno, fijo } from '../../dominio/formato'
 import { basalDia } from '../../dominio/energia'
 import { fechaCorta, sumarDias } from '../../dominio/fechas'
-import {
-  cambioDesdeInicio, faltaMeta, hitosDominadas, mediasSemanales, pendienteSemanal, pesoMaximo, progresoMeta, serieMedida, seriesDe, ultimoValor,
-  veredictoCinturaAltura, veredictoGrasa, veredictoImc, type Tono,
-} from '../../dominio/tendencias'
+import { cambioDesdeInicio, faltaMeta, hitosDominadas, mediasSemanales, pendienteSemanal, pesoMaximo, progresoMeta, serieMedida, seriesDe, ultimoValor, veredictoCinturaAltura, veredictoGrasa, veredictoImc, type Tono, grasaEn } from '../../dominio/tendencias'
 import { t, tk } from '../../i18n'
 import type { Cambio, ControlPeso, CuerpoInforme, Evaluacion, MetaInforme, PuntoCuerpo, ResumenInforme, SerieCuerpo, TonoInforme, ZonaCuerpo } from './tipos'
-import { MENOS, conSigno, dia10, entre, fijo, mesAnio, r1 } from './comun'
-import { edadEn, grasaEn, leerCintura, leerGrasaBascula, leerPeso, nombreDe, type Ctx } from './contexto'
+import { dia10, entre, mesAnio, r1 } from './comun'
+import { edadEn, leerCintura, leerGrasaBascula, leerPeso, nombreDe, type Ctx } from './contexto'
 
 const ZONAS_IMC = { cortes: [18.5, 25] as [number, number], escala: [10, 40] as [number, number], marcas: [10, 15, 18.5, 25, 30, 35, 40] }
 const ZONAS_CA = { cortes: [0.4, 0.5] as [number, number], escala: [0.3, 0.8] as [number, number], marcas: [0.3, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8] }
@@ -36,7 +34,7 @@ export function cambioDe(delta: number, tono: TonoInforme, f: (v: number) => str
 
 function serieCuerpo(c: Ctx, puntos: PuntoCuerpo[], leer: (m: Medicion) => number | undefined, campo: 'peso' | 'grasa' | 'cintura'): SerieCuerpo {
   const enP = puntos.filter(x => entre(x.fecha, c.inicio, c.fin))
-  const antes = campo === 'grasa' ? (grasaEn(c, sumarDias(c.inicio, -1)) ?? null) : ultimoValor(c.ms, leer, sumarDias(c.inicio, -1))
+  const antes = campo === 'grasa' ? (grasaEn(c.ms, c.marina, sumarDias(c.inicio, -1)) ?? null) : ultimoValor(c.ms, leer, sumarDias(c.inicio, -1))
   const camb = cambioDesdeInicio(enP)
   // Con un solo dato en el periodo, «al empezar» es el último de antes (si lo hay), y se avisa de que es de antes.
   const conAntes = enP.length === 1 && !!antes
@@ -70,7 +68,7 @@ export function cuerpoInforme(c: Ctx): CuerpoInforme {
   const cintura = serieCuerpo(c, serieMedida(c.ms, leerCintura), leerCintura, 'cintura')
   const h = c.p.alturaCm > 0 ? c.p.alturaCm : null
   const pAhora = ultimoValor(c.ms, leerPeso, c.fin)?.valor ?? null
-  const gAhora = grasaEn(c, c.fin)
+  const gAhora = grasaEn(c.ms, c.marina, c.fin)
   const cAhora = ultimoValor(c.ms, leerCintura, c.fin)?.valor ?? null
   const tabla: CuerpoInforme['tabla'] = []
   // Las palabras de los veredictos son de Progreso (tendencias.ts): t() las deja igual si ya vienen traducidas.
@@ -111,7 +109,7 @@ export function zonasInforme(c: Ctx): { zonas: ZonaCuerpo[]; subtitulo: string |
   const zonas: ZonaCuerpo[] = []
   const h = c.p.alturaCm > 0 ? c.p.alturaCm : null
   const p = ultimoValor(c.ms, leerPeso, c.fin)
-  const g = grasaEn(c, c.fin)
+  const g = grasaEn(c.ms, c.marina, c.fin)
   const cin = ultimoValor(c.ms, leerCintura, c.fin)
   const tonoV = (t: Tono): TonoInforme => t
   if (p && h) {
@@ -134,7 +132,7 @@ export function zonasInforme(c: Ctx): { zonas: ZonaCuerpo[]; subtitulo: string |
 export function controlPeso(c: Ctx): ControlPeso | null {
   const p = ultimoValor(c.ms, leerPeso, c.fin)
   if (!p) return null
-  const g = grasaEn(c, c.fin)
+  const g = grasaEn(c.ms, c.marina, c.fin)
   const metaG = c.metas.find(m => m.tipo === 'grasa' && !m.hecha)
   const meta = metaG?.objetivo ?? (c.p.sexo === 'mujer' ? 25 : 18)
   let pesoConMeta: number | null = null, sobra: number | null = null
@@ -183,7 +181,7 @@ export function metasInforme(c: Ctx): MetaInforme[] {
     let hito: string | null = null
     if (m.tipo === 'cintura') actual = ultimoValor(c.ms, leerCintura, c.fin)?.valor ?? null
     else if (m.tipo === 'peso') actual = ultimoValor(c.ms, leerPeso, c.fin)?.valor ?? null
-    else if (m.tipo === 'grasa') actual = grasaEn(c, c.fin)?.valor ?? null
+    else if (m.tipo === 'grasa') actual = grasaEn(c.ms, c.marina, c.fin)?.valor ?? null
     else if (m.tipo === 'dominadas') {
       const d = hitosDominadas(ses)
       actual = d.estrictas

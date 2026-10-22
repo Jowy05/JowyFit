@@ -1,6 +1,5 @@
-// AJU-02 · Informe en PDF (Ajustes): de qué días y qué lleva; «Crear el PDF» lo hace en el móvil.
-// Android lo guarda en Documentos/JowyFit y deja compartirlo; iPhone abre el menú Compartir (si no se puede, se descarga);
-// en el ordenador se descarga. Diseño: docs/INFORME-PDF-DISENO.md §1.
+// AJU-02 · Informe en PDF (Ajustes): de qué días y qué lleva; se crea en el móvil. Diseño: docs/INFORME-PDF-DISENO.md §1.
+// Android lo guarda en Documentos/JowyFit y deja compartirlo; iPhone abre Compartir (si no puede, se descarga); el ordenador lo descarga.
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import paquete from '../../../package.json'
@@ -40,7 +39,7 @@ export function HojaInforme() {
   const a = useAjustes()
   const nativo = esNativo()
   const apple = dispositivoApple()
-  // Uno para crear y otro para compartir: con uno solo, compartir justo después de crear se ignoraba.
+  // Uno para crear y otro para compartir: con uno solo, compartir justo después de crear se ignoraría.
   const unaVez = useUnaVez()
   const unaVezCompartir = useUnaVez()
   const guardado = a.informe

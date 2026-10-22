@@ -55,7 +55,7 @@ export function tarjetaHoy(r: Rutina | null | undefined, semana: EstadoDia[], ho
   if (enCurso) return { tipo: 'curso' }
   if (!r) return { tipo: 'sin' }
   const h = semana.find(d => d.fecha === hoy)
-  // Semana que no contiene hoy (p. ej. calculada antes de medianoche): antes reventaba con h undefined.
+  // Semana que no contiene hoy (p. ej. calculada antes de medianoche): sin día de hoy, toca descanso.
   if (!h) return { tipo: 'descanso', proximo: semana.find(d => d.fecha > hoy && d.estado === 'plan') ?? proximaSemana }
   const proximo = semana.find(d => d.fecha > hoy && d.estado === 'plan') ?? proximaSemana
   // Sesión perdida esta semana que se puede recolocar en el día opcional (hoy o más adelante).

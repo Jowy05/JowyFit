@@ -1,5 +1,4 @@
-// Red de seguridad: si algo falla al pintar, en vez de dejar la app en blanco (sin salida) se enseña
-// «Algo ha ido mal» con lo necesario para salir: volver a Inicio, recuperar una copia o borrar los datos.
+// Si algo falla al pintar, «Algo ha ido mal» con salida: volver a Inicio, recuperar una copia o borrar los datos.
 // No depende de Ajustes ni de la navegación: funciona aunque la app entera haya fallado.
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react'
 import { borrarTodosLosDatos, importar } from '../datos/copias'

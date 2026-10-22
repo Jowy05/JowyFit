@@ -2,13 +2,14 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
+import { guardarSesion } from '../../datos/acciones/entreno'
 import { marcaDe } from '../../datos/repos'
 import { sugerenciaPara } from '../../datos/consultas'
 import { catalogoCargado, ejercicio, nombreMaterial } from '../../catalogo/catalogo'
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import { alternativasDe } from '../../dominio/generador'
 import { irA, sustituir } from '../../dominio/sesion'
-import { kg } from '../../dominio/calculos'
+import { kg } from '../../dominio/formato'
 import { cx, Hoja, Ico, Th, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -47,7 +48,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'sheet-ocup'> }) {
   const hacer = unaVez(async () => {
     if (!alt) return
     const x = ejercicio(alt)!
-    await db.sesiones.put(sustituir(s, idx, alt, 'ocupado', { peso: sug?.peso ?? null, reps: sug?.reps ?? null }, tipoRegistro(x)))
+    await guardarSesion(sustituir(s, idx, alt, 'ocupado', { peso: sug?.peso ?? null, reps: sug?.reps ?? null }, tipoRegistro(x)))
     nav.hoja(null)
     aviso(`${t('Cambiado a {ejercicio}', { ejercicio: x.nombre })}${sug?.peso != null ? ` · ${kg(sug.peso)} kg` : ''}`)
   })
@@ -69,7 +70,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'sheet-ocup'> }) {
         <span className="empty-ic"><Ico n="arrows-down-up" /></span>
         <h3 className="h3">{t('Está todo ocupado')}</h3>
         {siguiente >= 0 ? <p className="muted">{t('Haz antes {ejercicio} y vuelve luego.', { ejercicio: ejercicio(s.ejercicios[siguiente]!.ejercicio)?.nombre.toLowerCase() ?? '' })}</p> : <p className="muted">{t('Espera un poco o salta este ejercicio.')}</p>}
-        {siguiente >= 0 && <button className="btn xl" onClick={async () => { await db.sesiones.put(irA(s, siguiente)); nav.hoja(null); aviso(t('Reordenado: ahora {ejercicio}', { ejercicio: ejercicio(s.ejercicios[siguiente]!.ejercicio)?.nombre ?? '' })) }}>{t('Hacerlo ahora')}</button>}
+        {siguiente >= 0 && <button className="btn xl" onClick={async () => { await guardarSesion(irA(s, siguiente)); nav.hoja(null); aviso(t('Reordenado: ahora {ejercicio}', { ejercicio: ejercicio(s.ejercicios[siguiente]!.ejercicio)?.nombre ?? '' })) }}>{t('Hacerlo ahora')}</button>}
         <button className="btn gry sm mt8" onClick={() => { nav.hoja(null); aviso(t('Vale. Vuelve a probar en un par de minutos')) }}>{t('Esperar')}</button>
         <button className="btn ln sm mt8" onClick={() => setPaso(actualEn + 1)}>{t('Volver a la primera alternativa')}</button>
       </div>

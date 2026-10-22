@@ -24,10 +24,8 @@ function guardarPasos(e: EstadoPasos) {
 type Paso = { id: string; titulo: string; hecho: boolean; ir: () => void }
 export type Guia = { pasos: Paso[]; n: number; cerrar: () => void }
 
-/**
- * 4 pasos que se marcan solos al hacerlos. Desaparece al completarlos o con «Ya lo sé». Solo las primeras semanas.
- * Devuelve null si no se ve, y undefined mientras carga (cuenta como «se ve» para no enseñar y quitar los pendientes).
- */
+/** 4 pasos que se marcan solos; desaparece al completarlos o con «Ya lo sé», y solo sale las primeras semanas.
+ * null si no se ve; undefined mientras carga (cuenta como «se ve» para no enseñar y quitar los pendientes). */
 export function usePrimerosPasos(tar: ReturnType<typeof tarjetaHoy>): Guia | null | undefined {
   const nav = useNav()
   const ajustes = useAjustes()

@@ -1,5 +1,4 @@
-// Cómo se agrupa el material en el catálogo del gimnasio y en qué patrón de movimiento
-// cae cada ejercicio (lo usan el generador de rutina y las alternativas A → B → C).
+// Grupos de material del catálogo y patrón de movimiento de cada ejercicio (generador de rutina y alternativas A → B → C).
 // Los nombres van marcados con tk(): se traducen al pintarlos con t().
 import type { Ejercicio } from './tipos'
 import type { TipoRegistro } from '../datos/tipos'

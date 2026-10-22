@@ -1,6 +1,6 @@
 // Entrenos y fuerza: la tabla de entrenos, el esfuerzo, las subidas, las gráficas de fuerza y las mejores series.
 import type { Sesion } from '../../datos/tipos'
-import { kg, num } from '../../dominio/calculos'
+import { kg, num, conSigno } from '../../dominio/formato'
 import { MESES, deISO, fechaCorta, lunesDe, sumarDias } from '../../dominio/fechas'
 import { mejorMarca, volumen } from '../../dominio/progresion'
 import { ejerciciosHechos, nivelSeries, seriesDe, seriesPorGrupo } from '../../dominio/tendencias'
@@ -10,10 +10,7 @@ import type {
   Direccion, EntrenosInforme, EsfuerzoEjercicio, EsfuerzoInforme, FilaEntreno, FilaSemanaEntrenos, FuerzaInforme, GraficaFuerza, MejorSerie,
   MesInforme, PuntoEsfuerzo, RecordSesion, SemanaInforme, SubidaInforme, TonoInforme,
 } from './tipos'
-import {
-  agrupar, conSigno, entre, esfuerzoDe, etiquetaSemana, fechaDia, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, r1, serieFuerza, suma,
-  textoDuracion, textoPct, textoSerie, trabajo, unidadCorta, unidadFuerza,
-} from './comun'
+import { agrupar, entre, esfuerzoDe, etiquetaSemana, fechaDia, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, r1, serieFuerza, suma, textoDuracion, textoPct, textoSerie, trabajo, unidadCorta, unidadFuerza } from './comun'
 import { cuentaEntrenos, nombreDe, type Ctx } from './contexto'
 import { evaluarEntrenos } from './resumen'
 

@@ -1,7 +1,5 @@
-// Comprobación estricta de una copia ANTES de tocar la base: cada campo de cada tabla con su tipo.
-// Si algo no cuadra se rechaza la copia entera (no se borra nada) con un mensaje que se entiende.
-// Antes solo se miraba la estructura de arriba: un nombre que era un objeto, un id 2^53 o un perfil vacío
-// entraban y dejaban la app en blanco o sin poder apuntar nada.
+// Comprobación estricta de una copia antes de tocar la base: cada campo de cada tabla con su tipo (un nombre que es
+// un objeto o un id 2^53 dejan la app en blanco). Si algo no cuadra se rechaza entera, sin borrar nada.
 import { imagenOFF } from '../dominio/comida'
 import { TABLAS, type NombreTabla } from './db'
 import { t, tk } from '../i18n'
@@ -15,7 +13,6 @@ const mal = (donde: string, que: string): never => {
   throw new CopiaNoValida(t('La copia tiene datos que no son de JowyFit ({donde}: {que}). No se ha cambiado nada.', { donde, que }))
 }
 
-// ---------- límites ----------
 /** Mayor id que se acepta: muy lejos de lo que usa nadie y de 2^53 (que agota el contador de IndexedDB). */
 const ID_MAX = 1e9
 const LIMITES = {
@@ -28,7 +25,6 @@ const LIMITES = {
 /** Tipos de imagen que se aceptan en las fotos de una copia. Nunca SVG ni HTML (podrían llevar código). */
 export const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'] as const
 
-// ---------- reglas básicas ----------
 // Lo que se comprueba se dice en el idioma de la app; los nombres de los campos (› nombre, › fecha…) van tal cual.
 const texto = (max: number): Regla => (v, d) => (typeof v === 'string' ? (v.length <= max ? v : mal(d, t('texto de {n} letras', { n: v.length }))) : mal(d, t('no es un texto')))
 const corto = texto(LIMITES.corto)
@@ -42,7 +38,7 @@ const bool: Regla = (v, d) => (typeof v === 'boolean' ? v : mal(d, t('no es sí/
 const nulo = (r: Regla): Regla => (v, d) => (v === null ? null : r(v, d))
 const constante = (x: string): Regla => (v, d) => (v === x ? v : mal(d, t('no es el esperado')))
 const rango = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : mal(d, t('número fuera de lo normal')))
-/** Uno de los valores que usa la app (si no, la pantalla no sabía qué pintar y fallaba). */
+/** Uno de los valores que usa la app (si no, la pantalla no sabe qué pintar y falla). */
 const uno = (...valores: string[]): Regla => (v, d) => (typeof v === 'string' && valores.includes(v) ? v : mal(d, t('valor desconocido')))
 /** Igual, pero un valor desconocido se quita (y se usa el de siempre): para el perfil y los ajustes. */
 const unoO = (...valores: string[]): Regla => v => (typeof v === 'string' && valores.includes(v) ? v : undefined)
@@ -96,11 +92,10 @@ function obj(campos: Campos): Regla {
   }
 }
 
-// ---------- archivos (fotos) ----------
 export type RefArchivo = { __archivo: string; tipo: string }
 /**
  * Una foto de la copia: referencia a un archivo del zip. Si su tipo no es de imagen (SVG, HTML…) se descarta:
- * abierta en otra pestaña podía ejecutar código con los datos de la app.
+ * abierta en otra pestaña podría ejecutar código con los datos de la app.
  */
 const archivo: Regla = (v, d) => {
   if (!esObjeto(v) || typeof v.__archivo !== 'string' || typeof v.tipo !== 'string') return mal(d, t('no es una foto'))
@@ -110,7 +105,6 @@ const archivo: Regla = (v, d) => {
   return { __archivo: v.__archivo, tipo } satisfies RefArchivo
 }
 
-// ---------- las tablas ----------
 const REGISTRO = uno('peso', 'mancuerna', 'asistido', 'corporal', 'tiempo', 'cardio')
 const FRANJA = uno('desayuno', 'comida', 'merienda', 'cena')
 const macros = { hidratos: opc(num), azucares: opc(num), grasas: opc(num), sal: opc(num) }
@@ -247,12 +241,12 @@ export function validarDatos(datos: unknown): { tablas: Record<NombreTabla, Fila
     if (v.length > LIMITES.filas) throw new CopiaNoValida(t('La copia tiene demasiados datos ({tabla})', { tabla: nombreTabla }))
     tablas[tb] = v.map((f, i) => ESQUEMA[tb](f, `${nombreTabla} ${i + 1}`) as Fila)
   }
-  // Sin un perfil con el alta hecha, restaurar dejaba el móvil vacío (borraba todo y no ponía nada).
+  // Sin un perfil con el alta hecha, restaurar dejaría el móvil vacío (borra todo y no pone nada).
   if (tablas.perfil.length !== 1 || tablas.perfil[0]!.altaCompleta !== true) {
     throw new CopiaNoValida(t('La copia está vacía o incompleta: no trae tu perfil. No se ha cambiado nada.'))
   }
   if (tablas.ajustes.length > 1) throw new CopiaNoValida(t('La copia está dañada ({tabla})', { tabla: t(NOMBRE_TABLA.ajustes) }))
-  // Las fotos sin imagen válida (tipo raro o archivo que falta) no se restauran: la pantalla de fotos fallaba con ellas.
+  // Las fotos sin imagen válida (tipo raro o archivo que falta) no se restauran: la pantalla de fotos falla con ellas.
   tablas.fotos = tablas.fotos.filter(f => f.imagen !== undefined)
   const archivos = new Set<string>()
   const buscar = (v: unknown) => {

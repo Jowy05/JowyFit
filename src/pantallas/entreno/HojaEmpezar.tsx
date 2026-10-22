@@ -1,16 +1,16 @@
 // SES-01 · Antes de empezar
 import { useState } from 'react'
-import { db } from '../../datos/db'
 import { guardarPerfil } from '../../datos/repos'
 import type { DiaRutina, Perfil } from '../../datos/tipos'
 import { DIAS, horaActual, minutosDe } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
-import { esNativo, ID_AVISO, permisoNotificaciones, programar } from '../../plataforma'
+import { esNativo, permisoNotificaciones } from '../../plataforma'
 import { cx, FilaInterruptor, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfilCargado, useRutina, useSesionEnCurso } from '../../datos/hooks'
-import { abrirEntreno, iniciarEntreno } from './iniciar'
+import { abrirEntreno } from './iniciar'
+import { calentarAntes, iniciarEntreno } from '../../datos/acciones/entreno'
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -43,7 +43,7 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
   const nav = useNav()
   const unaVez = useUnaVez()
   const aviso = useAviso()
-  // «Normal» marcada por defecto (antes salía marcada la hora de salida, que parecía un entreno más largo).
+  // «Normal» marcada por defecto: con la hora de salida marcada parece un entreno más largo.
   const [modo, setModo] = useState<'normal' | 'corta'>(empezarCorta ? 'corta' : 'normal')
   // La hora de salida es la del perfil (coche o andando, según lo que tenga elegido); aquí solo se ve y se cambia.
   const horaPerfil = perfil.horaLimite[perfil.transporte]
@@ -63,15 +63,7 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
     if (esNativo() && !(await permisoNotificaciones(true))) aviso(t('Sin permiso de notificaciones: no te avisaremos al acabar el descanso (actívalo en Ajustes)'))
     if (hora !== horaPerfil) await guardarPerfil({ horaLimite: { ...perfil.horaLimite, [perfil.transporte]: hora } })
     const id = await iniciarEntreno({ letra: dia.letra, version: modo, horaLimite: hora })
-    if (calentar) {
-      const s = await db.sesiones.get(id)
-      if (s) {
-        const hasta = Date.now() + 300_000
-        await db.sesiones.put({ ...s, descansoHasta: hasta, descansoTotal: 300 })
-        // Igual que el descanso entre series: aviso aunque el móvil esté bloqueado.
-        void programar([{ id: ID_AVISO.descanso, titulo: t('Calentamiento terminado'), texto: t('A por la primera serie'), cuando: new Date(hasta) }], [ID_AVISO.descanso])
-      }
-    }
+    if (calentar) await calentarAntes(id)
     nav.hoja(null)
     nav.completa('entreno')
   })

@@ -1,10 +1,10 @@
 // Resumen del periodo: la tabla «Al empezar / Ahora», las evaluaciones y lo más destacado.
-import { conUnidad, kg, num } from '../../dominio/calculos'
+import { conUnidad, kg, num, capital, fijo } from '../../dominio/formato'
 import { fechaCorta } from '../../dominio/fechas'
 import { ejerciciosHechos, seriesDe } from '../../dominio/tendencias'
 import { t, tc, tn } from '../../i18n'
 import type { ComidaInforme, CuerpoInforme, Evaluacion, FilaResumen, LineaDestacado, PasosInforme, SemanaInforme, SerieCuerpo, TonoInforme } from './tipos'
-import { capital, esfuerzoDe, fijo, formatoSerie, palabraEsfuerzo, serieFuerza, trabajo, unidadCorta, unidadFuerza } from './comun'
+import { esfuerzoDe, formatoSerie, palabraEsfuerzo, serieFuerza, trabajo, unidadCorta, unidadFuerza } from './comun'
 import { cuentaEntrenos, nombreDe, type Ctx } from './contexto'
 import { cambioDe, evaluarCuerpo } from './cuerpo'
 

@@ -1,6 +1,5 @@
-// Guion del tutorial de la app: qué pantalla se pone, qué se señala (ancla `data-tour`) y qué se dice.
-// Un guion por plataforma: en iPhone se explican las cosas adaptadas (pasos a mano, copia con Compartir,
-// pitido y destello) y no sale nada que allí no funcione (reloj, báscula, recordatorios).
+// Guion del tutorial: qué pantalla se pone, qué se señala (ancla `data-tour`) y qué se dice. Uno por plataforma: en
+// iPhone se explica lo adaptado (pasos a mano, copia con Compartir) y no sale reloj, báscula ni recordatorios.
 import type { CodigoPantalla, Pestana, SinDatos } from '../../app/nav'
 import { t } from '../../i18n'
 

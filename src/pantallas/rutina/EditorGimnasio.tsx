@@ -1,6 +1,7 @@
 // RUT-08 · Editor de gimnasio
 import { useEffect, useState } from 'react'
 import { db } from '../../datos/db'
+import { guardarGimnasio } from '../../datos/acciones/rutina'
 import type { Gimnasio } from '../../datos/tipos'
 import { Cab, Ico, Pantalla, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -18,13 +19,12 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
   // undefined = cargando · null = no existe (o no hay ningún gimnasio todavía).
   const [g, setG] = useState<Gimnasio | null | undefined>(undefined)
   useEffect(() => {
-    // Sin id válido (p. ej. sin gimnasios) Dexie rechaza la consulta y la pantalla se quedaba en blanco.
+    // Sin id válido (p. ej. sin gimnasios) Dexie rechaza la consulta y la pantalla se quedaría en blanco.
     if (!Number.isFinite(id)) return
     void db.gimnasios.get(id).then(x => setG(x ?? null), () => setG(null))
   }, [id])
-  // Las máquinas propias se editan en una hoja y se guardan directamente: se recargan al volver.
-  // La hoja también marca en la base el material al que se parece la máquina: hay que traerlo,
-  // o al pulsar «Guardar» aquí se perdía.
+  // Las máquinas propias se guardan desde su hoja, que también marca el material al que se parecen:
+  // se recargan al volver, o «Guardar» aquí lo perdería.
   const propias = lista.find(x => x.id === id)?.propias
   useEffect(() => {
     if (!propias) return
@@ -40,9 +40,9 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
     </Pantalla>
   )
   const cambia = (c: Partial<Gimnasio>) => setG(x => (x ? { ...x, ...c } : x))
-  // Doble toque: dos «atrás».
+  // Un doble toque no hace dos «atrás».
   const guardar = unaVez(async () => {
-    await db.gimnasios.put(g)
+    await guardarGimnasio(g)
     aviso(t('Gimnasio guardado'))
     nav.atras()
   })
@@ -74,7 +74,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
           </div>
         )}
         <PesosGimnasio g={g} onCambio={cambia} />
-        <button className="btn ln sm mt20" onClick={async () => { await db.gimnasios.put(g); nav.hoja('sheet-maq', { gym: g.id }) }}><Ico n="plus" b />{t('Añadir una máquina que no sale')}</button>
+        <button className="btn ln sm mt20" onClick={async () => { await guardarGimnasio(g); nav.hoja('sheet-maq', { gym: g.id }) }}><Ico n="plus" b />{t('Añadir una máquina que no sale')}</button>
         {lista.length > 1 && <button className="btn bad sm mt8" onClick={borrar}><Ico n="trash" />{t('Borrar gimnasio')}</button>}
         <div className="dock">
           <div className="result card">

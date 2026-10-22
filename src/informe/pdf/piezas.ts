@@ -166,7 +166,7 @@ export class Flujo {
   }
 }
 
-/** Alto de un título de sección (h2) con su raya. `primero`: arriba de la página o de la columna. */
+/** Alto de un título de sección (h2) con su raya. */
 export const altoH2 = (margen: number) => margen + 4.2 + 2.9 + 2.1
 
 /** Título de sección (14 pt; 11 si no cabe) con un subtítulo pequeño al lado y la raya fina debajo. Devuelve su alto. */
@@ -209,7 +209,6 @@ function raya(l: Lienzo, x: number, y: number, w: number, wTexto: number) {
 
 const INTER_NOTA = TAM.micro * 0.3528 * 1.4
 
-/** Alto de una nota pequeña en gris. */
 export function altoNota(l: Medidor, texto: string, w: number, sangria = 0): number {
   return 1.2 + l.partir(texto, w - sangria, TAM.micro).length * INTER_NOTA + 0.6
 }
@@ -265,7 +264,6 @@ export function chip(l: Lienzo, x: number, y: number, texto: string, color: stri
   return w
 }
 
-/** Ancho de un chip pequeño (ver `chip`). */
 const anchoChip = (l: Medidor, texto: string, tam: number = TAM.micro) => l.ancho(texto, tam, 'negrita') + 5
 
 /** Etiqueta pequeña de color («semana de prueba»). Devuelve el ancho. */

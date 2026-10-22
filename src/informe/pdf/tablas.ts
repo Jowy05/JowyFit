@@ -208,7 +208,6 @@ const FD_CAB = 6.2, FD_FILA = 6.5, FD_HUECO = 0.5, FD_INTER = 3.4
 
 /** Líneas del nombre de una fila (hasta dos: «Press de banca con / barra (kg)»). */
 const lineasEtq = (l: Medidor, etq: string, w: number) => dosLineas(l, etq, w - 3, TAM.cuerpo)
-/** Líneas de cada título de la cabecera. */
 const lineasTitulo = (l: Medidor, titulo: string, w: number) => (titulo ? textoCab(l, titulo, w - 2).lineas : [])
 
 /** Alto de una tabla Fitdays: la cabecera y las filas crecen si algo va en dos líneas. */

@@ -2,6 +2,7 @@
 // Van marcados con tk(): se calculan al importar, antes de cargar el idioma; se traducen al pintarlos con t(x).
 import type { Dia, Nivel, Perfil, Reps, TipoObjetivo, Trabajo, Zona } from '../../datos/tipos'
 import { DIAS_ABREV } from '../../dominio/fechas'
+import { capital } from '../../dominio/formato'
 import { idioma, t, tc, tk } from '../../i18n'
 
 export const OBJETIVO_TXT: Record<TipoObjetivo, string> = { recomposicion: tk('Perder grasa y ganar músculo'), perder: tk('Perder peso'), fuerza: tk('Ganar fuerza') }
@@ -44,7 +45,6 @@ export const SECCIONES: { s: ClaveSeccion; t: string; ico: string; mas?: boolean
 /** Título de una sección del perfil en el idioma de la app. */
 export const tituloSeccion = (x: (typeof SECCIONES)[number]) => (x.s === 'horario' ? tc('sección', 'Horario') : t(x.t))
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** «Mar · Jue · Vie» (en catalán «Dt. · Dj. · Dv.», en inglés «Tue · Thu · Fri»). */
 export function diasTxt(dias: Dia[]): string {

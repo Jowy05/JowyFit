@@ -1,7 +1,7 @@
 // Acceso a los datos: valores por defecto y operaciones habituales.
 import { dispositivoApple } from '../plataforma'
 import { db } from './db'
-import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Plantilla } from './tipos'
+import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Plantilla, Rutina } from './tipos'
 import { t, tk } from '../i18n'
 
 export function perfilPorDefecto(): Perfil {
@@ -123,8 +123,8 @@ export async function leerPerfil(): Promise<Perfil | undefined> {
   return db.perfil.get('yo')
 }
 
-// Leer y guardar van en una misma transacción: dos cambios a la vez (dos interruptores seguidos, la báscula y la copia
-// al abrir la app) se pisaban y se perdía uno de los dos.
+// Leer y guardar van en una misma transacción: si no, dos cambios a la vez (dos interruptores seguidos, la báscula y
+// la copia al abrir la app) se pisan y se pierde uno.
 export async function guardarPerfil(cambios: Partial<Perfil>): Promise<Perfil> {
   return db.transaction('rw', db.perfil, async () => {
     const actual = (await leerPerfil()) ?? perfilPorDefecto()
@@ -167,11 +167,15 @@ export async function prepararBase() {
   if ((await db.plantillas.count()) === 0) await db.plantillas.bulkAdd(plantillasIniciales())
 }
 
+// Solo leen (sin crear los ajustes que falten): sirven también dentro de useLiveQuery.
+/** El gimnasio elegido en Ajustes o, si no hay o se borró, el primero. */
 export async function gimnasioActivo(): Promise<Gimnasio | undefined> {
-  const a = await leerAjustes()
-  if (a.gimnasioActivo != null) {
-    const g = await db.gimnasios.get(a.gimnasioActivo)
-    if (g) return g
-  }
-  return db.gimnasios.toCollection().first()
+  const id = (await db.ajustes.get('app'))?.gimnasioActivo
+  const g = id != null ? await db.gimnasios.get(id) : undefined
+  return g ?? db.gimnasios.toCollection().first()
+}
+
+/** La rutina activa (la última, si por lo que sea hay más de una). */
+export async function rutinaActiva(): Promise<Rutina | undefined> {
+  return db.rutinas.filter(x => x.activa).last()
 }

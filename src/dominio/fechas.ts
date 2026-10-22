@@ -90,7 +90,7 @@ export function horaActual(ahora = new Date()): string {
 
 export function minutosDe(hhmm: string): number {
   const [h, m] = (hhmm ?? '').split(':').map(Number)
-  // Una hora vacía o mal escrita cuenta como 0 en vez de NaN (NaN rompía todas las comparaciones).
+  // Una hora vacía o mal escrita cuenta como 0 en vez de NaN (NaN rompe todas las comparaciones).
   const hh = Number.isFinite(h) ? h! : 0, mm = Number.isFinite(m) ? m! : 0
   return hh * 60 + mm
 }

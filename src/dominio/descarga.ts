@@ -1,7 +1,5 @@
-// Estancamiento y semana suave (descarga). Sin ajustes nuevos: la app lo detecta y lo propone.
-//  · Por ejercicio: 3 sesiones con el mismo peso sin mejorar el 1RM estimado → bajar un 10 % y volver a subir.
-//  · Global: 3 ejercicios estancados, o 6 semanas seguidas entrenando → proponer una semana suave
-//    (mismos ejercicios, 1 serie menos y −10 % de peso).
+// Estancamiento y semana suave (descarga), sin ajustes: por ejercicio, 3 sesiones sin mejorar el 1RM → −10 % y a subir;
+// en global, 3 ejercicios estancados o 6 semanas seguidas → semana suave (1 serie menos y −10 % de peso).
 import type { Serie, Sesion } from '../datos/tipos'
 import { epley } from './calculos'
 import { lunesDe, sumarDias } from './fechas'
@@ -22,9 +20,8 @@ export function pesoTop(series: Serie[]): number {
 export const SESIONES_ESTANCADO = 3
 
 /**
- * ¿Lleva 3 sesiones sin progresar? `hechos` va del más reciente al más antiguo.
- * Hace falta una sesión anterior de referencia, y que en las 3 últimas no se haya bajado el peso
- * (así, tras bajar un 10 %, no vuelve a saltar mientras se recupera).
+ * ¿Lleva 3 sesiones sin progresar? `hechos` va del más reciente al más antiguo. Hace falta una sesión anterior de
+ * referencia y que en las 3 últimas no se haya bajado el peso (así no vuelve a saltar mientras se recupera).
  */
 export function estancado(hechos: { series: Serie[] }[]): boolean {
   if (hechos.length < SESIONES_ESTANCADO + 1) return false
@@ -39,7 +36,7 @@ export function estancado(hechos: { series: Serie[] }[]): boolean {
 
 /**
  * Peso para volver a empezar tras un estancamiento (o en la semana suave): −10 %, al peso que exista más cercano
- * por debajo del actual (antes se redondeaba siempre hacia abajo: 55 kg bajaba a 47,5, un −14 %).
+ * por debajo del actual (redondear siempre hacia abajo llevaría 55 kg a 47,5, un −14 %).
  */
 export function pesoReinicio(peso: number, lista: number[]): number {
   const objetivo = peso * 0.9

@@ -1,8 +1,8 @@
 // Lo que comparten las páginas del informe. Color: el morado de la marca para los títulos y la serie principal;
 // el gris para lo que se compara o no llega.
-import { num } from '../../../dominio/calculos'
+import { fijo, num } from '../../../dominio/formato'
 import { MESES_CORTOS, deISO, fechaCorta } from '../../../dominio/fechas'
-import { regionNumeros, t, tc } from '../../../i18n'
+import { t, tc } from '../../../i18n'
 import type { EntrenosInforme, GraficaFuerza } from '../../calculo/tipos'
 import { palabraEsfuerzo } from '../../calculo/comun'
 import { TAM, type Lienzo } from '../lienzo'
@@ -10,10 +10,8 @@ import type { EtiquetaX, Medir } from '../graficas'
 import { chipEsfuerzo, type Flujo } from '../piezas'
 import { tablaPartida, type Celda, type Columna } from '../tablas'
 
-/** Un decimal con la coma (o el punto, en inglés) del idioma: «7,0». */
-export const r1 = (v: number) => v.toFixed(1).replace('.', regionNumeros() === 'en-US' ? '.' : ',')
 /** «7,0 bien» (con un decimal, como en la maqueta). */
-const textoEsf = (media: number, palabra: string) => `${r1(media)} ${t(palabra)}`
+const textoEsf = (media: number, palabra: string) => `${fijo(media)} ${t(palabra)}`
 /** Ancho de las etiquetas de los ejes (6,5 pt). */
 export const medirEje = (l: Lienzo): Medir => s => l.ancho(s, TAM.micro)
 

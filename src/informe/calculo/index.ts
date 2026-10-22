@@ -1,5 +1,4 @@
-// Informe en PDF: todos los números y textos que salen en el informe, calculados a partir de las tablas y un periodo.
-// Lógica pura (sin Dexie ni React; las tablas las lee leer.ts): el dibujo (informe/pdf) solo pinta lo que sale de aquí.
+// Números y textos del informe en PDF a partir de las tablas y un periodo. Lógica pura (sin Dexie ni React): informe/pdf solo pinta.
 // Regla de oro: lo que no se sabe es null (nunca un 0 inventado). Diseño: docs/INFORME-PDF-DISENO.md (§5).
 import { datosQuincena } from '../../dominio/comida'
 import { DIAS_CORTOS, deISO, diaSemana, fechaCorta, formatoHora, horaActual, sumarDias } from '../../dominio/fechas'
@@ -8,7 +7,8 @@ import { ultimoValor } from '../../dominio/tendencias'
 import { nombreEntreno } from '../../dominio/nombres'
 import { idioma, t } from '../../i18n'
 import type { CasillaDia, DetalleEntreno, DetalleSerie, EntradaInforme, Evaluacion, Informe, ResumenInforme, SeccionesInforme } from './tipos'
-import { dia10, entre, fechaDia, fijo, mesAnio, minutosSesion, suma, textoDuracion, unico } from './comun'
+import { dia10, entre, fechaDia, mesAnio, minutosSesion, suma, textoDuracion, unico } from './comun'
+import { fijo } from '../../dominio/formato'
 import { SECCIONES_POR_DEFECTO, hayDatosEn, primerDato, rangoInforme } from './periodo'
 import { contexto, cuentaEntrenos, edadEn, estadosDias, leerPeso, nombreDe, type Ctx } from './contexto'
 import { mesesInforme, puntuacionInforme, semanasInforme } from './semanas'

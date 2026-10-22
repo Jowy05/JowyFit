@@ -3,10 +3,7 @@ import { useState } from 'react'
 import { MESES } from '../../dominio/fechas'
 import { t } from '../../i18n'
 
-/**
- * Fecha de nacimiento con tres desplegables (día, mes, año). El calendario del móvil empieza en el año
- * actual y llegar a 1960 cuesta muchos toques; así se elige el año de una lista.
- */
+/** Tres desplegables (día, mes, año): el calendario del móvil empieza en el año actual y llegar a 1960 cuesta muchos toques. */
 export function FechaFacil({ valor, onCambio }: { valor: string; onCambio: (v: string) => void }) {
   const [a0, m0, d0] = /^\d{4}-\d{2}-\d{2}$/.test(valor) ? valor.split('-').map(Number) : [0, 0, 0]
   const [dia, setDia] = useState(d0 || 0)

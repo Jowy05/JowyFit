@@ -1,6 +1,5 @@
 // Catálogo de ejercicios RepDB: carga, búsqueda, imágenes y nombres en el idioma de la app.
-// En inglés se usan los textos de RepDB en inglés (catalogo.en.json). En catalán RepDB no trae textos y se quedan en
-// castellano (decisión pendiente del dueño: traducirlos aparte o dejarlos así).
+// En inglés usa catalogo.en.json; en catalán RepDB no trae textos y se quedan en castellano (pendiente de decidir).
 import { useEffect, useState } from 'react'
 import type { Catalogo, Ejercicio, TextosCatalogo } from './tipos'
 import { propio } from '../dominio/claves'
@@ -12,10 +11,7 @@ let indice: Map<string, Ejercicio> = new Map()
 
 const base = () => import.meta.env.BASE_URL ?? '/'
 
-/**
- * Nombres como se dicen en el gimnasio: «Polea» (no «Cable»), «Barra Z» (no «Barra EZ») y «Máquina de Barra Guiada»
- * (no «Máquina Smith», que no dice nada a quien no lo sabe), en toda la app.
- */
+/** Nombres de gimnasio en toda la app: «Polea» (no «Cable»), «Barra Z» (no «Barra EZ») y «Máquina de Barra Guiada» (no «Máquina Smith»). */
 export function nombreComun(nombre: string): string {
   return nombre.replace(/\b(?:con|en) Cable\b/g, 'en Polea').replace(/\bCable\b/g, 'Polea').replace(/\bBarra EZ\b/g, 'Barra Z')
     .replace(/\bMáquina Smith\b/g, 'Máquina de Barra Guiada')
@@ -72,8 +68,7 @@ export async function cargarCatalogo(): Promise<Catalogo> {
     }),
     idioma() === 'en' ? cargarIngles() : null,
   ]).then(([c, en]) => { usarCatalogo(c, en); return c })
-  // Si falla (sin conexión, archivo a medio bajar), la próxima vez se vuelve a intentar: antes el fallo se quedaba
-  // guardado y el catálogo ya no cargaba hasta cerrar la app.
+  // Si falla (sin conexión, archivo a medio bajar), el fallo no se guarda: la próxima vez se vuelve a intentar.
   promesa.catch(() => { promesa = null })
   return promesa
 }

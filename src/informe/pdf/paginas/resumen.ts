@@ -1,9 +1,9 @@
 // Página 1: resumen del periodo, cómo está tu cuerpo, semana a semana (o la semana día a día) y el lateral.
-import { num } from '../../../dominio/calculos'
+import { num, fijo } from '../../../dominio/formato'
 import { fechaCorta } from '../../../dominio/fechas'
 import { t, tc } from '../../../i18n'
 import type { FilaResumen, Informe, ResumenInforme, SemanaInforme } from '../../calculo/tipos'
-import { fijo, lista } from '../../calculo/comun'
+import { lista } from '../../calculo/comun'
 import { TAM, type Lienzo } from '../lienzo'
 import { altoZonas, filasZonas, grafica, type BarraGrafica, type FilaZonas } from '../graficas'
 import { FILA_KV, Flujo, IZQ, altoConsejo, altoH2, altoH3, altoNota, chip, claro, consejo, h2, h3, kv, nota, type Maqueta } from '../piezas'

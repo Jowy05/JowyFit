@@ -19,8 +19,7 @@ export function restanteSesion(s: Sesion): number {
   let t = 0
   s.ejercicios.forEach((e, i) => {
     const j = e.superserie ? s.ejercicios.findIndex(o => o.uid === e.superserie) : -1
-    // Segundo del par (su compañero existe y va antes, y sigue vivo): solo cuenta el tiempo de sus series.
-    // Antes, con el compañero borrado (findIndex = −1), se le quitaba el descanso igualmente.
+    // Segundo del par (su compañero existe, va antes y sigue vivo): solo cuenta el tiempo de sus series.
     const comp = j >= 0 ? s.ejercicios[j]! : undefined
     if (comp && j < i && comp.estado !== 'hecho' && comp.estado !== 'saltado' && e.estado !== 'hecho' && e.estado !== 'saltado') {
       const pend = e.series.filter(x => !x.hecha && !x.calentamiento).length

@@ -1,10 +1,8 @@
 // Cambiar cuánto se toma de un suplemento («10 g» de creatina en vez de «3-5 g»).
 // El batido de proteína, además, dice cuánta proteína lleva: es lo que se suma al día al marcarlo.
 import { useState } from 'react'
-import { db } from '../../datos/db'
-import { guardarPerfil } from '../../datos/repos'
+import { guardarSuplemento } from '../../datos/acciones/comida'
 import { batidoDe, dosisDe, dosisPorDefecto, esBatido, kcalBatido } from '../../dominio/comida'
-import { hoyISO } from '../../dominio/fechas'
 import { Hoja, Ico, Stepper, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -14,7 +12,7 @@ import { propio } from '../../dominio/claves'
 import { t } from '../../i18n'
 
 export function HojaSuplemento({ ruta }: { ruta: Ruta<'sheet-supl'> }) {
-  // El formulario se monta con el perfil ya cargado: con el de por defecto, «Guardar» pisaba el batido con 24 g.
+  // El formulario se monta con el perfil ya cargado: con el de por defecto, «Guardar» pisaría el batido con 24 g.
   const perfil = usePerfilCargado()
   const s = ruta.d.nombre
   if (!perfil) return <Hoja titulo={t(s)}><p className="muted">{t('Cargando…')}</p></Hoja>
@@ -32,14 +30,7 @@ function Formulario({ perfil, s }: { perfil: Perfil; s: string }) {
   const unaVez = useUnaVez()
 
   const guardar = unaVez(async () => {
-    await guardarPerfil({ dosisSuplementos: { ...perfil.dosisSuplementos, [s]: dosis.trim() }, ...(batido ? { batido: b } : {}) })
-    if (batido) {
-      // Lo mismo en el batido de Mis comidas y en el que ya se haya marcado hoy.
-      // La de Mis comidas puede llevar el nombre traducido (las comidas de partida se crean en el idioma de la app).
-      const nombres = [s.toLowerCase(), t(s).toLowerCase()]
-      await db.plantillas.filter(p => nombres.includes(p.nombre.toLowerCase())).modify({ kcal: b.kcal, proteina: b.proteina })
-      await db.comidas.where('fecha').equals(hoyISO()).filter(c => c.suplemento === s).modify({ kcal: b.kcal, proteina: b.proteina })
-    }
+    await guardarSuplemento(perfil, s, dosis.trim(), batido ? b : null, [s.toLowerCase(), t(s).toLowerCase()])
     nav.hoja(null)
     aviso(t('Guardado: {nombre}', { nombre: `${t(s)}${dosis.trim() ? ` · ${dosis.trim()}` : ''}` }))
   })

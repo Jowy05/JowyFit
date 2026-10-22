@@ -2,15 +2,14 @@
 // sin saber de gimnasio se queda con un valor por defecto y se cambia después en Perfil.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { db } from '../../datos/db'
-import { gimnasioNuevo, guardarAjustes, guardarPerfil, perfilPorDefecto } from '../../datos/repos'
+import { gimnasioNuevo, guardarPerfil, perfilPorDefecto } from '../../datos/repos'
+import { completarAlta } from '../../datos/acciones/alta'
 import { importar } from '../../datos/copias'
 import type { Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../datos/tipos'
-import { catalogoCargado } from '../../catalogo/catalogo'
 import { TODAS_LAS_CLAVES } from '../../catalogo/clasificacion'
-import { generarRutina } from '../../dominio/generador'
 import { estadoSemana } from '../../dominio/semana'
 import { DIAS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
-import { capital } from '../../dominio/formato'
+import { capital, decimal, leerNumero } from '../../dominio/formato'
 import { elegirArchivo } from '../../plataforma'
 import { cx, Elegir, FilaInterruptor, Ico, LARGO } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
@@ -22,7 +21,7 @@ import { Medir } from './Medir'
 // Los minutos de cada día salen del mismo cálculo que usa Mi plan, para que digan lo mismo.
 import { minutos } from '../rutina/comun'
 import { propio } from '../../dominio/claves'
-import { idioma, t, tc, tk, tn } from '../../i18n'
+import { t, tc, tk, tn } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
 import { tr } from '../../i18n/jsx'
 
@@ -30,7 +29,6 @@ import { tr } from '../../i18n/jsx'
 const PASO = { bienvenida: 1, sobreTi: 2, objetivo: 3, entrenar: 4, horarios: 5, salud: 6, gimnasio: 7, lista: 8 } as const
 const TOTAL = 8
 
-const numero = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) ? n : null }
 /** «a», «a y b», «a, b y c». */
 const enLista = (xs: string[]) => xs.length < 2 ? xs.join('') : xs.length > 2 ? tc('3+', '{lista} y {ultimo}', { lista: xs.slice(0, -1).join(', '), ultimo: xs[xs.length - 1]! }) : t('{lista} y {ultimo}', { lista: xs[0]!, ultimo: xs[1]! })
 // Los nombres de las zonas, marcados con tk(): se traducen al pintarlos.
@@ -43,10 +41,10 @@ type Medidas = Record<ClaveMedida, string>
 type Fallo = { msg: string; campos: string[] }
 const SIN_MEDIDAS: Medidas = { cintura: '', cuello: '', cadera: '', pecho: '', brazo: '', brazoContraido: '', muslo: '' }
 /** Las medidas escritas, solo las que tienen un número válido. */
-const medidasEnCm = (m: Medidas) => Object.fromEntries(PERIMETROS.map(([k]) => [k, numero(m[k]) ?? 0]).filter(([, v]) => (v as number) > 0)) as Partial<Record<ClaveMedida, number>>
+const medidasEnCm = (m: Medidas) => Object.fromEntries(PERIMETROS.map(([k]) => [k, leerNumero(m[k]) ?? 0]).filter(([, v]) => (v as number) > 0)) as Partial<Record<ClaveMedida, number>>
 const firma = (peso: number | null, m: Medidas) => JSON.stringify([peso, medidasEnCm(m)])
-// En inglés, con punto decimal.
-const aTexto = (n: number | null | undefined) => (n != null && n > 0 ? (idioma() === 'en' ? String(n) : String(n).replace('.', ',')) : '')
+const aTexto = (n: number | null | undefined) => (n != null && n > 0 ? decimal(n) : '')
+
 
 /** Qué falta o está mal en «Sobre ti». Null si se puede seguir. */
 function falloSobreTi(d: Datos): Fallo | null {
@@ -58,9 +56,9 @@ function falloSobreTi(d: Datos): Fallo | null {
   if (falta.length) return { msg: t('Para seguir falta {lista}.', { lista: enLista(falta) }), campos }
   const años = /^\d{4}-\d{2}-\d{2}$/.test(d.nacimiento) ? edad(d.nacimiento) : NaN
   if (!(años >= 12 && años <= 100)) return { msg: t('Revisa la fecha de nacimiento.'), campos: ['nacimiento'] }
-  const alt = numero(d.altura)
+  const alt = leerNumero(d.altura)
   if (alt == null || alt < 120 || alt > 230) return { msg: t('La altura va en centímetros: por ejemplo, 170.'), campos: ['altura'] }
-  const kg = numero(d.peso)
+  const kg = leerNumero(d.peso)
   if (kg == null || kg < 30 || kg > 250) return { msg: t('El peso va en kilos: por ejemplo, 72.'), campos: ['peso'] }
   return null
 }
@@ -147,23 +145,16 @@ export function Alta() {
 
   const terminar = useCallback(async () => {
     const hoy = hoyISO()
-    const gimnasio: Gimnasio = { ...gym, material: gymModo === 'completo' ? [...TODAS_LAS_CLAVES] : gym.material, creado: new Date().toISOString() }
-    const gymId = await db.gimnasios.add(gimnasio)
-    const perfil = await guardarPerfil({ ...p, nacimiento: datos.nacimiento, sexo: datos.sexo ?? p.sexo, alturaCm: Math.round(numero(datos.altura) ?? p.alturaCm), altaCompleta: false })
-    const peso = numero(datos.peso)
-    const yaHay = (await db.mediciones.count()) > 0
-    // Con datos importados solo se apunta una medición nueva si se ha cambiado algo.
-    if (!yaHay || firma(peso, medidas) !== importado) {
-      const per = medidasEnCm(medidas)
-      const m: Medicion = { fecha: `${hoy}T${new Date().toTimeString().slice(0, 5)}`, origen: 'manual' }
-      if (peso != null) m.pesoKg = peso
-      if (Object.keys(per).length) m.perimetros = per
-      await db.mediciones.add(m)
-    }
-    const c = catalogoCargado()
-    const rutina = generarRutina({ perfil, gimnasio: { ...gimnasio, id: gymId }, marcas: new Map(), ejercicios: c?.ejercicios ?? [], calibracion: true })
-    await db.rutinas.add(rutina)
-    await guardarAjustes({ gimnasioActivo: gymId, inicio: hoy })
+    const peso = leerNumero(datos.peso)
+    const per = medidasEnCm(medidas)
+    const medicion: Medicion = { fecha: `${hoy}T${new Date().toTimeString().slice(0, 5)}`, origen: 'manual' }
+    if (peso != null) medicion.pesoKg = peso
+    if (Object.keys(per).length) medicion.perimetros = per
+    const { perfil, rutina } = await completarAlta({
+      gimnasio: { ...gym, material: gymModo === 'completo' ? [...TODAS_LAS_CLAVES] : gym.material },
+      perfil: { ...p, nacimiento: datos.nacimiento, sexo: datos.sexo ?? p.sexo, alturaCm: Math.round(leerNumero(datos.altura) ?? p.alturaCm), altaCompleta: false },
+      medicion, medicionCambiada: firma(peso, medidas) !== importado, hoy,
+    })
     const dias = [...rutina.dias].sort((a, b) => Number(a.opcional) - Number(b.opcional) || (a.dia ?? 9) - (b.dia ?? 9))
     const fijos = rutina.dias.filter(d => !d.opcional)
     const extra = rutina.dias.find(d => d.opcional)
@@ -208,7 +199,7 @@ export function Alta() {
         </div>
         <div className="alt-foot col">
           <button className="btn xl" onClick={sig}>{t('Empezar')} <Ico n="arrow-right" b /></button>
-          {/* Lo secundario en una fila: con tres botones apilados el pie tapaba el texto en móviles bajos. */}
+          {/* Lo secundario en una fila: con tres botones apilados el pie tapa el texto en móviles bajos. */}
           <div className="alta-fila">
             <button className={cx('btn gry sm alta-letra', letra === 'grande' && 'on')} aria-pressed={letra === 'grande'} onClick={cambiarLetra}>
               <span className="alta-aa" aria-hidden="true">Aa</span>{t('Letra grande')}{letra === 'grande' && <Ico n="check" b />}

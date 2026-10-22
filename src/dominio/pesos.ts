@@ -37,7 +37,7 @@ export function pesosBarra(barra: number, discos: number[], max = 300): number[]
 /** Lista de pesos para un ejercicio según su material. Máquinas y poleas: de 2,5 en 2,5. */
 export function pesosPara(material: string | null, registro: TipoRegistro, g?: Gimnasio | null): number[] {
   if (registro === 'corporal' || registro === 'tiempo' || registro === 'cardio') return []
-  // −100 … 0 (sin «-0», que se veía como «-0 kg»)
+  // −100 … 0 (sin «-0», que se vería como «-0 kg»)
   if (registro === 'asistido') return Array.from({ length: 21 }, (_, i) => (i ? -i * 5 : 0)).reverse()
   if ((material === 'dumbbell' || material === 'kettlebell') && g) {
     const m = mancuernasDisponibles(g)
@@ -63,10 +63,7 @@ export function ajustarA(lista: number[], valor: number, abajo = false): number 
   return mejor
 }
 
-/**
- * Siguiente peso disponible arriba o abajo. Si no hay ninguno en esa dirección se queda donde está
- * (antes, con un peso por encima de la lista, «subir» devolvía el máximo de la lista: bajaba).
- */
+/** Siguiente peso disponible arriba o abajo; sin ninguno en esa dirección se queda donde está (nunca «sube» bajando). */
 export function siguiente(lista: number[], valor: number, dir: 1 | -1): number {
   if (!lista.length) return Math.max(0, valor + dir * 2.5)
   if (dir > 0) return lista.find(v => v > valor + 1e-9) ?? Math.max(valor, lista[lista.length - 1]!)
@@ -82,7 +79,7 @@ export function discosPorLado(total: number, barra: number, discos: number[]): n
   if (objetivo < 0) return null
   if (objetivo === 0) return []
   if (objetivo > 100_000) return null // más de 1000 kg por lado: no es un peso real
-  // Un disco de 0 kg (o negativo) colgaba la calculadora en un bucle infinito.
+  // Un disco de 0 kg (o negativo) cuelga la calculadora en un bucle infinito.
   const tipos = [...new Set(discos.filter(d => Number.isFinite(d) && d > 0).map(d => Math.round(d * 100)))].filter(d => d > 0).sort((a, b) => b - a)
   if (!tipos.length) return null
   // Mínimo número de discos para cada peso (con repetición). El reparto voraz fallaba con juegos
@@ -109,7 +106,7 @@ export function calentamiento(pesoTrabajo: number, lista: number[], minimo = 0):
   const out: { peso: number; reps: number }[] = []
   for (const [f, reps] of pasos) {
     const objetivo = pesoTrabajo * f
-    // Sin lista de pesos se redondea hacia abajo a 2,5 kg (antes salían cosas como 25,9 kg).
+    // Sin lista de pesos se redondea hacia abajo a 2,5 kg (nada de 25,9 kg).
     const real = lista.length ? ajustarA(lista, objetivo, true) : Math.floor(objetivo / 2.5 + 1e-9) * 2.5
     const p = Math.max(minimo, real)
     // Una aproximación de 0 kg no tiene sentido.

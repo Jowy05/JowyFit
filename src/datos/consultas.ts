@@ -1,36 +1,21 @@
 // Consultas que combinan tablas: historial de ejercicios, sugerencias, totales del día…
 import { db } from './db'
-import type { Comida, DiaRutina, Gimnasio, Medicion, Perfil, Serie, Sesion } from './tipos'
+import type { Comida, DiaRutina, Gimnasio, Medicion, Meta, Perfil, Serie, Sesion } from './tipos'
 import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
-import { conPartida, desdeReferencia, sugerir, type Sugerencia } from '../dominio/progresion'
+import { bloqueObjetivo, conPartida, desdeReferencia, historialEn, sugerir, type Hecho, type Sugerencia } from '../dominio/progresion'
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
 import { edad, hoyISO } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
 import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
-import { grasaPorMedidas } from '../dominio/tendencias'
-import { regionNumeros, t } from '../i18n'
-
-type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
+import { grasaActual, hitosDominadas, pesoMaximo, seriesDe, ultimoValor } from '../dominio/tendencias'
+import { kg } from '../dominio/formato'
+import { t } from '../i18n'
 
 /** Sesiones terminadas, de la más reciente a la más antigua. */
 export async function sesionesHechas(): Promise<Sesion[]> {
   return (await db.sesiones.where('estado').equals('hecha').toArray()).sort((a, b) => b.inicio - a.inicio)
-}
-
-/** Historial de un ejercicio dentro de una lista de sesiones ya leída (más reciente primero). */
-export function historialEn(sesiones: Sesion[], id: string, excluir?: number): Hecho[] {
-  const out: Hecho[] = []
-  for (const s of sesiones) {
-    if (s.id === excluir) continue
-    for (const e of s.ejercicios) {
-      if (e.ejercicio !== id) continue
-      const series = e.series.filter(x => x.hecha)
-      if (series.some(x => !x.calentamiento)) out.push({ sesionId: s.id!, fecha: s.fecha, inicio: s.inicio, series })
-    }
-  }
-  return out
 }
 
 /** Historial de un ejercicio (más reciente primero), solo sesiones con series hechas. */
@@ -40,10 +25,6 @@ export async function historialDe(id: string, excluir?: number): Promise<Hecho[]
 
 export async function ultimasSeries(id: string, excluir?: number): Promise<Serie[] | null> {
   return (await historialDe(id, excluir))[0]?.series ?? null
-}
-
-export function bloqueObjetivo(b: { repsMin: number; repsMax: number; rpe: number }) {
-  return { repsMin: b.repsMin, repsMax: b.repsMax, rpe: b.rpe }
 }
 
 export async function sugerenciaPara(id: string, objetivo: { repsMin: number; repsMax: number; rpe: number }, g?: Gimnasio | null, excluir?: number, sesiones?: Sesion[], referencias?: Record<string, string>): Promise<Sugerencia> {
@@ -56,14 +37,12 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
   const lista = pesosPara(e?.material ?? null, reg, g)
   const s = sugerir(ultimas, objetivo, reg, lista)
   // 3 sesiones con el mismo peso sin mejorar: se baja un 10 % para volver a subir (sin contar la calibración).
-  // Con mancuernas o kettlebell también (antes solo con barra y máquinas: nunca bajaban al estancarse).
+  // También con mancuernas y kettlebell, no solo con barra y máquinas.
   if ((reg === 'peso' || reg === 'mancuerna') && s.peso != null && s.accion !== 'subir' && s.accion !== 'primera') {
     const sinCalibrar = historialEn(todas.filter(x => !x.calibracion), id, excluir)
     if (estancado(sinCalibrar)) {
       const p = pesoReinicio(s.peso, lista)
-      // En inglés, punto decimal.
-      const pesoTxt = regionNumeros() === 'en-US' ? String(p) : String(p).replace('.', ',')
-      if (p < s.peso) return { ...s, accion: 'bajar', peso: p, reps: objetivo.repsMin, texto: t('Llevas {n} sesiones sin mejorar: baja a {peso} kg y vuelve a subir', { n: SESIONES_ESTANCADO, peso: pesoTxt }) }
+      if (p < s.peso) return { ...s, accion: 'bajar', peso: p, reps: objetivo.repsMin, texto: t('Llevas {n} sesiones sin mejorar: baja a {peso} kg y vuelve a subir', { n: SESIONES_ESTANCADO, peso: kg(p) }) }
     }
   }
   // Sin historial: si el perfil tiene un peso de referencia para este ejercicio, se parte de él.
@@ -78,17 +57,13 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
   return s
 }
 
-/** Sugerencias de todo un día leyendo las sesiones una sola vez (antes, una lectura completa por ejercicio). */
+/** Sugerencias de todo un día leyendo las sesiones una sola vez, no una por ejercicio. */
 export async function sugerenciasDia(dia: DiaRutina, g?: Gimnasio | null): Promise<Map<string, Sugerencia>> {
   const m = new Map<string, Sugerencia>()
   const sesiones = await sesionesHechas()
   const refs = (await db.perfil.get('yo'))?.referencias ?? {}
   for (const b of dia.bloques) m.set(b.ejercicio, await sugerenciaPara(b.ejercicio, bloqueObjetivo(b), g, undefined, sesiones, refs))
   return m
-}
-
-export function totalesComida(lista: Comida[]) {
-  return lista.reduce((suma, c) => ({ kcal: suma.kcal + c.kcal, proteina: suma.proteina + c.proteina, cafeina: suma.cafeina + (c.cafeina ?? 0) }), { kcal: 0, proteina: 0, cafeina: 0 })
 }
 
 export async function comidasDe(fecha: string): Promise<Comida[]> {
@@ -104,13 +79,9 @@ export async function pesoActual(): Promise<number | null> {
   return (await ultimaMedicion('peso'))?.pesoKg ?? null
 }
 
-/** % de grasa más reciente: el de la báscula (de los últimos 4 meses) o, si no, el de la cinta (cintura y cuello). */
+/** % de grasa de hoy con la regla de dominio/tendencias.grasaEn (báscula de los últimos 120 días o cinta). */
 export async function grasaReciente(p: Perfil): Promise<number | null> {
-  const ms = await db.mediciones.orderBy('fecha').toArray()
-  const limite = new Date(Date.now() - 120 * 86_400_000).toISOString().slice(0, 10)
-  const bascula = [...ms].reverse().find(m => m.bascula?.grasaPct != null && m.fecha.slice(0, 10) >= limite)?.bascula?.grasaPct
-  if (bascula != null) return bascula
-  return grasaPorMedidas(ms, p.sexo, p.alturaCm).pop()?.valor ?? null
+  return grasaActual(await db.mediciones.toArray(), p, hoyISO())
 }
 
 type GastoDia = { basal: number; formula: 'katch' | 'mifflin'; peso: number; grasa: number | null; pasos: number; entreno: GastoEntreno; hayEntreno: boolean }
@@ -120,13 +91,13 @@ type GastoDia = { basal: number; formula: 'katch' | 'mifflin'; peso: number; gra
  * (los pasos y los entrenos de ese día, contando solo las series hechas). Null si falta el peso o la altura.
  */
 export async function gastoDelDia(p: Perfil, fecha: string): Promise<GastoDia | null> {
-  const peso = await pesoActual()
+  const [ms, dia, delDia] = await Promise.all([db.mediciones.orderBy('fecha').toArray(), db.pasos.get(fecha), db.sesiones.where('fecha').equals(fecha).toArray()])
+  const peso = [...ms].reverse().find(m => m.pesoKg != null)?.pesoKg ?? null
   if (peso == null || !(p.alturaCm > 0)) return null
-  const grasa = await grasaReciente(p)
+  const grasa = grasaActual(ms, p, hoyISO())
   const b = basalDia({ pesoKg: peso, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, grasaPct: grasa })
-  const dia = await db.pasos.get(fecha)
   const pasos = dia ? kcalPasos(dia.pasos, peso, p.alturaCm, dia.troteKm ?? 0) : 0
-  const sesiones = (await db.sesiones.where('fecha').equals(fecha).toArray()).filter(s => s.estado !== 'cancelada')
+  const sesiones = delDia.filter(s => s.estado !== 'cancelada')
   const entreno: GastoEntreno = { hecho: 0, plan: 0, saltado: 0 }
   for (const s of sesiones) {
     const k = kcalSesion(s, peso, id => ejercicio(id)?.met)
@@ -141,6 +112,22 @@ export async function objetivosEnergia(p: Perfil): Promise<{ kcal: number; prote
   const peso = await pesoActual()
   const o = objetivos({ pesoKg: peso ?? 75, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, entrenosSemana: p.diasFijos.length })
   return { ...o, kcal: a?.kcalManual ?? o.kcal, proteina: a?.proteinaManual ?? o.proteina, peso }
+}
+
+/** Valor actual de una meta (null si no se puede saber). */
+export async function valorActualMeta(tipo: Meta['tipo'], ejercicioId: string | undefined, perfil: Perfil): Promise<number | null> {
+  if (tipo === 'libre') return null
+  if (tipo === 'ejercicio' || tipo === 'dominadas') {
+    const ses = await sesionesHechas()
+    if (tipo === 'dominadas') return hitosDominadas(ses).estrictas
+    if (!ejercicioId) return null
+    const pesos = ses.map(s => pesoMaximo(seriesDe(s, ejercicioId))).filter((v): v is number => v != null)
+    return pesos.length ? Math.max(...pesos) : null
+  }
+  const ms = await db.mediciones.toArray()
+  if (tipo === 'cintura') return ultimoValor(ms, m => m.perimetros?.cintura)?.valor ?? null
+  if (tipo === 'peso') return ultimoValor(ms, m => m.pesoKg)?.valor ?? null
+  return grasaActual(ms, perfil, hoyISO())
 }
 
 export async function sesionDeHoy(): Promise<Sesion | undefined> {

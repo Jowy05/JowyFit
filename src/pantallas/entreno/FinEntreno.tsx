@@ -2,13 +2,14 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
-import { historialEn, sesionesHechas } from '../../datos/consultas'
+import { sesionesHechas } from '../../datos/consultas'
+import { historialEn } from '../../dominio/progresion'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { resumen } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO, sumarDias } from '../../dominio/fechas'
 import { estadoSemana } from '../../dominio/semana'
-import { kg } from '../../dominio/calculos'
-import { cancelar, ID_AVISO } from '../../plataforma'
+import { capital, kg } from '../../dominio/formato'
+import { terminarEntreno } from '../../datos/acciones/entreno'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -18,7 +19,6 @@ import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 import { nombreEntreno } from '../../dominio/nombres'
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
   const nav = useNav()
@@ -63,23 +63,19 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
   const sem = r ? [...estadoSemana(r, [], hoy, ajustes.recolocadas), ...estadoSemana(r, [], sumarDias(hoy, 7), ajustes.recolocadas)] : []
   const prox = sem.find(d => d.fecha > hoy && d.estado === 'plan')
 
-  // Un doble toque en «Guardar» abría dos veces la rutina definitiva (o volvía dos veces a Inicio).
+  // Un doble toque en «Guardar» no abre dos veces la rutina definitiva ni vuelve dos veces a Inicio.
   const guardar = unaVez(async () => {
     const mins = Math.round(res.segundos / 60)
-    await db.sesiones.put({
-      ...s, estado: 'hecha', fin, descansoHasta: undefined,
-      // El tiempo, los descansos y lo que estaba ocupado ya los mide la app: solo se pregunta lo que no sabe.
-      respuestas: { minutosReales: mins, molestia: hayMolestia ? molestia || 'sí' : undefined, nota: nota || undefined },
-    })
-    void cancelar([ID_AVISO.descanso])
+    // El tiempo, los descansos y lo que estaba ocupado ya los mide la app: solo se pregunta lo que no sabe.
+    await terminarEntreno(s, fin, { minutosReales: mins, molestia: hayMolestia ? molestia || 'sí' : undefined, nota: nota || undefined })
     nav.completa(null)
     if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso(t('Semana de prueba terminada')) }
-    else { nav.raiz('ini'); aviso(t('Guardado. {dia} ✓', { dia: cap(DIAS[(new Date().getDay() + 6) % 7]!) })) }
+    else { nav.raiz('ini'); aviso(t('Guardado. {dia} ✓', { dia: capital(DIAS[(new Date().getDay() + 6) % 7]!) })) }
   })
 
   return (
     <Pantalla full>
-      <Cab className="fin-hd" crumb={<span className="tag ok"><Ico n="flag-checkered" b />{t('Entreno terminado')}</span>} titulo={nombreEntreno(s)} sub={`${cap(fechaLarga(s.fecha))}${g ? ` · ${g.nombre}` : ''}`}
+      <Cab className="fin-hd" crumb={<span className="tag ok"><Ico n="flag-checkered" b />{t('Entreno terminado')}</span>} titulo={nombreEntreno(s)} sub={`${capital(fechaLarga(s.fecha))}${g ? ` · ${g.nombre}` : ''}`}
         derecha={<button className="ib" aria-label={t('Volver al entreno')} onClick={() => nav.completa('entreno')}><Ico n="x" /></button>} />
       <div className="pg">
         <div className="spec-box"><div className="spec c2">
@@ -126,7 +122,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
           <div className="sec">
             <div className="card pd row">
               <span className="ico"><Ico n="calendar-blank" /></span>
-              <span className="tx"><span className="lbl">{t('Próxima sesión')}</span><b>{cap(DIAS[diaSemana(deISO(prox.fecha))]!)} · {formatoHora(perfil.horaEntreno)} · {nombreEntreno(prox.dia)}</b><small>~{Math.round(duracionDia(prox.dia.bloques) / 60)} min</small></span>
+              <span className="tx"><span className="lbl">{t('Próxima sesión')}</span><b>{capital(DIAS[diaSemana(deISO(prox.fecha))]!)} · {formatoHora(perfil.horaEntreno)} · {nombreEntreno(prox.dia)}</b><small>~{Math.round(duracionDia(prox.dia.bloques) / 60)} min</small></span>
             </div>
           </div>
         )}

@@ -9,7 +9,8 @@ import type { Camara } from '../../plataforma/escanerWeb'
 import { cx, Ico, Pantalla, Stepper, useUnaVez, recortar, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { LineaMacros, Mini, apuntar, kp } from './comun'
+import { LineaMacros, Mini, kp } from './comun'
+import { apuntar, guardarProducto } from '../../datos/acciones/comida'
 import { t } from '../../i18n'
 
 type Estado =
@@ -46,7 +47,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
     if (guardado && !guardado.pendiente) { setEstado({ e: 'encontrado', p: guardado, ya: true }); return }
     const r = await buscarOFF(codigo)
     if (r.estado === 'encontrado') {
-      await db.productos.put(r.producto)
+      await guardarProducto(r.producto)
       setEstado({ e: 'encontrado', p: r.producto, ya: false })
     } else setEstado(r.estado === 'no' ? { e: 'no', codigo } : { e: 'offline', codigo })
   }
@@ -74,7 +75,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
   }, [ronda, escribir])
 
   const otraVez = () => { setEscribir(false); setEstado({ e: 'camara' }); setRonda(r => r + 1) }
-  // Doble toque en «Añadir»: apuntaba dos veces y hacía «atrás» dos veces (salía también de la pantalla anterior).
+  // Un doble toque en «Añadir» no apunta dos veces ni hace dos «atrás» (saldría también de la pantalla anterior).
   const unaVez = useUnaVez()
   const apuntarProducto = async (p: Producto) => {
     const { base: _, ...v } = porRacion(p)
@@ -86,7 +87,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
   const anadir = unaVez(apuntarProducto)
   const anadirAMano = unaVez(async (codigo: string) => {
     const p: Producto = { codigo, nombre: nombre.trim() || t('Producto {codigo}', { codigo }), marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: kcal, proteinaRacion: prot, guardado: new Date().toISOString(), manual: true }
-    await db.productos.put(p)
+    await guardarProducto(p)
     await apuntarProducto(p)
   })
   const salirPendiente = unaVez(async (codigo: string, comoNota: boolean) => {
@@ -96,7 +97,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
     else aviso(t('Guardado para buscarlo luego'))
   })
   const guardarPendiente = async (codigo: string) => {
-    await db.productos.put({ codigo, nombre: t('Código {codigo}', { codigo }), marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: null, proteinaRacion: null, guardado: new Date().toISOString(), pendiente: true })
+    await guardarProducto({ codigo, nombre: t('Código {codigo}', { codigo }), marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: null, proteinaRacion: null, guardado: new Date().toISOString(), pendiente: true })
   }
 
   const enCamara = estado.e === 'camara' && !escribir

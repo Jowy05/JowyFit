@@ -1,6 +1,6 @@
 // Hoja para elegir un ejercicio: cambiar, «si está ocupado» (alternativas B/C) o añadir (rutina o entreno en curso).
 import { useMemo, useState } from 'react'
-import { db } from '../../datos/db'
+import { guardarSesion } from '../../datos/acciones/entreno'
 import { buscar, catalogoCargado, ejercicio, nombreMaterial } from '../../catalogo/catalogo'
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import type { Ejercicio } from '../../catalogo/tipos'
@@ -11,7 +11,7 @@ import { Chip, cx, Hoja, Ico, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta, type Rutas } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
-import { guardarRutina } from './EditarPlan'
+import { guardarRutina } from '../../datos/acciones/rutina'
 import { musculosComunes, nombreEj } from './comun'
 import { t, tk } from '../../i18n'
 
@@ -47,7 +47,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'sheet-elegir'> }) {
 
   const entrada = () => ({ perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] })
 
-  // Doble toque en un ejercicio: se añadía dos veces (al entreno o al plan).
+  // Un doble toque en un ejercicio no lo añade dos veces (al entreno o al plan).
   const elegir = unaVez(async (e: Ejercicio) => {
     if (d.modo === 'sesion-anadir' || d.modo === 'sesion-cambiar') {
       if (!sesion?.id) return
@@ -58,9 +58,9 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'sheet-elegir'> }) {
         const ej = desdeBloque(b, { peso: sug.peso, reps: sug.reps })
         if (!nueva.ejercicios.some(x => x.estado === 'curso')) ej.estado = 'curso'
         nueva.ejercicios.push(ej)
-        await db.sesiones.put(nueva)
+        await guardarSesion(nueva)
       } else {
-        await db.sesiones.put(sustituir(sesion, d.idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
+        await guardarSesion(sustituir(sesion, d.idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
       }
       nav.hoja(null)
       aviso(modo === 'sesion-anadir' ? t('Añadido: {nombre}', { nombre: nombreEj(e) }) : t('Cambiado por {nombre}', { nombre: nombreEj(e) }))

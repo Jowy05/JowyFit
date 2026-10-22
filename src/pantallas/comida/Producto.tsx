@@ -6,11 +6,12 @@ import { db } from '../../datos/db'
 import type { Producto as TProducto } from '../../datos/tipos'
 import { NOMBRE_RACION, aspecto, buscarOFF, escalarMacros, imagenOFF, factorRacion, porRacion, soloMacros, textoRacion, type Racion } from '../../dominio/comida'
 import { hoyISO } from '../../dominio/fechas'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio, recortar } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { LineaMacros, apuntar, kp } from './comun'
+import { LineaMacros, kp } from './comun'
+import { apuntar, borrarProducto, guardarProducto, plantillaDeProducto } from '../../datos/acciones/comida'
 import { t } from '../../i18n'
 
 const g = (v: number | null | undefined, u = 'g') => (v == null ? '—' : `${num(v)} ${u}`)
@@ -27,7 +28,7 @@ export function Producto({ ruta }: { ruta: Ruta<'com-prod'> }) {
   const [racion, setRacion] = useState<Racion>('N')
   const [unidades, setUnidades] = useState(1)
   const [buscando, setBuscando] = useState(false)
-  // Doble toque: dos comidas apuntadas, dos plantillas o dos «atrás».
+  // Un doble toque no apunta dos comidas, ni crea dos plantillas, ni hace dos «atrás».
   const unaVez = useUnaVez()
 
   if (p === undefined) return <Pantalla><div className="cargando">{t('Cargando…')}</div></Pantalla>
@@ -44,7 +45,7 @@ export function Producto({ ruta }: { ruta: Ruta<'com-prod'> }) {
     setBuscando(true)
     const r = await buscarOFF(p.codigo)
     setBuscando(false)
-    if (r.estado === 'encontrado') { await db.productos.put(r.producto); aviso(t('Encontrado')) }
+    if (r.estado === 'encontrado') { await guardarProducto(r.producto); aviso(t('Encontrado')) }
     else aviso(r.estado === 'no' ? t('No está en Open Food Facts: apúntalo a mano') : t('Sigue sin haber conexión'))
   }
   const anadir = unaVez(async () => {
@@ -53,18 +54,16 @@ export function Producto({ ruta }: { ruta: Ruta<'com-prod'> }) {
     aviso(t('Añadido: {nombre}', { nombre: `${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''}${racion !== 'N' ? ` (${textoRacion(racion)})` : ''}` }), des)
   })
   const comoPlantilla = unaVez(async () => {
-    const ya = await db.plantillas.filter(x => x.codigo === p.codigo).first()
-    if (ya) { aviso(t('Ya está en Mis comidas')); return }
-    await db.plantillas.add({ nombre: p.nombre, kcal: base.kcal, proteina: base.proteina, cafeina: base.cafeina, ...soloMacros(base), tipo: base.cafeina ? 'bebida' : 'comida', franja, usos: 0, codigo: p.codigo })
-    aviso(t('Guardado en Mis comidas'))
+    const creada = await plantillaDeProducto({ nombre: p.nombre, kcal: base.kcal, proteina: base.proteina, cafeina: base.cafeina, ...soloMacros(base), tipo: base.cafeina ? 'bebida' : 'comida', franja, usos: 0, codigo: p.codigo })
+    aviso(creada ? t('Guardado en Mis comidas') : t('Ya está en Mis comidas'))
   })
   const borrar = unaVez(async (x: TProducto) => {
-    await db.productos.delete(x.codigo)
+    const deshacer = await borrarProducto(x)
     nav.atras()
-    aviso(t('Borrado: {nombre}', { nombre: x.nombre }), () => { void db.productos.put(x) })
+    aviso(t('Borrado: {nombre}', { nombre: x.nombre }), deshacer)
   })
 
-  // Solo imágenes de Open Food Facts: una copia ajena podía meter la de cualquier servidor («píxel espía»).
+  // Solo imágenes de Open Food Facts: una copia ajena puede meter la de cualquier servidor («píxel espía»).
   const imagen = imagenOFF(p.imagen)
   return (
     <Pantalla>

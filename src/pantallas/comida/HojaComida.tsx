@@ -1,6 +1,7 @@
 // Editar algo ya apuntado: nombre, cuándo (franja), cuánto («Poco · Normal · Mucho»), hora y, en «Afinar», los números.
 import { useEffect, useState } from 'react'
 import { db } from '../../datos/db'
+import { borrarComida, guardarComida } from '../../datos/acciones/comida'
 import type { Comida, Franja } from '../../datos/tipos'
 import { FRANJAS, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, escalarMacros, factorRacion, nombreFranja, notaPorTamano, tamanoDe, tipoRacion, type Racion, type TamanoNota } from '../../dominio/comida'
 import { t } from '../../i18n'
@@ -41,14 +42,14 @@ export function HojaComida({ ruta }: { ruta: Ruta<'sheet-comida'> }) {
   const ponerFranja = (franja: Franja) => cambia({ franja, ...(aMano && tam ? notaPorTamano(tam, franja) : {}) })
   const afinar = (x: Partial<Comida>) => { setTam(null); cambia(x) }
   const guardar = async () => {
-    await db.comidas.put({ ...c, nombre: c.nombre.trim() || original.nombre })
+    const deshacer = await guardarComida({ ...c, nombre: c.nombre.trim() || original.nombre }, original)
     nav.hoja(null)
-    aviso(t('Guardado'), () => { void db.comidas.put(original) })
+    aviso(t('Guardado'), deshacer)
   }
   const borrar = async () => {
-    await db.comidas.delete(id)
+    const deshacer = await borrarComida(original)
     nav.hoja(null)
-    aviso(t('Borrado: {nombre}', { nombre: t(original.nombre) }), () => { void db.comidas.put(original) })
+    aviso(t('Borrado: {nombre}', { nombre: t(original.nombre) }), deshacer)
   }
 
   return (

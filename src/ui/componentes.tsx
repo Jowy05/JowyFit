@@ -6,6 +6,7 @@ import { siguiente } from '../dominio/pesos'
 import { useNav } from '../app/nav'
 import { t } from '../i18n'
 import { regionNumeros } from '../i18n'
+import { leerNumero } from '../dominio/formato'
 
 export const cx = (...c: (string | number | false | null | undefined)[]) => c.filter(x => typeof x === 'string' && x).join(' ')
 export const estilo = (o: Record<string, string | number>) => o as CSSProperties
@@ -99,8 +100,9 @@ export function Stepper({ valor, onCambio, lista, paso = 1, min, max, className,
             style={{ width: '5ch', background: 'transparent', border: 0, textAlign: 'center', outline: 'none', padding: 0 }}
             onBlur={e => {
               // Lo que se escribe a mano se respeta (p. ej. 46 kg con discos de 1 kg), dentro de los límites.
-              let n = parseFloat(e.target.value.replace(',', '.'))
-              if (!Number.isNaN(n)) { if (min != null) n = Math.max(min, n); if (max != null) n = Math.min(max, n); onCambio(Math.round(n * 100) / 100) }
+              let n = leerNumero(e.target.value)
+              if (n != null) { if (min != null) n = Math.max(min, n); if (max != null) n = Math.min(max, n); onCambio(Math.round(n * 100) / 100) }
+
               setEditando(false)
             }}
             onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
@@ -216,12 +218,12 @@ export function Seccion({ titulo, accion, onAccion, extra, children, className, 
 
 /**
  * Campo de texto que se guarda solo: un momento después de dejar de escribir, al salir del campo y al cerrar la
- * pantalla (antes solo al salir del campo: con «atrás» o cambiando de pestaña se perdía lo escrito).
+ * pantalla (con «atrás» o cambiando de pestaña no se pierde lo escrito).
  */
-/** Largo máximo de lo que se escribe: nombres cortos y notas de un párrafo (un texto enorme congelaba las pantallas). */
+/** Largo máximo de lo que se escribe: nombres cortos y notas de un párrafo (un texto enorme congela las pantallas). */
 export const LARGO = { nombre: 80, corto: 40, frase: 200, nota: 1000, buscar: 100 } as const
 
-/** Recorta un texto para pintarlo: uno enorme (de una copia vieja) congelaba la pantalla al dibujarlo. */
+/** Recorta un texto para pintarlo: uno enorme (de una copia vieja) congela la pantalla al dibujarlo. */
 export function recortar(t: unknown, n: number = LARGO.frase): string {
   const s = typeof t === 'string' ? t : t == null ? '' : String(t)
   return s.length > n ? `${s.slice(0, n)}…` : s

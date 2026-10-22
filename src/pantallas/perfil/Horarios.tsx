@@ -29,12 +29,8 @@ function limites(hora: string, minutos: number): Perfil['horaLimite'] {
   return { coche: hhmm, andando: hhmm }
 }
 
-/**
- * Horario sencillo del alta: días (un toque = entrenas o no), un día extra opcional aparte,
- * la hora y los minutos. Días y hora empiezan sin marcar y hay que elegirlos; el día extra empieza en «Ninguno».
- * Coche/andando, hora de salida, hora de acostarse y «si pierdes una sesión»
- * se quedan con su valor por defecto y se cambian en Perfil → Horario (`Horarios`, abajo).
- */
+/** Horario sencillo del alta: días (un toque = entrenas o no), día extra opcional, hora y minutos. Días y hora empiezan
+ * sin marcar; el día extra, en «Ninguno». Lo demás queda por defecto y se cambia en Perfil → Horario (`Horarios`). */
 export function HorariosAlta({ p, cambia, faltaDias, faltaHora }: Props & { faltaDias: boolean; faltaHora: boolean }) {
   const conmutar = (d: Dia) => {
     if (p.diasFijos.includes(d)) cambia({ diasFijos: p.diasFijos.filter(x => x !== d) })

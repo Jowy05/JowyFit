@@ -2,8 +2,9 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../datos/db'
+import { guardarFoto } from '../../datos/acciones/cuerpo'
 import type { Foto, Medicion } from '../../datos/tipos'
-import { num } from '../../dominio/calculos'
+import { num } from '../../dominio/formato'
 import { fechaCorta, horaActual, hoyISO, numeroSemana } from '../../dominio/fechas'
 import { ultimoValor } from '../../dominio/tendencias'
 import { hacerFoto } from '../../plataforma'
@@ -43,7 +44,7 @@ export function Fotos() {
   const nueva = async () => {
     const imagen = await hacerFoto()
     if (!imagen) return
-    await db.fotos.add({ fecha: `${hoy}T${horaActual()}`, pose: poseNueva, imagen })
+    await guardarFoto({ fecha: `${hoy}T${horaActual()}`, pose: poseNueva, imagen })
     aviso(t('Foto guardada · {pose}', { pose: nombrePose(poseNueva).toLowerCase() }))
     // Siguiente pose que falte hoy.
     const hechasHoy = new Set([...(fotos ?? []).filter(f => f.fecha.startsWith(hoy)).map(f => f.pose), poseNueva])

@@ -1,9 +1,8 @@
 // Rendimiento de las funciones que se llaman en cada render (Progreso, Inicio, resumen semanal)
 // con un historial grande: ~3 años de entrenos, mediciones diarias y comidas.
 import { describe, expect, it } from 'vitest'
-import { ejerciciosHechos, evolucion, grasaPorMedidas, hitosDominadas, logros, mediasSemanales, serieMedida, subidas, datosQuincena } from '../src/dominio/tendencias'
+import { ejerciciosHechos, evolucion, grasaPorMedidas, hitosDominadas, logros, mediasSemanales, serieMedida, subidas, datosQuincena, tendenciaPeso } from '../src/dominio/tendencias'
 import { resumenSemana } from '../src/dominio/resumen'
-import { tendenciaPeso } from '../src/dominio/peso'
 import { estadoSemana, racha } from '../src/dominio/semana'
 import { sumarDias } from '../src/dominio/fechas'
 import type { Comida, Medicion, Rutina, Serie, Sesion } from '../src/datos/tipos'

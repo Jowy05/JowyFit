@@ -1,11 +1,18 @@
-// Gráficas SVG con el estilo del mockup (líneas con área, puntos y último valor; barras).
+// Gráficas SVG con el estilo del mockup (líneas con área, puntos y último valor; barras), ejes en números redondos.
 // Con menos de 2 datos no se dibuja nada: un punto suelto con ejes raros no dice nada.
-// Los ejes van en números redondos (88 · 90 · 92), no en 91,2 / 88,8.
-import { num } from '../dominio/calculos'
+import { num } from '../dominio/formato'
 import { ejeRedondo } from '../dominio/tendencias'
 import { t } from '../i18n'
 
 type Punto = { x: string; y: number }
+
+/** Puntos de una línea pequeña (SVG 120×40) para la tendencia. */
+export function lineaSpark(ys: number[], ancho = 120, alto = 40): string {
+  if (ys.length < 2) return ''
+  const min = Math.min(...ys), max = Math.max(...ys)
+  const r = max - min || 1
+  return ys.map((y, i) => `${Math.round(2 + (i * (ancho - 4)) / (ys.length - 1))},${Math.round(4 + ((max - y) / r) * (alto - 8))}`).join(' ')
+}
 
 const W = 320, H = 130, X0 = 40, X1 = 300, Y0 = 20, Y1 = 104
 

@@ -1,15 +1,15 @@
 // Guion del tutorial de la app: qué pantalla se pone, qué se señala (ancla `data-tour`) y qué se dice.
 // Un guion por plataforma: en iPhone se explican las cosas adaptadas (pasos a mano, copia con Compartir,
 // pitido y destello) y no sale nada que allí no funcione (reloj, báscula, recordatorios).
-import type { Pestana } from '../nav'
+import type { CodigoPantalla, Pestana, SinDatos } from '../nav'
 import { t } from '../../i18n'
 
-export type PasoTutorial = {
+type PasoTutorial = {
   id: string
   /** Pestaña que se pone (su pantalla de entrada). Sin pestaña ni ancla, la tarjeta sale en el centro. */
   pestana?: Pestana
   /** Pantalla dentro de la pestaña (por ejemplo «aju», Ajustes). */
-  ruta?: string
+  ruta?: SinDatos<CodigoPantalla>
   /** Lo que se señala; con varios, el primero que se vea. Si no hay ninguno (nada que enseñar), el paso se salta. */
   sel?: string | string[]
   titulo: string

@@ -94,7 +94,7 @@ export type EsfuerzoInforme = {
   objetivo: number | null
 }
 
-export type PalabraEsfuerzo = 'fácil' | 'bien' | 'duro' | 'al límite'
+type PalabraEsfuerzo = 'fácil' | 'bien' | 'duro' | 'al límite'
 
 export type FilaResumen = {
   /** «Peso (kg)» */
@@ -245,7 +245,7 @@ export type ResumenInforme = {
   lineas: Evaluacion[]
 }
 
-export type RecordSesion = { ejercicio: string; nombre: string; peso: number; reps: number; texto: string }
+type RecordSesion = { ejercicio: string; nombre: string; peso: number; reps: number; texto: string }
 
 export type FilaEntreno = {
   fecha: string
@@ -481,7 +481,7 @@ export type TuDiaInforme = {
   cuerpo: string | null
 }
 
-export type DetalleSerie = { n: number; peso: number | null; reps: number | null; segundos: number | null; rpe: number | null; calentamiento: boolean; hecha: boolean; record: boolean; nota: string | null }
+type DetalleSerie = { n: number; peso: number | null; reps: number | null; segundos: number | null; rpe: number | null; calentamiento: boolean; hecha: boolean; record: boolean; nota: string | null }
 export type DetalleEntreno = {
   fecha: string
   /** «mar 20 oct · Cuerpo completo A · 58 min» */
@@ -507,9 +507,6 @@ export type Informe = {
   tuDia: TuDiaInforme | null
   detalleEntrenos: DetalleEntreno[] | null
 }
-
-/** Nombre que usa el diseño (§5). */
-export type DatosInforme = Informe
 
 /** Lo que el informe necesita del catálogo de ejercicios (RepDB), para no depender de él aquí. */
 export type CatalogoInforme = { nombre: (id: string) => string; patron: (id: string) => string | undefined; met: (id: string) => number | null | undefined }
@@ -912,7 +909,7 @@ const PROPIOS = new Set(['Arnold', 'Pallof', 'Pendlay', 'Zercher', 'Zottman', 'S
  * Nombre de ejercicio como en la maqueta: solo la primera letra en mayúscula («Press de Banca con Barra» → «Press de banca con barra»).
  * Se respetan las siglas (TRX, EZ), las letras sueltas (Z, T) y los nombres propios.
  */
-export function nombreNormal(t: string): string {
+function nombreNormal(t: string): string {
   return t.split(' ').map((p, i) => {
     if (i === 0 || p.length <= 1 || PROPIOS.has(p) || /\d/.test(p) || (p.match(/\p{Lu}/gu)?.length ?? 0) >= 2) return p
     return p.toLowerCase()
@@ -1666,7 +1663,7 @@ function comidaInforme(c: Ctx, detalle: boolean): ComidaInforme {
 // ================================================================ pasos y gasto
 
 /** Gasto de un día con el peso y el % de grasa de ESE día (no los de hoy). Null si falta el peso o la altura. */
-export function gastoEnDia(c: Pick<Ctx, 'ms' | 'marina' | 'p' | 'pasos' | 'todas' | 'cat'>, fecha: string): GastoDiaInforme | null {
+function gastoEnDia(c: Pick<Ctx, 'ms' | 'marina' | 'p' | 'pasos' | 'todas' | 'cat'>, fecha: string): GastoDiaInforme | null {
   const peso = ultimoValor(c.ms, leerPeso, fecha)?.valor
   const e = edadEn(c.p.nacimiento, fecha)
   if (peso == null || !(c.p.alturaCm > 0) || e == null) return null

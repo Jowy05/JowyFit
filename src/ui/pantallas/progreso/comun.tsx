@@ -10,7 +10,7 @@ import { Cab, Seg } from '../../comp'
 import { useNav } from '../../nav'
 import { t, tk } from '../../../i18n'
 
-export type PestanaProgreso = 'pro-sem' | 'pro-fuerza' | 'pro-cuerpo' | 'pro-fotos' | 'pro-obj'
+type PestanaProgreso = 'pro-sem' | 'pro-fuerza' | 'pro-cuerpo' | 'pro-fotos' | 'pro-obj'
 
 const PESTANAS: { v: PestanaProgreso; t: string }[] = [
   { v: 'pro-sem', t: tk('Semana') },
@@ -90,7 +90,6 @@ export function useUrlsFotos(fotos: Foto[]): Map<number, string> {
     setUrls(m)
     return () => { for (const u of m.values()) URL.revokeObjectURL(u) }
     // Solo cambia si cambian las fotos (por id).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clave])
   return urls
 }

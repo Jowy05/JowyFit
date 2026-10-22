@@ -11,6 +11,6 @@ describe('botón atrás del móvil', () => {
   it('fuera del entreno vuelve atrás, y en Inicio deja minimizar la app', () => {
     expect(queHaceAtras(estadoInicial())).toBe('minimizar-app')
     expect(queHaceAtras(reducirNav(estadoInicial(), { t: 'pestana', pestana: 'com' }))).toBe('atras')
-    expect(queHaceAtras(reducirNav(estadoInicial(), { t: 'completa', ruta: { p: 'ses-fin' } }))).toBe('atras')
+    expect(queHaceAtras(reducirNav(estadoInicial(), { t: 'completa', ruta: { p: 'ses-fin', d: { id: 1 } } }))).toBe('atras')
   })
 })

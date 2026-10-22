@@ -34,7 +34,7 @@ function cuando(iso: string): string {
   return `${fechaCorta(aISO(d))}, ${horaDe(d.getTime())}`
 }
 
-export function Ajustes({ ruta }: { ruta: Ruta }) {
+export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const a = useAjustes()

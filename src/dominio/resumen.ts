@@ -124,7 +124,7 @@ export function resumenSemana(o: {
 }
 
 type DatosConsejo = { cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }
-export type TipoConsejo = 'faltan-datos' | 'proteina' | 'sube-peso' | 'peso-estable' | 'baja-cintura' | 'menos-picoteo' | 'recorta-cenas' | 'estable-picoteo' | 'estable'
+type TipoConsejo = 'faltan-datos' | 'proteina' | 'sube-peso' | 'peso-estable' | 'baja-cintura' | 'menos-picoteo' | 'recorta-cenas' | 'estable-picoteo' | 'estable'
 
 /** Qué consejo toca, sin depender del idioma (para decidir el tono sin mirar la frase). */
 export function tipoConsejo(o: DatosConsejo): TipoConsejo {

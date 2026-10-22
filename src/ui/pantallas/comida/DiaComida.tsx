@@ -9,7 +9,7 @@ import { DIAS, deISO, diaMes, diaSemana, horaActual, hoyISO, semanaDe, sumarDias
 import { num } from '../../../dominio/calculos'
 import { t, tn } from '../../../i18n'
 import { Barra, cx, Ico, Pantalla, Seccion, useUnaVez, recortar } from '../../comp'
-import { useNav, type Ruta } from '../../nav'
+import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
 import { CabComida, Deslizable, Mini } from './comun'
@@ -17,13 +17,13 @@ import { batidoAMano, desmarcarSuplemento, marcarSuplemento } from './suplemento
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-export function DiaComida({ ruta }: { ruta?: Ruta }) {
+export function DiaComida() {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
   const ajustes = useAjustes()
   const hoy = hoyISO()
-  const [fecha, setFecha] = useState<string>(typeof ruta?.d?.fecha === 'string' ? ruta.d.fecha : hoy)
+  const [fecha, setFecha] = useState(hoy)
   const comidas = useLiveQuery(() => db.comidas.where('fecha').equals(fecha).toArray(), [fecha]) ?? []
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
   const semana = semanaDe(fecha)

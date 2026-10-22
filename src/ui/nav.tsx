@@ -1,22 +1,98 @@
 // Navegación de la app: 5 pestañas, cada una con su pila de pantallas, hojas inferiores
-// y pantallas completas (alta de usuario, entreno en curso). Sin dependencias: es un reducer.
+// y pantallas completas (alta de usuario, entreno en curso). Sin dependencias (solo tipos): es un reducer.
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react'
+import type { Franja, Meta } from '../datos/tipos'
+import type { ClaveSeccion } from './pantallas/perfil/textos'
 
 export type Pestana = 'ini' | 'rut' | 'com' | 'pro' | 'per'
-export const PESTANAS: Pestana[] = ['ini', 'rut', 'com', 'pro', 'per']
 
-export type Ruta = { p: string; d?: Record<string, unknown> }
+/** Id de algo guardado: Dexie lo tipa opcional, pero lo leído de la base siempre lo tiene. */
+type Id = number | undefined
 
-export type EstadoNav = {
-  pestana: Pestana
-  pilas: Record<Pestana, Ruta[]>
-  hoja: Ruta | null
-  completa: Ruta | null
-  /** Pantalla completa minimizada (el entreno sigue en curso y se ve la mini barra). */
-  minimizada: Ruta | null
+/** Datos que lleva cada pantalla y cada hoja (`undefined`: ninguno). Las hojas empiezan por «sheet-». */
+export type Rutas = {
+  ini: undefined
+  rut: undefined
+  'rut-dia': { letra: string }
+  'rut-gen': { definitiva: boolean } | undefined
+  'rut-edit': { letra: string } | undefined
+  'rut-ej': { filtro: 'evitados' } | undefined
+  'rut-ficha': { id: string }
+  'rut-gym': undefined
+  'rut-gym-edit': { id: Id }
+  entreno: undefined
+  'ses-fin': { id: Id }
+  com: undefined
+  'com-scan': { fecha?: string; franja?: Franja } | undefined
+  'com-prod': { codigo: string; fecha?: string; franja?: Franja }
+  'com-plant': undefined
+  'com-guard': undefined
+  'com-energia': undefined
+  'pro-sem': undefined
+  'pro-fuerza': undefined
+  'pro-entreno': { id: Id }
+  'pro-cuerpo': undefined
+  'pro-reg': undefined
+  'pro-fotos': undefined
+  'pro-obj': undefined
+  'pro-pasos': undefined
+  per: undefined
+  'per-sec': { s: ClaveSeccion }
+  aju: { seccion: 'datos' | 'comida' } | undefined
+  creditos: undefined
+  'sheet-peso': undefined
+  'sheet-ses1': { letra: string; version?: 'normal' | 'corta' }
+  'sheet-ocup': { idx: number }
+  'sheet-lista': undefined
+  'sheet-salir-entreno': undefined
+  'sheet-tools': { idx: number }
+  'sheet-discos': { idx: number }
+  'sheet-cal': { idx: number }
+  'sheet-instr': { id: string }
+  'sheet-nota-serie': { idx: number; n: number }
+  'sheet-add': { fecha?: string; franja?: Franja; nota?: boolean } | undefined
+  'sheet-plant': { id?: number; fecha?: string; franja?: Franja }
+  'sheet-comida': { id: Id }
+  'sheet-supl': { nombre: string }
+  'sheet-maq': { gym: Id; id?: string }
+  'sheet-elegir':
+    | { modo: 'anadir'; letra: string }
+    | { modo: 'cambiar' | 'alternativa'; letra: string; uid: string; id: string }
+    | { modo: 'sesion-anadir' }
+    | { modo: 'sesion-cambiar'; idx: number; id?: string }
+  'sheet-meta': { id?: number; tipo?: Meta['tipo'] } | undefined
+  'sheet-trote': undefined
+  'sheet-confirmar': DatosConfirmar
+  'sheet-informe': undefined
+  'sheet-tutorial': undefined
 }
 
-export const RAIZ: Record<Pestana, Ruta> = {
+/** Hoja de confirmación: los textos y qué se hace al aceptar (con el id de lo que se borra). */
+type DatosConfirmar = { titulo: string; texto?: string; si?: string; no?: string; peligro?: boolean } & (
+  | { accion: 'regenerar' | 'borrar-todo' }
+  | { accion: 'borrar-gimnasio' | 'borrar-sesion' | 'cancelar-entreno' | 'borrar-medicion' | 'borrar-foto'; id: Id }
+)
+
+export type CodigoRuta = keyof Rutas
+export type CodigoHoja = Extract<CodigoRuta, `sheet-${string}`>
+export type CodigoPantalla = Exclude<CodigoRuta, CodigoHoja>
+/** Pantallas y hojas que se abren sin datos. */
+export type SinDatos<C extends CodigoRuta = CodigoRuta> = { [K in C]: undefined extends Rutas[K] ? K : never }[C]
+
+export type Ruta<C extends CodigoRuta = CodigoRuta> = { [K in C]: undefined extends Rutas[K] ? { p: K; d?: Rutas[K] } : { p: K; d: Rutas[K] } }[C]
+/** Los datos de la ruta, obligatorios u opcionales según la pantalla. */
+type Datos<C extends CodigoRuta, Mas extends unknown[] = []> = undefined extends Rutas[C] ? [d?: Rutas[C], ...Mas] : [d: Rutas[C], ...Mas]
+
+type EstadoNav = {
+  pestana: Pestana
+  pilas: Record<Pestana, Ruta<CodigoPantalla>[]>
+  hoja: Ruta<CodigoHoja> | null
+  completa: Ruta<CodigoPantalla> | null
+  /** Pantalla completa minimizada (el entreno sigue en curso y se ve la mini barra). */
+  minimizada: Ruta<CodigoPantalla> | null
+}
+
+export const RAIZ: Record<Pestana, Ruta<SinDatos<CodigoPantalla>>> = {
   ini: { p: 'ini' },
   rut: { p: 'rut' },
   com: { p: 'com' },
@@ -32,13 +108,13 @@ export const estadoInicial = (): EstadoNav => ({
   minimizada: null,
 })
 
-export type AccionNav =
+type AccionNav =
   | { t: 'pestana'; pestana: Pestana }
-  | { t: 'ir'; ruta: Ruta; pestana?: Pestana }
-  | { t: 'reemplazar'; ruta: Ruta }
+  | { t: 'ir'; ruta: Ruta<CodigoPantalla>; pestana?: Pestana }
+  | { t: 'reemplazar'; ruta: Ruta<CodigoPantalla> }
   | { t: 'atras' }
-  | { t: 'hoja'; ruta: Ruta | null }
-  | { t: 'completa'; ruta: Ruta | null }
+  | { t: 'hoja'; ruta: Ruta<CodigoHoja> | null }
+  | { t: 'completa'; ruta: Ruta<CodigoPantalla> | null }
   | { t: 'minimizar' }
   | { t: 'restaurar' }
   | { t: 'raiz'; pestana: Pestana }
@@ -84,7 +160,7 @@ export function reducirNav(s: EstadoNav, a: AccionNav): EstadoNav {
 }
 
 /** ¿Queda algo a lo que volver con «atrás»? Si no, Android minimiza la app. */
-export function puedeVolver(s: EstadoNav): boolean {
+function puedeVolver(s: EstadoNav): boolean {
   return !!s.hoja || !!s.completa || s.pilas[s.pestana].length > 1 || s.pestana !== 'ini'
 }
 
@@ -99,30 +175,31 @@ export function queHaceAtras(s: EstadoNav): 'preguntar-entreno' | 'atras' | 'min
 
 type Nav = {
   estado: EstadoNav
-  ir: (p: string, d?: Record<string, unknown>, pestana?: Pestana) => void
-  reemplazar: (p: string, d?: Record<string, unknown>) => void
+  ir: <C extends CodigoPantalla>(p: C, ...d: Datos<C, [pestana?: Pestana]>) => void
+  reemplazar: <C extends CodigoPantalla>(p: C, ...d: Datos<C>) => void
   atras: () => void
   pestana: (t: Pestana) => void
   raiz: (t: Pestana) => void
-  hoja: (p: string | null, d?: Record<string, unknown>) => void
-  completa: (p: string | null, d?: Record<string, unknown>) => void
+  hoja: { (p: null): void; <C extends CodigoHoja>(p: C, ...d: Datos<C>): void }
+  completa: { (p: null): void; <C extends CodigoPantalla>(p: C, ...d: Datos<C>): void }
   minimizar: () => void
   restaurar: () => void
   poner: (estado: EstadoNav) => void
-  actual: Ruta
+  actual: Ruta<CodigoPantalla>
 }
 
 const Ctx = createContext<Nav | null>(null)
 
 export function ProveedorNav({ children, inicial }: { children: ReactNode; inicial?: EstadoNav }) {
   const [estado, d] = useReducer(reducirNav, inicial ?? estadoInicial())
-  const ir = useCallback((p: string, datos?: Record<string, unknown>, pestana?: Pestana) => d({ t: 'ir', ruta: { p, d: datos }, pestana }), [])
-  const reemplazar = useCallback((p: string, datos?: Record<string, unknown>) => d({ t: 'reemplazar', ruta: { p, d: datos } }), [])
+  // Los tipos de Nav emparejan cada código con sus datos; aquí dentro ya no se puede comprobar.
+  const ir = useCallback((p: CodigoPantalla, datos?: unknown, pestana?: Pestana) => d({ t: 'ir', ruta: { p, d: datos } as Ruta<CodigoPantalla>, pestana }), []) as Nav['ir']
+  const reemplazar = useCallback((p: CodigoPantalla, datos?: unknown) => d({ t: 'reemplazar', ruta: { p, d: datos } as Ruta<CodigoPantalla> }), []) as Nav['reemplazar']
   const atras = useCallback(() => d({ t: 'atras' }), [])
   const pestana = useCallback((t: Pestana) => d({ t: 'pestana', pestana: t }), [])
   const raiz = useCallback((t: Pestana) => d({ t: 'raiz', pestana: t }), [])
-  const hoja = useCallback((p: string | null, datos?: Record<string, unknown>) => d({ t: 'hoja', ruta: p ? { p, d: datos } : null }), [])
-  const completa = useCallback((p: string | null, datos?: Record<string, unknown>) => d({ t: 'completa', ruta: p ? { p, d: datos } : null }), [])
+  const hoja = useCallback((p: CodigoHoja | null, datos?: unknown) => d({ t: 'hoja', ruta: p ? { p, d: datos } as Ruta<CodigoHoja> : null }), []) as Nav['hoja']
+  const completa = useCallback((p: CodigoPantalla | null, datos?: unknown) => d({ t: 'completa', ruta: p ? { p, d: datos } as Ruta<CodigoPantalla> : null }), []) as Nav['completa']
   const minimizar = useCallback(() => d({ t: 'minimizar' }), [])
   const restaurar = useCallback(() => d({ t: 'restaurar' }), [])
   const poner = useCallback((e: EstadoNav) => d({ t: 'poner', estado: e }), [])

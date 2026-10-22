@@ -9,7 +9,7 @@ import { num } from '../../../dominio/calculos'
 import { t, tn } from '../../../i18n'
 
 /** Claves de material que usa algún ejercicio (las demás no aportan nada). */
-export function clavesUtiles(): Set<string> {
+function clavesUtiles(): Set<string> {
   const c = catalogoCargado()
   return new Set((c?.ejercicios ?? []).map(e => e.material).filter((m): m is string => !!m))
 }

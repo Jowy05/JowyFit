@@ -16,8 +16,6 @@
 .btn.ux-com-apuntar{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:48px}
 .btn.ux-com-apuntar i{margin-right:6px;vertical-align:-2px}
 
-/* Añadir: «Poco · Normal · Mucho» con palabras (antes P N G). */
-.png.ux-com-png button{width:auto;min-width:46px;padding:0 7px;font:600 12.5px var(--font-display);letter-spacing:.01em}
 /* Escribir lo que he comido y Crear comida: «Poco · Normal · Mucho» con las kcal debajo. */
 .chip.ux-com-tam{min-height:58px;padding:6px 4px}
 .chip.ux-com-tam>span{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.1}

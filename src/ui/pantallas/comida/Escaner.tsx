@@ -1,7 +1,7 @@
 // COM-03 · Escáner: lee el código, lo busca en lo ya guardado y si no en Open Food Facts.
 import { useEffect, useRef, useState } from 'react'
 import { db } from '../../../datos/db'
-import type { Franja, Producto } from '../../../datos/tipos'
+import type { Producto } from '../../../datos/tipos'
 import { buscarOFF, codigoValido, porRacion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { escanearNativo, esAndroid, vibrar } from '../../../plataforma'
@@ -20,11 +20,11 @@ type Estado =
   | { e: 'offline'; codigo: string }
   | { e: 'sincamara'; motivo: string }
 
-export function Escaner({ ruta }: { ruta: Ruta }) {
+export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const fecha = typeof ruta.d?.fecha === 'string' ? ruta.d.fecha : hoyISO()
-  const franja = ruta.d?.franja as Franja | undefined
+  const fecha = ruta.d?.fecha ?? hoyISO()
+  const franja = ruta.d?.franja
   const [estado, setEstado] = useState<Estado>({ e: 'camara' })
   const [ronda, setRonda] = useState(0)
   const [escribir, setEscribir] = useState(false)
@@ -71,7 +71,6 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
       }
     })()
     return () => { cancelado = true; camara.current?.parar(); camara.current = null }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ronda, escribir])
 
   const otraVez = () => { setEscribir(false); setEstado({ e: 'camara' }); setRonda(r => r + 1) }

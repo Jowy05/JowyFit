@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { BaseJowyFit, TABLAS, db, pedirPersistencia } from '../src/datos/db'
 import {
-  ajustesPorDefecto, gimnasioActivo, gimnasioNuevo, guardarAjustes, guardarPerfil, hoy, leerAjustes, leerPerfil, marcaDe, marcar, perfilPorDefecto,
+  ajustesPorDefecto, gimnasioActivo, gimnasioNuevo, guardarAjustes, guardarPerfil, leerAjustes, leerPerfil, marcaDe, marcar, perfilPorDefecto,
   plantillasIniciales, prepararBase,
 } from '../src/datos/repos'
 import {
@@ -67,7 +67,6 @@ describe('valores por defecto', () => {
     expect(ps.filter(p => p.tipo === 'picoteo')).toHaveLength(3)
     expect(ps.find(p => p.nombre === 'Café')!.cafeina).toBe(80)
     expect(ps.every(p => p.usos === 0)).toBe(true)
-    expect(hoy).toBe(hoyISO)
   })
 })
 

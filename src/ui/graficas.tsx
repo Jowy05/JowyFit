@@ -5,7 +5,7 @@ import { num } from '../dominio/calculos'
 import { ejeRedondo } from '../dominio/tendencias'
 import { t } from '../i18n'
 
-export type Punto = { x: string; y: number }
+type Punto = { x: string; y: number }
 
 const W = 320, H = 130, X0 = 40, X1 = 300, Y0 = 20, Y1 = 104
 

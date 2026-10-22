@@ -5,7 +5,7 @@ import { deISO, diaSemana, diasEntre } from '../../../dominio/fechas'
 import { batidoDe, dosisDe, esBatido } from '../../../dominio/comida'
 import { t } from '../../../i18n'
 
-export type Pendiente = { id: string; titulo: string; detalle: string; icono: string; accion: 'peso' | 'medir' | 'foto' | 'suplemento' | 'pasos'; hecho?: boolean }
+type Pendiente = { id: string; titulo: string; detalle: string; icono: string; accion: 'peso' | 'medir' | 'foto' | 'suplemento' | 'pasos'; hecho?: boolean }
 
 /**
  * `pasosAMano` + `tarde`: en iPhone no hay recordatorios ni pasos automáticos; por la tarde (desde las 18 h), si hoy

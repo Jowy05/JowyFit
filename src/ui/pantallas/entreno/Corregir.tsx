@@ -16,7 +16,7 @@ import { t } from '../../../i18n'
 
 type Datos = Pick<Serie, 'peso' | 'reps' | 'segundos'>
 
-export const conPesoReg = (e: EjercicioSesion) => e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
+const conPesoReg = (e: EjercicioSesion) => e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
 export const etiquetaPeso = (e: EjercicioSesion) => (e.registro === 'asistido' ? t('Ayuda (kg)') : e.registro === 'mancuerna' ? t('Kg por mancuerna') : t('Peso (kg)'))
 export const etiquetaReps = (e: EjercicioSesion) => (e.registro === 'cardio' ? t('¿Cuántos minutos?') : t('¿Cuántas has hecho?'))
 
@@ -29,7 +29,7 @@ export function valorSerie(x: Serie, e: EjercicioSesion): string {
 }
 
 /** Guarda la corrección y vuelve a mirar si la serie es récord frente a lo anterior. */
-export async function guardarCorreccion(s: Sesion, idx: number, k: number, d: Datos): Promise<void> {
+async function guardarCorreccion(s: Sesion, idx: number, k: number, d: Datos): Promise<void> {
   const e = s.ejercicios[idx]
   const x = e?.series[k]
   if (!e || !x || !x.hecha) return

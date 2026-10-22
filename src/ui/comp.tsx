@@ -190,11 +190,6 @@ export function Campo({ etiqueta, children, ayuda }: { etiqueta: ReactNode; chil
   )
 }
 
-/** Fila de ficha técnica: etiqueta a la izquierda, valor a la derecha. */
-export function Dato({ k, v, onClick }: { k: ReactNode; v: ReactNode; onClick?: () => void }) {
-  return <p onClick={onClick}><span>{k}</span><b>{v}</b></p>
-}
-
 export function Seccion({ titulo, accion, onAccion, extra, children, className, tour }: { titulo: ReactNode; accion?: ReactNode; onAccion?: () => void; extra?: ReactNode; children: ReactNode; className?: string; /** Ancla del tutorial. */ tour?: string }) {
   return (
     <div className={cx('sec', className)} data-tour={tour}>

@@ -1,6 +1,6 @@
 // Textos compartidos por las pantallas de Perfil (etiquetas de cada opción y lista de secciones).
 // Van marcados con tk(): se calculan al importar, antes de cargar el idioma; se traducen al pintarlos con t(x).
-import type { Cardio, Dia, Nivel, Perfil, Reps, TipoObjetivo, Trabajo, Zona } from '../../../datos/tipos'
+import type { Dia, Nivel, Perfil, Reps, TipoObjetivo, Trabajo, Zona } from '../../../datos/tipos'
 import { DIAS_ABREV } from '../../../dominio/fechas'
 import { idioma, t, tc, tk } from '../../../i18n'
 
@@ -8,7 +8,6 @@ export const OBJETIVO_TXT: Record<TipoObjetivo, string> = { recomposicion: tk('P
 export const NIVEL_TXT: Record<Nivel, string> = { empiezo: tk('Empiezo'), vuelvo: tk('Vuelvo tras un parón'), intermedio: tk('Intermedio'), avanzado: tk('Avanzado') }
 export const PREFERENCIA_TXT: Record<Perfil['preferencia'], string> = { maquinas: tk('Máquinas y poleas'), libre: tk('Peso libre'), mezcla: tk('Mezcla') }
 export const REPS_TXT: Record<Reps, string> = { pesadas: tk('Pocas y pesadas'), moderadas: tk('Moderadas'), mezcla: tk('Mezcla') }
-export const CARDIO_TXT: Record<Cardio, string> = { nada: tk('Nada'), pasos: tk('Pasos'), trote: tk('Trote') }
 export const TRABAJO_TXT: Record<Trabajo, string> = { sentado: tk('Sentado'), depie: tk('De pie'), fisico: tk('Físico') }
 
 export const ZONAS_SENSIBLES: { v: Zona; t: string }[] = [

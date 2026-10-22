@@ -32,7 +32,7 @@ export function restanteSesion(s: Sesion): number {
   return t
 }
 
-export type EstadoHora = { minutosTarde: number; finEstimado: number; aTiempo: boolean }
+type EstadoHora = { minutosTarde: number; finEstimado: number; aTiempo: boolean }
 
 /** Compara el final estimado con la hora límite (HH:MM del mismo día). */
 export function estadoHora(s: Sesion, ahora: number): EstadoHora | null {
@@ -46,7 +46,7 @@ export function estadoHora(s: Sesion, ahora: number): EstadoHora | null {
   return { minutosTarde: tarde, finEstimado: fin, aTiempo: tarde <= 0 }
 }
 
-export type Recorte = { tipo: 'serie'; uid: string; texto: string } | { tipo: 'corta'; texto: string }
+type Recorte = { tipo: 'serie'; uid: string; texto: string } | { tipo: 'corta'; texto: string }
 
 /** Propuesta concreta cuando se va tarde. */
 export function propuestaRecorte(s: Sesion, minutosTarde: number, nombre: (id: string) => string): Recorte | null {

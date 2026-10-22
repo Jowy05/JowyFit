@@ -12,12 +12,12 @@ import { useGimnasio, usePerfil, useRutina } from '../../datos'
 import { filas, materialCorto, minutos, musculosComunes, nombreEj, nombreEntreno, SS, SS_EXPLICA, tituloDia } from './comun'
 import { t } from '../../../i18n'
 
-export function DetalleDia({ ruta }: { ruta: Ruta }) {
+export function DetalleDia({ ruta }: { ruta: Ruta<'rut-dia'> }) {
   const nav = useNav()
   const r = useRutina()
   const g = useGimnasio()
   const perfil = usePerfil()
-  const dia = r?.dias.find(d => d.letra === ruta.d?.letra) ?? r?.dias[0]
+  const dia = r?.dias.find(d => d.letra === ruta.d.letra) ?? r?.dias[0]
   const sug = useLiveQuery(() => (dia ? sugerenciasDia(dia, g) : Promise.resolve(undefined)), [dia, g])
   if (!dia) return <Pantalla><Cab atras titulo={t('Día')} /></Pantalla>
   let n = 0

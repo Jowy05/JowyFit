@@ -5,9 +5,9 @@ import type { Medicion } from '../datos/tipos'
 import { t } from '../i18n'
 
 /** Un dato suelto de Health Connect: cuándo (ISO), el valor, su id y la app que lo escribió. */
-export type MuestraHC = { fecha: string; valor: number; id?: string; fuente?: string }
+type MuestraHC = { fecha: string; valor: number; id?: string; fuente?: string }
 /** Una pesada: peso, grasa o los dos. */
-export type LecturaBascula = { fecha: string; pesoKg?: number; grasaPct?: number; ids: string[]; fuente?: string }
+type LecturaBascula = { fecha: string; pesoKg?: number; grasaPct?: number; ids: string[]; fuente?: string }
 
 /** Peso y grasa de la misma pesada si se tomaron con menos de 10 minutos de diferencia. */
 const MISMA_PESADA_MS = 10 * 60_000

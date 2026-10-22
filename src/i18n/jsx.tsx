@@ -6,7 +6,7 @@
 import { Fragment, type ReactNode } from 'react'
 import { t } from './index'
 
-export type VarsJSX = Record<string, ReactNode | ((dentro: string) => ReactNode)>
+type VarsJSX = Record<string, ReactNode | ((dentro: string) => ReactNode)>
 
 const PIEZA = /\{(\w+)\}|<(\w+)>([\s\S]*?)<\/\2>/g
 

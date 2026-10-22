@@ -54,7 +54,7 @@ export function plantillas(nDias: number): { estructura: string; dias: Plantilla
 // Función y no constante: el nombre se traduce al generar (en el nivel del módulo aún no hay idioma).
 const EXTRA = (): Plantilla => ({ letra: 'S', nombre: t('Sesión extra'), huecos: [...BRAZOS(1), P('tiron-v', 'secundario', 2), ...HOMBROS(3), P('core', 'core', 4)] })
 
-export type EntradaGenerador = {
+type EntradaGenerador = {
   perfil: Perfil
   gimnasio: Pick<Gimnasio, 'material' | 'id'> | null
   marcas: Map<string, MarcaEjercicio>

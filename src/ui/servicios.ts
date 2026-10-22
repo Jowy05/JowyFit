@@ -2,7 +2,7 @@
 import { db } from '../datos/db'
 import { exportar, nombreCopia } from '../datos/copias'
 import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
-import { DIAS, deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
+import { deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
 import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
@@ -77,7 +77,7 @@ export async function sincronizarPasos(): Promise<boolean> {
  * Trae el peso y el % de grasa de la báscula desde Health Connect (si está activado): los últimos 30 días
  * la primera vez y luego las dos últimas semanas. Devuelve cuántas pesadas nuevas ha guardado.
  */
-export async function sincronizarBascula(): Promise<number> {
+async function sincronizarBascula(): Promise<number> {
   const a = await leerAjustes()
   if (a.fuenteBascula !== 'auto' || !(await pasosDisponibles())) return 0
   try {
@@ -151,7 +151,7 @@ export async function comprobarSalud(): Promise<string[]> {
  * Nombre libre para una copia nueva en Documentos/JowyFit: con la hora y, si ya existe, con «-2», «-3»…
  * Antes era uno por día y la copia automática (tras recuperar otra) pisaba la que se había hecho a mano.
  */
-export async function nombreCopiaLibre(fecha = new Date()): Promise<string> {
+async function nombreCopiaLibre(fecha = new Date()): Promise<string> {
   const existentes = esNativo() ? (await copiasGuardadas()).map(c => c.nombre) : []
   return nombreCopia(fecha, existentes)
 }
@@ -193,8 +193,6 @@ export async function copiaCompartiendo(lista?: CopiaPreparada): Promise<{ resul
   await guardarAjustes({ ultimaCopia: new Date().toISOString() })
   return { resultado: r === 'compartido' ? 'compartido' : 'descargado', copia }
 }
-
-export const NOMBRES_DIAS = DIAS
 
 let arrancado = false
 export function arrancarServicios(): () => void {

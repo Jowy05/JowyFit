@@ -9,8 +9,6 @@ type PdfLib = typeof import('pdf-lib')
 export const MM = 72 / 25.4
 export const ANCHO_A4 = 210
 export const ALTO_A4 = 297
-/** 1 pt en mm (para pasar tamaños de letra a alturas). */
-export const PT = 25.4 / 72
 
 /**
  * Tamaños de letra del informe (pt): siempre uno de estos, nada por debajo de 6,5.
@@ -30,7 +28,7 @@ const PALETA = {
   /** Fondo claro de la zona sana (zonas del cuerpo, series por grupo, esfuerzo 7-8). */
   zonaSana: '#DCEBF7',
 }
-export type Color = keyof typeof PALETA
+type Color = keyof typeof PALETA
 /** Colores en uso: los de la paleta con los cambios del estilo elegido (ver `aplicarEstilo`). */
 export const C: Record<Color, string> = { ...PALETA }
 
@@ -38,7 +36,7 @@ export const C: Record<Color, string> = { ...PALETA }
  * Estilo del informe: la misma maqueta y los mismos datos con otra estética. «clasico» es el de siempre;
  * los demás cambian la paleta, la letra de los títulos y cómo se dibujan cabeceras de tabla, fichas, títulos y portada.
  */
-export type Estilo = {
+type Estilo = {
   /** Letra de los títulos: Helvetica negrita o Times negrita. */
   titulos: 'helvetica' | 'times'
   /** Cabecera de tabla: banda oscura con letra blanca, banda clara con letra de color o solo una raya debajo. */
@@ -70,7 +68,7 @@ export const ESTILO_POR_DEFECTO: NombreEstilo = 'clinico'
 
 const CLASICO: Estilo = { titulos: 'helvetica', cabTabla: 'oscura', cebra: true, fichas: 'relleno', h2: 'raya', portada: 'banda', acento: PALETA.naranja, cabTexto: PALETA.blanco, cabFondo: PALETA.cab, borde: PALETA.linea, versalitas: false, casillas: 'grises' }
 
-export const ESTILOS: Record<NombreEstilo, { nombre: string; idea: string; estilo: Estilo; colores: Partial<Record<Color, string>> }> = {
+const ESTILOS: Record<NombreEstilo, { nombre: string; idea: string; estilo: Estilo; colores: Partial<Record<Color, string>> }> = {
   clasico: { nombre: 'Clásico', idea: 'El de ahora: bandas oscuras y fichas grises, al estilo de un informe de báscula.', estilo: CLASICO, colores: {} },
   nordico: {
     nombre: 'Nórdico',
@@ -117,7 +115,7 @@ export function aplicarEstilo(nombre: NombreEstilo = 'clasico') {
 /** «titulo»: la letra de los títulos del estilo (Helvetica o Times, en negrita). */
 export type Peso = 'normal' | 'negrita' | 'cursiva' | 'titulo'
 export type Ancla = 'start' | 'middle' | 'end'
-export type OpcTexto = { tam?: number; color?: string; peso?: Peso; anc?: Ancla; espaciado?: number }
+type OpcTexto = { tam?: number; color?: string; peso?: Peso; anc?: Ancla; espaciado?: number }
 export type Fuentes = Record<Peso, PDFFont>
 
 const f2 = (n: number) => (Math.round(n * 1000) / 1000).toString()
@@ -163,7 +161,7 @@ export class Medidor {
 
 /** Trozo de texto con su letra y color (para frases con partes en negrita). */
 export type Trozo = { t: string; peso?: Peso; color?: string }
-export type LineaRica = { trozos: (Trozo & { x: number })[]; ancho: number }
+type LineaRica = { trozos: (Trozo & { x: number })[]; ancho: number }
 
 /** Parte un texto con trozos de distinto estilo en líneas de como mucho `w` mm. */
 export function partirRico(m: Medidor, trozos: Trozo[], w: number, tam: number): LineaRica[] {
@@ -323,7 +321,7 @@ export class Lienzo extends Medidor {
 }
 
 /** Rectángulo (con esquinas redondeadas si r > 0) como trazo SVG. */
-export function rutaRect(x: number, y: number, w: number, h: number, r = 0): string {
+function rutaRect(x: number, y: number, w: number, h: number, r = 0): string {
   if (w <= 0 || h <= 0) return ''
   const rr = Math.min(r, w / 2, h / 2)
   if (rr <= 0) return `M${f2(x)} ${f2(y)} H${f2(x + w)} V${f2(y + h)} H${f2(x)} Z`

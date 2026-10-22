@@ -15,7 +15,7 @@ import { t, tn } from '../../../i18n'
 import { tr } from '../../../i18n/jsx'
 import { nombreEntreno } from '../../../dominio/nombres'
 
-export function HojaEmpezar({ ruta }: { ruta: Ruta }) {
+export function HojaEmpezar({ ruta }: { ruta: Ruta<'sheet-ses1'> }) {
   const nav = useNav()
   const r = useRutina()
   const perfil = usePerfilCargado()
@@ -29,14 +29,14 @@ export function HojaEmpezar({ ruta }: { ruta: Ruta }) {
       <button className="btn xl mt16" onClick={() => { nav.hoja(null); abrirEntreno(nav) }}><Ico n="play" b />{t('Continuar')}</button>
     </Hoja>
   )
-  const dia = r?.dias.find(d => d.letra === ruta.d?.letra) ?? r?.dias[0]
+  const dia = r?.dias.find(d => d.letra === ruta.d.letra) ?? r?.dias[0]
   if (!dia) return (
     <Hoja titulo={t('Sin rutina')}>
       <p className="muted">{t('Aún no tienes rutina. La creamos con tus días, tu tiempo y tu gimnasio.')}</p>
       <button className="btn mt16" onClick={() => { nav.hoja(null); nav.ir('rut-gen', undefined, 'rut') }}>{t('Crear mi rutina')}</button>
     </Hoja>
   )
-  return <FormEmpezar dia={dia} perfil={perfil} corta={ruta.d?.version === 'corta'} />
+  return <FormEmpezar dia={dia} perfil={perfil} corta={ruta.d.version === 'corta'} />
 }
 
 function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; perfil: Perfil; corta: boolean }) {

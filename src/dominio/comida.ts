@@ -42,7 +42,7 @@ export type Racion = 'P' | 'N' | 'G'
  * - un plato (comida, producto, bebida, lo escrito a mano) guarda el plato entero: Poco = ⅓, Normal = el plato, Mucho = × 1,5;
  * - un picoteo guarda la bolsa o el paquete entero: Poco = ⅓, Normal = la mitad, Mucho = todo.
  */
-export type TipoRacion = 'plato' | 'picoteo'
+type TipoRacion = 'plato' | 'picoteo'
 const FACTORES: Record<TipoRacion, Record<Racion, number>> = { plato: { P: 1 / 3, N: 1, G: 1.5 }, picoteo: { P: 1 / 3, N: 1 / 2, G: 1 } }
 export const tipoRacion = (tipo?: string): TipoRacion => (tipo === 'picoteo' ? 'picoteo' : 'plato')
 export const factorRacion = (r: Racion, tipo?: string) => FACTORES[tipoRacion(tipo)][r]
@@ -168,7 +168,7 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
 export const URL_OFF = (codigo: string) =>
   `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(codigo)}.json?fields=product_name,product_name_es,generic_name_es,brands,nutriments,serving_quantity,image_front_small_url,image_front_url&lc=es&app_name=JowyFit`
 
-export type Busqueda = { estado: 'encontrado'; producto: Producto } | { estado: 'no' } | { estado: 'offline' }
+type Busqueda = { estado: 'encontrado'; producto: Producto } | { estado: 'no' } | { estado: 'offline' }
 
 /** Busca un código en Open Food Facts. No envía nada más que el código. */
 export async function buscarOFF(codigo: string, f: typeof fetch = fetch): Promise<Busqueda> {
@@ -236,7 +236,7 @@ export function ordenarPlantillas(ps: Plantilla[]): Plantilla[] {
 }
 
 // ---------- ajuste quincenal ----------
-export type Quincena = { consejo: string; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
+type Quincena = { consejo: string; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
 
 /** Compara los últimos 14 días con los 14 anteriores y da un consejo por tendencias. */
 /** Consejo quincenal con tono y etiqueta. Los números salen de `tendencias.datosQuincena`, la misma cuenta que usa Progreso. */

@@ -8,18 +8,18 @@ import { alternativasDe, bloqueNuevo, patronGenerador } from '../../../dominio/g
 import { desdeBloque, sustituir } from '../../../dominio/sesion'
 import { sugerenciaPara } from '../../../datos/consultas'
 import { Chip, cx, Hoja, Ico, Th, useUnaVez, LARGO } from '../../comp'
-import { useNav, type Ruta } from '../../nav'
+import { useNav, type Ruta, type Rutas } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
 import { musculosComunes, nombreEj } from './comun'
 import { t, tk } from '../../../i18n'
 
-type Modo = 'cambiar' | 'alternativa' | 'anadir' | 'sesion-anadir' | 'sesion-cambiar'
+type Modo = Rutas['sheet-elegir']['modo']
 
 const TITULO: Record<Modo, string> = { cambiar: tk('Cambiar ejercicio'), alternativa: tk('Si está ocupado'), anadir: tk('Añadir ejercicio'), 'sesion-anadir': tk('Añadir al entreno'), 'sesion-cambiar': tk('Cambiar ejercicio') }
 
-export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
+export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'sheet-elegir'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
@@ -27,8 +27,9 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
   const marcas = useMarcas()
   const r = useRutina()
   const sesion = useSesionEnCurso()
-  const modo = ruta.d?.modo as Modo
-  const actual = ejercicio(ruta.d?.id as string | undefined)
+  const d = ruta.d
+  const modo = d.modo
+  const actual = ejercicio('id' in d ? d.id : undefined)
   const [mismoPatron, setMismoPatron] = useState(!!actual)
   const [q, setQ] = useState('')
   const material = useMemo(() => new Set(g?.material ?? []), [g])
@@ -48,19 +49,18 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
 
   // Doble toque en un ejercicio: se añadía dos veces (al entreno o al plan).
   const elegir = unaVez(async (e: Ejercicio) => {
-    if (modo === 'sesion-anadir' || modo === 'sesion-cambiar') {
+    if (d.modo === 'sesion-anadir' || d.modo === 'sesion-cambiar') {
       if (!sesion?.id) return
       const b = bloqueNuevo(e.id, entrada())
       const sug = await sugerenciaPara(e.id, b, g, sesion.id)
-      if (modo === 'sesion-anadir') {
+      if (d.modo === 'sesion-anadir') {
         const nueva = structuredClone(sesion)
         const ej = desdeBloque(b, { peso: sug.peso, reps: sug.reps })
         if (!nueva.ejercicios.some(x => x.estado === 'curso')) ej.estado = 'curso'
         nueva.ejercicios.push(ej)
         await db.sesiones.put(nueva)
       } else {
-        const idx = Number(ruta.d?.idx ?? 0)
-        await db.sesiones.put(sustituir(sesion, idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
+        await db.sesiones.put(sustituir(sesion, d.idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
       }
       nav.hoja(null)
       aviso(modo === 'sesion-anadir' ? t('Añadido: {nombre}', { nombre: nombreEj(e) }) : t('Cambiado por {nombre}', { nombre: nombreEj(e) }))
@@ -68,13 +68,13 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
     }
     if (!r) return
     const nueva = structuredClone(r)
-    const dia = nueva.dias.find(d => d.letra === ruta.d?.letra) ?? nueva.dias[0]!
-    if (modo === 'anadir') {
+    const dia = nueva.dias.find(x => x.letra === d.letra) ?? nueva.dias[0]!
+    if (d.modo === 'anadir') {
       dia.bloques.push(bloqueNuevo(e.id, entrada()))
     } else {
-      const b = dia.bloques.find(x => x.uid === ruta.d?.uid)
+      const b = dia.bloques.find(x => x.uid === d.uid)
       if (!b) return
-      if (modo === 'cambiar') {
+      if (d.modo === 'cambiar') {
         const nb = bloqueNuevo(e.id, entrada())
         Object.assign(b, { ejercicio: e.id, alternativas: alternativasDe(e.id, entrada()), registro: nb.registro })
       } else {

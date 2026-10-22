@@ -62,7 +62,7 @@ export function regionNumeros(): string {
 }
 
 /** Rellena {variables}: «Faltan {n} g» + { n: 12 } → «Faltan 12 g». Lo que no está en vars se deja tal cual. */
-export function rellenar(texto: string, vars?: Vars): string {
+function rellenar(texto: string, vars?: Vars): string {
   if (!vars) return texto
   return texto.replace(/\{(\w+)\}/g, (todo, k: string) => (Object.hasOwn(vars, k) ? String(vars[k]) : todo))
 }

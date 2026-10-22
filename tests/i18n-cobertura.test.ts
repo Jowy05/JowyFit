@@ -28,9 +28,10 @@ const ZONAS: Zona[] = Object.entries(modulos)
   .filter(z => z.zona !== 'index')
 
 // Todos los usos del código.
+const ARCHIVOS = archivosApp(RAIZ)
 const usos: Uso[] = []
 const problemas: Problema[] = []
-for (const f of archivosApp(RAIZ)) {
+for (const f of ARCHIVOS) {
   const r = escanear(fs.readFileSync(f, 'utf8'), rel(f))
   usos.push(...r.usos)
   problemas.push(...r.problemas)
@@ -136,6 +137,12 @@ describe.skipIf(!ESTRICTO)('cobertura completa (interruptor I18N_ESTRICTO)', () 
   }
   it('el buscador ve textos en el código', () => {
     expect(usos.length).toBeGreaterThan(0)
+  })
+  // Una carpeta movida o un import de i18n por alias saca archivos del escaneo sin que nada falle.
+  // Si se borran archivos a propósito, baja estos números a los nuevos.
+  it('el buscador sigue mirando todos los archivos', () => {
+    expect(ARCHIVOS.length).toBeGreaterThanOrEqual(87 - 2)
+    expect(archivosTsx(RAIZ).length).toBeGreaterThanOrEqual(60 - 2)
   })
 })
 

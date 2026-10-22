@@ -109,12 +109,12 @@ export function Objetivos() {
 
 // ---------- hoja: crear o editar una meta ----------
 
-export function HojaMeta({ ruta }: { ruta: Ruta }) {
-  const id = ruta.d?.id != null ? Number(ruta.d.id) : null
+export function HojaMeta({ ruta }: { ruta: Ruta<'sheet-meta'> }) {
+  const id = ruta.d?.id ?? null
   const meta = useLiveQuery(async () => (id != null ? (await db.metas.get(id)) ?? null : null), [id])
   const ejercicios = useLiveQuery(async () => ejerciciosHechos(await sesionesHechas()), [])
   if ((id != null && meta === undefined) || !ejercicios) return <Hoja titulo={t('Meta')}><div className="cargando">…</div></Hoja>
-  const tipo = TIPOS_META.some(x => x.v === ruta.d?.tipo) ? (ruta.d!.tipo as Meta['tipo']) : undefined
+  const tipo = TIPOS_META.some(x => x.v === ruta.d?.tipo) ? ruta.d?.tipo : undefined
   return <FormMeta key={meta?.id ?? 'nueva'} meta={meta ?? null} tipoInicial={tipo} ejercicios={ejercicios} />
 }
 

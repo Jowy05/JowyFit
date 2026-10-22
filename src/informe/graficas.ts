@@ -6,9 +6,9 @@ import { DIAS_CORTOS, MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../domi
 import { t } from '../i18n'
 import { C, ESTILO, TAM, fondoCab, fondoCasilla, letraCab, type Ancla, type Lienzo } from './lienzo'
 
-export type Eje = { min: number; max: number; marcas: number[] }
+type Eje = { min: number; max: number; marcas: number[] }
 
-export type SerieGrafica = {
+type SerieGrafica = {
   vals: (number | null)[]
   color: string
   /** Grosor de la línea; 0 = solo puntos. */
@@ -25,12 +25,12 @@ export type SerieGrafica = {
   colorHueco?: string
 }
 export type BarraGrafica = { v: number | null; color?: string; etq?: string | null; partes?: { v: number; color: string }[] }
-export type BandaGrafica = { desde: number; hasta: number; color: string; texto?: string; colorTexto?: string; fuera?: boolean }
-export type LineaH = { v: number; color: string; ancho?: number; raya?: number[]; texto?: string; colorTexto?: string; fuera?: boolean; izq?: boolean; fondo?: boolean }
-export type MarcaGrafica = { i: number; v: number; tipo?: 'hoy' | 'record' | 'primero'; texto?: string; dx?: number; dy?: number; anc?: Ancla; tam?: number; color?: string }
+type BandaGrafica = { desde: number; hasta: number; color: string; texto?: string; colorTexto?: string; fuera?: boolean }
+type LineaH = { v: number; color: string; ancho?: number; raya?: number[]; texto?: string; colorTexto?: string; fuera?: boolean; izq?: boolean; fondo?: boolean }
+type MarcaGrafica = { i: number; v: number; tipo?: 'hoy' | 'record' | 'primero'; texto?: string; dx?: number; dy?: number; anc?: Ancla; tam?: number; color?: string }
 export type EtiquetaX = { i: number; t: string; anc?: Ancla }
 
-export type OpcGrafica = {
+type OpcGrafica = {
   x: number; y: number; w: number; h: number
   /** Número de huecos en x (días del periodo, sesiones, semanas…). */
   n: number
@@ -97,7 +97,7 @@ export function ejeDe(valores: number[], marcasDeseadas = 3, desdeCero = false, 
   return { min, max, marcas }
 }
 
-export type Geometria = { X: (i: number) => number; Y: (v: number) => number; x0: number; x1: number; y0: number; y1: number }
+type Geometria = { X: (i: number) => number; Y: (v: number) => number; x0: number; x1: number; y0: number; y1: number }
 
 /** Dibuja una gráfica y devuelve sus funciones de posición (para añadir cosas encima). */
 export function grafica(l: Lienzo, o: OpcGrafica): Geometria {
@@ -201,7 +201,7 @@ const estimar: Medir = s => s.length * 1.1
 const SEP_ETQ = 3
 
 /** ¿Ninguna etiqueta pisa a la anterior? `pos` da la x de cada índice. */
-export function sinPisarse(xs: EtiquetaX[], pos: (i: number) => number, medir: Medir): boolean {
+function sinPisarse(xs: EtiquetaX[], pos: (i: number) => number, medir: Medir): boolean {
   const ext = (e: EtiquetaX): [number, number] => {
     const w = medir(e.t), x = pos(e.i)
     return e.anc === 'start' ? [x, x + w] : e.anc === 'end' ? [x - w, x] : [x - w / 2, x + w / 2]

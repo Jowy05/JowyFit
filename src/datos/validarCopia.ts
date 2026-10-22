@@ -10,15 +10,15 @@ type Fila = Record<string, unknown>
 /** Comprueba un valor y lo devuelve limpio. `undefined` = quitar el campo. Lanza si no vale. */
 type Regla = (v: unknown, donde: string) => unknown
 
-export class CopiaNoValida extends Error {}
+class CopiaNoValida extends Error {}
 const mal = (donde: string, que: string): never => {
   throw new CopiaNoValida(t('La copia tiene datos que no son de JowyFit ({donde}: {que}). No se ha cambiado nada.', { donde, que }))
 }
 
 // ---------- límites ----------
 /** Mayor id que se acepta: muy lejos de lo que usa nadie y de 2^53 (que agota el contador de IndexedDB). */
-export const ID_MAX = 1e9
-export const LIMITES = {
+const ID_MAX = 1e9
+const LIMITES = {
   corto: 60, // valores tipo «hombre», «pesadas», «comida»…
   nombre: 1000,
   nota: 20_000,

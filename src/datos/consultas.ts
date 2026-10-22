@@ -13,7 +13,7 @@ import { grasaPorMedidas } from '../dominio/tendencias'
 import { regionNumeros, t } from '../i18n'
 import { calcularInforme, hayDatosEn, primerDato, rangoInforme, type CatalogoInforme, type Informe, type PeriodoInforme, type RangoInforme, type SeccionesInforme, type TablasInforme } from '../dominio/informe'
 
-export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
+type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
 
 /** Sesiones terminadas, de la más reciente a la más antigua. */
 export async function sesionesHechas(): Promise<Sesion[]> {
@@ -114,7 +114,7 @@ export async function grasaReciente(p: Perfil): Promise<number | null> {
   return grasaPorMedidas(ms, p.sexo, p.alturaCm).pop()?.valor ?? null
 }
 
-export type GastoDia = { basal: number; formula: 'katch' | 'mifflin'; peso: number; grasa: number | null; pasos: number; entreno: GastoEntreno; hayEntreno: boolean }
+type GastoDia = { basal: number; formula: 'katch' | 'mifflin'; peso: number; grasa: number | null; pasos: number; entreno: GastoEntreno; hayEntreno: boolean }
 
 /**
  * Lo que gastas en un día: en reposo (con tu peso, altura, edad, sexo y % de grasa) y por ejercicio

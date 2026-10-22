@@ -25,8 +25,6 @@ import './estilos/ux-iphone.css'
 marcarPlataforma()
 prepararSonido()
 
-export type PropsPantalla = { ruta: Ruta }
-
 declare global { interface Window { __jfAtras?: () => boolean } }
 
 export function App() {
@@ -129,9 +127,10 @@ function Marco() {
   useEffect(() => { const t = window.setTimeout(precargarPantallas, 1200); return () => window.clearTimeout(t) }, [])
 
   const ruta = nav.actual
-  const Pant = (PANTALLAS[ruta.p] ?? PANTALLAS.ini) as ComponentType<PropsPantalla>
+  // registro.tsx da a cada código su pantalla y nav.tsx sus datos; TypeScript no sabe casar las dos uniones aquí.
+  const Pant = PANTALLAS[ruta.p] as ComponentType<{ ruta: Ruta }>
   const hoja = nav.estado.hoja
-  const Hoja = hoja ? (HOJAS[hoja.p] as ComponentType<PropsPantalla> | undefined) : undefined
+  const Hoja = hoja ? (HOJAS[hoja.p] as ComponentType<{ ruta: Ruta }>) : undefined
   // El escáner ocupa toda la pantalla: sin barra de pestañas tapando sus botones.
   const full = !!nav.estado.completa || ruta.p === 'com-scan'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.

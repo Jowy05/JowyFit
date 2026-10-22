@@ -24,10 +24,10 @@ import { tr } from '../../../i18n/jsx'
 
 const REGISTRO_TXT = { peso: tk('kg y repeticiones'), mancuerna: tk('kg de cada mancuerna'), asistido: tk('kg de ayuda'), corporal: tk('repeticiones'), tiempo: tk('segundos'), cardio: tk('minutos') }
 
-export function Ficha({ ruta }: { ruta: Ruta }) {
+export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const e = ejercicio(String(ruta.d?.id ?? ''))
+  const e = ejercicio(ruta.d.id)
   const marcas = useMarcas()
   const r = useRutina()
   const g = useGimnasio()

@@ -13,8 +13,6 @@ import { Mini, buscarPendientes, kp } from './comun'
 import { t, tn } from '../../../i18n'
 import { tr } from '../../../i18n/jsx'
 
-export { buscarPendientes }
-
 export function Guardados() {
   const nav = useNav()
   const aviso = useAviso()

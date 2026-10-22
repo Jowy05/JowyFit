@@ -17,7 +17,7 @@ import { tr } from '../../../i18n/jsx'
 const OBJETIVO = { recomposicion: tk('Perder grasa y ganar músculo'), perder: tk('Perder peso'), fuerza: tk('Ganar fuerza') }
 const GUSTOS = { maquinas: tk('Máquinas y poleas'), libre: tk('Peso libre'), mezcla: tk('Mezcla') }
 
-export function Generar({ ruta }: { ruta: Ruta }) {
+export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
@@ -35,6 +35,7 @@ export function Generar({ ruta }: { ruta: Ruta }) {
   const [conPrueba, setConPrueba] = useState<boolean | null>(null)
   const prueba = !definitiva && (conPrueba ?? (!actual || actual.calibracion))
 
+  // actual?.id va en las dependencias: la rutina activa llega después del primer cálculo.
   const propuesta = useMemo<Omit<Rutina, 'id'> | null>(() => {
     const c = catalogoCargado()
     if (!c) return null
@@ -42,9 +43,6 @@ export function Generar({ ruta }: { ruta: Ruta }) {
     // La definitiva sale de la rutina de prueba (con lo que cambiaste a mano), ajustada a tus tiempos reales.
     if (definitiva && actual) return rutinaDefinitiva(actual, { perfil, tiempos, compuesto: id => ejercicio(id)?.mecanica === 'compound' })
     return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: prueba, evitar, tiempos, descansos: { compuesto: ajustes.descansoCompuesto, aislamiento: ajustes.descansoAislamiento } })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    // !!actual: la rutina activa llega después del primer cálculo; sin esto, al regenerar con una rutina ya hecha
-    // la propuesta salía marcada como «semana de calibración».
   }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length, actual?.id, prueba, ajustes.descansoCompuesto, ajustes.descansoAislamiento])
   const cambios = definitiva && actual && propuesta ? cambiosRutina(actual, propuesta, id => nombreEj(id), tituloDia) : []
 

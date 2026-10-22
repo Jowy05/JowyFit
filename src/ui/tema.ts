@@ -22,13 +22,13 @@ export function letraGuardada(): Letra {
   return leer(CLAVE_LETRA) === 'grande' ? 'grande' : 'normal'
 }
 
-export function temaEfectivo(p: PreferenciaTema): 'light' | 'dark' {
+function temaEfectivo(p: PreferenciaTema): 'light' | 'dark' {
   if (p === 'claro') return 'light'
   if (p === 'oscuro') return 'dark'
   return consulta()?.matches ? 'dark' : 'light'
 }
 
-export function aplicarTema(p: PreferenciaTema) {
+function aplicarTema(p: PreferenciaTema) {
   const t = temaEfectivo(p)
   document.documentElement.dataset.theme = t
   const color = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || (t === 'dark' ? '#10151C' : '#F2F4F7')

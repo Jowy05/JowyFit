@@ -2,7 +2,6 @@
 import { dispositivoApple } from '../plataforma'
 import { db } from './db'
 import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Plantilla } from './tipos'
-import { hoyISO } from '../dominio/fechas'
 import { t, tk } from '../i18n'
 
 export function perfilPorDefecto(): Perfil {
@@ -176,5 +175,3 @@ export async function gimnasioActivo(): Promise<Gimnasio | undefined> {
   }
   return db.gimnasios.toCollection().first()
 }
-
-export const hoy = hoyISO

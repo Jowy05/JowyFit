@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { preview } from 'vite'
-import { devices, webkit } from 'playwright'
+import { devices, webkit } from '@playwright/test'
 import { AYUDANTE } from '../e2e/pagina.mjs'
 
 const RAIZ = path.resolve(import.meta.dirname, '..', '..')

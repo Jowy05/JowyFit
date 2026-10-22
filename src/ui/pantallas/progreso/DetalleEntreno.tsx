@@ -16,9 +16,9 @@ import { nombreEntreno } from '../../../dominio/nombres'
 
 const DESCANSOS = { cortos: tk('Cortos'), bien: tk('Bien'), largos: tk('Largos') } as const
 
-export function DetalleEntreno({ ruta }: { ruta: Ruta }) {
+export function DetalleEntreno({ ruta }: { ruta: Ruta<'pro-entreno'> }) {
   const nav = useNav()
-  const id = Number(ruta.d?.id)
+  const id = Number(ruta.d.id)
   const s = useLiveQuery(async () => (await db.sesiones.get(id)) ?? null, [id])
   const gym = useLiveQuery(async () => (s?.gimnasioId != null ? (await db.gimnasios.get(s.gimnasioId)) ?? null : null), [s?.gimnasioId])
   // Serie que se está corrigiendo: ejercicio (posición) y serie (posición en sus series).

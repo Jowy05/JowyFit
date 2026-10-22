@@ -41,7 +41,7 @@ export function estadoSemana(r: Rutina | null | undefined, sesiones: Sesion[], h
   })
 }
 
-export type Tarjeta =
+type Tarjeta =
   | { tipo: 'curso' }
   | { tipo: 'hoy'; dia: DiaRutina }
   | { tipo: 'hecho'; sesion: Sesion; proximo?: EstadoDia }

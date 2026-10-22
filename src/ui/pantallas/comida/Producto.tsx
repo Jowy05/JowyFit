@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
-import type { Franja, Producto as TProducto } from '../../../datos/tipos'
+import type { Producto as TProducto } from '../../../datos/tipos'
 import { NOMBRE_RACION, aspecto, buscarOFF, escalarMacros, imagenOFF, factorRacion, porRacion, soloMacros, textoRacion, type Racion } from '../../../dominio/comida'
 import { hoyISO } from '../../../dominio/fechas'
 import { num } from '../../../dominio/calculos'
@@ -15,12 +15,12 @@ import { t } from '../../../i18n'
 
 const g = (v: number | null | undefined, u = 'g') => (v == null ? '—' : `${num(v)} ${u}`)
 
-export function Producto({ ruta }: { ruta: Ruta }) {
+export function Producto({ ruta }: { ruta: Ruta<'com-prod'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const codigo = String(ruta.d?.codigo ?? '')
-  const fecha = typeof ruta.d?.fecha === 'string' ? ruta.d.fecha : hoyISO()
-  const franja = ruta.d?.franja as Franja | undefined
+  const codigo = ruta.d.codigo
+  const fecha = ruta.d.fecha ?? hoyISO()
+  const franja = ruta.d.franja
   const p = useLiveQuery(() => db.productos.get(codigo).then(x => x ?? null), [codigo])
   // Si ya está en Mis comidas, el botón de guardarlo sobra.
   const enMisComidas = useLiveQuery(() => db.plantillas.filter(x => x.codigo === codigo).count().then(n => n > 0), [codigo]) ?? true

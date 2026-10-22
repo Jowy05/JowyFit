@@ -39,7 +39,7 @@ export function repsMaximas(series: Serie[]): number | null {
   return r.length ? Math.max(...r) : null
 }
 
-export type Medida = 'peso' | 'e1rm' | 'volumen'
+type Medida = 'peso' | 'e1rm' | 'volumen'
 
 /** Evolución de un ejercicio sesión a sesión según la medida elegida. */
 export function evolucion(sesiones: Sesion[], id: string, medida: Medida): PuntoFecha[] {
@@ -159,7 +159,7 @@ export function seriesPorGrupo(sesiones: Sesion[], dias: string[], patronDe: (id
 
 // ---------- medidas del cuerpo ----------
 
-export type Lector = (m: Medicion) => number | undefined
+type Lector = (m: Medicion) => number | undefined
 
 /** Un punto por día (el último del día), de más antiguo a más reciente. */
 export function serieMedida(ms: Medicion[], f: Lector): PuntoFecha[] {
@@ -268,7 +268,7 @@ export const esDominadaAsistida = (id: string, registro: TipoRegistro) => (DOMIN
 export const esDominadaNegativa = (id: string) => DOMINADA.test(id) && /negative/.test(id)
 
 /** id: qué hito es, sin depender del idioma (título y detalle salen traducidos). */
-export type Hito = { id: 'asistidas' | 'negativas' | 'e1' | 'e3' | 'e5'; titulo: string; detalle: string; fecha: string | null; estado: 'hecho' | 'actual' | 'pendiente' }
+type Hito = { id: 'asistidas' | 'negativas' | 'e1' | 'e3' | 'e5'; titulo: string; detalle: string; fecha: string | null; estado: 'hecho' | 'actual' | 'pendiente' }
 
 /** Hitos guiados de las dominadas: asistidas → negativas → 1 → 3 → 5 estrictas. */
 export function hitosDominadas(sesiones: Sesion[]): { hitos: Hito[]; estrictas: number; hay: boolean } {

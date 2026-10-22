@@ -23,12 +23,12 @@ const textoSnack = (p: Plantilla) => p.cafeina != null
   ? `${p.kcal < 20 ? '~' : ''}${t('{kcal} kcal · {mg} mg cafeína', { kcal: p.kcal, mg: p.cafeina })}`
   : `~${p.kcal} kcal`
 
-export function HojaAnadir({ ruta }: { ruta: Ruta }) {
+export function HojaAnadir({ ruta }: { ruta: Ruta<'sheet-add'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const fecha = typeof ruta.d?.fecha === 'string' ? ruta.d.fecha : hoyISO()
+  const fecha = ruta.d?.fecha ?? hoyISO()
   const esHoy = fecha === hoyISO()
-  const [franja, setFranja] = useState<Franja>((ruta.d?.franja as Franja | undefined) ?? franjaPorHora(horaActual()))
+  const [franja, setFranja] = useState<Franja>(ruta.d?.franja ?? franjaPorHora(horaActual()))
   const [nota, setNota] = useState(!!ruta.d?.nota)
   const [texto, setTexto] = useState('')
   // «Escribir lo que he comido»: por defecto «Normal» (según el momento del día); los números, solo para quien quiera afinar.
@@ -38,7 +38,6 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const [busca, setBusca] = useState('')
   const [todas, setTodas] = useState(false)
   const fotoUrl = useUrlBlob(foto)
-  const picoteoRef = useRef<HTMLDivElement>(null)
   const notaRef = useRef<HTMLDivElement>(null)
   const notaInput = useRef<HTMLInputElement>(null)
   const plantillas = useLiveQuery(() => db.plantillas.toArray(), []) ?? []
@@ -53,9 +52,6 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const kcal = tipico ? tipico.kcal : manual.kcal
   const prot = tipico ? tipico.proteina : manual.prot
 
-  useEffect(() => {
-    if (ruta.d?.modo === 'picoteo') picoteoRef.current?.scrollIntoView({ block: 'start' })
-  }, [ruta.d?.modo])
   // Al abrir «Escribir lo que he comido», que se vea entera.
   useEffect(() => {
     if (nota) notaRef.current?.scrollIntoView?.({ block: 'nearest' })
@@ -216,7 +212,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
         </>
       )}
 
-      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">{t('Picoteo')}</h2><span className="lbl">{t('Toca para apuntar')}</span></div>
+      <div className="sec-h mt16"><h2 className="h3">{t('Picoteo')}</h2><span className="lbl">{t('Toca para apuntar')}</span></div>
       {picoteos.length > 0 && (
         <div className="list">
           {picoteos.map(p => (

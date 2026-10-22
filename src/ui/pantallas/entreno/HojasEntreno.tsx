@@ -14,11 +14,11 @@ import { conCalentamiento } from './iniciar'
 import { t } from '../../../i18n'
 import { tr } from '../../../i18n/jsx'
 
-export function HojaHerramientas({ ruta }: { ruta: Ruta }) {
+export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
-  const idx = Number(ruta.d?.idx ?? 0)
+  const idx = ruta.d.idx
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)
   if (s === undefined) return <Hoja titulo={t('Más')}><p className="muted">{t('Cargando…')}</p></Hoja>
@@ -71,10 +71,10 @@ const ALTO: Record<string, number> = { '25': 96, '20': 90, '15': 82, '10': 72, '
 const clase = (d: number) => (d >= 15 ? 'p25' : d >= 5 ? 'p10' : 'p125')
 const ancho = (d: number) => (d >= 10 ? 15 : d >= 5 ? 12 : 9)
 
-export function HojaDiscos({ ruta }: { ruta: Ruta }) {
+export function HojaDiscos({ ruta }: { ruta: Ruta<'sheet-discos'> }) {
   const s = useSesionEnCurso()
   const g = useGimnasio()
-  const e = s?.ejercicios[Number(ruta.d?.idx ?? 0)]
+  const e = s?.ejercicios[ruta.d.idx]
   const ej = ejercicio(e?.ejercicio)
   const barraPorDefecto = ej?.material === 'barbell' || !ej?.material ? (g?.barraKg ?? 20) : (BARRAS[ej.material] ?? 20)
   // La sesión y el gimnasio llegan un instante después de abrir la hoja: mientras no se toque,
@@ -122,12 +122,12 @@ export function HojaDiscos({ ruta }: { ruta: Ruta }) {
   )
 }
 
-export function HojaCalentamiento({ ruta }: { ruta: Ruta }) {
+export function HojaCalentamiento({ ruta }: { ruta: Ruta<'sheet-cal'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
   const g = useGimnasio()
-  const idx = Number(ruta.d?.idx ?? 0)
+  const idx = ruta.d.idx
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)
   if (s === undefined) return <Hoja titulo={t('Calentamiento')}><p className="muted">{t('Cargando…')}</p></Hoja>
@@ -162,8 +162,8 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta }) {
   )
 }
 
-export function HojaInstrucciones({ ruta }: { ruta: Ruta }) {
-  const ej = ejercicio(String(ruta.d?.id ?? ''))
+export function HojaInstrucciones({ ruta }: { ruta: Ruta<'sheet-instr'> }) {
+  const ej = ejercicio(ruta.d.id)
   if (!ej) return <Hoja titulo={t('Instrucciones')}><p className="muted">{t('No encontrado.')}</p></Hoja>
   return (
     <Hoja titulo={t('Instrucciones')} sub={ej.nombre} className="tall">
@@ -177,9 +177,9 @@ export function HojaInstrucciones({ ruta }: { ruta: Ruta }) {
   )
 }
 
-export function HojaNotaSerie({ ruta }: { ruta: Ruta }) {
+export function HojaNotaSerie({ ruta }: { ruta: Ruta<'sheet-nota-serie'> }) {
   const s = useSesionEnCurso()
-  const idx = Number(ruta.d?.idx ?? 0), n = Number(ruta.d?.n ?? 0)
+  const { idx, n } = ruta.d
   const serie = s?.ejercicios[idx]?.series[n]
   if (s === undefined) return <Hoja titulo={t('Nota')}><p className="muted">{t('Cargando…')}</p></Hoja>
   if (!s || !serie) return <Hoja titulo={t('Nota')}><p className="muted">{t('No hay serie.')}</p></Hoja>

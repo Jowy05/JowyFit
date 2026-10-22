@@ -16,7 +16,7 @@ import { tr } from '../../../i18n/jsx'
 /** Grupos sencillos para el filtro principal (los músculos exactos van en «Más filtros»). En castellano: se traducen al pintarlos. */
 const GRUPOS_SIMPLES = [tk('Pecho'), tk('Espalda'), tk('Hombro'), tk('Brazo'), tk('Abdomen'), tk('Glúteo'), tk('Pierna')]
 
-export function Biblioteca({ ruta }: { ruta: Ruta }) {
+export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
   const nav = useNav()
   const g = useGimnasio()
   const marcas = useMarcas()
@@ -58,7 +58,6 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
     if (hoy) l = l.filter(e => datos?.hechosHoy.has(e.id))
     l = buscar(q, l)
     return l.sort((a, b) => Number(enPlan.has(b.id)) - Number(enPlan.has(a.id)) || Number(!!marcas.get(b.id)?.favorito) - Number(!!marcas.get(a.id)?.favorito) || a.nombre.localeCompare(b.nombre))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c, q, grupo, musculo, material, enGym, favs, hoy, evitados, g?.material.length, marcas, datos, enPlan])
   const [n, setN] = useState(40)
   const nFavs = [...marcas.values()].filter(m => m.favorito).length

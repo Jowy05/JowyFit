@@ -10,11 +10,11 @@ import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from './Catalo
 import { t, tn } from '../../../i18n'
 import { tr } from '../../../i18n/jsx'
 
-export function EditorGimnasio({ ruta }: { ruta: Ruta }) {
+export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const lista = useGimnasios()
-  const id = Number(ruta.d?.id ?? lista[0]?.id)
+  const id = Number(ruta.d.id ?? lista[0]?.id)
   // undefined = cargando · null = no existe (o no hay ningún gimnasio todavía).
   const [g, setG] = useState<Gimnasio | null | undefined>(undefined)
   useEffect(() => {

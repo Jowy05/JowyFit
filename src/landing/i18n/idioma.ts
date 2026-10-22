@@ -10,7 +10,7 @@
 
 export type Idioma = 'es' | 'ca' | 'en'
 /** Cada idioma con su nombre en su propio idioma (no se traducen). */
-export const NOMBRES: Record<Idioma, string> = { es: 'Español', ca: 'Català', en: 'English' }
+const NOMBRES: Record<Idioma, string> = { es: 'Español', ca: 'Català', en: 'English' }
 const LOCALE: Record<Idioma, string> = { es: 'es-ES', ca: 'ca-ES', en: 'en-US' }
 const OG: Record<Idioma, string> = { es: 'es_ES', ca: 'ca_ES', en: 'en_US' }
 const GUARDADO = 'jf-idioma-web'
@@ -21,7 +21,7 @@ const esIdioma = (x: unknown): x is Idioma => x === 'es' || x === 'ca' || x === 
 const deLaDireccion = (): string | null => { try { return new URLSearchParams(location.search).get('lang') } catch { return null } }
 
 /** El mismo orden que el script del <head>: ?lang= → el que eligió la persona → el del navegador → castellano. */
-export function detectar(): Idioma {
+function detectar(): Idioma {
   const q = deLaDireccion()
   if (esIdioma(q)) return q
   let g: string | null = null

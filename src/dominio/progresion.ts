@@ -67,7 +67,7 @@ export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; re
   return { accion: 'mantener', peso, reps: Math.min(objetivo.repsMax, Math.max(...reps) + 1), ultima, texto: t('Mismo peso, una rep más') }
 }
 
-export type Marca = { peso: number; reps: number; e1rm: number }
+type Marca = { peso: number; reps: number; e1rm: number }
 
 /** Mejor marca histórica: mayor 1RM estimado. */
 export function mejorMarca(series: Serie[]): Marca | null {
@@ -80,7 +80,7 @@ export function mejorMarca(series: Serie[]): Marca | null {
   return mejor
 }
 
-export type Logro = { tipo: 'peso' | 'reps' | 'e1rm'; texto: string; peso: number; reps: number }
+type Logro = { tipo: 'peso' | 'reps' | 'e1rm'; texto: string; peso: number; reps: number }
 
 /** ¿Esta serie es un récord frente al historial anterior del ejercicio? */
 export function esRecord(s: Serie, historial: Serie[]): Logro | null {

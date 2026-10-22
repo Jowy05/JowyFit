@@ -510,10 +510,9 @@ if (!compilada) escenario('copia de seguridad: exportar e importar', async () =>
   await pulsar('Añadir', '.dock')
   await pulsar('Batido de proteína', '.sheet')
   await pulsar(/^Normal/, '.popup')
-  // Exporta con la función real de la app, borra todo e importa.
+  // Exporta con la función real de la app, borra todo e importa. Si copias.ts o db.ts se mueven, el import falla y el escenario también.
   const r = await js(`
-    const m = await import('/src/datos/copias.ts').catch(() => null)
-    if (!m) return 'sin-modulo'
+    const m = await import('/src/datos/copias.ts')
     const bytes = await m.exportar()
     const { db } = await import('/src/datos/db.ts')
     const antes = await db.comidas.count()
@@ -521,7 +520,7 @@ if (!compilada) escenario('copia de seguridad: exportar e importar', async () =>
     await m.importar(bytes)
     return antes + '/' + (await db.comidas.count()) + '/' + (await db.perfil.count())
   `)
-  if (r !== 'sin-modulo' && r !== '1/1/1') throw new Error(`Copia: ${r}`)
+  if (r !== '1/1/1') throw new Error(`Copia: ${r}`)
 })
 
 escenario('semana: dos entrenos, progresión y día perdido', async () => {

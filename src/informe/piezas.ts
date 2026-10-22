@@ -9,12 +9,12 @@ type PdfLib = typeof import('pdf-lib')
 
 /** Márgenes (mm): 14 a los lados; el contenido acaba a 18 mm del borde de abajo. */
 export const IZQ = 14
-export const DER = ANCHO_A4 - 14
+const DER = ANCHO_A4 - 14
 export const ANCHO = DER - IZQ
 /** Hasta dónde llega el contenido: 3 mm por encima de la raya del pie (una nota al final no la roza). */
-export const FONDO = 281.5
+const FONDO = 281.5
 /** Dónde empieza el contenido en las páginas con la cabecera de una línea. */
-export const ARRIBA = 19.1
+const ARRIBA = 19.1
 
 /** Color de cada tono del informe. */
 export const TONO: Record<TonoInforme, string> = {
@@ -232,7 +232,7 @@ export function nota(l: Lienzo, x: number, y: number, w: number, texto: string, 
   return 1.2 + lineas.length * INTER_NOTA + 0.6
 }
 
-export type FormaLeyenda = 'cuadro' | 'linea' | 'raya' | 'punto' | 'anillo'
+type FormaLeyenda = 'cuadro' | 'linea' | 'raya' | 'punto' | 'anillo'
 
 /** Título pequeño de una gráfica (8,5 pt negrita) con leyenda a la derecha. */
 export function tituloGrafica(l: Lienzo, x: number, y: number, w: number, texto: string, leyenda: { t: string; color: string; forma?: FormaLeyenda }[] = [], derecha?: string): number {
@@ -262,7 +262,7 @@ let ICONO: PDFImage | null = null
 export function ponerIcono(img: PDFImage | null) { ICONO = img }
 
 /** El logo de la app: el icono (PNG) si está; si no, el cuadrado de color con la mancuerna, dibujado con rectángulos. */
-export function logo(l: Lienzo, x: number, y: number, t: number) {
+function logo(l: Lienzo, x: number, y: number, t: number) {
   if (ICONO) { l.imagen(ICONO, x, y, t, t); return }
   const s = t / 512
   l.rect(x, y, t, t, C.logo, 112 * s)
@@ -281,7 +281,7 @@ export function chip(l: Lienzo, x: number, y: number, texto: string, color: stri
 }
 
 /** Ancho de un chip pequeño (ver `chip`). */
-export const anchoChip = (l: Medidor, texto: string, tam: number = TAM.micro) => l.ancho(texto, tam, 'negrita') + 5
+const anchoChip = (l: Medidor, texto: string, tam: number = TAM.micro) => l.ancho(texto, tam, 'negrita') + 5
 
 /** Etiqueta pequeña de color («semana de prueba»). Devuelve el ancho. */
 export function etiqueta(l: Lienzo, x: number, base: number, texto: string): number {
@@ -399,8 +399,8 @@ export type FilaTabla = {
 const INTER_CELDA = 3
 const SANGRIA_ESTRELLA = 3.4
 
-export const altoCabecera = (compacta: boolean, lineas = 1) => (compacta ? 5.6 : 5.9) + (lineas - 1) * 2.7
-export const altoFila = (compacta: boolean, lineas = 1) => (compacta ? 5.4 : 5.8) + (lineas - 1) * INTER_CELDA
+const altoCabecera = (compacta: boolean, lineas = 1) => (compacta ? 5.6 : 5.9) + (lineas - 1) * 2.7
+const altoFila = (compacta: boolean, lineas = 1) => (compacta ? 5.4 : 5.8) + (lineas - 1) * INTER_CELDA
 
 /** La palabra más ancha de la cabecera de una columna (ninguna palabra se corta: la columna crece lo justo). */
 function palabraMasAncha(l: Medidor, texto: string): number {
@@ -410,7 +410,7 @@ function palabraMasAncha(l: Medidor, texto: string): number {
 }
 
 /** Ajusta los anchos de las columnas al ancho de la tabla (la primera sin ancho se lleva lo que sobre). */
-export function anchosDe(cols: Columna[], w: number, l?: Medidor): Columna[] {
+function anchosDe(cols: Columna[], w: number, l?: Medidor): Columna[] {
   const ancho = (c: Columna) => (c.w > 0 && l && c.t ? Math.max(c.w, palabraMasAncha(l, c.t) + 3.4) : c.w)
   const fijo = cols.reduce((s, c) => s + (c.w > 0 ? ancho(c) : 0), 0)
   const libres = cols.filter(c => !(c.w > 0)).length
@@ -438,10 +438,10 @@ function textoCab(l: Medidor, texto: string, w: number): { lineas: string[]; esp
 }
 
 /** Líneas de la cabecera (1 o 2). */
-export const lineasCabecera = (l: Medidor, cols: Columna[]) => Math.max(1, ...cols.map(c => (c.t ? textoCab(l, c.t, c.w - 3.2).lineas.length : 1)))
+const lineasCabecera = (l: Medidor, cols: Columna[]) => Math.max(1, ...cols.map(c => (c.t ? textoCab(l, c.t, c.w - 3.2).lineas.length : 1)))
 
 /** Cabecera de una tabla de lista (banda clara u oscura según el estilo). Las que no caben van en dos líneas. */
-export function cabeceraTabla(l: Lienzo, x: number, y: number, cols: Columna[], compacta: boolean): number {
+function cabeceraTabla(l: Lienzo, x: number, y: number, cols: Columna[], compacta: boolean): number {
   const n = lineasCabecera(l, cols)
   const h = altoCabecera(compacta, n)
   const wTotal = cols.reduce((s, c) => s + c.w, 0)
@@ -482,13 +482,13 @@ function lineasCelda(l: Medidor, c: Columna, cel: Celda, fila: FilaTabla): strin
 }
 
 /** Alto de una fila (más alta si algún nombre va en dos líneas). */
-export function altoFilaDe(l: Medidor, cols: Columna[], fila: FilaTabla, compacta: boolean): number {
+function altoFilaDe(l: Medidor, cols: Columna[], fila: FilaTabla, compacta: boolean): number {
   const n = Math.max(1, ...cols.map((c, i) => lineasCelda(l, c, fila.celdas[i] ?? null, fila).length))
   return altoFila(compacta, n)
 }
 
 /** Una fila de una tabla de lista (filas alternas blanco / gris claro). */
-export function filaTabla(l: Lienzo, x: number, y: number, cols: Columna[], fila: FilaTabla, par: boolean, compacta: boolean): number {
+function filaTabla(l: Lienzo, x: number, y: number, cols: Columna[], fila: FilaTabla, par: boolean, compacta: boolean): number {
   const h = altoFilaDe(l, cols, fila, compacta)
   const wTotal = cols.reduce((s, c) => s + c.w, 0)
   if (fila.estilo === 'total') {
@@ -534,9 +534,6 @@ export function tabla(l: Lienzo, x: number, y: number, w: number, cols: Columna[
   return yy - y
 }
 
-/** Alto aproximado (todas las filas de una línea). */
-export const altoTabla = (filas: number, compacta: boolean, sinCabecera = false) => (sinCabecera ? 0 : altoCabecera(compacta)) + filas * altoFila(compacta)
-
 /** Alto exacto de una tabla: con las cabeceras y los nombres que van en dos líneas. */
 export function altoTablaDe(l: Medidor, w: number, cols: Columna[], filas: FilaTabla[], o: { compacta?: boolean; sinCabecera?: boolean } = {}): number {
   const compacta = !!o.compacta
@@ -578,7 +575,7 @@ export function tablaPartida(f: Flujo, cols: Columna[], filas: FilaTabla[], o: {
 
 // ---------------------------------------------------------------- tabla Fitdays (resumen y cuerpo)
 
-export type FilaFitdays = { etq: string; celdas: (Celda | { junta: string })[]; evaluacion: { texto: string; color: string } }
+type FilaFitdays = { etq: string; celdas: (Celda | { junta: string })[]; evaluacion: { texto: string; color: string } }
 
 const FD_CAB = 6.2, FD_FILA = 6.5, FD_HUECO = 0.5, FD_INTER = 3.4
 

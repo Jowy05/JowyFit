@@ -4,7 +4,7 @@
 // Siempre se puede apuntar a la vez que se guarda, y borrar si ya existía.
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
-import type { Franja, Plantilla } from '../../../datos/tipos'
+import type { Plantilla } from '../../../datos/tipos'
 import { FRANJAS, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora, nombreFranja, tipoRacion } from '../../../dominio/comida'
 import { t, tc, tk } from '../../../i18n'
 import { horaActual, hoyISO } from '../../../dominio/fechas'
@@ -20,13 +20,13 @@ const nueva = (): Plantilla => ({ nombre: '', ...POR_DEFECTO.comida, tipo: 'comi
 /** Qué se escribe arriba de los números, según el tipo. */
 const QUE_TRAE = { comida: tk('Lo que trae el plato'), picoteo: tk('Lo que trae entero (la bolsa, el paquete…)'), bebida: tk('Lo que trae (la lata, el vaso…)') } as const
 
-export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
+export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const id = typeof ruta.d?.id === 'number' ? ruta.d.id : undefined
+  const id = ruta.d.id
   // Desde Añadir llegan el día y la franja; si no, se apunta hoy.
-  const fechaRuta = typeof ruta.d?.fecha === 'string' ? ruta.d.fecha : null
-  const franjaRuta = ruta.d?.franja as Franja | undefined
+  const fechaRuta = ruta.d.fecha ?? null
+  const franjaRuta = ruta.d.franja
   const [p, setP] = useState<Plantilla | null>(id == null ? nueva() : null)
   // Si aún no se han tocado los números, al cambiar de tipo se ponen los de ese tipo.
   const [tocados, setTocados] = useState(id != null)

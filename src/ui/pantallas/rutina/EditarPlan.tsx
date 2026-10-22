@@ -17,11 +17,11 @@ export async function guardarRutina(r: Rutina) {
   await db.rutinas.put(r)
 }
 
-export function EditarPlan({ ruta }: { ruta: Ruta }) {
+export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const r = useRutina()
-  const [letra, setLetra] = useState<string>(String(ruta.d?.letra ?? 'A'))
+  const [letra, setLetra] = useState(ruta.d?.letra ?? 'A')
   // Ejercicios con «Más opciones» abierto (lo raro va plegado: a la vista solo nombre, series y cambiar).
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
   const alternar = (uid: string) => setAbiertos(s => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n })

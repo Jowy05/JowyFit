@@ -57,7 +57,7 @@ export function seriesSuave(n: number): number {
 
 export const SEMANAS_SIN_DESCARGA = 6
 
-export type Propuesta = { motivo: string; estancados: string[] }
+type Propuesta = { motivo: string; estancados: string[] }
 
 /**
  * ¿Proponer una semana suave? Cuenta las semanas con algún entreno normal (sin la calibración ni

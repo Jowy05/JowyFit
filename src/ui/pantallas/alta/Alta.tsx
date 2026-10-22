@@ -433,7 +433,7 @@ function Fila({ t: titulo, d, on, c }: { t: string; d?: string; on: boolean; c: 
   return <div className="it"><span className="tx"><b>{titulo}</b>{d && <small>{d}</small>}</span><Interruptor on={on} onCambio={c} etiqueta={titulo} /></div>
 }
 
-export function Medir() {
+function Medir() {
   return (
     <div className="measure mt16">
       <svg className="sil-fig" viewBox="0 0 120 240" aria-hidden="true">

@@ -9,10 +9,10 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, useUrlBlob } from './comun'
 
-export function HojaComida({ ruta }: { ruta: Ruta }) {
+export function HojaComida({ ruta }: { ruta: Ruta<'sheet-comida'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const id = Number(ruta.d?.id)
+  const id = Number(ruta.d.id)
   const [c, setC] = useState<Comida | null>(null)
   const [original, setOriginal] = useState<Comida | null>(null)
   // Lo escrito a mano («nota» o «foto»): el tamaño elegido, o null si los números se afinaron a mano.

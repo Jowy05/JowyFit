@@ -22,7 +22,7 @@ export function Gimnasios() {
   const unaVez = useUnaVez()
   const nuevo = unaVez(async () => {
     const id = await db.gimnasios.add(gimnasioNuevo(t('Gimnasio {n}', { n: lista.length + 1 })))
-    nav.ir('rut-gym-edit', { id, nuevo: true })
+    nav.ir('rut-gym-edit', { id })
   })
   const activar = async (id: number, nombre: string) => {
     await guardarAjustes({ gimnasioActivo: id })

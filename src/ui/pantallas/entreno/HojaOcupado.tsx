@@ -17,14 +17,14 @@ import { materialCorto } from '../rutina/comun'
 import { t } from '../../../i18n'
 
 
-export function HojaOcupado({ ruta }: { ruta: Ruta }) {
+export function HojaOcupado({ ruta }: { ruta: Ruta<'sheet-ocup'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
   const g = useGimnasio()
   const perfil = usePerfil()
   const marcas = useMarcas()
-  const idx = Number(ruta.d?.idx ?? 0)
+  const idx = ruta.d.idx
   const e = s?.ejercicios[idx]
   const plan = useLiveQuery(async () => {
     if (!s || !e) return [] as string[]

@@ -293,7 +293,7 @@ export async function permisosSalud(): Promise<string[]> {
   } catch { return [] }
 }
 
-export type MuestraBascula = { fecha: string; valor: number; id?: string; fuente?: string }
+type MuestraBascula = { fecha: string; valor: number; id?: string; fuente?: string }
 /** Pesos (kg) y % de grasa escritos en Health Connect desde una fecha. Si falta un permiso, esa parte llega vacía. */
 export async function leerBascula(desde: Date): Promise<{ pesos: MuestraBascula[]; grasas: MuestraBascula[] }> {
   const { Health } = await import('@capgo/capacitor-health')
@@ -350,7 +350,7 @@ export async function guardarArchivo(nombre: string, bytes: Uint8Array, tipo = '
   return nombre
 }
 
-export type Compartido = 'compartido' | 'cancelado' | 'sin-gesto' | 'no-se-puede'
+type Compartido = 'compartido' | 'cancelado' | 'sin-gesto' | 'no-se-puede'
 /**
  * Web (sobre todo iPhone): abre el menú Compartir con el archivo («Guardar en Archivos», AirDrop, WhatsApp…).
  * 'sin-gesto': Safari pide que salga justo después de un toque y se tardó demasiado (hay que tocar otra vez);

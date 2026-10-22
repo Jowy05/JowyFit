@@ -20,14 +20,14 @@ import { nombreEntreno } from '../../../dominio/nombres'
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-export function FinEntreno({ ruta }: { ruta: Ruta }) {
+export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const g = useGimnasio()
   const perfil = usePerfil()
   const ajustes = useAjustes()
   const r = useRutina()
-  const s = useLiveQuery(() => db.sesiones.get(Number(ruta.d?.id)), [ruta.d?.id])
+  const s = useLiveQuery(() => db.sesiones.get(Number(ruta.d.id)), [ruta.d.id])
   // Hora de fin: ahora, salvo que la última serie quede muy lejos (la app se cerró en el resumen o se guarda
   // al día siguiente): entonces, poco después de la última serie, para que la duración no salga en horas.
   const [abierto] = useState(Date.now())

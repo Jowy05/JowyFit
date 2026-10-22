@@ -13,15 +13,15 @@ import { materialSinMaquina } from './comun'
 
 const PARECIDAS = ['seated_row_machine', 'lat_pulldown_machine', 'chest_press_machine', 'leg_press', 'shoulder_press_machine', 'leg_curl', 'cable', 'smith_machine', 'hack_squat', 'hip_thrust_machine']
 
-export function HojaMaquina({ ruta }: { ruta: Ruta }) {
+export function HojaMaquina({ ruta }: { ruta: Ruta<'sheet-maq'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const gymId = Number(ruta.d?.gym)
-  const [m, setM] = useState<MaquinaPropia>({ id: String(ruta.d?.id ?? `m${Date.now().toString(36)}`), nombre: '', parecida: null, notas: '' })
+  const gymId = Number(ruta.d.gym)
+  const [m, setM] = useState<MaquinaPropia>({ id: ruta.d.id ?? `m${Date.now().toString(36)}`, nombre: '', parecida: null, notas: '' })
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
-    void db.gimnasios.get(gymId).then(g => { const p = g?.propias.find(x => x.id === ruta.d?.id); if (p) setM(p) })
-  }, [gymId, ruta.d?.id])
+    void db.gimnasios.get(gymId).then(g => { const p = g?.propias.find(x => x.id === ruta.d.id); if (p) setM(p) })
+  }, [gymId, ruta.d.id])
   useEffect(() => { if (!m.foto) return; const u = URL.createObjectURL(m.foto); setUrl(u); return () => URL.revokeObjectURL(u) }, [m.foto])
   const suma = m.parecida ? (catalogoCargado()?.ejercicios ?? []).filter(e => e.material === m.parecida).length : 0
   const guardar = async () => {

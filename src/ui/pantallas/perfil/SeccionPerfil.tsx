@@ -23,10 +23,10 @@ const AFECTAN_RUTINA: ClaveSeccion[] = ['horario', 'objetivos', 'preferencias', 
 
 const alternar = <T,>(lista: T[], v: T): T[] => (lista.includes(v) ? lista.filter(x => x !== v) : [...lista, v])
 
-export function SeccionPerfil({ ruta }: { ruta: Ruta }) {
+export function SeccionPerfil({ ruta }: { ruta: Ruta<'per-sec'> }) {
   const nav = useNav()
   const cargado = usePerfilCargado()
-  const s = String(ruta.d?.s ?? '') as ClaveSeccion
+  const s = ruta.d.s
   const sec = SECCIONES.find(x => x.s === s)
   const guardar = (c: Partial<Perfil>) => { void guardarPerfil(c) }
   // Hasta tener el perfil guardado no se enseñan los campos: con el de por defecto, un toque rápido

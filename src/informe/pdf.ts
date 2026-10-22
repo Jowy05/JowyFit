@@ -14,7 +14,7 @@ export const nombrePdf = (r: Pick<RangoInforme, 'periodo' | 'hoy'>) => t('JowyFi
 /** Idioma del PDF (para los lectores de pantalla). */
 const LENGUA = { es: 'es-ES', ca: 'ca-ES', en: 'en-US' } as const
 
-export type OpcionesPdf = {
+type OpcionesPdf = {
   /** Versión de la app para los metadatos («JowyFit 0.1.6»). */
   version?: string
   /** Fecha de creación de los metadatos (por defecto, ahora). */

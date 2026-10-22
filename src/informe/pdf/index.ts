@@ -1,12 +1,17 @@
-// Informe en PDF: dibuja el Informe (src/dominio/informe.ts) en A4 vertical con pdf-lib y la Helvetica estándar.
+// Informe en PDF: dibuja el Informe (informe/calculo) en A4 vertical con pdf-lib y la Helvetica estándar.
 // pdf-lib se carga con import() al crear el PDF, para que no pese al abrir la app. Diseño: docs/INFORME-PDF-DISENO.md.
-import { archivoPeriodo, type Informe, type RangoInforme } from '../dominio/informe'
-import { idioma, t } from '../i18n'
+import type { Informe, RangoInforme } from '../calculo/tipos'
+import { archivoPeriodo } from '../calculo/periodo'
+import { idioma, t } from '../../i18n'
 import { textoPdf } from './texto'
-import { aplicarEstilo, ESTILO, ESTILO_POR_DEFECTO, type NombreEstilo } from './lienzo'
+import { ESTILO_POR_DEFECTO, temaDe, type NombreEstilo, type Tema } from './lienzo'
 import { ICONO_PNG } from './icono'
-import { Maqueta, ponerIcono } from './piezas'
-import { paginaAnexo, paginaComidaCuerpoPasos, paginaEntrenos, paginaFuerza, paginaMeses, paginaResumen, paginaTuDia } from './paginas'
+import { Maqueta } from './piezas'
+import { paginaResumen } from './paginas/resumen'
+import { paginaEntrenos, paginaFuerza, paginaMeses } from './paginas/entrenos'
+import { paginaComidaCuerpoPasos } from './paginas/comidaCuerpoPasos'
+import { paginaAnexo } from './paginas/anexo'
+import { paginaTuDia } from './paginas/tuDia'
 
 /** Nombre del archivo: JowyFit-informe-<periodo>-<AAAA-MM-DD>.pdf, con el periodo en el idioma de la app (sin el nombre de la persona). */
 export const nombrePdf = (r: Pick<RangoInforme, 'periodo' | 'hoy'>) => t('JowyFit-informe-{periodo}-{fecha}.pdf', { periodo: archivoPeriodo(r.periodo), fecha: r.hoy })
@@ -26,21 +31,20 @@ type OpcionesPdf = {
 /** Crea el PDF del informe. Solo lleva las secciones marcadas que tienen datos (el resumen va siempre). */
 export async function crearPdf(inf: Informe, o: OpcionesPdf = {}): Promise<Uint8Array> {
   const lib = await import('pdf-lib')
-  aplicarEstilo(o.estilo ?? ESTILO_POR_DEFECTO)
-  try { return await dibujar(lib, inf, o) } finally { aplicarEstilo(); ponerIcono(null) }
+  return dibujar(lib, inf, o, temaDe(o.estilo ?? ESTILO_POR_DEFECTO))
 }
 
-async function dibujar(lib: typeof import('pdf-lib'), inf: Informe, o: OpcionesPdf): Promise<Uint8Array> {
+async function dibujar(lib: typeof import('pdf-lib'), inf: Informe, o: OpcionesPdf, tema: Tema): Promise<Uint8Array> {
   const doc = await lib.PDFDocument.create()
   const [normal, negrita, cursiva, titulo] = await Promise.all([
     doc.embedFont(lib.StandardFonts.Helvetica),
     doc.embedFont(lib.StandardFonts.HelveticaBold),
     doc.embedFont(lib.StandardFonts.HelveticaOblique),
-    ESTILO.titulos === 'times' ? doc.embedFont(lib.StandardFonts.TimesRomanBold) : null,
+    tema.estilo.titulos === 'times' ? doc.embedFont(lib.StandardFonts.TimesRomanBold) : null,
   ])
-  // El logo es el icono de la app (src/informe/icono.ts lo genera scripts/iconos.mjs).
-  ponerIcono(await doc.embedPng(Uint8Array.from(atob(ICONO_PNG), c => c.charCodeAt(0))))
-  const maq = new Maqueta(lib, doc, { normal, negrita, cursiva, titulo: titulo ?? negrita }, inf)
+  // El logo es el icono de la app (icono.ts lo genera scripts/iconos.mjs).
+  const icono = await doc.embedPng(Uint8Array.from(atob(ICONO_PNG), c => c.charCodeAt(0)))
+  const maq = new Maqueta(lib, doc, { normal, negrita, cursiva, titulo: titulo ?? negrita }, inf, tema, icono)
 
   if (inf.tuDia) paginaTuDia(maq, inf.tuDia)
   else {

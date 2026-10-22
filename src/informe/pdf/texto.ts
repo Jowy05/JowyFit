@@ -2,7 +2,7 @@
 // Todo lo que se escribe pasa por textoPdf(): lo que tiene equivalente se cambia y lo demás se quita
 // (las flechas, estrellas y puntos se dibujan aparte). Diseño: docs/INFORME-PDF-DISENO.md §2.
 // El catalán y el inglés caben: à è é í ï ò ó ú ü ç, el punto volado de «l·l» y las comillas “ ” son de WinAnsi.
-import { tc } from '../i18n'
+import { tc } from '../../i18n'
 
 /** Los caracteres de WinAnsi que no están en Latin-1 (0x80-0x9F). */
 const EXTRA_WINANSI = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ'

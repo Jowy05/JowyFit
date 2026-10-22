@@ -1,4 +1,4 @@
-// Inglés (EE. UU., sencillo) · zona «informe»: el informe en PDF (dominio/informe.ts, src/informe/) y la hoja «Informe en PDF».
+// Inglés (EE. UU., sencillo) · zona «informe»: el informe en PDF (src/informe/) y la hoja «Informe en PDF».
 // Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
 import type { Diccionario } from '../tipos'
 

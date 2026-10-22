@@ -1,10 +1,10 @@
 // Gráficas vectoriales del PDF (§4 del diseño): una gráfica de líneas o barras con ejes redondos, bandas,
 // rayas de objetivo fuera del área de dibujo y marcas (último dato, récord); y las filas de zonas al estilo Fitdays.
 // Se dibujan sobre el Lienzo en mm; las medidas son las de la maqueta (.cache/pdf-maqueta/generar-maqueta.mjs).
-import { num } from '../dominio/calculos'
-import { DIAS_CORTOS, MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../dominio/fechas'
-import { t } from '../i18n'
-import { C, ESTILO, TAM, fondoCab, fondoCasilla, letraCab, type Ancla, type Lienzo } from './lienzo'
+import { num } from '../../dominio/calculos'
+import { DIAS_CORTOS, MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../../dominio/fechas'
+import { t } from '../../i18n'
+import { TAM, type Ancla, type Lienzo } from './lienzo'
 
 type Eje = { min: number; max: number; marcas: number[] }
 
@@ -114,26 +114,26 @@ export function grafica(l: Lienzo, o: OpcGrafica): Geometria {
     const ya = Y(Math.min(b.hasta, eje.max)), yb = Y(Math.max(b.desde, eje.min))
     l.rect(x0, ya, x1 - x0, yb - ya, b.color)
     if (b.texto) {
-      if (b.fuera) l.texto(x1 + (o.sepFuera ?? 1), (ya + yb) / 2 + 0.9, b.texto, { tam: TAM.micro, color: b.colorTexto ?? C.gris, peso: 'negrita' })
-      else l.texto(x1 - 0.8, ya + 2.4, b.texto, { tam: TAM.micro, color: b.colorTexto ?? C.gris, anc: 'end' })
+      if (b.fuera) l.texto(x1 + (o.sepFuera ?? 1), (ya + yb) / 2 + 0.9, b.texto, { tam: TAM.micro, color: b.colorTexto ?? l.c.gris, peso: 'negrita' })
+      else l.texto(x1 - 0.8, ya + 2.4, b.texto, { tam: TAM.micro, color: b.colorTexto ?? l.c.gris, anc: 'end' })
     }
   }
   for (const m of eje.marcas) {
-    l.linea(x0, Y(m), x1, Y(m), C.rejilla, 0.2)
-    if (!o.etiquetasY) l.texto(x0 - 1.2, Y(m) + 0.9, fmtY(m), { tam: TAM.micro, color: C.gris, anc: 'end' })
+    l.linea(x0, Y(m), x1, Y(m), l.c.rejilla, 0.2)
+    if (!o.etiquetasY) l.texto(x0 - 1.2, Y(m) + 0.9, fmtY(m), { tam: TAM.micro, color: l.c.gris, anc: 'end' })
   }
-  for (const e of o.etiquetasY ?? []) l.texto(x0 - 1.2, Y(e.v) + 0.9, e.t, { tam: TAM.micro, color: C.gris, anc: 'end' })
-  l.linea(x0, y1, x1, y1, C.linea, 0.3)
-  for (const e of o.etiquetasX ?? []) l.texto(X(e.i), o.y + o.h - 1.2, e.t, { tam: TAM.micro, color: C.gris, anc: e.anc ?? 'middle' })
+  for (const e of o.etiquetasY ?? []) l.texto(x0 - 1.2, Y(e.v) + 0.9, e.t, { tam: TAM.micro, color: l.c.gris, anc: 'end' })
+  l.linea(x0, y1, x1, y1, l.c.linea, 0.3)
+  for (const e of o.etiquetasX ?? []) l.texto(X(e.i), o.y + o.h - 1.2, e.t, { tam: TAM.micro, color: l.c.gris, anc: e.anc ?? 'middle' })
   if (barras) {
     const hueco = (x1 - x0) / Math.max(1, n)
     const bw = o.fraccionBarra ? hueco * o.fraccionBarra : Math.min(o.anchoBarra ?? 4.5, hueco * (hueco < 1.6 ? 0.8 : 0.62))
     barras.forEach((b, i) => {
-      if (b.v == null) { l.rect(X(i) - bw / 2, y1 - 0.6, bw, 0.6, C.linea); return }
+      if (b.v == null) { l.rect(X(i) - bw / 2, y1 - 0.6, bw, 0.6, l.c.linea); return }
       if (b.partes) {
         let base = Math.max(0, eje.min)
         for (const p of b.partes) { if (p.v > 0) l.rect(X(i) - bw / 2, Y(base + p.v), bw, Y(base) - Y(base + p.v), p.color); base += p.v }
-      } else l.rect(X(i) - bw / 2, Y(b.v), bw, y1 - Y(b.v), b.color ?? C.azul)
+      } else l.rect(X(i) - bw / 2, Y(b.v), bw, y1 - Y(b.v), b.color ?? l.c.azul)
     })
   }
   for (const r of o.lineasH ?? []) {
@@ -144,8 +144,8 @@ export function grafica(l: Lienzo, o: OpcGrafica): Geometria {
   barras?.forEach((b, i) => {
     if (!b.etq || b.v == null) return
     const w = l.ancho(b.etq, TAM.micro, 'negrita')
-    l.rect(X(i) - w / 2 - 0.4, Y(b.v) - 3.4, w + 0.8, 2.6, C.blanco)
-    l.texto(X(i), Y(b.v) - 1.2, b.etq, { tam: TAM.micro, color: C.tinta, anc: 'middle', peso: 'negrita' })
+    l.rect(X(i) - w / 2 - 0.4, Y(b.v) - 3.4, w + 0.8, 2.6, l.c.blanco)
+    l.texto(X(i), Y(b.v) - 1.2, b.etq, { tam: TAM.micro, color: l.c.tinta, anc: 'middle', peso: 'negrita' })
   })
   for (const s of o.series ?? []) {
     if (s.ancho !== 0) {
@@ -159,8 +159,8 @@ export function grafica(l: Lienzo, o: OpcGrafica): Geometria {
     if (s.puntos) {
       s.vals.forEach((v, i) => {
         if (v == null) return
-        if (s.hueco?.(i)) l.circulo(X(i), Y(v), s.r ?? 0.75, C.blanco, s.colorHueco ?? s.color, 0.35)
-        else l.circulo(X(i), Y(v), s.r ?? 0.75, s.colorPunto?.(i, v) ?? s.color, C.blanco, 0.25)
+        if (s.hueco?.(i)) l.circulo(X(i), Y(v), s.r ?? 0.75, l.c.blanco, s.colorHueco ?? s.color, 0.35)
+        else l.circulo(X(i), Y(v), s.r ?? 0.75, s.colorPunto?.(i, v) ?? s.color, l.c.blanco, 0.25)
       })
     }
   }
@@ -170,14 +170,14 @@ export function grafica(l: Lienzo, o: OpcGrafica): Geometria {
     const tx = r.izq ? x0 + 2.6 : x1 - 0.8
     if (r.fondo) {
       const w = l.ancho(r.texto, TAM.micro, 'negrita')
-      l.rect(r.izq ? tx - 0.8 : tx - w - 0.8, Y(r.v) - 3.3, w + 1.6, 2.8, C.blanco, 0.6)
+      l.rect(r.izq ? tx - 0.8 : tx - w - 0.8, Y(r.v) - 3.3, w + 1.6, 2.8, l.c.blanco, 0.6)
     }
     l.texto(tx, Y(r.v) - 0.9, r.texto, { tam: TAM.micro, color: r.colorTexto ?? r.color, anc: r.izq ? 'start' : 'end', peso: 'negrita' })
   }
   for (const m of o.marcas ?? []) {
     if (m.tipo === 'record') l.estrella(X(m.i), Y(m.v), 1.5)
-    if (m.tipo === 'hoy') l.circulo(X(m.i), Y(m.v), 1.25, C.azul, C.blanco, 0.35)
-    if (m.tipo === 'primero') l.circulo(X(m.i), Y(m.v), 1.25, C.azul, C.blanco, 0.35)
+    if (m.tipo === 'hoy') l.circulo(X(m.i), Y(m.v), 1.25, l.c.azul, l.c.blanco, 0.35)
+    if (m.tipo === 'primero') l.circulo(X(m.i), Y(m.v), 1.25, l.c.azul, l.c.blanco, 0.35)
     if (m.texto) {
       // El valor no se sale de la gráfica por arriba ni por los lados.
       let anc = m.anc ?? 'middle'
@@ -186,13 +186,11 @@ export function grafica(l: Lienzo, o: OpcGrafica): Geometria {
       if (anc === 'middle' && tx + w / 2 > o.x + o.w) anc = 'end'
       if (anc === 'middle' && tx - w / 2 < x0) anc = 'start'
       const ty = Math.max(o.y + 2.4, Y(m.v) + (m.dy ?? -2.2))
-      l.texto(anc === 'end' && tx > o.x + o.w ? o.x + o.w : tx, ty, m.texto, { tam: m.tam ?? TAM.micro, color: m.color ?? C.tinta, anc, peso: 'negrita' })
+      l.texto(anc === 'end' && tx > o.x + o.w ? o.x + o.w : tx, ty, m.texto, { tam: m.tam ?? TAM.micro, color: m.color ?? l.c.tinta, anc, peso: 'negrita' })
     }
   }
   return { X, Y, x0, x1, y0, y1 }
 }
-
-// ---------------------------------------------------------------- etiquetas de fechas
 
 /** Ancho de una etiqueta (mm); sin Lienzo, una estimación a 6,5 pt. */
 export type Medir = (s: string) => number
@@ -273,8 +271,6 @@ export function etiquetasPuntos(fechas: string[], anchoMm: number, medir: Medir)
 /** Índice de una fecha dentro de los días del periodo. */
 export const indiceDia = (inicio: string, fecha: string) => diasEntre(inicio, fecha)
 
-// ---------------------------------------------------------------- zonas al estilo Fitdays
-
 export type FilaZonas = { etq: string; valor: number; texto: string; cortes: [number, number]; dominio: [number, number]; palabra: string; tono: string }
 
 /** Altura de las filas de zonas. */
@@ -292,23 +288,23 @@ export function filasZonas(l: Lienzo, x: number, y: number, o: { w: number; fila
   const fh = 10.5, hh = 5.5, gap = 0.6
   const pista0 = x + col + 2, pista1 = x + w - 2
   const pw = pista1 - pista0
-  l.rect(x, y, col, hh, fondoCab())
+  l.rect(x, y, col, hh, l.fondoCab())
   let acc = 0
   nombres.forEach((nm, i) => {
     const xa = pista0 + acc * pw, wa = anchos[i]! * pw
     // La primera y la última caja llegan hasta donde llegan las filas de debajo.
     const desde = i === 0 ? x + col + 0.5 : xa, hasta = i === nombres.length - 1 ? x + w : xa + wa - 0.5
-    l.rect(desde, y, hasta - desde, hh, i === 1 ? fondoCab() : C.zonaClara)
-    l.texto(xa + wa / 2, y + hh - 1.6, nm, { tam: TAM.peque, color: i === 1 ? letraCab() : C.gris, anc: 'middle' })
+    l.rect(desde, y, hasta - desde, hh, i === 1 ? l.fondoCab() : l.c.zonaClara)
+    l.texto(xa + wa / 2, y + hh - 1.6, nm, { tam: TAM.peque, color: i === 1 ? l.letraCab() : l.c.gris, anc: 'middle' })
     acc += anchos[i]!
   })
   o.filas.forEach((f, k) => {
     const yy = y + hh + gap + k * (fh + gap)
-    const fEtq = fondoCasilla(C.celdaEtq), fPista = fondoCasilla(C.celda)
+    const fEtq = l.fondoCasilla(l.c.celdaEtq), fPista = l.fondoCasilla(l.c.celda)
     if (fEtq) l.rect(x, yy, col, fh, fEtq)
-    if (ESTILO.casillas === 'rayas') l.linea(x, yy + fh + gap / 2, x + w, yy + fh + gap / 2, C.linea, 0.2)
+    if (l.estilo.casillas === 'rayas') l.linea(x, yy + fh + gap / 2, x + w, yy + fh + gap / 2, l.c.linea, 0.2)
     const etq = l.partir(f.etq, col - 3, TAM.cuerpo)
-    etq.slice(0, 2).forEach((tx, j) => l.texto(x + 2, yy + fh / 2 + 1 + (j - (Math.min(2, etq.length) - 1) / 2) * 3.4, tx, { tam: TAM.cuerpo, color: C.tinta }))
+    etq.slice(0, 2).forEach((tx, j) => l.texto(x + 2, yy + fh / 2 + 1 + (j - (Math.min(2, etq.length) - 1) / 2) * 3.4, tx, { tam: TAM.cuerpo, color: l.c.tinta }))
     if (fPista) l.rect(x + col + 0.5, yy, w - col - 0.5, fh, fPista)
     const [a, b] = f.cortes, [mn, mx] = f.dominio
     const tramo: [number, number][] = [[mn, a], [a, b], [b, mx]]
@@ -327,20 +323,20 @@ export function filasZonas(l: Lienzo, x: number, y: number, o: { w: number; fila
     anchos.forEach((an, i) => {
       const wa = an * pw
       const iz = i ? 0.25 : 0, de = i < anchos.length - 1 ? 0.25 : 0
-      l.rect(xa + iz, ty, wa - iz - de, th, i === 1 ? C.zonaSana : C.zonaClara)
+      l.rect(xa + iz, ty, wa - iz - de, th, i === 1 ? l.c.zonaSana : l.c.zonaClara)
       xa += wa
     })
     // Solo los límites entre zonas, debajo.
     const ta = num(a, 2), tb = num(b, 2)
     const xa1 = X(a), xb1 = X(b)
-    l.texto(xa1, yy + fh - 0.9, ta, { tam: TAM.micro, color: C.gris, anc: 'middle' })
-    if (xb1 - xa1 > (l.ancho(ta, TAM.micro) + l.ancho(tb, TAM.micro)) / 2 + 1) l.texto(xb1, yy + fh - 0.9, tb, { tam: TAM.micro, color: C.gris, anc: 'middle' })
+    l.texto(xa1, yy + fh - 0.9, ta, { tam: TAM.micro, color: l.c.gris, anc: 'middle' })
+    if (xb1 - xa1 > (l.ancho(ta, TAM.micro) + l.ancho(tb, TAM.micro)) / 2 + 1) l.texto(xb1, yy + fh - 0.9, tb, { tam: TAM.micro, color: l.c.gris, anc: 'middle' })
     // El valor: un punto en la pista y, encima, el número y su palabra (el color nunca va solo).
     const xv = X(f.valor)
-    l.circulo(xv, ty + th / 2, 1.35, C.cab, C.blanco, 0.4)
+    l.circulo(xv, ty + th / 2, 1.35, l.c.cab, l.c.blanco, 0.4)
     const wNum = l.ancho(f.texto, TAM.cuerpo, 'negrita'), wPal = l.ancho(f.palabra, TAM.peque, 'negrita')
     const x0 = Math.min(Math.max(xv - wNum / 2, pista0 - 1), x + w - (wNum + 1.4 + wPal))
-    l.texto(x0, yy + 3.4, f.texto, { tam: TAM.cuerpo, color: C.tinta, peso: 'negrita' })
+    l.texto(x0, yy + 3.4, f.texto, { tam: TAM.cuerpo, color: l.c.tinta, peso: 'negrita' })
     l.texto(x0 + wNum + 1.4, yy + 3.4, f.palabra, { tam: TAM.peque, color: f.tono, peso: 'negrita' })
   })
   return altoZonas(o.filas.length)

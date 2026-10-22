@@ -1,6 +1,7 @@
 // Dibujo del PDF en milímetros con el origen arriba a la izquierda (como la maqueta), sobre pdf-lib.
 // Las formas van como trazos SVG (pdf-lib les da la vuelta al eje y); el texto, con la Helvetica estándar.
 import type { PDFFont, PDFImage, PDFPage } from 'pdf-lib'
+import type { TonoInforme } from '../calculo/tipos'
 import { textoPdf } from './texto'
 
 type PdfLib = typeof import('pdf-lib')
@@ -29,8 +30,7 @@ const PALETA = {
   zonaSana: '#DCEBF7',
 }
 type Color = keyof typeof PALETA
-/** Colores en uso: los de la paleta con los cambios del estilo elegido (ver `aplicarEstilo`). */
-export const C: Record<Color, string> = { ...PALETA }
+type Paleta = Record<Color, string>
 
 /**
  * Estilo del informe: la misma maqueta y los mismos datos con otra estética. «clasico» es el de siempre;
@@ -63,7 +63,7 @@ type Estilo = {
   casillas: 'grises' | 'rayas'
 }
 export type NombreEstilo = 'clasico' | 'nordico' | 'editorial' | 'energia' | 'clinico'
-/** El que usa la app (elegido por el usuario el 21/10/2026). */
+/** El que usa la app (lo eligió el dueño). */
 export const ESTILO_POR_DEFECTO: NombreEstilo = 'clinico'
 
 const CLASICO: Estilo = { titulos: 'helvetica', cabTabla: 'oscura', cebra: true, fichas: 'relleno', h2: 'raya', portada: 'banda', acento: PALETA.naranja, cabTexto: PALETA.blanco, cabFondo: PALETA.cab, borde: PALETA.linea, versalitas: false, casillas: 'grises' }
@@ -96,21 +96,16 @@ const ESTILOS: Record<NombreEstilo, { nombre: string; idea: string; estilo: Esti
   },
 }
 
-/** Estilo en uso (lo cambia `aplicarEstilo` al empezar cada PDF). */
-export const ESTILO: Estilo = { ...CLASICO }
+/** Colores y estilo de un PDF: cada PDF lleva los suyos. */
+export type Tema = { c: Paleta; estilo: Estilo }
 
-/** Fondo y letra de las cabeceras (de tabla y de rejilla) según el estilo. */
-export const fondoCab = () => (ESTILO.cabTabla === 'oscura' ? C.cab : ESTILO.cabFondo)
-export const letraCab = () => (ESTILO.cabTabla === 'oscura' ? C.blanco : ESTILO.cabTexto)
-/** Fondo de una casilla de las tablas de resumen y zonas (sin fondo si el estilo las quiere abiertas). */
-export const fondoCasilla = (color: string) => (ESTILO.casillas === 'rayas' ? null : color)
-
-/** Pone la paleta y el estilo elegidos (o los de siempre). */
-export function aplicarEstilo(nombre: NombreEstilo = 'clasico') {
+export function temaDe(nombre: NombreEstilo): Tema {
   const e = ESTILOS[nombre] ?? ESTILOS.clasico
-  Object.assign(C, PALETA, e.colores)
-  Object.assign(ESTILO, e.estilo)
+  return { c: { ...PALETA, ...e.colores }, estilo: { ...e.estilo } }
 }
+
+/** Color de cada tono del informe. */
+const tonos = (c: Paleta): Record<TonoInforme, string> => ({ ok: c.verde, warn: c.ambar, bad: c.rojo, gris: c.gris, tinta: c.tinta, oro: c.oro, azul: c.facil })
 
 /** «titulo»: la letra de los títulos del estilo (Helvetica o Times, en negrita). */
 export type Peso = 'normal' | 'negrita' | 'cursiva' | 'titulo'
@@ -120,9 +115,13 @@ export type Fuentes = Record<Peso, PDFFont>
 
 const f2 = (n: number) => (Math.round(n * 1000) / 1000).toString()
 
-/** Medidas de texto (no necesitan página). */
+/** Medidas de texto (no necesitan página). El estilo cuenta: las cabeceras en versalitas miden distinto. */
 export class Medidor {
-  constructor(readonly fuentes: Fuentes) {}
+  readonly estilo: Estilo
+
+  constructor(readonly fuentes: Fuentes, tema: Tema) {
+    this.estilo = tema.estilo
+  }
 
   /** Ancho en mm. `espaciado` en pt entre letras. */
   ancho(s: string, tam: number, peso: Peso = 'normal', espaciado = 0): number {
@@ -198,10 +197,14 @@ export function partirRico(m: Medidor, trozos: Trozo[], w: number, tam: number):
 
 /** Una página del PDF en mm. */
 export class Lienzo extends Medidor {
+  readonly c: Paleta
+  readonly tono: Record<TonoInforme, string>
   private readonly colores = new Map<string, ReturnType<PdfLib['rgb']>>()
 
-  constructor(private readonly lib: PdfLib, readonly pagina: PDFPage, fuentes: Fuentes) {
-    super(fuentes)
+  constructor(private readonly lib: PdfLib, readonly pagina: PDFPage, fuentes: Fuentes, tema: Tema) {
+    super(fuentes, tema)
+    this.c = tema.c
+    this.tono = tonos(tema.c)
     // Uniones redondeadas en todas las líneas (sin picos en los giros bruscos de las gráficas).
     pagina.pushOperators(lib.setLineJoin(lib.LineJoinStyle.Round))
   }
@@ -215,6 +218,12 @@ export class Lienzo extends Medidor {
     }
     return c
   }
+
+  /** Fondo y letra de las cabeceras (de tabla y de rejilla) según el estilo. */
+  fondoCab(): string { return this.estilo.cabTabla === 'oscura' ? this.c.cab : this.estilo.cabFondo }
+  letraCab(): string { return this.estilo.cabTabla === 'oscura' ? this.c.blanco : this.estilo.cabTexto }
+  /** Fondo de una casilla de las tablas de resumen y zonas (sin fondo si el estilo las quiere abiertas). */
+  fondoCasilla(color: string): string | null { return this.estilo.casillas === 'rayas' ? null : color }
 
   /** Un trazo SVG en mm (y hacia abajo). */
   ruta(d: string, o: { relleno?: string; borde?: string; grosor?: number; raya?: number[]; redondo?: boolean }) {
@@ -266,14 +275,14 @@ export class Lienzo extends Medidor {
   }
 
   /** Estrella de récord: 5 puntas en oro con borde blanco. */
-  estrella(cx: number, cy: number, r: number, color: string = C.oro) {
+  estrella(cx: number, cy: number, r: number, color: string = this.c.oro) {
     const pts: [number, number][] = []
     for (let i = 0; i < 10; i++) {
       const a = -Math.PI / 2 + (i * Math.PI) / 5
       const rr = i % 2 ? r * 0.45 : r
       pts.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a)])
     }
-    this.poligono(pts, color, C.blanco, 0.2)
+    this.poligono(pts, color, this.c.blanco, 0.2)
   }
 
   /** Triángulo de cambio: arriba (sube) o abajo (baja). `t` = media anchura. */
@@ -306,13 +315,13 @@ export class Lienzo extends Medidor {
     const w = this.ancho(t, tam, peso, esp)
     const x0 = o.anc === 'middle' ? x - w / 2 : o.anc === 'end' ? x - w : x
     if (esp) this.pagina.pushOperators(this.lib.setCharacterSpacing(esp))
-    this.pagina.drawText(t, { x: x0 * MM, y: (ALTO_A4 - y) * MM, size: tam, font: this.fuentes[peso], color: this.color(o.color ?? C.tinta) })
+    this.pagina.drawText(t, { x: x0 * MM, y: (ALTO_A4 - y) * MM, size: tam, font: this.fuentes[peso], color: this.color(o.color ?? this.c.tinta) })
     if (esp) this.pagina.pushOperators(this.lib.setCharacterSpacing(0))
     return w
   }
 
   /** Líneas con trozos de distinto estilo (de partirRico). Devuelve la altura usada. */
-  textoRico(x: number, y: number, lineas: LineaRica[], tam: number, interlinea: number, colorBase: string = C.tinta) {
+  textoRico(x: number, y: number, lineas: LineaRica[], tam: number, interlinea: number, colorBase: string = this.c.tinta) {
     lineas.forEach((l, i) => {
       for (const tr of l.trozos) this.texto(x + tr.x, y + i * interlinea, tr.t, { tam, peso: tr.peso, color: tr.color ?? colorBase })
     })

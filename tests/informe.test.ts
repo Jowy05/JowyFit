@@ -3,15 +3,21 @@
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import type { Ajustes, Comida, DiaRutina, EjercicioSesion, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../src/datos/tipos'
+import type { CatalogoInforme, EntradaInforme, Informe, PeriodoInforme } from '../src/informe/calculo/tipos'
 import {
-  calcularInforme, conSigno, diasDe, edadEn, esfuerzoDe, etiquetaPeriodo, etiquetaSemana, evaluarCuerpo, evaluarEntrenos, evaluarProteina, fechaDia, hayDatosEn, lista,
-  mediana, mediaEsfuerzo, mesAnio, minutosSesion, objetivosInforme, palabraEsfuerzo, palabraPuntuacion, pctCambio, primerDato, puntuacionDe, queDiceEsfuerzo,
-  rangoInforme, serieFuerza, textoDuracion, textoFuerza, textoPct, tonoProteinaDia, unidadFuerza, valorFuerza, zonaEsfuerzo, compararKcal, compararPeso,
-  type CatalogoInforme, type EntradaInforme, type Informe, type PeriodoInforme,
-} from '../src/dominio/informe'
+  conSigno, diasDe, esfuerzoDe, etiquetaSemana, fechaDia, lista, mediaEsfuerzo, mediana, mesAnio, minutosSesion, palabraEsfuerzo, pctCambio,
+  queDiceEsfuerzo, serieFuerza, textoDuracion, textoFuerza, textoPct, unidadFuerza, valorFuerza, zonaEsfuerzo,
+} from '../src/informe/calculo/comun'
+import { etiquetaPeriodo, hayDatosEn, primerDato, rangoInforme } from '../src/informe/calculo/periodo'
+import { edadEn, objetivosInforme } from '../src/informe/calculo/contexto'
+import { palabraPuntuacion, puntuacionDe } from '../src/informe/calculo/semanas'
+import { evaluarCuerpo } from '../src/informe/calculo/cuerpo'
+import { evaluarEntrenos, evaluarProteina, tonoProteinaDia } from '../src/informe/calculo/resumen'
+import { compararKcal, compararPeso } from '../src/informe/calculo/dia'
+import { calcularInforme } from '../src/informe/calculo/index'
 import { resumenSemana } from '../src/dominio/resumen'
 import { db } from '../src/datos/db'
-import { datosInforme, periodoInforme, tablasInforme } from '../src/datos/consultas'
+import { datosInforme, periodoInforme, tablasInforme } from '../src/informe/calculo/leer'
 
 // ---------------------------------------------------------------- datos de ejemplo
 

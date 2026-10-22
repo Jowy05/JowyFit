@@ -3,11 +3,12 @@
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import type { Ajustes, Comida, EjercicioSesion, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../src/datos/tipos'
-import { calcularInforme, type CatalogoInforme, type EntradaInforme, type PeriodoInforme, type SeccionesInforme } from '../src/dominio/informe'
+import type { CatalogoInforme, EntradaInforme, PeriodoInforme, SeccionesInforme } from '../src/informe/calculo/tipos'
+import { calcularInforme } from '../src/informe/calculo/index'
 import { aISO, sumarDias } from '../src/dominio/fechas'
 import { crearPdf, nombrePdf } from '../src/informe/pdf'
-import { enWinAnsi, textoPdf } from '../src/informe/texto'
-import { ejeDe, etiquetasFechas } from '../src/informe/graficas'
+import { enWinAnsi, textoPdf } from '../src/informe/pdf/texto'
+import { ejeDe, etiquetasFechas } from '../src/informe/pdf/graficas'
 import { contenidos, leerPdf } from '../scripts/leer-pdf.mjs'
 
 // ---------------------------------------------------------------- datos de prueba

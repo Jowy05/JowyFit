@@ -79,6 +79,6 @@ console.log('Iconos generados')
 
 // ---------------------------------------------------------------- logo del informe en PDF (va dentro del código del PDF)
 const pdf = await sharp(fuente).resize(160, 160).png({ compressionLevel: 9, palette: true, quality: 90 }).toBuffer()
-fs.writeFileSync(path.join(RAIZ, 'src', 'informe', 'icono.ts'),
+fs.writeFileSync(path.join(RAIZ, 'src', 'informe', 'pdf', 'icono.ts'),
   `// Icono de la app para el logo del PDF (PNG de 160 px en base64). Lo genera scripts/iconos.mjs: no se edita a mano.\nexport const ICONO_PNG = '${pdf.toString('base64')}'\n`)
 console.log('Logo del PDF:', Math.round(pdf.length / 1024), 'KB')

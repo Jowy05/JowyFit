@@ -1,4 +1,20 @@
-/* Ajustes de usabilidad: zona alta. */
+/* Pantalla Alta: bienvenida, pasos y rutina lista. */
+.alt-h2{font-size:32px;margin-top:4px}
+.alt-top{display:flex;align-items:center;gap:8px;padding:2px 8px 4px}
+.prog{display:flex;gap:3px;flex:1}
+.prog i{flex:1;height:5px;border-radius:3px;background:var(--raised)}
+.prog i.on{background:var(--go)}
+.skip-gap{width:48px;flex:none}
+.build>i{animation:build 2.2s ease-out both}
+@keyframes build{from{width:0}to{width:100%}}
+.steps-done{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.steps-done li{display:flex;gap:10px;align-items:center;font-size:15px;animation:fadeup .4s both}
+.steps-done li:nth-child(1){animation-delay:.3s}.steps-done li:nth-child(2){animation-delay:.8s}.steps-done li:nth-child(3){animation-delay:1.3s}.steps-done li:nth-child(4){animation-delay:1.8s}
+.steps-done i{flex:none;width:24px;height:24px;border-radius:50%;background:var(--ok-t);color:var(--ok);display:grid;place-items:center;font-size:13px}
+.ready{overflow:hidden;animation:fadeup .45s 2.3s both}
+.ready-h{padding:14px;background:var(--hd);border-bottom:1px solid var(--line)}
+.ready-h h2{font-size:22px;margin-top:8px}
+.big-sum{font-size:16px;font-weight:700;margin-top:4px;color:var(--go)}
 
 /* Bienvenida: botón «Aa Letra grande» (activa la letra grande al momento). */
 .btn.alta-letra{font-weight:600}
@@ -6,19 +22,19 @@
 .btn.alta-letra.on{background:var(--blue-t);color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
 
 /* Pie de los pasos: aviso de lo que falta encima de «Atrás / Siguiente». */
-.alt-foot.alta-pie{flex-direction:column}
 .alta-botones{display:flex;gap:8px;width:100%}
 .alta-aviso{font-size:15px}
 .alta-aviso>i{color:var(--warn)}
 
 /* Campo que falta o está mal (solo tras pulsar «Siguiente»). */
-.alta-falta>.lbl,.alta-falta .lbl{color:var(--bad)}
+.alta-falta .lbl{color:var(--bad)}
 .alta-falta .inp,.alta-falta .chip{border-color:var(--bad)}
 
-/* Altura y peso: número con su unidad al lado. */
+/* Altura y peso: número con su unidad al lado; el ejemplo («Ej.: 170») en fino y gris claro, que no parezca un número ya escrito. */
 .alta-unid{position:relative;display:block}
 .alta-unid .inp{padding-right:44px;font-size:18px;font-weight:600}
 .alta-unid>span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none}
+.alta-unid .inp::placeholder{font-weight:400;font-size:15px;color:var(--muted);opacity:.75}
 
 /* Objetivo: «Zonas a priorizar (opcional)» separado de las tarjetas. */
 .alta-sep{margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
@@ -30,9 +46,6 @@
 
 /* Fecha con tres desplegables */
 .fecha-facil{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:8px}
-
-/* Altura y peso: el ejemplo («Ej.: 170») en fino y gris claro, que no parezca un número ya escrito. */
-.alta-unid .inp::placeholder{font-weight:400;font-size:15px;color:var(--muted);opacity:.75}
 
 /* Tus horarios: días con tres letras (Lun, Mar, Mié…) en vez de L, M, X. */
 .alta-dias .chip.day{font-size:14.5px;letter-spacing:-.01em}

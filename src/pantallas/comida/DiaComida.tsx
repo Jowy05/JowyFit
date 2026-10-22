@@ -111,7 +111,7 @@ export function DiaComida() {
                         <b>{recortar(t(c.nombre))}</b>
                         <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ${textoRacion(c.racion)}` : ''}{c.cafeina ? ` · ${t('{n} mg cafeína', { n: c.cafeina })}` : ''}{c.foto ? ` · ${t('con foto')}` : ''}</small>
                       </span>
-                      <span className="end ux-com-end"><em>{Math.round(c.proteina)} g</em><small> {t('prot.')}</small><br /><small>{Math.round(c.kcal)} kcal</small></span>
+                      <span className="end"><em>{Math.round(c.proteina)} g</em><small> {t('prot.')}</small><br /><small>{Math.round(c.kcal)} kcal</small></span>
                     </Deslizable>
                   ))}
                   {!lista.length && (
@@ -148,7 +148,7 @@ export function DiaComida() {
                 const dosis = dosisDe(perfil.dosisSuplementos, s)
                 const detalle = [dosis, batido ? `${t('{n} g proteína', { n: batidoDe(perfil.batido).proteina })}${hecho && !aMano ? ` · ${t('sumada al día')}` : ''}` : '', aMano ? t('ya apuntado') : ''].filter(Boolean).join(' · ')
                 return (
-                  <div key={s} className="it tpl ux-com-fila">
+                  <div key={s} className="it tpl">
                     <button className={cx('tpl-m todo', hecho && 'done')} onClick={() => aMano ? aviso(t('Ya tienes un batido apuntado hoy')) : void alternarSuplemento(s)}>
                       <span className="box"><Ico n="check" b /></span>
                       <span className="tx"><b>{t(s)}</b><small>{detalle || (hecho ? t('Tomado') : t('Toca cuando lo tomes'))}</small></span>

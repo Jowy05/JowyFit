@@ -165,7 +165,7 @@ function FilasDia({ dia, sug }: { dia: DiaRutina; sug?: Map<string, Sugerencia> 
     filas.push(
       <div key={b.uid} className={cx('exr', s?.accion === 'subir' && 'hot')}>
         {comp ? <span className="th xs c-br"><Ico n="link" b /></span> : <Th ej={e} size="xs" />}
-        <span className="tx ellip">{comp ? t('Dos seguidos: {a} + {b}', { a: palabraClave(e?.nombre), b: palabraClave(ejercicio(comp.ejercicio)?.nombre) }) : e?.nombre}</span>
+        <span className="tx">{comp ? t('Dos seguidos: {a} + {b}', { a: palabraClave(e?.nombre), b: palabraClave(ejercicio(comp.ejercicio)?.nombre) }) : e?.nombre}</span>
         <span className="sr">{b.series} × {b.repsMin}-{b.repsMax}</span>
         <b className={cx('kg', (comp ? nuevo(s) && nuevo(s2) : nuevo(s)) && 'ux-nuevo')}>
           {comp ? (nuevo(s) && nuevo(s2) ? (todosNuevos ? '' : t('nuevo')) : `${pesoTxt(s)} · ${pesoTxt(s2)}`) : s && !nuevo(s) && s.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : pesoTxt(s)}

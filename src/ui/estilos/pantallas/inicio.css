@@ -1,0 +1,60 @@
+/* Pantalla Inicio. */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 8px;border-radius:8px;background:var(--surface);border:1px solid var(--line);min-height:68px;color:var(--ink)}
+.wd span{font:600 11.5px var(--font-display);letter-spacing:.08em;color:var(--muted)}
+.wd b{font:700 16px var(--font-mono)}
+.wd i{font-size:13px;color:var(--muted)}
+.wd.plan i,.wd.opt i{color:var(--blue)}
+.wd.off{background:transparent}
+.wd.today{background:var(--go);border-color:var(--go);color:var(--on-go)}
+.wd.today span,.wd.today i{color:var(--on-go)}
+.hd .legend{margin-top:8px}
+.hd .legend i{font-size:13px}
+.today{overflow:hidden}
+.today-hero{position:relative;padding:14px 14px 12px;background:linear-gradient(120deg,var(--blue-t),transparent 72%);border-bottom:1px solid var(--line);overflow:hidden}
+.today-hero h3{font-size:29px;margin-top:8px;position:relative}
+.today-hero .row{position:relative}
+.today-bg{position:absolute;right:-18px;top:-16px;font-size:128px;color:var(--blue);opacity:.12;transform:rotate(-24deg)}
+.today-hero.live{background:linear-gradient(120deg,var(--go-t),transparent 72%)}
+.today-hero.opt{background:linear-gradient(120deg,var(--blue-t),transparent 72%);border-bottom-style:dashed}
+.today-meta{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:14px;margin-top:6px;position:relative}
+.today-meta span{display:inline-flex;align-items:center;gap:5px}
+.exl{padding:2px 14px}
+.exr{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);min-width:0}
+/* Los nombres de los ejercicios de hoy, en dos líneas antes que cortados («Sentadilla Trasera c…»). */
+.exr .tx{font-size:15px;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.exr .sr{font:500 13px var(--font-mono);color:var(--muted);flex:none}
+.exr .kg{font:700 14px var(--font-mono);flex:none;min-width:58px;text-align:right;white-space:nowrap}
+.exr.hot .kg{color:var(--ok)}
+/* Ejercicio que aún no tiene peso: «nuevo» en gris (en azul parecía un enlace). */
+.exr .kg.ux-nuevo{font:600 12px var(--font-body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.exmore{font-size:13.5px;color:var(--muted);padding:8px 0 6px}
+.today-act{display:grid;gap:8px}
+.calib{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:var(--warn-t);font-size:14px;border-bottom:1px solid var(--line)}
+.calib i{color:var(--warn);font-size:19px;flex:none}
+.kpi.steps{display:flex;align-items:center;gap:10px}
+.rot{display:grid}
+.rot>.rot-it{display:none}
+.rot>.rot-it.on{display:block;animation:fadeup .35s both}
+.rot-it .ach .dots{align-self:flex-start}
+.rot-big{font:700 22px var(--font-display);margin-top:6px}
+.streak{display:flex;gap:6px}
+.streak i{flex:1;height:10px;border-radius:3px;background:var(--raised)}
+.streak i.on{background:var(--ok)}
+.streak i.cur{background:repeating-linear-gradient(135deg,var(--ok) 0 4px,transparent 4px 8px);opacity:.7}
+.sem-card{display:flex!important;align-items:center;gap:12px}
+.lamp{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:22px}
+/* «¿Voy bien?»: el color del semáforo de verdad. */
+.lamp.ok{background:var(--ok);color:#fff;box-shadow:0 0 0 5px var(--ok-t)}
+.lamp.ux-warn{background:var(--warn);color:#fff;box-shadow:0 0 0 5px var(--warn-t)}
+.lamp.ux-bad{background:var(--bad);color:#fff;box-shadow:0 0 0 5px var(--bad-t)}
+.lamp.ux-nada{background:var(--raised);color:var(--muted)}
+.campo-mini{display:flex;flex-direction:column;gap:4px;min-width:0}
+.campo-mini .inp{min-height:44px}
+
+/* Tres accesos rápidos («+ Comer o beber», Escanear, + Peso). */
+.ux-qa3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* Apuntar peso: el número es un campo que se escribe directamente (teclado numérico al tocarlo). */
+.stp.ux-peso .v{display:flex;align-items:baseline;justify-content:center;cursor:text}
+.stp.ux-peso input.val{width:5ch;min-width:0;padding:0;border:0;border-bottom:2px dashed var(--line);border-radius:0;background:transparent;color:var(--ink);text-align:center;outline:none}
+.stp.ux-peso input.val:focus{border-bottom-color:var(--blue)}

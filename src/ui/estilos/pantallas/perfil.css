@@ -1,0 +1,45 @@
+/* Pantalla Perfil y Ajustes (también los días y horarios, que usa el alta). */
+.prof{display:flex;align-items:center;gap:14px;margin-top:4px}
+.avatar{flex:none;width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#2C8FD0,#1E4163);color:#fff;display:grid;place-items:center;font:700 28px var(--font-display);letter-spacing:.04em;box-shadow:0 0 0 3px var(--surface)}
+.prof h1{font-size:30px}
+.q{width:40px;height:40px;margin:-10px -10px -10px 0;display:grid;place-items:center;border-radius:50%;color:var(--blue);font-size:18px}
+.prio .pn{flex:none;width:26px;height:26px;border-radius:6px;background:var(--go-t);color:var(--go);display:grid;place-items:center;font:700 13px var(--font-mono)}
+.segc{display:flex;gap:4px;padding:3px;border-radius:8px;background:var(--raised)}
+.segc button{flex:1;min-height:42px;border-radius:6px;font-weight:600;font-size:14px;color:var(--muted);text-align:center}
+.segc button.on{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line),var(--card-sh)}
+.aa{font:700 17px var(--font-display);margin-right:2px}
+.it.danger .tx b{color:var(--bad)}
+.it.danger .ico{background:var(--bad-t);color:var(--bad)}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.chip.day{padding:0;min-height:50px;font:700 17px var(--font-display)}
+.lg{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);background:var(--surface)}
+.lg.fix{background:var(--go);border-color:var(--go)}
+.lg.opt{border:1.5px dashed var(--blue);background:transparent}
+.legal{font-size:13px;color:var(--muted);line-height:1.45}
+.legal a{color:var(--blue)}
+
+/* ---------- Informe en PDF (hoja de Ajustes) ---------- */
+.inf-periodos .chip{flex:1 1 auto}
+.inf-casillas .it{min-height:60px;align-items:center}
+.inf-casillas .it .tx small{display:block}
+.casilla{flex:none;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--line);background:var(--surface);color:var(--on-blue);font-size:16px}
+.casilla.on{background:var(--blue);box-shadow:none}
+.inf-creando{display:flex;flex-direction:column;gap:6px;align-items:stretch;text-align:center;color:var(--muted)}
+.bar.carga>i{width:40%;animation:inf-carga 1.1s ease-in-out infinite alternate}
+@keyframes inf-carga{from{transform:translateX(-10%)}to{transform:translateX(160%)}}
+@media (prefers-reduced-motion:reduce){.bar.carga>i{animation:none;width:100%;opacity:.6}}
+.inf-hecho .note .small{overflow-wrap:anywhere}
+/* Catalán e inglés: los títulos largos de «Ver más números» (Perfil) se parten en dos líneas y el «?» se queda a su derecha. */
+:root:not([lang="es"]) .kpi .row.jb:has(> button.q){flex-wrap:nowrap;align-items:flex-start}
+
+/* Perfil: objetivo grande con kcal y proteína en una línea. */
+.per-obj .k{white-space:normal}
+.per-obj .per-y{font:500 15px var(--font-body);color:var(--muted);margin:0 8px}
+
+/* Ajustes: «Más ajustes» plegado y «Borrar todo» aparte, al final. */
+.aju-mas>summary .tx{display:flex;flex-direction:column;line-height:1.2;padding:8px 0}
+.aju-mas>summary .tx small{font-weight:400;font-size:13px;color:var(--muted)}
+.aju-borrar{margin-top:40px}
+
+/* Perfil: el objetivo en la cabecera puede ser largo («Perder grasa y ganar músculo»). */
+.prof .tag{white-space:normal;height:auto;min-height:22px;padding:3px 7px;line-height:1.2}

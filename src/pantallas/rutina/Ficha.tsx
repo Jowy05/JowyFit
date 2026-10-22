@@ -92,7 +92,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
 
   return (
     <Pantalla>
-      <div className="gal has-img">
+      <div className="gal">
         <button className="gal-back" onClick={nav.atras} aria-label={t('Atrás')}><Ico n="caret-left" b /></button>
         <span className="gal-cnt tag">RepDB · {pose + 1} / {e.poses.length}</span>
         {e.poses.map((p, i) => (

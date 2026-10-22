@@ -45,7 +45,7 @@ export function Plantillas() {
 
   // Toda la fila apunta; el lápiz (aparte) edita. Sin etiqueta de momento del día: la sección ya dice qué es.
   const fila = (p: Plantilla) => (
-    <div key={p.id} className="it tpl ux-com-fila">
+    <div key={p.id} className="it tpl">
       <button className="tpl-m" onClick={() => pedir(p)}>
         <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
         <span className="tx">

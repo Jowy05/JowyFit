@@ -197,7 +197,7 @@ export function Alta() {
           </div></div>
           <p className="note plain mt16"><Ico n="lock-simple" /><span>{tr('<b>Tus datos se quedan en este móvil.</b> Nada se sube a ningún sitio.', { b: x => <b>{x}</b> })}</span></p>
         </div>
-        <div className="alt-foot col">
+        <div className="alt-foot">
           <button className="btn xl" onClick={sig}>{t('Empezar')} <Ico n="arrow-right" b /></button>
           {/* Lo secundario en una fila: con tres botones apilados el pie tapa el texto en móviles bajos. */}
           <div className="alta-fila">
@@ -363,7 +363,7 @@ function Paso({ n, titulo, desc, children, pie, onAtras, sinAtras, aviso }: { n:
           {children}
         </div>
         {pie && (
-          <div className="alt-foot alta-pie">
+          <div className="alt-foot">
             {/* Lo que falta para seguir, justo encima de «Siguiente» (es donde se mira al pulsarlo). */}
             {aviso && <p className="note warn alta-aviso" role="alert"><Ico n="warning-circle" /><span>{aviso}</span></p>}
             <div className="alta-botones">{pie}</div>

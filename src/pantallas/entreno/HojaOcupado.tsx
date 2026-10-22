@@ -54,7 +54,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'sheet-ocup'> }) {
   })
   const siguiente = s.ejercicios.findIndex((x, i) => i !== idx && x.estado === 'pendiente')
   const abc = (
-    <div className="abc ux-abc">
+    <div className="abc">
       {plan.map((id, i) => (
         <span key={id} style={{ display: 'contents' }}>
           {i > 0 && <Ico n="arrow-right" />}

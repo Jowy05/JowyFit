@@ -1,0 +1,101 @@
+/* Pantalla Progreso: semana, fuerza, cuerpo, fotos, objetivos y pasos. */
+.sem{display:flex;align-items:center;gap:16px;padding:16px;border-color:var(--ok);background:linear-gradient(90deg,var(--ok-t),transparent 85%),var(--surface)}
+.lights{flex:none;display:flex;flex-direction:column;gap:5px;padding:7px;border-radius:12px;background:#1A222C}
+.lights i{width:18px;height:18px;border-radius:50%;opacity:.22}
+.lights .r{background:#E5534B}.lights .a{background:#F2B233}.lights .g{background:#7CC242}
+.lights i.on{opacity:1;box-shadow:0 0 12px #7CC242}
+.sem-t{display:flex;align-items:center;gap:8px;font:700 27px/1.1 var(--font-display);color:var(--ok)}
+.sem-d{font-size:15px;margin-top:4px}
+.pips{display:flex;gap:4px}
+.pips i{flex:1;height:8px;border-radius:2px;background:var(--raised)}
+.pips i.on{background:var(--ok)}.pips i.ex{background:var(--blue)}
+.kpi.st .d b{font-family:var(--font-mono)}
+.advice{display:flex;flex-direction:column;gap:4px}
+.lgl{display:inline-block;width:14px;height:0;border-top:2.5px solid var(--blue);vertical-align:3px;margin:0 4px 0 8px}
+.lgl.d{border-top:2px dashed var(--muted)}
+.date-row{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:14px;color:var(--ink)}
+.date-row .ph-pencil-simple{color:var(--blue)}
+.cmp{overflow:hidden}
+.cmp-v{position:relative;height:300px}
+.cmp-a,.cmp-b{position:absolute;inset:0;display:grid;place-items:center}
+.cmp-a{background:linear-gradient(160deg,#5B6B7D,#2A3644)}
+.cmp-b{background:linear-gradient(160deg,#4F80A8,#1C3B58);clip-path:inset(0 0 0 50%)}
+.cmp-h{position:absolute;top:0;bottom:0;left:50%;width:3px;margin-left:-1.5px;background:#fff;display:grid;place-items:center}
+.cmp-h i{width:42px;height:42px;border-radius:50%;background:#fff;color:#1A2430;display:grid;place-items:center;font-size:18px;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.cmp-l,.cmp-r{position:absolute;top:10px;padding:4px 8px;border-radius:4px;background:rgba(0,0,0,.42);color:#fff;font:600 12px var(--font-display);letter-spacing:.08em;text-transform:uppercase}
+.cmp-l{left:10px}.cmp-r{right:10px}
+.cmp-d{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:4px 14px 8px}
+.gal-d{margin:14px 0 8px;font-size:14px;color:var(--muted)}
+.gal-d b{color:var(--ink)}
+.pthumb{position:relative;aspect-ratio:3/4;border-radius:8px;background:linear-gradient(160deg,#4F80A8,#1C3B58);display:grid;place-items:center;overflow:hidden}
+.pthumb svg{height:82%;width:auto}
+.pthumb span{position:absolute;left:6px;bottom:6px;font:600 11px var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.38);padding:2px 6px;border-radius:3px}
+.pthumb.b{background:linear-gradient(160deg,#587590,#2A3F55)}
+.pthumb.c{background:linear-gradient(160deg,#5B6B7D,#2A3644)}
+.goal b{font-size:16px}
+.mile{list-style:none;margin:0;padding:0}
+.mile li{display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:16px}
+.mile li::before{content:"";position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--line)}
+.mile li:last-child::before{display:none}
+.mile li>i{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--raised);color:var(--muted);font-size:15px;position:relative;z-index:1}
+.mile li.done>i{background:var(--ok);color:#fff}
+.mile li.done::before{background:var(--ok)}
+.mile li.done>.ph-trophy{background:var(--gold-g);color:#2A1D00}
+.mile li.cur>i{background:var(--go);color:var(--on-go);box-shadow:0 0 0 5px var(--go-t)}
+.mile span b{display:block;font-weight:600;padding-top:5px}
+.mile small{color:var(--muted);font-size:13px}
+.vbars{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;height:170px;padding-top:4px}
+.vbars>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0}
+.vbars i{display:block;width:100%;max-width:30px;height:calc(var(--h) * 1.28px);border-radius:4px 4px 2px 2px;background:var(--blue)}
+.vbars b{font:600 10.5px var(--font-mono);color:var(--muted)}
+.vbars span{font:600 12px/16px var(--font-display);color:var(--muted)}
+.vbars .lo i{background:var(--muted);opacity:.45}
+.vbars .now i{background:var(--go)}
+.vbars .now span{color:var(--go)}
+.vb-goal{position:absolute;left:0;right:0;bottom:calc(20px + var(--g) * 1.28px);border-top:2px dashed var(--ok);pointer-events:none}
+.gkey{display:inline-block;width:18px;border-top:2px dashed var(--ok);vertical-align:3px;margin-right:4px}
+.vb-goal em{position:absolute;right:0;top:-18px;font:700 10.5px var(--font-mono);font-style:normal;color:var(--ok);background:var(--surface);padding:0 3px}
+.xd{padding:12px}
+.xd-h{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.xd-h b{flex:1;font-size:15.5px;min-width:0}
+.xd-n{margin:2px 0 2px}
+.ach.locked{background:var(--surface)}
+.ach.locked .tx b{color:var(--muted)}
+
+/* Etiqueta con una frase normal (no en mayúsculas): «Un poco por encima de lo saludable». */
+.tag.frase{text-transform:none;letter-spacing:0;font-size:12.5px;line-height:1.25;height:auto;min-height:22px;padding:3px 8px;white-space:normal;flex:0 1 auto}
+
+/* Semana: estado de cada tarjeta con palabra, no solo un icono. */
+.kpi .tag.est{height:20px;padding:0 6px;font-size:10.5px;letter-spacing:.05em;max-width:62%;overflow:hidden;text-overflow:ellipsis}
+.kpi .k.pronto{font:700 20px/1.1 var(--font-display);white-space:normal}
+.sem .sem-d+.sem-d{margin-top:2px}
+
+/* Fuerza: la frase que contesta «¿levanto más que al empezar?». */
+.fza-frase{font-weight:600;font-size:15.5px;line-height:1.35}
+
+/* Cuerpo: veredicto junto a cintura/altura. */
+.cuerpo-ver{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+
+/* Registrar medidas: lo tocado se marca con el borde, lo no tocado no se ve apagado. */
+.reg-campo.tocado .stp{box-shadow:0 0 0 2px var(--ok-t)}
+
+/* Pasos: el objetivo diario se toca para cambiarlo. */
+.pasos-obj{align-items:center;text-align:left;color:var(--ink);gap:8px}
+.pasos-obj .tx{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+
+/* Registrar medidas: dibujo pequeño (solo la parte que se mide), para que «Guardar» no quede tan abajo. */
+.reg-medir{padding:8px 12px;gap:12px}
+.reg-medir .sil-fig{width:52px;height:65px}
+.reg-medir .measure-key p{margin-bottom:0}
+
+/* Fuerza → Por ejercicio: los ejercicios en varias filas; un nombre largo parte en dos líneas. */
+.fza-chips{align-items:center}
+.fza-chips .chip{max-width:100%;white-space:normal;text-align:left;line-height:1.2;padding-top:6px;padding-bottom:6px}
+
+/* Fuerza → Series por grupo: número y palabra («poco», «bien», «mucho»). */
+.hbars.fza-grupos>div{grid-template-columns:72px minmax(0,1fr) 22px 58px;gap:8px}
+.fza-grupos .tag{justify-content:center;height:20px;font-size:10.5px}
+
+/* Detalle de un entreno: las series se tocan para corregirlas. */
+.ux-det-serie{cursor:pointer}
+.ux-det-serie:active td{background:var(--raised)}

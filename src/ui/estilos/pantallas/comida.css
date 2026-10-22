@@ -1,0 +1,120 @@
+/* Pantalla Comida: el día, añadir, escáner, producto y mis comidas. */
+details.fold.slot>summary .ph-caret-down{margin-left:6px}
+.slot-n{margin-left:auto;font-size:13px;color:var(--muted);font-weight:500}
+.fe{display:flex;align-items:center;gap:12px;padding:8px 0;background:var(--surface);position:relative;z-index:1}
+.fe .end{line-height:1.25}
+.fe .end small{font-size:11.5px;color:var(--muted)}
+/* Día: la proteína manda; las kcal, debajo y en pequeño. */
+.fe .end em{font-style:normal;color:var(--ok);font-size:15px;font-weight:700}
+.fp{flex:none;width:44px;height:44px;border-radius:8px;display:grid;place-items:center;color:#fff;font-size:22px;position:relative;overflow:hidden}
+.fp::before{content:"";position:absolute;inset:0;background:radial-gradient(110% 80% at 20% 10%,rgba(255,255,255,.28),transparent 60%)}
+.fp>*{position:relative}
+.fp.l{width:56px;height:56px;font-size:26px}
+.fp.xl{width:72px;height:72px;font-size:26px}
+.f-dr{background:linear-gradient(135deg,#3C8DD8,#1E4E8C)}.f-cu{background:linear-gradient(135deg,#EDB03E,#C4601C)}.f-sh{background:linear-gradient(135deg,#9A7BD8,#5B3EA0)}
+.f-pz{background:linear-gradient(135deg,#E86A4A,#A8321F)}.f-te{background:linear-gradient(135deg,#C98A3A,#7A4518)}.f-al{background:linear-gradient(135deg,#B9583F,#6E2A1C)}
+.f-bo{background:linear-gradient(135deg,#D9A35B,#8E5B26)}.f-sn{background:linear-gradient(135deg,#E3BC3A,#A8700F)}
+.swipe{position:relative;overflow:hidden;border-radius:8px;background:var(--bad);touch-action:pan-y}
+.swipe+.swipe{margin-top:4px}
+.swipe .fe{transition:transform .2s ease;cursor:pointer}
+.swipe .fe.moved{transform:translateX(-92px);padding-right:8px;box-shadow:6px 0 12px rgba(0,0,0,.12)}
+.swipe-del{position:absolute;right:0;top:0;bottom:0;width:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;font-weight:600;font-size:13px}
+.swipe-del i{font-size:20px}
+.adj{display:flex!important;flex-direction:column;align-items:flex-start;gap:4px}
+.adj .row.jb{width:100%}
+.cam{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 32%,#2B3B41,#090C0F 75%);display:flex;flex-direction:column;color:#fff;overflow-y:auto;padding-bottom:var(--sa-b)}
+.cam.live{background:#000}
+.cam.live>:not(video){position:relative;z-index:1}
+.scanner-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Los botones de arriba, por debajo de la muesca (sin muesca, a 50 px). */
+.cam-top{display:flex;align-items:center;justify-content:space-between;padding:max(50px,calc(var(--sb-h) + 10px)) 12px 0}
+.cam-b{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;font-size:20px;color:#fff}
+.cam-b.on{background:#FFE58A;color:#1A1400}
+.cam-t{font:600 16px var(--font-display);letter-spacing:.08em;text-transform:uppercase}
+.vf{position:relative;width:78%;max-width:300px;aspect-ratio:1.5;margin:48px auto 0;flex:none}
+.vf-c{position:absolute;width:36px;height:36px;border:4px solid var(--go)}
+.vf-c.tl{top:0;left:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+.vf-c.tr{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+.vf-c.bl{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 10px}
+.vf-c.br{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.laser{position:absolute;left:6%;right:6%;height:2px;background:var(--go);box-shadow:0 0 12px var(--go);top:50%;animation:laser 1.8s ease-in-out infinite alternate}
+@keyframes laser{from{top:12%}to{top:88%}}
+.cam-hint{text-align:center;margin-top:18px;color:rgba(255,255,255,.82);font-size:15px}
+.chips.cam-demo{justify-content:center;margin:auto 12px 12px;padding-top:16px}
+.cam-demo .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff;min-height:40px;font-size:13.5px}
+.cam-demo .chip.on{background:#fff;color:#111;border-color:#fff}
+.cam-panel{background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:16px 16px 26px;flex:none}
+.prod-hero{position:relative;margin-top:calc(-1 * var(--sb-h));height:240px;display:grid;place-items:center;overflow:hidden}
+.prod-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(80% 70% at 30% 20%,rgba(255,255,255,.25),transparent 60%)}
+.prod-ic{font-size:112px;color:rgba(255,255,255,.92);position:relative}
+.formula{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 8px}
+.formula p{flex:1;min-width:0;text-align:center;display:grid;gap:3px}
+.formula b{font:700 17px var(--font-mono)}
+.formula>i{font:700 16px var(--font-mono);font-style:normal;color:var(--muted)}
+.formula .res b{color:var(--go)}
+.formula .lbl{font-size:10.5px}
+.nota-r{display:none}
+.nota-r.show{display:block;animation:fadeup .25s both}
+/* Mis comidas: toda la fila apunta; el lápiz, aparte, edita. */
+.it.tpl{padding:6px 4px 6px 12px;gap:8px}
+.tpl-m{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;min-height:52px;color:var(--ink)}
+.tpl-m .car{margin-left:auto;color:var(--go)}
+.png{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:none}
+.png button{width:38px;height:46px;font:700 14px var(--font-mono);color:var(--muted);border-left:1px solid var(--line);text-align:center}
+.png button:first-child{border-left:0}
+.png button.on{background:var(--go-t);color:var(--go)}
+.snk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.snk button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:58px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:left;color:var(--ink)}
+.snk b{font-size:14.5px;line-height:1.2}
+.snk small{font-size:12px;color:var(--muted)}
+.it .fp+.tx small .tag{height:19px;font-size:10.5px;vertical-align:1px;margin-right:4px}
+.vacio-pg{padding:28px 16px}
+.slot .in>.lnk{padding:6px 0}
+
+.ux-com-kcal .bar{height:6px}
+/* Tarjeta única «Cómo vas»: el picoteo de la semana dentro. */
+.ux-com-pic{width:100%;gap:10px;padding-top:10px;border-top:1px solid var(--line);text-align:left}
+.ux-com-pic .tx b{font-size:15px}
+
+/* Añadir: arriba del todo Escanear · Escribir lo que he comido · Foto; el del centro, más ancho y marcado. */
+.grid3.ux-com-qa3{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)}
+.qa.ux-com-escribir{border-color:var(--go);font-size:14px}
+.qa.ux-com-escribir.on{border-color:var(--blue)}
+/* Búsqueda sin resultados: «Apuntar «lo buscado»». El nombre largo se corta, no se sale. */
+.btn.ux-com-apuntar{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:48px}
+.btn.ux-com-apuntar i{margin-right:6px;vertical-align:-2px}
+
+/* Escribir lo que he comido y Crear comida: «Poco · Normal · Mucho» con las kcal debajo. */
+.chip.ux-com-tam{min-height:58px;padding:6px 4px}
+.chip.ux-com-tam>span{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.1}
+.chip.ux-com-tam small{font-size:11.5px;color:var(--muted);font-weight:500}
+.chip.ux-com-tam.on small{color:inherit;opacity:.8}
+/* Crear comida: cómo quedan Poco · Normal · Mucho con los números escritos (solo se mira, no se toca). */
+.ux-com-prev{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ux-com-prev>span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;background:var(--raised);font-size:13px;line-height:1.15;text-align:center}
+.ux-com-prev b{font-size:13.5px}
+.ux-com-prev small{font-size:11.5px;color:var(--muted)}
+/* Afinar los números: discreto, plegado. */
+.ux-com-afinar>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.ux-com-afinar>summary::-webkit-details-marker{display:none}
+.ux-com-afinar>summary .mono{color:var(--ink)}
+.ux-com-afinar>summary .ph-caret-down{transition:transform .2s}
+.ux-com-afinar[open]>summary .ph-caret-down{transform:rotate(180deg)}
+
+/* Mis comidas: el lápiz de editar, aparte; «Escanear» como enlace dentro de la frase. */
+.ux-com-lapiz{color:var(--muted);border-left:1px solid var(--line);border-radius:0}
+.lnk.ux-com-inl{padding:0;margin:0;font-size:inherit;vertical-align:baseline}
+
+/* Tu objetivo de energía: los dos números, grandes. */
+.ux-com-obj-n{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin-top:6px;font-size:16px}
+.ux-com-obj-n b{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* Producto: lo que trae, en una línea. */
+.ux-com-prod-res b{font-size:17px}
+
+/* Ventana «¿Cuánto?» al tocar algo para apuntarlo: encima de todo, también de la hoja de Añadir. */
+.popup-fondo{position:absolute;inset:0;z-index:90;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:16px;animation:jf-fade .18s both}
+.popup{width:100%;max-width:380px;padding:18px 16px 14px;background:var(--surface);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.popup-op{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.popup-op .chip.ux-com-tam{min-height:84px}
+.popup-op .chip.ux-com-tam>span{font-size:16px}

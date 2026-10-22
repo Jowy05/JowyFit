@@ -39,7 +39,7 @@ img,svg{display:block}
 /* aviso breve */
 .toast{position:absolute;left:14px;right:14px;bottom:calc(var(--tabbar-h) + var(--sa-b) + 14px);z-index:80;display:flex;align-items:center;gap:12px;
   padding:14px 16px;border-radius:14px;background:var(--toast-bg,#1d1f24);color:var(--toast-fg,#fff);font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:jf-in .2s both}
-/* Avisos: abajo pero por encima del botón fijo de cada pantalla (antes tapaban «Añadir»);
+/* Avisos: abajo pero por encima del botón fijo de cada pantalla, para no tapar «Añadir»;
    en pantalla completa (entreno, escáner) arriba, para no tapar «Hecho» ni «Ocupado». */
 .toast{top:auto;bottom:calc(var(--tabbar-h) + var(--sa-b) + 96px)}
 body.pantalla-completa .toast{bottom:auto;top:calc(var(--sb-h) + 12px)}

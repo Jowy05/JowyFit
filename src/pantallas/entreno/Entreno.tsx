@@ -170,7 +170,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
           <p className="lbl ux-ses-lbl">{t('Ejercicio {n} de {total}', { n: idx + 1, total: s.ejercicios.length })}</p>
           <div className="ux-ses-p">
             <div className="sprog">{s.ejercicios.map((x, i) => <i key={x.uid} className={cx(i === idx ? 'cur' : (x.estado === 'hecho' || x.estado === 'saltado') && 'on')} />)}</div>
-            <span className="clock ux-llevas">{t('llevas {n} min', { n: Math.floor((ahora - s.inicio) / 60000) })}</span>
+            <span className="clock">{t('llevas {n} min', { n: Math.floor((ahora - s.inicio) / 60000) })}</span>
           </div>
         </div>
         {s.horaLimite && hora && (
@@ -191,7 +191,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
         </div>
       )}
       {verAviso && (
-        <div className="safety ux-aviso" style={{ background: partes.length === 1 ? partes[0]!.tono : undefined }}>
+        <div className="safety" style={{ background: partes.length === 1 ? partes[0]!.tono : undefined }}>
           <Ico n={partes[0]!.ico} b />
           <span className="grow">{textoAviso}</span>
           <button className="ux-aviso-x" aria-label={t('Cerrar aviso')} onClick={() => setAvisosCerrados(c => [...c, textoAviso])}><Ico n="x" b /></button>
@@ -289,7 +289,7 @@ function SinEjercicio({ s, e, idx, ahora }: { s: Sesion; e?: EjercicioSesion; id
       <div className="ses-top" style={{ paddingTop: 8 }}>
         <button className="ux-tbtn" onClick={() => nav.hoja('sheet-lista')} aria-label={t('Lista de la sesión')}><Ico n="list-numbers" /><span>{t('Lista')}</span></button>
         <div className="grow"><p className="lbl">{nombreEntreno(s)}</p></div>
-        <span className="clock ux-llevas">{t('llevas {n} min', { n: Math.floor((ahora - s.inicio) / 60000) })}</span>
+        <span className="clock">{t('llevas {n} min', { n: Math.floor((ahora - s.inicio) / 60000) })}</span>
       </div>
       <div className="pg">
         {e ? (

@@ -156,7 +156,7 @@ export function Instalar({ alCerrar, conDatos, letra }: { alCerrar: () => void; 
                 : tr('<b>Instálala antes de empezar.</b> Lo que apuntes aquí, en Safari, no pasa a la app de tu pantalla de inicio.', { b: negrita })}</span></p>
             )}
           </div>
-          <div className="alt-foot col">
+          <div className="alt-foot">
             <button className="btn gry" onClick={alCerrar}>{instalada ? t('Cerrar') : t('Seguir en el navegador')}</button>
           </div>
         </div>

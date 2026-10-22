@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { db } from '../datos/db'
 import { borrarTodosLosDatos } from '../datos/copias'
 import { guardarAjustes } from '../datos/repos'
-import { cancelar } from '../plataforma'
+import { cancelar, ID_AVISO } from '../plataforma'
 import { cx, Hoja, Ico, useUnaVez } from './componentes'
 import { useNav, type Ruta } from '../app/nav'
 import { useAviso } from './aviso'
@@ -33,8 +33,8 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta<'sheet-confirmar'> }) {
         nav.hoja(null); nav.atras(); aviso(t('Entreno borrado')); return
       case 'cancelar-entreno':
         await db.sesiones.delete(d.id)
-        // Si había un descanso en marcha, su notificación (9001) ya no tiene sentido.
-        void cancelar([9001])
+        // Si había un descanso en marcha, su notificación ya no tiene sentido.
+        void cancelar([ID_AVISO.descanso])
         nav.hoja(null); nav.completa(null); aviso(t('Entreno descartado')); return
       case 'borrar-medicion': {
         const m = await db.mediciones.get(d.id)

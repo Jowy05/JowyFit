@@ -4,17 +4,21 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { db } from '../../datos/db'
 import { gimnasioNuevo, guardarAjustes, guardarPerfil, perfilPorDefecto } from '../../datos/repos'
 import { importar } from '../../datos/copias'
-import type { Dia, Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../datos/tipos'
+import type { Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../datos/tipos'
 import { catalogoCargado } from '../../catalogo/catalogo'
 import { TODAS_LAS_CLAVES } from '../../catalogo/clasificacion'
 import { generarRutina } from '../../dominio/generador'
 import { estadoSemana } from '../../dominio/semana'
-import { DIAS, DIAS_ABREV, DIAS_CORTOS, MESES, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
+import { DIAS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
+import { capital } from '../../dominio/formato'
 import { elegirArchivo } from '../../plataforma'
-import { cx, Elegir, Ico, Interruptor, Stepper, LARGO } from '../../ui/componentes'
+import { cx, Elegir, FilaInterruptor, Ico, LARGO } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
 import { guardarLetra, letraGuardada, type Letra } from '../../ui/tema'
 import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from '../rutina/CatalogoMaterial'
+import { HorariosAlta } from '../perfil/Horarios'
+import { FechaFacil } from './FechaFacil'
+import { Medir } from './Medir'
 // Los minutos de cada día salen del mismo cálculo que usa Mi plan, para que digan lo mismo.
 import { minutos } from '../rutina/comun'
 import { propio } from '../../dominio/claves'
@@ -22,17 +26,13 @@ import { idioma, t, tc, tk, tn } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
 import { tr } from '../../i18n/jsx'
 
-// Pasos del alta (antes eran 10: «Tu cuerpo hoy» va dentro de «Sobre ti» y «Comida y actividad»
-// salió del alta; sus datos tienen valores por defecto y se cambian en Perfil).
+// Pasos del alta. Comida y actividad no se preguntan: tienen valores por defecto y se cambian en Perfil.
 const PASO = { bienvenida: 1, sobreTi: 2, objetivo: 3, entrenar: 4, horarios: 5, salud: 6, gimnasio: 7, lista: 8 } as const
 const TOTAL = 8
 
-const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const numero = (s: string) => { const n = parseFloat(s.replace(',', '.')); return Number.isFinite(n) ? n : null }
 /** «a», «a y b», «a, b y c». */
 const enLista = (xs: string[]) => xs.length < 2 ? xs.join('') : xs.length > 2 ? tc('3+', '{lista} y {ultimo}', { lista: xs.slice(0, -1).join(', '), ultimo: xs[xs.length - 1]! }) : t('{lista} y {ultimo}', { lista: xs[0]!, ultimo: xs[1]! })
-/** «Lun», «Dl», «Mon» (sin el punto del catalán: en un botón pequeño sobra). */
-const diaTres = (d: number) => mayuscula(DIAS_ABREV[d]!).replace(/\.$/, '')
 // Los nombres de las zonas, marcados con tk(): se traducen al pintarlos.
 const ZONA_TXT: Record<string, string> = { brazos: tk('brazos'), pecho: tk('pecho'), espalda: tk('espalda'), hombros: tk('hombros'), piernas: tk('piernas'), gluteo: tk('glúteo'), abdomen: tk('abdomen') }
 
@@ -65,13 +65,6 @@ function falloSobreTi(d: Datos): Fallo | null {
   return null
 }
 
-/** Hora a la que irse del gimnasio: la de entrenar + los minutos + 15 de margen. */
-function limites(hora: string, minutos: number): Perfil['horaLimite'] {
-  const m = (minutosDe(hora) + minutos + 15) % 1440
-  const hhmm = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-  return { coche: hhmm, andando: hhmm }
-}
-
 /** «Tu primer entreno: martes a las 5:30 · Cuerpo completo A», con la rutina recién hecha. */
 function primerEntreno(r: Omit<Rutina, 'id'>, hora: string, hoy: string): { cuando: string; nombre: string } | null {
   const rut = r as Rutina
@@ -85,51 +78,13 @@ function primerEntreno(r: Omit<Rutina, 'id'>, hora: string, hoy: string): { cuan
   return { cuando, nombre: nombreEntreno(d.dia) }
 }
 
-/**
- * Fecha de nacimiento con tres desplegables (día, mes, año). El calendario del móvil empieza en el año
- * actual y llegar a 1960 cuesta muchos toques; así se elige el año de una lista.
- */
-function FechaFacil({ valor, onCambio }: { valor: string; onCambio: (v: string) => void }) {
-  const [a0, m0, d0] = /^\d{4}-\d{2}-\d{2}$/.test(valor) ? valor.split('-').map(Number) : [0, 0, 0]
-  const [dia, setDia] = useState(d0 || 0)
-  const [mes, setMes] = useState(m0 || 0)
-  const [anio, setAnio] = useState(a0 || 0)
-  const ultimo = new Date().getFullYear() - 10
-  const anios = Array.from({ length: ultimo - 1920 + 1 }, (_, i) => ultimo - i)
-  const poner = (d: number, m: number, a: number) => {
-    setDia(d); setMes(m); setAnio(a)
-    if (d && m && a) {
-      const dd = Math.min(d, new Date(a, m, 0).getDate())
-      onCambio(`${a}-${String(m).padStart(2, '0')}-${String(dd).padStart(2, '0')}`)
-    } else onCambio('')
-  }
-  return (
-    <div className="fecha-facil" role="group" aria-label={t('Fecha de nacimiento')}>
-      <select className="inp" aria-label={t('Día de nacimiento')} value={dia || ''} onChange={e => poner(Number(e.target.value), mes, anio)}>
-        <option value="">{t('Día')}</option>
-        {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
-      </select>
-      <select className="inp" aria-label={t('Mes de nacimiento')} value={mes || ''} onChange={e => poner(dia, Number(e.target.value), anio)}>
-        <option value="">{t('Mes')}</option>
-        {MESES.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
-      </select>
-      <select className="inp" aria-label={t('Año de nacimiento')} value={anio || ''} onChange={e => poner(dia, mes, Number(e.target.value))}>
-        <option value="">{t('Año')}</option>
-        {anios.map(a => <option key={a} value={a}>{a}</option>)}
-      </select>
-    </div>
-  )
-}
-
 export function Alta() {
   const aviso = useAviso()
   const [paso, setPaso] = useState<number>(PASO.bienvenida)
-  // Días y hora empiezan vacíos (antes venía el horario de otra persona: martes, jueves y viernes a las 5:30
-  // con el sábado de extra, y quien no lee lo aceptaba). El nivel empieza en «Empiezo»: si alguien no lo
-  // cambia, lo peor que pasa es una rutina más suave, que la semana de prueba ajusta igualmente.
+  // Días y hora empiezan vacíos: un horario ya puesto se acepta sin leerlo. El nivel empieza en «Empiezo»: si alguien
+  // no lo cambia, lo peor que pasa es una rutina más suave, que la semana de prueba ajusta igualmente.
   const [p, setP] = useState<Perfil>(() => ({ ...perfilPorDefecto(), nivel: 'empiezo', superseries: true, diasFijos: [], diasOpcionales: [], horaEntreno: '' }))
-  // Fecha, sexo, altura y peso empiezan vacíos: antes venían rellenos (01/01/2000, hombre, 175 cm, 75 kg)
-  // y quien no lee los dejaba falsos, con lo que salían mal las calorías y la proteína.
+  // Fecha, sexo, altura y peso empiezan vacíos: rellenos, quien no lee los deja falsos y salen mal las calorías y la proteína.
   const [datos, setDatos] = useState<Datos>({ nacimiento: '', sexo: null, altura: '', peso: '' })
   const [medidas, setMedidas] = useState<Medidas>(SIN_MEDIDAS)
   const [importado, setImportado] = useState<string | null>(null)
@@ -216,14 +171,13 @@ export function Alta() {
     const minMax = fijos.length ? Math.max(...fijos.map(d => minutos(d))) : 0
     setResumen({
       tipo: rutina.estructura.split(' · ')[0] ?? rutina.estructura,
-      // «3 días + sábado si puedes · ~55 min»: antes ponía «3 días» con 4 filas debajo y un rango de minutos
-      // que no cuadraba con Mi plan. Los minutos, igual que la «Duración» de Mi plan (el día más largo).
+      // «3 días + sábado si puedes · ~55 min». Los minutos, igual que la «Duración» de Mi plan (el día más largo).
       estructura: extra
         ? t('{dias} + {dia} si puedes · ~{min} min', { dias: diasTxt, dia: extra.dia != null ? DIAS[extra.dia] : t('otro'), min: minMax })
         : t('{dias} · ~{min} min', { dias: diasTxt, min: minMax }),
       // El nombre del día de la semana en vez de las letras A, B, C, que no dicen nada.
       dias: dias.map(d => {
-        const nombre = d.dia != null ? mayuscula(DIAS[d.dia]) : t('Cuando puedas')
+        const nombre = d.dia != null ? capital(DIAS[d.dia]) : t('Cuando puedas')
         return {
           t: d.opcional ? t('{dia} (si puedes)', { dia: nombre }) : nombre,
           d: t('{n} ejercicios · ~{min} min', { n: d.bloques.length, min: minutos(d) }),
@@ -342,7 +296,7 @@ export function Alta() {
         <div className="alta-sep">
           <p className="lbl fl">{t('Zonas a priorizar')} <span className="hint">{t('(opcional)')}</span></p>
           <p className="small muted" style={{ marginBottom: 8 }}>{t('Si no eliges ninguna, se trabaja todo el cuerpo por igual.')}</p>
-          <Elegir opciones={Object.keys(ZONA_TXT).map(z => ({ v: z, t: mayuscula(t(ZONA_TXT[z]!)) }))} valor={p.zonasPrioridad} onCambio={z => cambia({ zonasPrioridad: p.zonasPrioridad.includes(z) ? p.zonasPrioridad.filter(x => x !== z) : [...p.zonasPrioridad, z] })} />
+          <Elegir opciones={Object.keys(ZONA_TXT).map(z => ({ v: z, t: capital(t(ZONA_TXT[z]!)) }))} valor={p.zonasPrioridad} onCambio={z => cambia({ zonasPrioridad: p.zonasPrioridad.includes(z) ? p.zonasPrioridad.filter(x => x !== z) : [...p.zonasPrioridad, z] })} />
         </div>
       </>) },
     [PASO.entrenar]: { t: t('Cómo te gusta entrenar'), c: (
@@ -355,8 +309,8 @@ export function Alta() {
           <p className="small muted mt4">{t('Peso libre: barras y mancuernas. Si dudas, deja «Mezcla».')}</p>
         </div>
         <div className="list">
-          {p.nivel !== 'empiezo' && <Fila t={t('Dos seguidos')} d={t('Dos ejercicios uno detrás de otro, sin descanso entre ellos: acabas antes')} on={p.superseries} c={v => cambia({ superseries: v })} />}
-          <Fila t={t('Abdominales')} d={t('Unos minutos al final de cada sesión')} on={p.core} c={v => cambia({ core: v })} />
+          {p.nivel !== 'empiezo' && <FilaInterruptor titulo={t('Dos seguidos')} d={t('Dos ejercicios uno detrás de otro, sin descanso entre ellos: acabas antes')} on={p.superseries} onCambio={v => cambia({ superseries: v })} />}
+          <FilaInterruptor titulo={t('Abdominales')} d={t('Unos minutos al final de cada sesión')} on={p.core} onCambio={v => cambia({ core: v })} />
         </div>
       </div>) },
     [PASO.horarios]: { t: t('Tus horarios'), d: t('Qué días y a qué hora vas al gimnasio.'), c: <HorariosAlta p={p} cambia={cambia} faltaDias={!!mal('dias')} faltaHora={!!mal('hora')} /> },
@@ -426,145 +380,6 @@ function Paso({ n, titulo, desc, children, pie, onAtras, sinAtras, aviso }: { n:
         )}
       </div>
     </section>
-  )
-}
-
-function Fila({ t: titulo, d, on, c }: { t: string; d?: string; on: boolean; c: (v: boolean) => void }) {
-  return <div className="it"><span className="tx"><b>{titulo}</b>{d && <small>{d}</small>}</span><Interruptor on={on} onCambio={c} etiqueta={titulo} /></div>
-}
-
-function Medir() {
-  return (
-    <div className="measure mt16">
-      <svg className="sil-fig" viewBox="0 0 120 240" aria-hidden="true">
-        <circle className="sil" cx="60" cy="24" r="15" />
-        <path className="sil" d="M53 38h14v10H53zM36 50Q60 44 84 50L100 58Q106 62 106 72L110 126Q110 134 104 134L98 80 92 82 92 138 90 226Q90 232 84 232H76L64 150H56L44 232H36Q30 232 30 226L28 138 28 82 22 80 16 134Q10 134 10 126L14 72Q14 62 20 58Z" />
-        <line className="msr" x1="34" y1="44" x2="86" y2="44" />
-        <line className="msr go" x1="20" y1="108" x2="100" y2="108" />
-        <circle className="msr-dot" cx="60" cy="108" r="3" />
-      </svg>
-      <div className="measure-key">
-        <p><span className="kdot blue" /><b>{t('Cuello')}</b><small>{t('Justo bajo la nuez')}</small></p>
-        <p><span className="kdot go" /><b>{t('Cintura')}</b><small>{t('A la altura del ombligo, sin apretar')}</small></p>
-        <p className="muted small mt8">{t('Cinta métrica horizontal, después de soltar el aire.')}</p>
-      </div>
-    </div>
-  )
-}
-
-/** Horas del desplegable del alta, cada media hora, agrupadas por parte del día. */
-// Los nombres se traducen al pintarlos, con contexto: «Mañana» y «Tarde» también son tiempo («mañana», «llegas tarde»).
-const FRANJAS_HORA: [string, number, number][] = [['Mañana', 5, 12], ['Mediodía', 12, 16], ['Tarde', 16, 20], ['Noche', 20, 23]]
-const nombreFranja = (f: string) => (f === 'Mañana' ? tc('parte del día', 'Mañana') : f === 'Mediodía' ? tc('parte del día', 'Mediodía') : f === 'Tarde' ? tc('parte del día', 'Tarde') : tc('parte del día', 'Noche'))
-const horasDe = (desde: number, hasta: number) => Array.from({ length: (hasta - desde) * 2 }, (_, i) => `${String(desde + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`)
-
-/**
- * Horario sencillo del alta: días (un toque = entrenas o no), un día extra opcional aparte,
- * la hora y los minutos. Días y hora empiezan sin marcar y hay que elegirlos; el día extra empieza en «Ninguno».
- * Coche/andando, hora de salida, hora de acostarse y «si pierdes una sesión»
- * se quedan con su valor por defecto y se cambian en Perfil → Horario (que usa `Horarios`, abajo).
- */
-function HorariosAlta({ p, cambia, faltaDias, faltaHora }: { p: Perfil; cambia: (c: Partial<Perfil>) => void; faltaDias: boolean; faltaHora: boolean }) {
-  const conmutar = (d: Dia) => {
-    if (p.diasFijos.includes(d)) cambia({ diasFijos: p.diasFijos.filter(x => x !== d) })
-    else cambia({ diasFijos: [...p.diasFijos, d].sort((a, b) => a - b), diasOpcionales: p.diasOpcionales.filter(x => x !== d) })
-  }
-  const extra = p.diasOpcionales.find(d => !p.diasFijos.includes(d)) ?? null
-  const libres = ([0, 1, 2, 3, 4, 5, 6] as Dia[]).filter(d => !p.diasFijos.includes(d))
-  const n = p.diasFijos.length
-  // Una copia importada puede traer una hora que no está en la lista (7:15): se añade para que se vea.
-  const enLaLista = FRANJAS_HORA.some(([, a, b]) => horasDe(a, b).includes(p.horaEntreno))
-  // La hora de irse del gimnasio (para la versión corta) se recalcula con la hora y los minutos elegidos.
-  const ponHora = (h: string) => { if (h) cambia({ horaEntreno: h, horaLimite: limites(h, p.minutosNormal) }) }
-  const ponMinutos = (v: number) => cambia({ minutosNormal: v, minutosCorta: Math.min(perfilPorDefecto().minutosCorta, v - 5), ...(p.horaEntreno ? { horaLimite: limites(p.horaEntreno, v) } : {}) })
-  return (
-    <>
-      <div className={cx(faltaDias && 'alta-falta')}>
-        <p className="lbl fl mt16">{t('¿Qué días vas a entrenar?')}</p>
-        <div className="days alta-dias">
-          {DIAS.map((nombre, i) => (
-            <button key={i} className={cx('chip day', p.diasFijos.includes(i as Dia) && 'fix on')} aria-pressed={p.diasFijos.includes(i as Dia)} aria-label={nombre} onClick={() => conmutar(i as Dia)}>{diaTres(i)}</button>
-          ))}
-        </div>
-        <p className="small muted mt8">{n === 0 ? t('Toca los días que vas a ir. Con 3 días a la semana va muy bien.')
-          : n === 3 ? t('Toca un día para marcarlo o quitarlo · {n} días a la semana (va muy bien)', { n })
-            : tn(n, 'Toca un día para marcarlo o quitarlo · 1 día a la semana', 'Toca un día para marcarlo o quitarlo · {n} días a la semana')}</p>
-      </div>
-      {/* El día extra solo aparece con algún día elegido: dos filas de días iguales desde el principio confundían. */}
-      {n > 0 && (
-        <>
-          <p className="lbl fl mt20">{t('Día extra si puedes')} <span className="hint">{t('(opcional)')}</span></p>
-          <div className="chips">
-            <button className={cx('chip', extra == null && 'on')} aria-pressed={extra == null} onClick={() => cambia({ diasOpcionales: [] })}>{t('Ninguno')}</button>
-            {libres.map(d => <button key={d} className={cx('chip', extra === d && 'on')} aria-pressed={extra === d} aria-label={t('Extra el {dia}', { dia: DIAS[d] })} onClick={() => cambia({ diasOpcionales: [d] })}>{diaTres(d)}</button>)}
-          </div>
-          <p className="small muted mt4">{t('Una sesión corta de brazos y hombros, solo si te apetece.')}</p>
-        </>
-      )}
-      <div className={cx('alta-hora', faltaHora && 'alta-falta')}>
-        <p className="lbl fl mt16">{t('¿A qué hora entrenas?')}</p>
-        {/* Un solo control: antes había botones de hora y además un campo con la misma hora escrita de otra forma. */}
-        <select className="inp" aria-label={t('Hora de entreno')} data-vacio={p.horaEntreno ? undefined : ''} value={p.horaEntreno} onChange={e => ponHora(e.target.value)}>
-          <option value="" disabled>{t('Elige la hora')}</option>
-          {!enLaLista && p.horaEntreno && <option value={p.horaEntreno}>{formatoHora(p.horaEntreno)}</option>}
-          {FRANJAS_HORA.map(([franja, a, b]) => (
-            <optgroup key={franja} label={nombreFranja(franja)}>{horasDe(a, b).map(h => <option key={h} value={h}>{formatoHora(h)}</option>)}</optgroup>
-          ))}
-        </select>
-      </div>
-      <p className="lbl fl mt16">{t('¿Cuánto tiempo tienes cada día?')}</p>
-      <Stepper valor={p.minutosNormal} paso={5} min={30} max={120} sufijo="min" etiqueta={t('Minutos por sesión')} onCambio={ponMinutos} />
-      <p className="small muted mt4">{t('Si un día vas con prisa, la app te ofrece una versión más corta.')}</p>
-      <p className="note plain mt16"><Ico n="gear" /><span>{tr('Coche o andando, hora de salir y hora de acostarte: en <b>Perfil → Horario</b>.', { b: x => <b>{x}</b> })}</span></p>
-    </>
-  )
-}
-
-/** Horario completo (Perfil → Horario). */
-export function Horarios({ p, cambia }: { p: Perfil; cambia: (c: Partial<Perfil>) => void }) {
-  const ciclo = (d: Dia) => {
-    if (p.diasFijos.includes(d)) cambia({ diasFijos: p.diasFijos.filter(x => x !== d), diasOpcionales: [...p.diasOpcionales, d].sort() })
-    else if (p.diasOpcionales.includes(d)) cambia({ diasOpcionales: p.diasOpcionales.filter(x => x !== d) })
-    else cambia({ diasFijos: [...p.diasFijos, d].sort() })
-  }
-  const horas = ['05:00', '05:30', '06:00', '07:00', '18:00', '19:00']
-  return (
-    <>
-      <div className="days mt16">
-        {DIAS_CORTOS.map((d, i) => (
-          <button key={i} className={cx('chip day', p.diasFijos.includes(i as Dia) && 'fix on', p.diasOpcionales.includes(i as Dia) && 'opt on')} onClick={() => ciclo(i as Dia)}>{d}</button>
-        ))}
-      </div>
-      <p className="legend mt8"><span><i className="lg fix" />{t('Fijo')}</span><span><i className="lg opt" />{t('Opcional')}</span><span><i className="lg" />{t('Libre')}</span></p>
-      <p className="lbl fl mt16">{t('¿A qué hora entrenas?')}</p>
-      <div className="chips">
-        {horas.map(h => <button key={h} className={cx('chip', p.horaEntreno === h && 'on')} onClick={() => cambia({ horaEntreno: h })}>{h.replace(/^0/, '')}</button>)}
-        {/* Al borrar un campo de hora llega '' y luego salía «NaN:undefined»: solo se guarda una hora válida. */}
-        <input className="inp" type="time" value={p.horaEntreno} onChange={e => { if (e.target.value) cambia({ horaEntreno: e.target.value }) }} style={{ width: 120, minHeight: 40 }} aria-label={t('Otra hora')} />
-      </div>
-      <p className="lbl fl mt16">{t('¿Cómo vas al gimnasio?')}</p>
-      <div className="chips eq">
-        <button className={cx('chip big', p.transporte === 'coche' && 'on')} onClick={() => cambia({ transporte: 'coche' })}><Ico n="car" />{t('Coche')}</button>
-        <button className={cx('chip big', p.transporte === 'andando' && 'on')} onClick={() => cambia({ transporte: 'andando' })}><Ico n="person-simple-walk" />{t('Andando')}</button>
-      </div>
-      <div className="grid2 mt16">
-        <label><span className="lbl fl">{t('Me voy (coche)')}</span><input className="inp" type="time" value={p.horaLimite.coche} onChange={e => { if (e.target.value) cambia({ horaLimite: { ...p.horaLimite, coche: e.target.value } }) }} /></label>
-        <label><span className="lbl fl">{t('Me voy (andando)')}</span><input className="inp" type="time" value={p.horaLimite.andando} onChange={e => { if (e.target.value) cambia({ horaLimite: { ...p.horaLimite, andando: e.target.value } }) }} /></label>
-      </div>
-      <p className="lbl fl mt16">{t('Tiempo por sesión')}</p>
-      <div className="grid2">
-        <div><span className="lbl fl">{t('Normal')}</span><Stepper className="sm" valor={p.minutosNormal} paso={5} min={30} max={120} sufijo="min" onCambio={v => cambia({ minutosNormal: v, minutosCorta: Math.min(p.minutosCorta, v - 5) })} /></div>
-        <div><span className="lbl fl">{t('Corto')}</span><Stepper className="sm" valor={p.minutosCorta} paso={5} min={20} max={p.minutosNormal - 5} sufijo="min" onCambio={v => cambia({ minutosCorta: v })} /></div>
-      </div>
-      <div className="list mt16">
-        <div className="it">
-          <span className="ico"><Ico n="moon" /></span>
-          <span className="tx"><b>{t('Hora de acostarte')}</b><small>{t('Para avisarte 1 h antes')}</small></span>
-          <input className="inp" type="time" value={p.horaDormir} onChange={e => { if (e.target.value) cambia({ horaDormir: e.target.value }) }} style={{ width: 110 }} aria-label={t('Hora de acostarte')} />
-        </div>
-        <div className="it"><span className="ico"><Ico n="calendar-x" /></span><span className="tx"><b>{t('Si pierdes una sesión')}</b><small>{p.sesionPerdida === 'sabado' ? t('Te propongo pasarla al día opcional') : t('Se salta sin más')}</small></span><Interruptor on={p.sesionPerdida === 'sabado'} onCambio={v => cambia({ sesionPerdida: v ? 'sabado' : 'saltar' })} etiqueta={t('Recolocar sesión perdida')} /></div>
-      </div>
-    </>
   )
 }
 

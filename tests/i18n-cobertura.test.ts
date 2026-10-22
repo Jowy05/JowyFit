@@ -141,8 +141,8 @@ describe.skipIf(!ESTRICTO)('cobertura completa (interruptor I18N_ESTRICTO)', () 
   // Una carpeta movida o un import de i18n por alias saca archivos del escaneo sin que nada falle.
   // Si se borran archivos a propósito, baja estos números a los nuevos.
   it('el buscador sigue mirando todos los archivos', () => {
-    expect(ARCHIVOS.length).toBeGreaterThanOrEqual(87 - 2)
-    expect(archivosTsx(RAIZ).length).toBeGreaterThanOrEqual(60 - 2)
+    expect(ARCHIVOS.length).toBeGreaterThanOrEqual(109 - 2)
+    expect(archivosTsx(RAIZ).length).toBeGreaterThanOrEqual(69 - 2)
   })
 })
 

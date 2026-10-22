@@ -137,6 +137,17 @@ export function Interruptor({ on, onCambio, etiqueta }: { on: boolean; onCambio:
   return <button type="button" role="switch" aria-checked={on} aria-label={etiqueta} className={cx('sw', on && 'on')} onClick={() => onCambio(!on)} />
 }
 
+/** Fila de lista con título, explicación y un interruptor. `etiqueta`, si el interruptor se lee distinto del título. */
+export function FilaInterruptor({ titulo, d, on, onCambio, ico, etiqueta = titulo }: { titulo: string; d?: ReactNode; on: boolean; onCambio: (v: boolean) => void; ico?: string; etiqueta?: string }) {
+  return (
+    <div className="it">
+      {ico && <span className="ico"><Ico n={ico} /></span>}
+      <span className="tx"><b>{titulo}</b>{d && <small>{d}</small>}</span>
+      <Interruptor on={on} onCambio={onCambio} etiqueta={etiqueta} />
+    </div>
+  )
+}
+
 export function Barra({ v, total, tono, gruesa }: { v: number; total: number; tono?: 'go' | 'ok' | 'warn' | 'gold'; gruesa?: boolean }) {
   return <span className={cx('bar', tono, gruesa && 'thick')}><i style={estilo({ '--w': pct(v, total) })} /></span>
 }

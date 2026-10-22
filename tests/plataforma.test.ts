@@ -40,8 +40,8 @@ describe('botón atrás y volver a la app', () => {
 describe('avisos (solo Android)', () => {
   it('en la web no hay permiso ni se programa nada, y nada falla', async () => {
     expect(await plat.permisoNotificaciones(true)).toBe(false)
-    await expect(plat.programar([{ id: plat.ID_DESCANSO, titulo: 'Descanso', texto: 'Siguiente serie', cuando: new Date() }], [1])).resolves.toBeUndefined()
-    await expect(plat.cancelar([plat.ID_DESCANSO])).resolves.toBeUndefined()
+    await expect(plat.programar([{ id: plat.ID_AVISO.descanso, titulo: 'Descanso', texto: 'Siguiente serie', cuando: new Date() }], [1])).resolves.toBeUndefined()
+    await expect(plat.cancelar([plat.ID_AVISO.descanso])).resolves.toBeUndefined()
     await expect(plat.cancelar([])).resolves.toBeUndefined()
   })
   it('programar y cancelar van en fila (en el orden en que se piden)', async () => {

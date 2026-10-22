@@ -1,7 +1,7 @@
 // Botón atrás del móvil en pleno entreno: antes salía sin decir nada (y el entreno seguía abierto abajo).
 // Ahora pregunta: «Acabar» (al resumen para guardarlo; si no se hizo ninguna serie, se cierra sin guardar) o «Continuar».
 import { db } from '../../datos/db'
-import { cancelar } from '../../plataforma'
+import { cancelar, ID_AVISO } from '../../plataforma'
 import { Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -22,7 +22,7 @@ export function HojaSalirEntreno() {
     if (hayAlgo) { nav.hoja(null); nav.completa('ses-fin', { id: s.id }); return }
     // Nada hecho: no hay nada que guardar. Se cierra y se sale.
     await db.sesiones.delete(s.id!)
-    void cancelar([9001])
+    void cancelar([ID_AVISO.descanso])
     nav.hoja(null)
     nav.completa(null)
     aviso(libre ? t('Entreno libre cerrado') : t('Entreno cerrado sin guardar: no habías hecho ninguna serie'))

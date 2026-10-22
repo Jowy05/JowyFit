@@ -5,8 +5,8 @@ import { guardarPerfil } from '../../datos/repos'
 import type { DiaRutina, Perfil } from '../../datos/tipos'
 import { DIAS, horaActual, minutosDe } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
-import { esNativo, permisoNotificaciones, programar } from '../../plataforma'
-import { cx, Hoja, Ico, Interruptor, useUnaVez } from '../../ui/componentes'
+import { esNativo, ID_AVISO, permisoNotificaciones, programar } from '../../plataforma'
+import { cx, FilaInterruptor, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfilCargado, useRutina, useSesionEnCurso } from '../../datos/hooks'
@@ -68,8 +68,8 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
       if (s) {
         const hasta = Date.now() + 300_000
         await db.sesiones.put({ ...s, descansoHasta: hasta, descansoTotal: 300 })
-        // Igual que el descanso entre series: aviso aunque el móvil esté bloqueado (id 9001).
-        void programar([{ id: 9001, titulo: t('Calentamiento terminado'), texto: t('A por la primera serie'), cuando: new Date(hasta) }], [9001])
+        // Igual que el descanso entre series: aviso aunque el móvil esté bloqueado.
+        void programar([{ id: ID_AVISO.descanso, titulo: t('Calentamiento terminado'), texto: t('A por la primera serie'), cuando: new Date(hasta) }], [ID_AVISO.descanso])
       }
     }
     nav.hoja(null)
@@ -94,11 +94,7 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
       </div>
       {noDa && <p className="note warn mt8"><Ico n="clock-countdown" /><span>{t('Con {n} min no te da para la normal: elige la corta.', { n: disponibles })}</span></p>}
       <div className="list mt12">
-        <div className="it">
-          <span className="ico"><Ico n="timer" /></span>
-          <span className="tx"><b>{t('Calentamiento general')}</b><small>{t('Temporizador de 5 min · opcional')}</small></span>
-          <Interruptor on={calentar} onCambio={setCalentar} etiqueta={t('Calentamiento general')} />
-        </div>
+        <FilaInterruptor ico="timer" titulo={t('Calentamiento general')} d={t('Temporizador de 5 min · opcional')} on={calentar} onCambio={setCalentar} />
       </div>
       <button className="btn xl mt16" onClick={() => void empezar()}><Ico n="play" b />{t('Empezar')}</button>
     </Hoja>

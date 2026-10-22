@@ -6,7 +6,7 @@ import type { Rutina } from '../../datos/tipos'
 import { catalogoCargado, ejercicio } from '../../catalogo/catalogo'
 import { ES_MAQUINA } from '../../catalogo/clasificacion'
 import { cambiosRutina, generarRutina, nombreZona, rutinaDefinitiva, tiemposReales } from '../../dominio/generador'
-import { Cab, Ico, Interruptor, Pantalla, useUnaVez } from '../../ui/componentes'
+import { Cab, FilaInterruptor, Ico, Pantalla, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos/hooks'
@@ -123,11 +123,7 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
         )}
         {!definitiva && (
           <div className="list mt12">
-            <div className="it">
-              <span className="ico"><Ico n="gauge" /></span>
-              <span className="tx"><b>{t('Empezar con una semana de prueba')}</b><small>{t('3 entrenos con pesos cómodos; luego te propongo la rutina definitiva con tus tiempos reales.')}</small></span>
-              <Interruptor on={prueba} onCambio={v => setConPrueba(v)} etiqueta={t('Empezar con una semana de prueba')} />
-            </div>
+            <FilaInterruptor ico="gauge" titulo={t('Empezar con una semana de prueba')} d={t('3 entrenos con pesos cómodos; luego te propongo la rutina definitiva con tus tiempos reales.')} on={prueba} onCambio={v => setConPrueba(v)} />
           </div>
         )}
         <div className="dock col">

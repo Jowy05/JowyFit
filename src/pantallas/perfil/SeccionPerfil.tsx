@@ -6,12 +6,12 @@ import { guardarPerfil } from '../../datos/repos'
 import type { Bascula, Dia, Medicion, Perfil, Zona } from '../../datos/tipos'
 import { kg, num } from '../../dominio/calculos'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../dominio/fechas'
-import { cx, Cab, Chip, Elegir, Ico, Interruptor, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
+import { cx, Cab, Chip, Elegir, FilaInterruptor, Ico, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfilCargado } from '../../datos/hooks'
 import { reprogramarNotificaciones } from '../../app/servicios'
-import { Horarios } from '../alta/Alta'
+import { Horarios } from './Horarios'
 import { NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, tituloSeccion, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -90,16 +90,6 @@ function Grupo({ titulo, children, ayuda }: { titulo: ReactNode; children: React
       <span className="lbl fl">{titulo}</span>
       {children}
       {ayuda && <small className="small muted mt4" style={{ display: 'block' }}>{ayuda}</small>}
-    </div>
-  )
-}
-
-function Fila({ titulo, d, on, c, ico }: { titulo: string; d?: string; on: boolean; c: (v: boolean) => void; ico?: string }) {
-  return (
-    <div className="it">
-      {ico && <span className="ico"><Ico n={ico} /></span>}
-      <span className="tx"><b>{titulo}</b>{d && <small>{d}</small>}</span>
-      <Interruptor on={on} onCambio={c} etiqueta={titulo} />
     </div>
   )
 }
@@ -321,8 +311,8 @@ function Preferencias({ p, guardar }: Props) {
         <Elegir eq opciones={(Object.keys(REPS_TXT) as Perfil['reps'][]).map(v => ({ v, t: t(REPS_TXT[v]) }))} valor={p.reps} onCambio={v => guardar({ reps: v })} />
       </Grupo>
       <div className="list">
-        <Fila titulo={t('Dos seguidos')} d={t('Dos ejercicios sin descanso entre ellos: ahorran tiempo')} on={p.superseries} c={v => guardar({ superseries: v })} />
-        <Fila titulo={t('Abdominales')} d={t('Unos minutos al final de las sesiones')} on={p.core} c={v => guardar({ core: v })} />
+        <FilaInterruptor titulo={t('Dos seguidos')} d={t('Dos ejercicios sin descanso entre ellos: ahorran tiempo')} on={p.superseries} onCambio={v => guardar({ superseries: v })} />
+        <FilaInterruptor titulo={t('Abdominales')} d={t('Unos minutos al final de las sesiones')} on={p.core} onCambio={v => guardar({ core: v })} />
       </div>
       <p className="small muted">{t('El objetivo de pasos se cambia tocando «Pasos» en Inicio.')}</p>
     </div>

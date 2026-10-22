@@ -8,7 +8,7 @@ import { resumen } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO, sumarDias } from '../../dominio/fechas'
 import { estadoSemana } from '../../dominio/semana'
 import { kg } from '../../dominio/calculos'
-import { cancelar } from '../../plataforma'
+import { cancelar, ID_AVISO } from '../../plataforma'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -71,7 +71,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
       // El tiempo, los descansos y lo que estaba ocupado ya los mide la app: solo se pregunta lo que no sabe.
       respuestas: { minutosReales: mins, molestia: hayMolestia ? molestia || 'sí' : undefined, nota: nota || undefined },
     })
-    void cancelar([9001])
+    void cancelar([ID_AVISO.descanso])
     nav.completa(null)
     if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso(t('Semana de prueba terminada')) }
     else { nav.raiz('ini'); aviso(t('Guardado. {dia} ✓', { dia: cap(DIAS[(new Date().getDay() + 6) % 7]!) })) }

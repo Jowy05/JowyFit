@@ -5,14 +5,13 @@ import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../dominio/fechas'
 import { estadoSemana } from '../dominio/semana'
 import { PASOS_POR_KM } from '../dominio/tendencias'
-import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
+import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, ID_AVISO, type Aviso } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
 import { regionNumeros, t, tn } from '../i18n'
 
-// Identificadores fijos de los recordatorios (el de fin de descanso es el 9001).
-const ID = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700 }
-const TODOS = [...Array.from({ length: 14 }, (_, i) => ID.dormir + i), ...Array.from({ length: 7 }, (_, i) => ID.pesarse + i), ID.batido, ID.creatina, ID.copia, ID.fotos, ID.domingo]
+// Todos los recordatorios: hasta 14 noches antes de entrenar y un día de pesaje por día de la semana.
+const TODOS = [...Array.from({ length: 14 }, (_, i) => ID_AVISO.dormir + i), ...Array.from({ length: 7 }, (_, i) => ID_AVISO.pesarse + i), ID_AVISO.batido, ID_AVISO.creatina, ID_AVISO.copia, ID_AVISO.fotos, ID_AVISO.domingo]
 
 function enFecha(fecha: string, hhmm: string): Date {
   const d = deISO(fecha)
@@ -37,22 +36,22 @@ export async function reprogramarNotificaciones(): Promise<void> {
       const vispera = sumarDias(d.fecha, -1)
       const cuando = enFecha(vispera, p.horaDormir)
       cuando.setHours(cuando.getHours() - 1)
-      if (cuando.getTime() > ahora) avisos.push({ id: ID.dormir + i, titulo: t('Mañana: {dia}', { dia: d.dia!.nombre }), texto: t('A las {hora}. En 1 h, a dormir 😴', { hora: p.horaEntreno.replace(/^0/, '') }), cuando })
+      if (cuando.getTime() > ahora) avisos.push({ id: ID_AVISO.dormir + i, titulo: t('Mañana: {dia}', { dia: d.dia!.nombre }), texto: t('A las {hora}. En 1 h, a dormir 😴', { hora: p.horaEntreno.replace(/^0/, '') }), cuando })
     })
   }
   if (a.noti.pesarse) p.diasPesaje.forEach((dia, i) => {
     const hoyD = diaSemana(deISO(hoy))
     const fecha = sumarDias(hoy, (dia - hoyD + 7) % 7 || (enFecha(hoy, a.noti.pesarseHora).getTime() < ahora ? 7 : 0))
-    avisos.push({ id: ID.pesarse + i, titulo: t('Hoy toca pesarse'), texto: t('En ayunas y después del baño'), cuando: enFecha(fecha, a.noti.pesarseHora), repetirCada: 'week' })
+    avisos.push({ id: ID_AVISO.pesarse + i, titulo: t('Hoy toca pesarse'), texto: t('En ayunas y después del baño'), cuando: enFecha(fecha, a.noti.pesarseHora), repetirCada: 'week' })
   })
-  if (a.noti.batido) avisos.push({ id: ID.batido, titulo: t('¿Batido de proteína?'), texto: t('Te ayuda a llegar a tu proteína del día'), cuando: enFecha(hoy, a.noti.batidoHora), repetirCada: 'day' })
-  if (a.noti.creatina) avisos.push({ id: ID.creatina, titulo: t('La creatina de hoy'), texto: t('{dosis}, a cualquier hora', { dosis: dosisDe(p.dosisSuplementos, 'Creatina') || t('Tu dosis') }), cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
-  if (a.noti.copia) avisos.push({ id: ID.copia, titulo: t('Copia de seguridad'), texto: t('Hace una semana de la última copia. Tus datos solo están en este móvil.'), cuando: enFecha(sumarDias(hoy, 7), '20:00') })
+  if (a.noti.batido) avisos.push({ id: ID_AVISO.batido, titulo: t('¿Batido de proteína?'), texto: t('Te ayuda a llegar a tu proteína del día'), cuando: enFecha(hoy, a.noti.batidoHora), repetirCada: 'day' })
+  if (a.noti.creatina) avisos.push({ id: ID_AVISO.creatina, titulo: t('La creatina de hoy'), texto: t('{dosis}, a cualquier hora', { dosis: dosisDe(p.dosisSuplementos, 'Creatina') || t('Tu dosis') }), cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
+  if (a.noti.copia) avisos.push({ id: ID_AVISO.copia, titulo: t('Copia de seguridad'), texto: t('Hace una semana de la última copia. Tus datos solo están en este móvil.'), cuando: enFecha(sumarDias(hoy, 7), '20:00') })
   if (a.noti.domingo) {
     const hoyD = diaSemana(deISO(hoy))
-    avisos.push({ id: ID.domingo, titulo: t('¿Voy bien?'), texto: t('Tu semana, en 10 segundos'), cuando: enFecha(sumarDias(hoy, (6 - hoyD + 7) % 7 || 7), '19:00'), repetirCada: 'week' })
+    avisos.push({ id: ID_AVISO.domingo, titulo: t('¿Voy bien?'), texto: t('Tu semana, en 10 segundos'), cuando: enFecha(sumarDias(hoy, (6 - hoyD + 7) % 7 || 7), '19:00'), repetirCada: 'week' })
   }
-  if (a.noti.fotos && p.fotosCadaSemanas > 0) avisos.push({ id: ID.fotos, titulo: t('Foto de progreso'), texto: t('Misma pose y misma luz que la última'), cuando: enFecha(sumarDias(hoy, p.fotosCadaSemanas * 7), '19:30') })
+  if (a.noti.fotos && p.fotosCadaSemanas > 0) avisos.push({ id: ID_AVISO.fotos, titulo: t('Foto de progreso'), texto: t('Misma pose y misma luz que la última'), cuando: enFecha(sumarDias(hoy, p.fotosCadaSemanas * 7), '19:30') })
   await programar(avisos.filter(x => x.cuando.getTime() > ahora || x.repetirCada))
 }
 

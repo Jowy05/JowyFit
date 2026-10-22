@@ -14,30 +14,29 @@ const en: Record<keyof typeof es, string> = {
   'cab.letra': 'Large text',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
-  'idioma.boton': 'Language: {nombre}',
+  'idioma.boton': "{codigo} · Language: {nombre}",
 
   // Hero: lo primero que se ve
-  'hero.ante': 'The free app for getting back to the gym',
   'hero.titulo.1': 'Less thinking.',
   'hero.titulo.2': 'More <em class="subrayado">training.</em>',
-  'hero.sub': 'It builds your routine around your days and your time, and raises your weights for you.',
+  'hero.sub': "The free app that builds your routine around your days and your time, and raises your weights for you.",
   'hero.nota-android': 'It doesn’t come from Google Play: you install it with the file on this page, in 3 steps. <a href="#android" data-abrir="d-android">See how to install it</a>',
   'hero.nota-pc': 'You’re on a computer: open this page on your Android phone to install it there.',
   'hero.dentro-app': '<b>You’re inside another app.</b> To put JowyFit on your Home Screen, open it in Safari: tap “···” or the compass and choose “Open in Safari.”',
   'hero.nota-apple': 'Tap it and the app opens in Safari and shows you how to put it on your Home Screen, just like any other icon.',
   'hero.nota-appstore': 'It’s not on the App Store, and it doesn’t need to be: it works from Safari, free and with nothing to download. <a href="#appstore" data-abrir="d-appstore">Why?</a>',
   'hero.otra-iphone': 'Have an iPhone? Use it from Safari, nothing to download',
-  'hero.otra-android': 'Have an Android? See how to download it',
+  'hero.otra-android': "Have an Android phone? See how to download it",
 
   // Botones (se repiten en el hero, en la franja del medio y en el cierre)
   'cta.descargar': 'Download the free app',
   'cta.empezada': 'Download started',
   'cta.abrir': 'Open JowyFit for free',
-  'cta.demo': 'Watch the demo <small>· 1 minute</small>',
+  'cta.demo': "Watch the demo <small class=\"solo-otro\">· 1 minute</small><small class=\"solo-apple\">· a minute and a half</small>",
   'cta.abrir-corto': 'Open JowyFit',
 
   // Lo que te garantizamos (debajo de cada botón)
-  'garantias.aria': 'What we promise you',
+  'garantias.aria': "At a glance",
   'garantias.gratis': 'Free',
   'garantias.cuentas': 'No accounts',
   'garantias.anuncios': 'No ads',
@@ -45,7 +44,7 @@ const en: Record<keyof typeof es, string> = {
 
   // Línea bajo el botón de Android (la escribe el JS): «Para Android 8 o superior · 28 MB · actualizada el 21 de octubre de 2026 · Novedades»
   'version.android': 'For Android 8 or later',
-  'version.tamano': '{mb} MB',
+  'version.tamano': "{mb} MB",
   'version.fecha': 'updated {fecha}',
   'version.novedades': 'What’s new',
   'version.corta': 'Version {version}',
@@ -93,7 +92,6 @@ const en: Record<keyof typeof es, string> = {
 
   // Reloj dibujado y bloque «El descanso te avisa»
   'reloj.terminado': 'Rest over',
-  'reloj.titulillo': 'Rest',
   'reloj.titulo': 'Your rest timer alerts you, even on your watch.',
   'reloj.texto': 'It goes off when rest is over, even with your phone in your pocket. If you have a watch connected to your phone, it buzzes on your wrist.',
   'reloj.serie': 'Set 2',
@@ -106,24 +104,20 @@ const en: Record<keyof typeof es, string> = {
   'anim.otra': 'Watch again',
 
   // Lo que hace por ti
-  'hace.titulillo': 'What it does for you',
-  'hace.titulo': 'You go to the gym. The app does the thinking.',
+  'hace.titulo': "What it does for you.",
   'hace.hoy.titulo': 'Tells you what to do today',
   'hace.hoy.texto': 'Tell it which days you go and how much time you have. Your routine builds itself.',
   'hace.toques.titulo': 'Log it in two taps',
-  'hace.toques.texto': 'Tap “Done” or “Same as last.” Then rest.',
+  'hace.toques.texto': "Tap “Done” or “Same as last,” then rest.",
   'hace.peso.titulo': 'Adds weight when it’s time',
   'hace.peso.texto': 'When a set feels easy, it adds a little more next time.',
 
   // Cifras
   'cifras.ejercicios': 'exercises, each with its own drawing',
-  'cifras.toques': 'taps to log a set',
-  'cifras.tamanos': 'portion sizes for food: A little, Normal, and A lot',
   'cifras.mas-de': 'Over {n}',
 
   // Así empiezas
-  'empiezas.titulillo': 'How you start',
-  'empiezas.titulo': 'Four steps and your plan is ready.',
+  'empiezas.titulo': "Your plan, in a few questions.",
   'empiezas.dias.aria': 'Example: Tuesday, Thursday, and Friday',
   'empiezas.dias.l': 'M',
   'empiezas.dias.m': 'T',
@@ -143,29 +137,24 @@ const en: Record<keyof typeof es, string> = {
   'empiezas.alt': 'The “Your schedule” step: Tuesday, Thursday, and Friday checked, at 5:30 a.m. for 60 minutes each day.',
 
   // Llamada del medio
-  'franja.titulo': 'Ready to start?',
-  'franja.sub': 'Quicker than warming up on the treadmill.',
 
   // Bloques de funciones
   'funciones.aria': 'What the app does',
 
   // Máquina ocupada
-  'ocupado.titulillo': 'During peak hours',
   'ocupado.titulo': 'Machine taken? It finds you another.',
-  'ocupado.texto': 'Tap “Taken” and it suggests another exercise that works the same muscles, with the weight already filled in. And it remembers what you do each day.',
+  'ocupado.texto': "At rush hour, tap “Taken” and it suggests another exercise that works the same muscles, with the weight already filled in. And it remembers what you do each day.",
   'ocupado.alt': 'The “Taken” sheet: if the barbell squat is taken, it suggests the leg press with 10 kg × 6-10.',
 
   // Comida
-  'comida.titulillo': 'Food',
   'comida.titulo': 'Eat without counting calories.',
   'comida.texto': 'Log what you eat with <strong>A little</strong>, <strong>Normal</strong>, or <strong>A lot</strong>. You see protein first; the rest stays in the background. And if it has a barcode, you scan it.',
   'comida.nota': 'Scanned products come from Open Food Facts, a free public list of foods: when you scan, the barcode is sent to it, and the product photo loads from their servers.',
   'comida.alt': 'Logging food: “Lentils with chorizo” with the A little, Normal, and A lot buttons, and Normal selected (about 600 kcal).',
 
   // ¿Voy bien?
-  'voybien.titulillo': 'Every Sunday',
   'voybien.titulo': 'Am I on track?',
-  'voybien.p1': 'A traffic light tells you how your week went: what’s going well and what you can improve. No stress.',
+  'voybien.p1': "Every Sunday, a traffic light tells you how your week went: what’s going well and what you can improve.",
   'voybien.p2': 'If something is falling behind, like protein, it points it out for next week. The app does the math: you just log what you eat.',
   'voybien.alt': 'The Sunday review: amber light, “Almost”: 3 of 3 workouts, 1 cm off your waist, and protein to work on.',
 
@@ -173,7 +162,6 @@ const en: Record<keyof typeof es, string> = {
   'comun.datos-ejemplo': 'Sample data.',
 
   // Tu cuerpo
-  'cuerpo.titulillo': 'Your body',
   'cuerpo.titulo': 'See how you change.',
   'cuerpo.p1': 'Weight, waist, and body fat in a simple chart. With each week’s average, because a single day’s weight can fool you.',
   'cuerpo.android': 'If you have a scale or a watch connected to your phone, your steps and weight are logged for you (through Health Connect, Android’s health app, and only if you turn it on).',
@@ -181,14 +169,8 @@ const en: Record<keyof typeof es, string> = {
   'cuerpo.alt': 'Progress, Body tab: weight drops from 85.2 to 82.3 kg in seven weeks, and waist from 98 to 95 cm.',
 
   // Privacidad
-  'privacidad.titulillo': 'Your data is yours',
   'privacidad.titulo': 'Your data stays on your phone.',
   'privacidad.intro': 'No accounts, no cloud. Nothing to steal and nothing to sell.',
-  'privacidad.ceros.cuentas': 'accounts',
-  'privacidad.ceros.anuncios': 'ads',
-  'privacidad.ceros.rastreadores': 'trackers',
-  'privacidad.ceros.euros': '€0',
-  'privacidad.ceros.al-mes': 'a month',
   'privacidad.pagina.titulo': 'This page doesn’t track you either',
   'privacidad.pagina.texto': 'No analytics, no cookies.',
   'privacidad.internet.titulo': 'Works offline',
@@ -197,18 +179,15 @@ const en: Record<keyof typeof es, string> = {
   'privacidad.cuentas.texto': 'Open the app and start.',
   'privacidad.copia.titulo': 'Your backup, your file',
   'privacidad.copia.texto': 'Save a backup whenever you want and take it to another phone.',
-  'privacidad.pierdo': '<b>What if I lose my phone?</b> Since nobody else has your data, it would be lost with it. That’s why the app reminds you if you go a week without making a backup. You make it in Profile → Settings → “Backup”: it’s a file you can email to yourself or save to Drive or your computer.',
+  'privacidad.pierdo': "<b>What if I lose my phone?</b> Since nobody else has your data, it would be lost with it: make a backup now and then (the app reminds you). <a href=\"#cambiar\" data-abrir=\"d-cambiar\">How to do it</a>",
 
   // Quién la ha hecho
-  'autor.titulillo': 'Who made it',
   'autor.titulo': 'Made by someone who works out early.',
-  'autor.chip': 'Before work',
-  'autor.texto': 'I made it for myself. I work out <span class="dato">early</span>, three days a week, and I wanted to open my phone and know what to do without thinking. I also thought of my dad: if he can figure it out without help, I got it right.',
+  'autor.texto': "I made it for myself. I work out early, three days a week, and I wanted to open my phone and know what to do without thinking. I also thought of my dad: if he can figure it out without help, I got it right.",
   'autor.novedades': 'What’s new in each version',
   'autor.codigo': 'The code is open: anyone who knows how to code can check what the app does on the inside. <a href="https://github.com/Jowy05/JowyFit">See the code</a>',
 
   // Preguntas frecuentes
-  'faq.titulillo': 'Common questions',
   'faq.titulo': 'Things you might be wondering.',
   'faq.android.pregunta': 'How do I install it on Android?',
   'faq.android.paso1': '<b>1.</b> Tap “Download the free app.” Chrome asks the same thing for every app that doesn’t come from Google Play, no matter which one it is. Tap “Download anyway.”',
@@ -234,7 +213,7 @@ const en: Record<keyof typeof es, string> = {
   'faq.internet.pregunta': 'Does it work offline?',
   'faq.internet.respuesta': 'Yes. Only the scanner needs a connection to look up the product; if there isn’t one, it saves the code and looks it up later.',
   'faq.mayores.pregunta': 'Is it for me if I’m 60 or have never been to a gym?',
-  'faq.mayores.respuesta': 'Yes. It’s easy to figure out without a tour, you can turn on large text, and the routine starts easy, with comfortable weights.',
+  'faq.mayores.respuesta': "Yes. The first time, a short guided tour shows you the important parts, you can turn on large text, and the routine starts easy, with comfortable weights.",
   'faq.actualizar.pregunta': 'How do I update it? Will I lose what I’ve logged?',
   'faq.actualizar.android': 'You won’t lose anything. When a new version comes out, download it from this page and install it over the one you have: your data stays.',
   'faq.actualizar.iphone': 'You won’t lose anything. It updates itself when you open it while you’re online, and your data stays.',
@@ -275,8 +254,7 @@ const en: Record<keyof typeof es, string> = {
   'cierre.iphone': 'On iPhone and iPad, open it in Safari and put it on your Home Screen.',
 
   // Pie
-  'pie.enlaces': '<b>JowyFit</b> · Free and open source · <a href="#novedades" data-abrir="d-novedades">What’s new</a> · <a href="privacypolicy.html">Privacy policy</a>',
-  'pie.cookies': 'This page has no analytics or cookies.',
+  'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Free and open source · <a href=\"#novedades\" data-abrir=\"d-novedades\">What’s new</a> · <a href=\"privacypolicy.html\">Privacy policy</a> (in Spanish)",
   'pie.creditos': 'Credits: the exercises and their drawings are from RepDB; the foods, from Open Food Facts. Phosphor icons and Barlow font. <span data-version-corta=""></span> · MIT License · <a href="https://github.com/Jowy05/JowyFit">Code</a>',
 
   // Barra fija del móvil

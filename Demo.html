@@ -4,11 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0A0E13" />
-    <meta name="description" data-i18n-attr="content:demo.meta.descripcion" content="Demo de JowyFit en un minuto: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad." />
+    <meta name="description" data-i18n-attr="content:demo.meta.descripcion" content="Demo de JowyFit: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad." />
     <meta name="format-detection" content="telephone=no" />
-    <title data-i18n="demo.meta.titulo">JowyFit · Demo en un minuto</title>
+    <title data-i18n="demo.meta.titulo">JowyFit · Así funciona la app</title>
     <link rel="icon" href="iconos/icono-64.png" type="image/png" sizes="64x64" />
     <link rel="apple-touch-icon" href="iconos/icono-180.png" />
+    <!-- Letra grande (la misma preferencia que la app y la landing), antes de pintar para que no salte. -->
+    <script>
+      try { if (localStorage.getItem('jf-letra') === 'grande') document.documentElement.setAttribute('data-letra', 'grande') } catch (e) {}
+    </script>
     <!--
       Idioma (antes de pintar, igual en index.html y Demo.html): «?lang=es|ca|en», si no el que eligió la persona
       (localStorage «jf-idioma-web») y si no el del navegador (el primero que sea en, ca o es); si no, castellano.
@@ -45,7 +49,7 @@
     </svg>
 
     <header class="d-cab">
-      <a class="d-marca" href="./"><img src="iconos/icono-64.png" width="34" height="34" alt="" />JowyFit</a>
+      <a class="d-marca" href="./" translate="no"><img src="iconos/icono-64.png" width="34" height="34" alt="" /><span class="d-marca-txt">JowyFit</span></a>
       <div class="d-cab-der">
         <!-- Idioma: el código del actual y un menú con los tres (cada uno en su idioma). Lo maneja src/landing/i18n/idioma.ts. -->
         <div class="d-idioma" data-idioma-selector>
@@ -66,25 +70,28 @@
       <div class="d-intro">
         <p class="d-titulillo" data-i18n="demo.intro.titulillo">Demo · capturas de la app de verdad</p>
         <h1 data-i18n="demo.intro.titulo">Así funciona JowyFit</h1>
-        <div class="d-plat" role="tablist" aria-label="Qué móvil tienes" data-i18n-attr="aria-label:demo.intro.plataforma">
-          <button type="button" role="tab" data-plat="android" aria-selected="true">Android</button>
-          <button type="button" role="tab" data-plat="apple" aria-selected="false">iPhone</button>
+        <div class="d-plat" role="group" aria-label="Qué móvil tienes" data-i18n-attr="aria-label:demo.intro.plataforma">
+          <button type="button" data-plat="android" aria-pressed="true">Android</button>
+          <button type="button" data-plat="apple" aria-pressed="false">iPhone</button>
         </div>
       </div>
 
       <div class="d-escena">
         <figure class="d-movil" aria-hidden="true">
           <div class="d-pantalla">
-            <img class="d-cap" data-cap="0" alt="" decoding="async" />
-            <img class="d-cap" data-cap="1" alt="" decoding="async" />
+            <img class="d-cap" data-cap="0" width="390" height="844" alt="" decoding="async" />
+            <img class="d-cap" data-cap="1" width="390" height="844" alt="" decoding="async" />
             <div class="d-foco" data-foco></div>
           </div>
         </figure>
 
-        <section class="d-tarjeta" aria-live="polite" data-tarjeta>
+        <section class="d-tarjeta" data-tarjeta>
           <p class="d-cap-n"><span data-capitulo>Inicio</span> · <span data-n>1 de 12</span></p>
-          <h2 data-titulo>Así funciona JowyFit</h2>
-          <p class="d-texto" data-texto></p>
+          <!-- Solo título y texto se leen en voz alta, y solo en pausa o al pasar a mano (main.ts pone aria-live). -->
+          <div aria-live="off" aria-atomic="true" data-vivo>
+            <h2 data-titulo>Así funciona JowyFit</h2>
+            <p class="d-texto" data-texto></p>
+          </div>
           <div class="d-barras" data-barras></div>
           <div class="d-controles">
             <button type="button" class="d-b d-b-sec" data-atras aria-label="Paso anterior" data-i18n-attr="aria-label:demo.control.atras"><svg aria-hidden="true"><use href="#d-atras"/></svg></button>

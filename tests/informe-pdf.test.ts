@@ -231,7 +231,9 @@ describe('crearPdf', () => {
     for (const p of ['semana', 'mes', 'todo'] as PeriodoInforme[]) {
       const { pdf } = await pdfDe(p, h)
       expect(pdf.texto).not.toMatch(/NaN|Infinity|undefined/)
-      expect(pdf.texto).toContain('Una sola vez')
+      // Con menos de 3 días no hay gráfica de fuerza: el ejercicio sale en «Tu mejor serie».
+      expect(pdf.texto).not.toContain('Progreso de fuerza')
+      expect(pdf.texto).toContain('Tu mejor serie en cada ejercicio')
     }
   })
 

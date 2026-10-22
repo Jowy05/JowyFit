@@ -3,6 +3,8 @@
   --n0: #0A0E13; --n1: #10151C; --n2: #18202A; --n-line: #2B394A;
   --n-ink: #F3F6FA; --n-sub: #C9D4E0; --n-muted: #A9B8C9; --n-acc: #B98CFF;
   --go: #7F26FB; --go-hover: #8F42FF; --go-press: #6A12E6; --on-go: #FFFFFF;
+  /* Bordes y pista de la barra: 3:1 como mínimo sobre la noche. */
+  --borde: rgba(243, 246, 250, .45); --pista: rgba(243, 246, 250, .35);
   --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --f-disp: "Barlow Semi Condensed", "Barlow", system-ui, sans-serif;
   --ease: cubic-bezier(.2, .8, .2, 1);
@@ -10,8 +12,10 @@
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+/* Letra grande (la preferencia de la app y la landing): todo va en rem, así crece entero. */
+html[data-letra='grande'] { font-size: 112.5%; }
 body {
-  margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--n-ink); font: 17px/1.5 var(--f-body); -webkit-font-smoothing: antialiased;
+  margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--n-ink); font: 1.0625rem/1.5 var(--f-body); -webkit-font-smoothing: antialiased;
   background: radial-gradient(90% 70% at 30% 40%, rgba(127, 38, 251, .22) 0%, rgba(127, 38, 251, 0) 60%), linear-gradient(180deg, #0A0E13 0%, #0E131A 55%, #150E22 100%);
   background-attachment: fixed;
 }
@@ -21,21 +25,27 @@ button { font: inherit; }
 [hidden] { display: none !important; }
 [data-plataforma='android'] .solo-apple, [data-plataforma='apple'] .solo-android { display: none !important; }
 
-/* Cabecera */
-.d-cab { max-width: 1120px; margin: 0 auto; padding: max(14px, env(safe-area-inset-top)) 20px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.d-marca { display: inline-flex; align-items: center; gap: 10px; color: var(--n-ink); text-decoration: none; font: 700 20px var(--f-disp); letter-spacing: .01em; }
+/* Cabecera (enlaces y botones de 44 px de alto como mínimo, para el dedo) */
+.d-cab {
+  max-width: 1120px; margin: 0 auto; padding: max(14px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.d-marca { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--n-ink); text-decoration: none; font: 700 1.25rem var(--f-disp); letter-spacing: .01em; }
 .d-marca img { border-radius: 9px; display: block; }
-.d-volver { color: var(--n-sub); font-weight: 500; font-size: 15px; text-decoration: none; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(243, 246, 250, .16); }
+.d-volver {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--borde);
+  color: var(--n-sub); font-weight: 500; font-size: .9375rem; text-decoration: none;
+}
 .d-volver:hover { background: rgba(243, 246, 250, .06); }
 /* Idioma: al lado de «Volver», con su mismo aspecto; el menú se abre debajo, a la derecha. */
 .d-cab-der { display: flex; align-items: center; gap: 8px; }
 .d-idioma { position: relative; z-index: 7; }
 .d-idioma-boton {
-  display: inline-flex; align-items: center; gap: 4px; color: var(--n-sub); font-weight: 500; font-size: 15px; cursor: pointer;
-  padding: 8px 10px 8px 12px; border-radius: 12px; border: 1px solid rgba(243, 246, 250, .16); background: none;
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: var(--n-sub); font-weight: 500; font-size: .9375rem; cursor: pointer;
+  padding: 0 10px 0 12px; border-radius: 12px; border: 1px solid var(--borde); background: none;
 }
 .d-idioma-boton:hover, .d-idioma-boton[aria-expanded='true'] { background: rgba(243, 246, 250, .06); }
-.d-idioma-boton svg { width: 16px; height: 16px; transition: transform .2s var(--ease); }
+.d-idioma-boton svg { width: 16px; height: 16px; }
 .d-idioma-boton[aria-expanded='true'] svg { transform: rotate(180deg); }
 .d-idioma-menu {
   position: absolute; top: calc(100% + 6px); right: 0; min-width: 168px; margin: 0; padding: 6px; list-style: none;
@@ -43,7 +53,7 @@ button { font: inherit; }
 }
 .d-idioma-menu button {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 44px; padding: 0 12px;
-  color: var(--n-ink); font-weight: 500; font-size: 16px; background: none; border: 0; border-radius: 8px; cursor: pointer; text-align: left;
+  color: var(--n-ink); font-weight: 500; font-size: 1rem; background: none; border: 0; border-radius: 8px; cursor: pointer; text-align: left;
 }
 .d-idioma-menu button:hover { background: rgba(243, 246, 250, .08); }
 .d-idioma-menu button:focus-visible { outline-offset: -3px; }
@@ -51,13 +61,14 @@ button { font: inherit; }
 .d-idioma-menu button[aria-checked='true'] { font-weight: 600; }
 .d-idioma-menu button[aria-checked='true'] svg { visibility: visible; }
 
-.d-main { max-width: 1120px; margin: 0 auto; padding: 18px 20px 40px; }
+.d-main { max-width: 1120px; margin: 0 auto; padding: 18px max(20px, env(safe-area-inset-right)) 40px max(20px, env(safe-area-inset-left)); }
 .d-intro { text-align: center; }
-.d-titulillo { margin: 0; font: 700 13px var(--f-disp); letter-spacing: .14em; text-transform: uppercase; color: var(--n-acc); }
-.d-intro h1 { margin: 4px 0 0; font: 800 clamp(32px, 6vw, 52px)/1.04 var(--f-disp); letter-spacing: -.02em; }
+.d-titulillo { margin: 0; font: 600 .9375rem var(--f-disp); color: var(--n-acc); }
+.d-intro h1 { margin: 4px 0 0; font: 800 clamp(2rem, 6vw, 3.25rem)/1.04 var(--f-disp); letter-spacing: -.02em; }
 .d-plat { display: inline-flex; gap: 4px; margin-top: 14px; padding: 4px; border-radius: 14px; background: rgba(243, 246, 250, .06); border: 1px solid rgba(243, 246, 250, .12); }
-.d-plat button { min-height: 40px; padding: 0 18px; border: 0; border-radius: 10px; background: none; color: var(--n-sub); font-weight: 600; cursor: pointer; }
-.d-plat button[aria-selected='true'] { background: var(--go); color: var(--on-go); }
+.d-plat button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: none; color: var(--n-sub); font-weight: 600; cursor: pointer; }
+.d-plat button[aria-pressed='false']:hover { background: rgba(243, 246, 250, .10); color: var(--n-ink); }
+.d-plat button[aria-pressed='true'] { background: var(--go); color: var(--on-go); }
 
 /* Escena: móvil + tarjeta */
 .d-escena { display: grid; justify-items: center; gap: 18px; margin-top: 18px; }
@@ -81,46 +92,49 @@ button { font: inherit; }
   width: min(100%, 460px); background: rgba(24, 32, 42, .92); border: 1px solid var(--n-line); border-radius: 22px; padding: 18px 18px 14px;
   box-shadow: 0 24px 60px -24px rgba(0, 0, 0, .7);
 }
-.d-cap-n { margin: 0; font: 700 12.5px var(--f-disp); letter-spacing: .1em; text-transform: uppercase; color: var(--n-acc); }
-.d-tarjeta h2 { margin: 4px 0 0; font: 700 clamp(22px, 3.2vw, 28px)/1.15 var(--f-disp); letter-spacing: -.01em; }
-.d-texto { margin: 6px 0 0; color: var(--n-sub); font-size: 17px; line-height: 1.45; min-height: 3em; }
+.d-cap-n { margin: 0; font: 600 .9375rem var(--f-disp); color: var(--n-acc); }
+.d-tarjeta h2 { margin: 4px 0 0; font: 700 clamp(1.375rem, 3.2vw, 1.75rem)/1.15 var(--f-disp); letter-spacing: -.01em; }
+.d-texto { margin: 6px 0 0; color: var(--n-sub); font-size: 1.0625rem; line-height: 1.45; min-height: 3em; }
+/* Barras de progreso: la raya se ve de 4 px, pero se toca en 44 px de alto (el margen negativo no la separa más). */
 .d-barras { display: flex; gap: 4px; margin-top: 14px; }
-.d-barra { flex: 1; height: 16px; padding: 6px 0; border: 0; background: none; cursor: pointer; }
-.d-barra i { display: block; height: 4px; border-radius: 4px; background: rgba(243, 246, 250, .16); position: relative; overflow: hidden; }
-.d-barra i::after { content: ''; position: absolute; inset: 0; width: var(--lleno, 0%); background: var(--go); border-radius: 4px; }
-.d-barra.hecha i::after { --lleno: 100%; }
-.d-barra.actual i::after { animation: inherit; }
-@keyframes d-llenar { from { width: 0; } to { width: 100%; } }
-.d-barra.actual i::after { width: 0; animation-name: d-llenar; animation-duration: inherit; animation-timing-function: linear; animation-fill-mode: forwards; animation-play-state: inherit; }
+.d-barra { flex: 1; height: 44px; margin: -18px 0 -10px; padding: 20px 0; border: 0; background: none; cursor: pointer; }
+.d-barra i { display: block; height: 4px; border-radius: 4px; background: var(--pista); overflow: hidden; }
+.d-barra i span { display: block; height: 100%; background: var(--go); transform: scaleX(0); transform-origin: left center; }
+.d-barra.hecha i span { transform: scaleX(1); }
+@keyframes d-llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-.d-controles { display: flex; gap: 8px; margin-top: 10px; }
+/* Los botones, por encima del borde que se toca de las barras. */
+.d-controles { position: relative; display: flex; gap: 8px; margin-top: 10px; }
 .d-b { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 14px; cursor: pointer; font-weight: 600; }
 .d-b svg { width: 20px; height: 20px; }
 .d-b-sec { background: var(--n2); color: var(--n-ink); border: 1px solid rgba(243, 246, 250, .22); }
 .d-b-sec:hover { background: #1F2935; }
-.d-b-play { flex: 1; background: var(--go); color: var(--on-go); border: 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 10px 24px -10px rgba(127, 38, 251, .7); }
+.d-b-sec:active { background: #26313F; }
+.d-b-play { flex: 1; background: var(--go); color: var(--on-go); border: 0; }
 .d-b-play:hover { background: var(--go-hover); }
+.d-b-play:active { background: var(--go-press); }
 .d-b-play .i-play, .d-b-play[data-estado='pausa'] .i-pausa { display: none; }
 .d-b-play[data-estado='pausa'] .i-play { display: block; }
-.d-teclas { margin: 10px 0 0; font-size: 13px; color: var(--n-muted); text-align: center; }
+.d-teclas { margin: 10px 0 0; font-size: .9375rem; color: var(--n-muted); text-align: center; }
 @media (hover: none) { .d-teclas { display: none; } }
 
 .d-final { text-align: center; padding: 24px 20px 20px; }
-.d-final img { display: block; margin: 0 auto 12px; border-radius: 22px; box-shadow: 0 10px 30px rgba(127, 38, 251, .45); }
-.d-final h2 { margin: 0; font: 800 30px/1.1 var(--f-disp); }
+.d-final img { display: block; margin: 0 auto 12px; border-radius: 22px; }
+.d-final h2 { margin: 0; font: 800 1.875rem/1.1 var(--f-disp); }
 .d-final p { margin: 8px 0 18px; color: var(--n-sub); }
 .d-cta {
   display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border-radius: 16px; text-decoration: none;
-  background: var(--go); color: var(--on-go); font: 700 19px var(--f-disp); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 12px 28px -10px rgba(127, 38, 251, .6);
+  background: var(--go); color: var(--on-go); font: 700 1.1875rem var(--f-disp);
 }
 .d-cta:hover { background: var(--go-hover); }
+.d-cta:active { background: var(--go-press); }
 .d-cta svg { width: 22px; height: 22px; }
 .d-otra { width: 100%; margin-top: 10px; }
 
 /* Escritorio y tablet: el móvil a la izquierda y la tarjeta al lado (en tablet vertical la tarjeta, debajo, quedaba fuera) */
 @media (min-width: 700px) {
-  .d-main { padding-top: 28px; }
-  .d-escena { grid-template-columns: auto minmax(0, 460px); justify-content: center; align-items: center; gap: 56px; margin-top: 28px; }
+  .d-main { padding-top: 22px; }
+  .d-escena { grid-template-columns: auto minmax(0, 460px); justify-content: center; align-items: center; gap: 56px; margin-top: 24px; }
   .d-movil { --w: min(340px, calc((100dvh - 250px) * 390 / 844)); }
   .d-tarjeta, .d-final { padding: 24px 24px 18px; }
 }
@@ -133,32 +147,59 @@ button { font: inherit; }
 /* Móvil: la captura a pantalla completa, como la app de verdad, y la tarjeta encima o debajo de lo señalado. */
 @media (max-width: 640px) {
   body { overflow: hidden; height: 100dvh; background: #F2F4F7; }
-  .d-cab { position: fixed; top: 0; left: 0; right: 0; z-index: 6; max-width: none; padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: rgba(10, 14, 19, .92); backdrop-filter: blur(10px); }
-  .d-marca { font-size: 18px; }
+  .d-cab {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 6; max-width: none; background: rgba(10, 14, 19, .92); backdrop-filter: blur(10px);
+    padding: max(6px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));
+  }
+  .d-marca { font-size: 1.125rem; }
   .d-marca img { width: 30px; height: 30px; }
-  .d-volver { padding: 6px 10px; font-size: 14px; }
-  .d-idioma-boton { padding: 6px 8px 6px 10px; font-size: 14px; }
+  .d-volver { padding: 0 10px; }
+  .d-idioma-boton { padding: 0 8px 0 10px; }
   .d-main { padding: 0; }
-  .d-intro { display: none; }
+  /* La presentación no cabe: el título se queda para los lectores de pantalla; el cambio de móvil va en la tarjeta. */
+  .d-titulillo, .d-plat { display: none; }
+  .d-intro h1 { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .d-escena { position: fixed; inset: 0; margin: 0; display: block; }
   .d-movil { --w: 100vw; position: absolute; inset: 0; width: auto; padding: 0; border-radius: 0; background: #F2F4F7; box-shadow: none; overflow: hidden; }
   .d-pantalla { position: absolute; left: 0; top: 0; aspect-ratio: auto; border-radius: 0; overflow: visible; transition: transform .35s var(--ease); }
-  .d-tarjeta { position: fixed; left: 10px; right: 10px; width: auto; z-index: 5; padding: 14px 14px 10px; border-radius: 18px; background: rgba(24, 32, 42, .97); }
+  /* Con zoom o letra grande la tarjeta no pasa de la pantalla: se desplaza dentro y los botones siguen a mano. */
+  .d-tarjeta {
+    position: fixed; left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); width: auto; z-index: 5;
+    padding: 14px 14px 10px; border-radius: 18px; background: rgba(24, 32, 42, .97);
+    max-height: calc(100dvh - var(--cab, 56px) - 20px); overflow-y: auto; overscroll-behavior: contain;
+  }
   .d-tarjeta[data-donde='abajo'] { bottom: max(10px, env(safe-area-inset-bottom)); }
   .d-tarjeta[data-donde='arriba'] { top: calc(var(--cab, 56px) + 10px); }
-  .d-tarjeta h2 { font-size: 21px; }
-  .d-texto { font-size: 15.5px; min-height: 0; }
+  .d-tarjeta h2 { font-size: 1.3125rem; }
+  .d-texto { font-size: .96875rem; min-height: 0; }
   .d-barras { margin-top: 10px; }
   .d-controles { margin-top: 6px; }
   .d-b { min-height: 44px; }
-  .d-otro-movil { display: block; width: 100%; margin-top: 6px; min-height: 36px; border: 0; background: none; color: var(--n-acc); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-  .d-final { position: fixed; left: 12px; right: 12px; top: 50%; transform: translateY(-50%); width: auto; z-index: 5; box-shadow: 0 0 0 200vmax rgba(8, 6, 18, .6); }
+  .d-otro-movil {
+    display: block; width: 100%; min-height: 44px; margin-top: 2px; border: 0; background: none; cursor: pointer;
+    color: var(--n-acc); font-weight: 600; font-size: .9375rem; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .d-final {
+    position: fixed; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%);
+    width: auto; z-index: 5; box-shadow: 0 0 0 200vmax rgba(8, 6, 18, .6);
+  }
 }
-/* Móviles muy estrechos (320 px): el botón de idioma, solo con el código, para que «Volver» no se parta. */
+/* Móvil estrecho con letra grande, o muy estrecho (320 px): el logo sin el nombre (se queda para los lectores de pantalla). */
+@media (max-width: 389px) {
+  html[data-letra='grande'] .d-marca { min-width: 44px; }
+  html[data-letra='grande'] .d-marca-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* Y en los muy estrechos, el botón de idioma solo con el código, para que «Volver» no se parta. */
 @media (max-width: 339px) {
+  .d-marca { min-width: 44px; }
+  .d-marca-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .d-cab { gap: 8px; }
-  .d-idioma-boton { padding: 6px 10px; }
+  .d-idioma-boton { padding: 0 10px; }
   .d-idioma-boton svg { display: none; }
+}
+/* Movimiento solo si la persona no ha pedido reducirlo. */
+@media (prefers-reduced-motion: no-preference) {
+  .d-idioma-boton svg { transition: transform .2s var(--ease); }
 }
 @media (prefers-reduced-motion: reduce) {
   .d-cap, .d-foco, .d-pantalla { transition: none; }

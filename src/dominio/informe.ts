@@ -106,6 +106,8 @@ export type FilaResumen = {
   cambio: Cambio | null
   /** Columna «Cambio» sin flecha: «92 %», «obj. 140». */
   cambioTexto: string | null
+  /** Filas que se miden contra un objetivo (entrenos, proteína, pasos): van en su propia tabla del PDF. */
+  contra: { valor: string; objetivo: string; pct: string | null } | null
   evaluacion: Evaluacion
   nota: string | null
 }
@@ -1196,6 +1198,21 @@ function controlPeso(c: Ctx): ControlPeso | null {
   return { peso: p.valor, pesoFecha: p.fecha, grasa: g?.valor ?? null, grasaFuente: g?.fuente ?? null, meta, metaPropia: !!metaG, pesoConMeta, sobra, ritmo, fechaMeta, filas }
 }
 
+/**
+ * Título de la meta en el idioma del informe: el guardado se escribió en el idioma de aquel momento.
+ * Las libres van tal cual las escribió la persona.
+ */
+function tituloMeta(c: Ctx, m: Meta, val: (v: number, u: string) => string): string {
+  switch (m.tipo) {
+    case 'cintura': return t('Cintura por debajo de {valor}', { valor: val(m.objetivo, m.unidad || 'cm') })
+    case 'peso': return t('Peso: {n} {unidad}', { n: kg(m.objetivo), unidad: m.unidad || 'kg' })
+    case 'grasa': return t('Grasa al {valor}', { valor: conUnidad(num(m.objetivo), '%') })
+    case 'dominadas': return t('{n} dominadas estrictas', { n: m.objetivo })
+    case 'ejercicio': return m.ejercicio ? t('{nombre}: {valor}', { nombre: nombreDe(c, m.ejercicio), valor: val(m.objetivo, m.unidad || 'kg') }) : m.titulo
+    default: return m.titulo
+  }
+}
+
 function metasInforme(c: Ctx): MetaInforme[] {
   const ses = c.hechas
   return c.metas.map(m => {
@@ -1220,7 +1237,7 @@ function metasInforme(c: Ctx): MetaInforme[] {
     const unidadFalta = m.tipo === 'grasa' ? t('puntos') : m.unidad
     const val = (v: number, u: string) => conUnidad(u === 'kg' ? kg(v) : num(v), u)
     return {
-      titulo: m.titulo, tipo: m.tipo, unidad: m.unidad, objetivo: m.objetivo, actual,
+      titulo: tituloMeta(c, m, val), tipo: m.tipo, unidad: m.unidad, objetivo: m.objetivo, actual,
       actualTexto: actual != null ? val(actual, m.unidad) : libre ? (m.hecha ? t('Hecha') : t('Pendiente')) : '—',
       progreso: libre ? (m.hecha ? 1 : 0) : conseguida ? 1 : progresoMeta(m.inicio, actual, m.objetivo),
       falta,
@@ -1283,7 +1300,7 @@ function filaPrincipal(c: Ctx): FilaResumen | null {
   return {
     dato: `${nombreDe(c, id)} (${u === 'asistido' ? t('ayuda, kg') : unidadCorta(u)})`,
     inicio: pts.length >= 2 ? f(a) : null, ahora: f(b), junto: null,
-    cambio: pts.length >= 2 ? cambioDe(b - a, tono, v => f(v)) : null, cambioTexto: null, evaluacion: ev,
+    cambio: pts.length >= 2 ? cambioDe(b - a, tono, v => f(v)) : null, cambioTexto: null, contra: null, evaluacion: ev,
     nota: pts.length === 1 ? t('Un solo entreno en estos días') : null,
   }
 }
@@ -1293,11 +1310,11 @@ function filaCuerpo(c: Ctx, dato: string, s: SerieCuerpo, campo: 'peso' | 'grasa
   // Los dos valores con los mismos decimales («80,1 → 79,0»).
   const f = formatoSerie([s.inicio, s.ahora, s.antes?.valor].filter((v): v is number => v != null))
   if (s.ahora == null) {
-    return { dato, inicio: f(s.antes!.valor), ahora: null, junto: null, cambio: null, cambioTexto: null, evaluacion: { texto: t('Sin medir'), tono: 'gris' }, nota: t('último: {valor} ({fecha})', { valor: f(s.antes!.valor), fecha: fechaCorta(s.antes!.fecha) }) }
+    return { dato, inicio: f(s.antes!.valor), ahora: null, junto: null, cambio: null, cambioTexto: null, contra: null, evaluacion: { texto: t('Sin medir'), tono: 'gris' }, nota: t('último: {valor} ({fecha})', { valor: f(s.antes!.valor), fecha: fechaCorta(s.antes!.fecha) }) }
   }
   const ev = s.inicio == null ? { texto: t('Un solo dato'), tono: 'gris' as const } : evaluarCuerpo(s.ahora - s.inicio, c.p.objetivo, campo)
   return {
-    dato, inicio: s.inicio == null ? null : f(s.inicio), ahora: f(s.ahora), junto: null, cambio: s.cambio, cambioTexto: null, evaluacion: ev,
+    dato, inicio: s.inicio == null ? null : f(s.inicio), ahora: f(s.ahora), junto: null, cambio: s.cambio, cambioTexto: null, contra: null, evaluacion: ev,
     nota: s.inicioAntes && s.inicioFecha ? t('al empezar, tu medida del {fecha} (de antes de estos días; dentro solo hay una)', { fecha: fechaCorta(s.inicioFecha) }) : null,
   }
 }
@@ -1312,7 +1329,11 @@ function tablaResumen(c: Ctx, cuerpo: CuerpoInforme, ent: ReturnType<typeof cuen
   // Sin ningún entreno no hay fila: lo dice la línea «Entrenos: 0 de N» del resumen.
   if (ent.hechos) {
     const pct = ent.tocaban ? Math.round((ent.enFijos / ent.tocaban) * 100) : null
-    filas.push({ dato: t('Entrenos'), inicio: null, ahora: null, junto: ent.tocaban ? t('{a} de {b}', { a: ent.enFijos, b: ent.tocaban }) : `${ent.hechos}`, cambio: null, cambioTexto: pct == null ? null : conUnidad(String(pct), '%'), evaluacion: evaluarEntrenos(pct), nota: ent.extra ? t('{n} extra', { n: ent.extra }) : null })
+    filas.push({
+      dato: t('Entrenos'), inicio: null, ahora: null, junto: ent.tocaban ? t('{a} de {b}', { a: ent.enFijos, b: ent.tocaban }) : `${ent.hechos}`, cambio: null, cambioTexto: pct == null ? null : conUnidad(String(pct), '%'),
+      contra: { valor: String(ent.tocaban ? ent.enFijos : ent.hechos), objetivo: ent.tocaban ? String(ent.tocaban) : '—', pct: pct == null ? null : conUnidad(String(pct), '%') },
+      evaluacion: evaluarEntrenos(pct), nota: ent.extra ? t('{n} extra', { n: ent.extra }) : null,
+    })
   }
   const conE = semanas.filter(s => s.esfuerzo != null)
   if (conE.length) {
@@ -1321,14 +1342,16 @@ function tablaResumen(c: Ctx, cuerpo: CuerpoInforme, ent: ReturnType<typeof cuen
     const pal = palabraEsfuerzo(total.media!)
     filas.push({
       dato: t('Esfuerzo medio'), inicio: conE.length >= 2 ? fijo(a) : null, ahora: fijo(conE.length >= 2 ? b : total.media!), junto: null,
-      cambio: conE.length >= 2 ? cambioDe(b - a, 'gris', v => fijo(v)) : null, cambioTexto: null,
+      cambio: conE.length >= 2 ? cambioDe(b - a, 'gris', v => fijo(v)) : null, cambioTexto: null, contra: null,
       evaluacion: { texto: `${capital(t(pal.palabra))} (${pal.rango})`, tono: pal.tono }, nota: total.pocas ? t('pocas series marcadas') : null,
     })
   }
-  if (comida?.proteina.media != null) filas.push({ dato: t('Proteína al día (g)'), inicio: null, ahora: null, junto: t('{n} de media', { n: num(comida.proteina.media, 0) }), cambio: null, cambioTexto: t('obj. {n}', { n: num(comida.proteina.objetivo, 0) }), evaluacion: comida.proteina.evaluacion, nota: null })
+  // Media contra objetivo: «103 · 140 · 74 %».
+  const contra = (media: number, obj: number) => ({ valor: num(media, 0), objetivo: num(obj, 0), pct: obj > 0 ? conUnidad(String(Math.round((media / obj) * 100)), '%') : null })
+  if (comida?.proteina.media != null) filas.push({ dato: t('Proteína al día (g)'), inicio: null, ahora: null, junto: t('{n} de media', { n: num(comida.proteina.media, 0) }), cambio: null, cambioTexto: t('obj. {n}', { n: num(comida.proteina.objetivo, 0) }), contra: contra(comida.proteina.media, comida.proteina.objetivo), evaluacion: comida.proteina.evaluacion, nota: null })
   if (pasos?.media != null) {
     const r = pasos.media / pasos.objetivo
-    filas.push({ dato: t('Pasos al día'), inicio: null, ahora: null, junto: t('{n} de media', { n: num(pasos.media, 0) }), cambio: null, cambioTexto: t('obj. {n}', { n: num(pasos.objetivo, 0) }), evaluacion: r >= 1 ? { texto: t('Bien'), tono: 'ok' } : r >= 0.8 ? { texto: t('A mejorar'), tono: 'warn' } : { texto: t('Pocos'), tono: 'bad' }, nota: null })
+    filas.push({ dato: t('Pasos al día'), inicio: null, ahora: null, junto: t('{n} de media', { n: num(pasos.media, 0) }), cambio: null, cambioTexto: t('obj. {n}', { n: num(pasos.objetivo, 0) }), contra: contra(pasos.media, pasos.objetivo), evaluacion: r >= 1 ? { texto: t('Bien'), tono: 'ok' } : r >= 0.8 ? { texto: t('A mejorar'), tono: 'warn' } : { texto: t('Pocos'), tono: 'bad' }, nota: null })
   }
   return filas.filter((x): x is FilaResumen => !!x)
 }

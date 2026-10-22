@@ -3,7 +3,9 @@
 // Con «reducir movimiento» no se mueve nada solo, y sin JS todo se ve igual (el CSS por defecto es el estado final).
 import { t, textos, type Clave } from './i18n'
 
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+// Se mira cada vez: si la persona lo activa con la página abierta, lo que aún no ha empezado ya no se mueve.
+const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)')
+const reduce = () => menosMovimiento.matches
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)
 const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)]
 const plataforma = () => document.documentElement.dataset.plataforma
@@ -43,7 +45,7 @@ function cifrasEnSuIdioma() {
 
 /** Contadores de datos reales («Más de 600», «2», «3»): de 0 al valor final, una vez. */
 function contadores() {
-  if (reduce) return
+  if (reduce()) return
   const els = $$('[data-contar]')
   alVer(els, 0.6, el => {
     const fin = Number(el.dataset.contar)
@@ -167,7 +169,7 @@ function maquetaHero() {
   boton.addEventListener('click', () => {
     if (estado === 'jugando') { anims.forEach(a => a.pause()); estable(); pintar('pausa') }
     else if (estado === 'pausa') { anims.forEach(a => a.play()); pintar('jugando') }
-    else crear(reduce ? 1 : 3)
+    else crear(reduce() ? 1 : 3)
   })
   // Solo se mueve a la vista y con la pestaña delante.
   new IntersectionObserver(([e]) => {
@@ -179,7 +181,9 @@ function maquetaHero() {
     if (estado !== 'jugando') return
     if (document.hidden) anims.forEach(a => a.pause()); else if (visible) anims.forEach(a => a.play())
   })
-  if (reduce) { pintar('inicio'); return }
+  // Si se activa «reducir movimiento» con la maqueta en marcha, se para.
+  menosMovimiento.addEventListener('change', () => { if (reduce() && estado === 'jugando') { anims.forEach(a => a.pause()); estable(); pintar('pausa') } })
+  if (reduce()) { pintar('inicio'); return }
   pintar('jugando')
   // Arranca cuando las tres capturas están listas (sin saltos) y tras la entrada del hero.
   const imgs = $$<HTMLImageElement>('.capa', visual)
@@ -189,16 +193,18 @@ function maquetaHero() {
   Promise.all([listas, espera]).then(() => { if (estado === 'jugando' && !anims.length) crear(3) })
 }
 
-/** Al tocar «Descargar»: el texto cambia un momento a «Descarga empezada». */
+/** Al tocar «Descargar»: el texto cambia un momento a «Descarga empezada» (y se dice a los lectores de pantalla). */
 function descargaEmpezada() {
   const ocupados = new WeakSet<Element>()
+  const aviso = $('[data-aviso-descarga]')
   for (const a of $$<HTMLAnchorElement>('[data-apk], [data-apk-barra]')) {
     a.addEventListener('click', () => {
       // No se impide nada: la descarga sigue su curso normal.
       if (ocupados.has(a) || !a.querySelector('.boton-txt')) return
       ocupados.add(a)
       a.classList.add('descargando')
-      setTimeout(() => { a.classList.remove('descargando'); ocupados.delete(a) }, 6000)
+      if (aviso) aviso.textContent = t('cta.empezada')
+      setTimeout(() => { a.classList.remove('descargando'); ocupados.delete(a); if (aviso) aviso.textContent = '' }, 6000)
     })
   }
 }
@@ -233,7 +239,7 @@ function barraFija() {
 
 /** El reloj del bloque «El descanso te avisa» vibra dos veces al verse. */
 function relojBloque() {
-  if (reduce || plataforma() === 'apple') return
+  if (reduce() || plataforma() === 'apple') return
   alVer($$('[data-reloj-bloque]'), 0.45, el => {
     const k: Keyframe[] = [{ transform: 'none' }, { transform: 'rotate(-5deg)' }, { transform: 'rotate(5deg)' }, { transform: 'rotate(-4deg)' }, { transform: 'rotate(4deg)' }, { transform: 'none' }]
     const cara = $('.reloj-cara', el)

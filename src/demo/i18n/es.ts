@@ -3,8 +3,8 @@
 // Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
 const es = {
   // Página: título y descripción
-  'demo.meta.descripcion': 'Demo de JowyFit en un minuto: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad.',
-  'demo.meta.titulo': 'JowyFit · Demo en un minuto',
+  'demo.meta.descripcion': 'Demo de JowyFit: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad.',
+  'demo.meta.titulo': 'JowyFit · Así funciona la app',
 
   // Cabecera
   'demo.cab.volver': 'Volver a la página',

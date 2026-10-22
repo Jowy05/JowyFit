@@ -12,6 +12,12 @@ export const ALTO_A4 = 297
 /** 1 pt en mm (para pasar tamaños de letra a alturas). */
 export const PT = 25.4 / 72
 
+/**
+ * Tamaños de letra del informe (pt): siempre uno de estos, nada por debajo de 6,5.
+ * «cifra» solo para el número grande de la puntuación.
+ */
+export const TAM = { micro: 6.5, peque: 7.5, cuerpo: 8.5, h3: 11, h2: 14, kpi: 16, h1: 28, cifra: 40 } as const
+
 /** Paleta del diseño (§2), sacada de tokens.css en tema claro. El PDF siempre sale en claro. */
 const PALETA = {
   tinta: '#16202B', titulo: '#3D4752', gris: '#6B7785', grisSuave: '#9AA5B1', linea: '#D9E0E8', rejilla: '#E8ECF1',
@@ -19,6 +25,10 @@ const PALETA = {
   azul: '#0A74B9', azulSuave: '#CFE3F2', naranja: '#EE6A0E', logo: '#FF7A1A', verde: '#3F8F1E', ambar: '#B7790B', rojo: '#C93A32', oro: '#A97D12',
   zonaClara: '#E3E7EC', normal: '#E6EAEF', facil: '#5E9FD0', blanco: '#FFFFFF',
   fondoNaranja: '#FDF1E9', fondoAzul: '#E7F1F8', fondoVerde: '#E9F2E4',
+  /** Gris neutro de las barras que no llegan al objetivo (la que llega va en el color de la serie). */
+  neutro: '#C3C9D1',
+  /** Fondo claro de la zona sana (zonas del cuerpo, series por grupo, esfuerzo 7-8). */
+  zonaSana: '#DCEBF7',
 }
 export type Color = keyof typeof PALETA
 /** Colores en uso: los de la paleta con los cambios del estilo elegido (ver `aplicarEstilo`). */
@@ -84,7 +94,7 @@ export const ESTILOS: Record<NombreEstilo, { nombre: string; idea: string; estil
     nombre: 'Clínico',
     idea: 'Como un informe médico, con el morado de la marca: cabeceras claras con letra morada, fichas con borde y mucho blanco.',
     estilo: { titulos: 'helvetica', cabTabla: 'clara', cebra: true, fichas: 'borde', h2: 'raya', portada: 'franja', acento: '#7F26FB', cabTexto: '#4C1D95', cabFondo: '#EFE7FE', borde: '#E3D8F7', versalitas: true, casillas: 'rayas' },
-    colores: { tinta: '#1D1A2B', titulo: '#3B0F86', gris: '#67627A', grisSuave: '#A8A2BC', linea: '#E3D8F7', rejilla: '#EFE9FA', banda: '#F5F0FE', celda: '#FAF7FF', celdaEtq: '#F1EAFE', cab: '#43207F', naranja: '#7F26FB', logo: '#7F26FB', azul: '#2D7FC1', fondoNaranja: '#F4ECFF' },
+    colores: { tinta: '#1D1A2B', titulo: '#3B0F86', gris: '#67627A', grisSuave: '#A8A2BC', linea: '#E3D8F7', rejilla: '#EFE9FA', banda: '#F5F0FE', celda: '#FAF7FF', celdaEtq: '#F1EAFE', cab: '#43207F', naranja: '#7F26FB', logo: '#7F26FB', azul: '#7F26FB', azulSuave: '#D9C8FD', fondoNaranja: '#F4ECFF', neutro: '#C9C4D6', zonaSana: '#EBDFFE' },
   },
 }
 
@@ -294,7 +304,7 @@ export class Lienzo extends Medidor {
   texto(x: number, y: number, s: string, o: OpcTexto = {}): number {
     const t = textoPdf(s)
     if (!t) return 0
-    const tam = o.tam ?? 8.5, peso = o.peso ?? 'normal', esp = o.espaciado ?? 0
+    const tam = o.tam ?? TAM.cuerpo, peso = o.peso ?? 'normal', esp = o.espaciado ?? 0
     const w = this.ancho(t, tam, peso, esp)
     const x0 = o.anc === 'middle' ? x - w / 2 : o.anc === 'end' ? x - w : x
     if (esp) this.pagina.pushOperators(this.lib.setCharacterSpacing(esp))

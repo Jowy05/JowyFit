@@ -14,13 +14,12 @@ const es = {
   'cab.letra': 'Letra grande',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
-  'idioma.boton': 'Idioma: {nombre}',
+  'idioma.boton': "{codigo} · Idioma: {nombre}",
 
   // Hero: lo primero que se ve
-  'hero.ante': 'La app gratis para volver al gimnasio',
   'hero.titulo.1': 'Menos pensar.',
   'hero.titulo.2': 'Más <em class="subrayado">entrenar.</em>',
-  'hero.sub': 'Te hace la rutina según tus días y tu tiempo, y te sube los pesos sola.',
+  'hero.sub': "La app gratis que te hace la rutina según tus días y tu tiempo, y te sube los pesos sola.",
   'hero.nota-android': 'No viene de Google Play: se instala con el archivo de esta página, en 3 pasos. <a href="#android" data-abrir="d-android">Ver cómo se instala</a>',
   'hero.nota-pc': 'Estás en un ordenador: abre esta página en tu móvil Android para instalarla allí.',
   'hero.dentro-app': '<b>Estás dentro de otra app.</b> Para dejar JowyFit en tu pantalla, ábrela en Safari: toca «···» o la brújula y elige «Abrir en Safari».',
@@ -33,11 +32,11 @@ const es = {
   'cta.descargar': 'Descargar la app gratis',
   'cta.empezada': 'Descarga empezada',
   'cta.abrir': 'Abrir JowyFit gratis',
-  'cta.demo': 'Ver la demo <small>· 1 minuto</small>',
+  'cta.demo': "Ver la demo <small class=\"solo-otro\">· 1 minuto</small><small class=\"solo-apple\">· minuto y medio</small>",
   'cta.abrir-corto': 'Abrir JowyFit',
 
   // Lo que te garantizamos (debajo de cada botón)
-  'garantias.aria': 'Lo que te garantizamos',
+  'garantias.aria': "En resumen",
   'garantias.gratis': 'Gratis',
   'garantias.cuentas': 'Sin cuentas',
   'garantias.anuncios': 'Sin anuncios',
@@ -45,7 +44,7 @@ const es = {
 
   // Línea bajo el botón de Android (la escribe el JS): «Para Android 8 o superior · 28 MB · actualizada el 21 de octubre de 2026 · Novedades»
   'version.android': 'Para Android 8 o superior',
-  'version.tamano': '{mb} MB',
+  'version.tamano': "{mb} MB",
   'version.fecha': 'actualizada el {fecha}',
   'version.novedades': 'Novedades',
   'version.corta': 'Versión {version}',
@@ -93,7 +92,6 @@ const es = {
 
   // Reloj dibujado y bloque «El descanso te avisa»
   'reloj.terminado': 'Descanso terminado',
-  'reloj.titulillo': 'Descanso',
   'reloj.titulo': 'El descanso te avisa, también en el reloj.',
   'reloj.texto': 'Suena al acabar aunque lleves el móvil en el bolsillo. Si tienes un reloj conectado al móvil, vibra en la muñeca.',
   'reloj.serie': 'Serie 2',
@@ -106,24 +104,20 @@ const es = {
   'anim.otra': 'Ver otra vez',
 
   // Lo que hace por ti
-  'hace.titulillo': 'Lo que hace por ti',
-  'hace.titulo': 'Tú vas al gimnasio. Lo demás lo piensa la app.',
+  'hace.titulo': "Lo que hace por ti.",
   'hace.hoy.titulo': 'Te dice qué toca hoy',
   'hace.hoy.texto': 'Le dices qué días vas y cuánto tiempo tienes. La rutina se hace sola.',
   'hace.toques.titulo': 'Apuntas en dos toques',
-  'hace.toques.texto': 'Tocas «Hecho» o «Igual que la anterior». Y a descansar.',
+  'hace.toques.texto': "Tocas «Hecho» o «Igual que la anterior», y a descansar.",
   'hace.peso.titulo': 'Sube el peso cuando toca',
   'hace.peso.texto': 'Cuando una serie te sale fácil, la próxima vez te pone un poco más.',
 
   // Cifras
   'cifras.ejercicios': 'ejercicios, cada uno con su dibujo',
-  'cifras.toques': 'toques para apuntar una serie',
-  'cifras.tamanos': 'tamaños para la comida: Poco, Normal y Mucho',
   'cifras.mas-de': 'Más de {n}',
 
   // Así empiezas
-  'empiezas.titulillo': 'Así empiezas',
-  'empiezas.titulo': 'Cuatro pasos y ya tienes tu plan.',
+  'empiezas.titulo': "Tu plan, en unas preguntas.",
   'empiezas.dias.aria': 'Ejemplo: martes, jueves y viernes',
   'empiezas.dias.l': 'L',
   'empiezas.dias.m': 'M',
@@ -143,29 +137,24 @@ const es = {
   'empiezas.alt': 'El paso «Tus horarios»: martes, jueves y viernes marcados, a las 5:30 y 60 minutos cada día.',
 
   // Llamada del medio
-  'franja.titulo': '¿Empezamos?',
-  'franja.sub': 'Tarda menos que calentar en la cinta.',
 
   // Bloques de funciones
   'funciones.aria': 'Lo que hace la app',
 
   // Máquina ocupada
-  'ocupado.titulillo': 'En hora punta',
   'ocupado.titulo': '¿Máquina ocupada? Te da otra.',
-  'ocupado.texto': 'Toca «Ocupado» y te propone otro ejercicio que trabaja lo mismo, con el peso ya puesto. Y se acuerda de qué haces cada día.',
+  'ocupado.texto': "En hora punta, toca «Ocupado» y te propone otro ejercicio que trabaja lo mismo, con el peso ya puesto. Y se acuerda de qué haces cada día.",
   'ocupado.alt': 'La hoja «Ocupado»: si la sentadilla con barra está ocupada, propone la prensa de piernas con 10 kg × 6-10.',
 
   // Comida
-  'comida.titulillo': 'Comida',
   'comida.titulo': 'Come sin contar calorías.',
   'comida.texto': 'Apunta lo que comes con <strong>Poco</strong>, <strong>Normal</strong> o <strong>Mucho</strong>. Primero ves la proteína; lo demás, en segundo plano. Y si tiene código de barras, lo escaneas.',
   'comida.nota': 'Los productos escaneados salen de Open Food Facts, una lista pública y gratuita de alimentos: al escanear se le envía el código de barras y la foto del producto se carga de sus servidores.',
   'comida.alt': 'Apuntar comida: «Lentejas con chorizo» con los botones Poco, Normal y Mucho, y Normal marcado (unas 600 kcal).',
 
   // ¿Voy bien?
-  'voybien.titulillo': 'Cada domingo',
   'voybien.titulo': '¿Voy bien?',
-  'voybien.p1': 'Un semáforo te dice cómo ha ido la semana: lo que va bien y lo que puedes mejorar. Sin agobios.',
+  'voybien.p1': "Cada domingo, un semáforo te dice cómo ha ido la semana: lo que va bien y lo que puedes mejorar.",
   'voybien.p2': 'Si algo flojea, como la proteína, te lo señala para la semana siguiente. Las cuentas las hace la app: tú solo apuntas lo que comes.',
   'voybien.alt': 'La revisión del domingo: semáforo en ámbar, «Casi»: 3 de 3 entrenos, un centímetro menos de cintura y, a mejorar, la proteína.',
 
@@ -173,7 +162,6 @@ const es = {
   'comun.datos-ejemplo': 'Datos de ejemplo.',
 
   // Tu cuerpo
-  'cuerpo.titulillo': 'Tu cuerpo',
   'cuerpo.titulo': 'Ve cómo cambias.',
   'cuerpo.p1': 'Peso, cintura y grasa corporal en una gráfica sencilla. Con la media de cada semana, porque el peso de un día suelto engaña.',
   'cuerpo.android': 'Si tienes una báscula o un reloj conectados al móvil, los pasos y el peso se apuntan solos (a través de Health Connect, la app de salud de Android, y solo si tú lo activas).',
@@ -181,14 +169,8 @@ const es = {
   'cuerpo.alt': 'Progreso, pestaña Cuerpo: el peso baja de 85,2 a 82,3 kg en siete semanas y la cintura, de 98 a 95 cm.',
 
   // Privacidad
-  'privacidad.titulillo': 'Tus datos son tuyos',
   'privacidad.titulo': 'Tus datos se quedan en tu móvil.',
   'privacidad.intro': 'No hay cuentas ni nube. No hay nada que robar ni que vender.',
-  'privacidad.ceros.cuentas': 'cuentas',
-  'privacidad.ceros.anuncios': 'anuncios',
-  'privacidad.ceros.rastreadores': 'rastreadores',
-  'privacidad.ceros.euros': '0 euros',
-  'privacidad.ceros.al-mes': 'al mes',
   'privacidad.pagina.titulo': 'Esta página tampoco te sigue',
   'privacidad.pagina.texto': 'No tiene analíticas ni cookies.',
   'privacidad.internet.titulo': 'Funciona sin internet',
@@ -197,18 +179,15 @@ const es = {
   'privacidad.cuentas.texto': 'Abres la app y empiezas.',
   'privacidad.copia.titulo': 'Tu copia, en tu archivo',
   'privacidad.copia.texto': 'Guarda una copia cuando quieras y llévatela a otro móvil.',
-  'privacidad.pierdo': '<b>¿Y si pierdo el móvil?</b> Como nadie más tiene tus datos, se perderían con él. Por eso la app te avisa si llevas una semana sin hacer una copia. Se hace en Perfil → Ajustes → «Copia de seguridad»: es un archivo que puedes mandarte por correo o guardar en Drive o en el ordenador.',
+  'privacidad.pierdo': "<b>¿Y si pierdo el móvil?</b> Como nadie más tiene tus datos, se perderían con él: haz una copia de vez en cuando (la app te lo recuerda). <a href=\"#cambiar\" data-abrir=\"d-cambiar\">Cómo se hace</a>",
 
   // Quién la ha hecho
-  'autor.titulillo': 'Quién la ha hecho',
   'autor.titulo': 'Hecha por alguien que entrena temprano.',
-  'autor.chip': 'Antes de trabajar',
-  'autor.texto': 'La hice para mí. Entreno <span class="dato">temprano</span>, tres días a la semana, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.',
+  'autor.texto': "La hice para mí. Entreno temprano, tres días a la semana, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.",
   'autor.novedades': 'Novedades de cada versión',
   'autor.codigo': 'El código está abierto: cualquiera que sepa programar puede revisar lo que hace la app por dentro. <a href="https://github.com/Jowy05/JowyFit">Ver el código</a>',
 
   // Preguntas frecuentes
-  'faq.titulillo': 'Preguntas frecuentes',
   'faq.titulo': 'Lo que te puedes preguntar.',
   'faq.android.pregunta': '¿Cómo se instala en Android?',
   'faq.android.paso1': '<b>1.</b> Toca «Descargar la app gratis». Chrome pregunta lo mismo con todas las apps que no vienen de Google Play, sin mirar cuál es. Toca «Descargar de todos modos».',
@@ -234,7 +213,7 @@ const es = {
   'faq.internet.pregunta': '¿Funciona sin internet?',
   'faq.internet.respuesta': 'Sí. Solo el escáner necesita conexión para buscar el producto; si no hay, guarda el código y lo busca después.',
   'faq.mayores.pregunta': '¿Sirve si tengo 60 años o nunca he ido al gimnasio?',
-  'faq.mayores.respuesta': 'Sí. Se entiende sin tutorial, puedes poner la letra grande y la rutina empieza suave, con pesos cómodos.',
+  'faq.mayores.respuesta': "Sí. La primera vez te enseña lo importante con un paseo guiado, puedes poner la letra grande y la rutina empieza suave, con pesos cómodos.",
   'faq.actualizar.pregunta': '¿Cómo se actualiza? ¿Pierdo lo que he apuntado?',
   'faq.actualizar.android': 'No pierdes nada. Cuando salga una versión nueva, descárgala desde esta página e instálala encima de la que tienes: tus datos se quedan.',
   'faq.actualizar.iphone': 'No pierdes nada. Se actualiza sola cuando la abres con internet, y tus datos se quedan.',
@@ -275,8 +254,7 @@ const es = {
   'cierre.iphone': 'En iPhone y iPad, ábrela en Safari y déjala en tu pantalla de inicio.',
 
   // Pie
-  'pie.enlaces': '<b>JowyFit</b> · Gratis y de código abierto · <a href="#novedades" data-abrir="d-novedades">Novedades</a> · <a href="privacypolicy.html">Política de privacidad</a>',
-  'pie.cookies': 'Esta página no tiene analíticas ni cookies.',
+  'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Gratis y de código abierto · <a href=\"#novedades\" data-abrir=\"d-novedades\">Novedades</a> · <a href=\"privacypolicy.html\">Política de privacidad</a>",
   'pie.creditos': 'Créditos: los ejercicios y sus dibujos son de RepDB; los alimentos, de Open Food Facts. Iconos Phosphor y letra Barlow. <span data-version-corta=""></span> · Licencia MIT · <a href="https://github.com/Jowy05/JowyFit">Código</a>',
 
   // Barra fija del móvil

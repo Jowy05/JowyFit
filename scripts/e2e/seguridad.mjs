@@ -173,7 +173,8 @@ for (const motor of ['edge', 'webkit']) {
 
   if (motor === 'edge') {
     await prueba('edge · el service worker se instala y la app abre sin conexión', async () => {
-      const activo = await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then(r => !!r.active), new Promise(ok => setTimeout(() => ok(false), 15_000))]))
+      // Precarga ~2.500 archivos (sobre todo los dibujos de los ejercicios): según la máquina tarda de 10 a 25 s.
+      const activo = await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then(r => !!r.active), new Promise(ok => setTimeout(() => ok(false), 45_000))]))
       comprobar(activo, 'El service worker no se ha activado')
       await esperar(1500)
       await s.ctx.setOffline(true)

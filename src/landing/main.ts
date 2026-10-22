@@ -96,10 +96,18 @@ function preguntas() {
   })
 }
 
+/** Las capturas de la app, en el idioma de la página (public/landing/capturas/<idioma>/). */
+function capturas() {
+  for (const img of document.querySelectorAll<HTMLImageElement>('img[src*="landing/capturas/"]')) {
+    const src = img.getAttribute('src')!.replace(/landing\/capturas\/(es|ca|en)\//, `landing/capturas/${textos.idioma()}/`)
+    if (src !== img.getAttribute('src')) img.setAttribute('src', src)
+  }
+}
+
 /** Idioma: el selector y los textos (si no es castellano). Al cambiar, se repinta lo que escribe el JS: la línea de
- *  la versión y la huella (sus párrafos se acaban de rehacer con el texto nuevo). */
+ *  la versión, la huella (sus párrafos se acaban de rehacer con el texto nuevo) y las capturas. */
 function idioma() {
-  textos.alCambiar(() => { lineaVersion(); huella() })
+  textos.alCambiar(() => { lineaVersion(); huella(); capturas() })
   textos.iniciar().catch(e => console.error('Landing:', e))
 }
 

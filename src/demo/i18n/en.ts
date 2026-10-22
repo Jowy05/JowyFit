@@ -4,8 +4,8 @@ import type es from './es'
 
 const en: Record<keyof typeof es, string> = {
   // Página: título y descripción
-  'demo.meta.descripcion': 'A one-minute JowyFit demo: your routine, your workout, your food, and how you’re doing, with screenshots of the real app.',
-  'demo.meta.titulo': 'JowyFit · One-minute demo',
+  'demo.meta.descripcion': 'A JowyFit demo: your routine, your workout, your food, and how you’re doing, with screenshots of the real app.',
+  'demo.meta.titulo': 'JowyFit · How the app works',
 
   // Cabecera
   'demo.cab.volver': 'Back to the page',

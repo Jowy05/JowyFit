@@ -45,8 +45,9 @@ async function dibujar(lib: typeof import('pdf-lib'), inf: Informe, o: OpcionesP
   if (inf.tuDia) paginaTuDia(maq, inf.tuDia)
   else {
     paginaResumen(maq)
-    if (inf.entrenos) paginaEntrenos(maq, inf.entrenos)
-    if (inf.fuerza) paginaFuerza(maq, inf.fuerza)
+    const fe = inf.entrenos ? paginaEntrenos(maq, inf.entrenos) : null
+    // En la semana hay poco de cada: la fuerza sigue debajo de los entrenos en vez de dejar media página en blanco.
+    if (inf.fuerza) paginaFuerza(maq, inf.fuerza, inf.periodo === 'semana' ? fe : null)
     // Mes a mes (Todo, 60 días o más): después de la fuerza; sin entrenos, después del cuerpo.
     const meses = inf.meses && (inf.fuerza || inf.cuerpo) ? inf.meses : null
     if (meses && inf.fuerza) paginaMeses(maq, meses, true, !!inf.cuerpo)

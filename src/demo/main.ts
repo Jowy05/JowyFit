@@ -1,6 +1,7 @@
 // Demo de JowyFit (/Demo): capturas reales de la app dentro de un móvil, un recuadro que señala de qué se habla
 // y una tarjeta que lo cuenta. Avanza sola (un minuto en Android), con pausa, atrás y siguiente (también con el
 // teclado). Reglas de los recorridos guiados: el foco se apaga mientras cambia la pantalla y se enciende ya quieto.
+// Con «reducir movimiento» empieza en pausa: la persona le da a «Seguir» cuando quiera.
 import '@fontsource/barlow/latin-400.css'
 import '@fontsource/barlow/latin-500.css'
 import '@fontsource/barlow/latin-600.css'
@@ -26,7 +27,7 @@ function plataformaInicial(): Plataforma {
 let plat: Plataforma = plataformaInicial()
 let pasos: PasoDemo[] = guion(plat)
 let i = 0
-let jugando = true
+let jugando = !reducido
 let restante = 0
 let inicio = 0
 let reloj = 0
@@ -38,6 +39,7 @@ const imgs = [...document.querySelectorAll<HTMLImageElement>('.d-cap')]
 const foco = $('[data-foco]')
 const barras = $('[data-barras]')
 const tarjeta = $('[data-tarjeta]')
+const vivo = $('[data-vivo]')
 const final = $('[data-final]')
 const botonPlay = $<HTMLButtonElement>('[data-play]')
 const pantalla = $('.d-pantalla')
@@ -51,11 +53,14 @@ const enMovil = matchMedia('(max-width: 640px)')
  */
 function colocarMovil(c: Caja | null) {
   if (!enMovil.matches) { pantalla.removeAttribute('style'); delete tarjeta.dataset.donde; return }
+  // Primero se mide todo y luego se escribe (si no, el navegador recalcula la página a cada paso).
   const vw = window.innerWidth, vh = window.innerHeight
   const s = vw / ANCHO, hi = ALTO * s
   const arriba = cab.getBoundingClientRect().bottom
-  raiz.style.setProperty('--cab', `${arriba}px`)
-  const hT = tarjeta.offsetHeight, M = 12
+  let hT = tarjeta.offsetHeight
+  const M = 12
+  // Si la cabecera cambió de alto (al girar, con letra grande), se vuelve a medir la tarjeta: su alto máximo depende de ella.
+  if (raiz.style.getPropertyValue('--cab') !== `${arriba}px`) { raiz.style.setProperty('--cab', `${arriba}px`); hT = tarjeta.offsetHeight }
   pantalla.style.width = `${vw}px`
   pantalla.style.height = `${hi}px`
   let donde = 'abajo', oy = arriba
@@ -89,8 +94,11 @@ function pintarBarras() {
     b.type = 'button'
     b.className = 'd-barra'
     b.setAttribute('aria-label', t('demo.control.barra', { n: k + 1, titulo: t(x.titulo) }))
-    b.append(document.createElement('i'))
-    b.addEventListener('click', () => ir(k))
+    // La pista (i) y lo que se llena (span; con transform, sin recalcular la página a cada fotograma).
+    const pista = document.createElement('i')
+    pista.append(document.createElement('span'))
+    b.append(pista)
+    b.addEventListener('click', () => ir(k, true))
     return b
   }))
 }
@@ -99,7 +107,7 @@ function pintarPlataforma() {
   raiz.dataset.plataforma = plat
   const otro = document.querySelector('[data-cambiar]')
   if (otro) otro.textContent = t(plat === 'apple' ? 'demo.cambiar.android' : 'demo.cambiar.iphone')
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-plat]')) b.setAttribute('aria-selected', String(b.dataset.plat === plat))
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-plat]')) b.setAttribute('aria-pressed', String(b.dataset.plat === plat))
 }
 
 /** Los textos del paso actual en la tarjeta (también al cambiar de idioma). */
@@ -120,8 +128,16 @@ function situarFoco(c: Caja) {
   foco.style.height = `${((c[3] + m * 2) / ALTO) * 100}%`
 }
 
-/** Pone el paso k: cambia la captura (fundido), apaga el foco, lo mueve y lo vuelve a encender. */
-function ir(k: number) {
+/** El lector de pantalla lee título y texto solo en pausa o al pasar a mano (si no, hablaría cada pocos segundos). */
+function ponerVivo(aMano: boolean) {
+  vivo.setAttribute('aria-live', aMano || !jugando ? 'polite' : 'off')
+}
+
+/** Lo que se llena en la barra del paso k. */
+const rellenoDe = (k: number) => barras.children[k]?.querySelector<HTMLElement>('span') ?? undefined
+
+/** Pone el paso k: cambia la captura (fundido), apaga el foco, lo mueve y lo vuelve a encender. «aMano»: lo pidió la persona. */
+function ir(k: number, aMano = false) {
   window.clearTimeout(reloj)
   const yo = ++turno
   final.hidden = true
@@ -130,6 +146,7 @@ function ir(k: number) {
   const paso = pasos[i]!
   const nueva = src(plat, paso.cap)
   foco.classList.remove('visible')
+  ponerVivo(aMano)
   pintarPaso()
   const actual = imgs[capa]!
   const cambiar = !actual.src.endsWith(nueva)
@@ -150,8 +167,16 @@ function ir(k: number) {
       for (const im of imgs) im.classList.toggle('ver', im === otra)
       window.setTimeout(ponerFoco, reducido ? 0 : 260)
     }
+    // Si la captura no llega, se queda la de antes, pero la tarjeta y el recuadro salen igual.
+    const fallo = () => {
+      if (yo !== turno) return
+      capa = 1 - capa
+      ponerFoco()
+    }
+    otra.onload = otra.onerror = null
     otra.src = nueva
-    if (otra.complete) listo(); else otra.onload = listo
+    if (otra.complete) (otra.naturalWidth > 0 ? listo : fallo)()
+    else { otra.onload = listo; otra.onerror = fallo }
   } else window.setTimeout(ponerFoco, reducido ? 0 : 140)
 
   const bs = [...barras.children] as HTMLElement[]
@@ -159,12 +184,12 @@ function ir(k: number) {
     b.classList.toggle('hecha', k < i)
     b.classList.toggle('actual', k === i)
     b.removeAttribute('aria-current')
-    const r = b.firstElementChild as HTMLElement
-    r.style.animation = 'none'
+    const r = rellenoDe(k)
+    if (r) r.style.animation = 'none'
   })
   bs[i]?.setAttribute('aria-current', 'step')
   restante = duracion(t(paso.titulo), t(paso.texto))
-  const relleno = bs[i]?.firstElementChild as HTMLElement | undefined
+  const relleno = rellenoDe(i)
   if (relleno) {
     void relleno.offsetWidth
     relleno.style.animation = `d-llenar ${restante}ms linear forwards`
@@ -180,11 +205,14 @@ function programar() {
 
 function terminar() {
   window.clearTimeout(reloj)
+  // Nuevo turno: el recuadro que aún iba a encenderse el último paso ya no sale detrás del final.
+  turno++
   foco.classList.remove('visible')
   tarjeta.hidden = true
   final.hidden = false
   ponerJugando(false, true)
-  ;(final.querySelector('.d-cta:not([hidden])') as HTMLElement | null)?.focus({ preventScroll: true })
+  // El botón del final que se ve: el de esta plataforma (el otro lo esconde el CSS).
+  final.querySelector<HTMLElement>(`.d-cta.solo-${plat}`)?.focus({ preventScroll: true })
 }
 
 function pintarPlay() {
@@ -197,7 +225,8 @@ function ponerJugando(si: boolean, alFinal = false) {
   jugando = si
   botonPlay.dataset.estado = si ? 'jugando' : 'pausa'
   pintarPlay()
-  const relleno = barras.children[i]?.firstElementChild as HTMLElement | undefined
+  ponerVivo(false)
+  const relleno = rellenoDe(i)
   if (alFinal) return
   if (si) { if (relleno) relleno.style.animationPlayState = 'running'; programar() }
   else {
@@ -214,9 +243,12 @@ function cambiarPlataforma(p: Plataforma) {
   pintarPlataforma()
   pintarBarras()
   precargar(plat)
-  ponerJugando(true, true)
-  ir(0)
+  ponerJugando(!reducido, true)
+  ir(0, true)
 }
+
+/** Siguiente paso a mano (o el final, si era el último). */
+const siguiente = () => (i + 1 < pasos.length ? ir(i + 1, true) : terminar())
 
 // ---------------------------------------------------------------- arranque
 // Idioma: el selector y los textos. Al cambiar, se repinta lo que escribe el JS sin parar ni reiniciar el paso.
@@ -242,9 +274,12 @@ ponerJugando(jugando, true)
 ir(0)
 
 botonPlay.addEventListener('click', () => ponerJugando(!jugando))
-$('[data-atras]').addEventListener('click', () => ir(i - 1))
-$('[data-sigue]').addEventListener('click', () => (i + 1 < pasos.length ? ir(i + 1) : terminar()))
-$('[data-otra]').addEventListener('click', () => { ponerJugando(true, true); ir(0) })
+$('[data-atras]').addEventListener('click', () => ir(i - 1, true))
+$('[data-sigue]').addEventListener('click', siguiente)
+// «Verla otra vez»: vuelve al principio y el foco pasa a Pausar/Seguir (el botón pulsado ya no se ve).
+$('[data-otra]').addEventListener('click', () => { ponerJugando(!reducido, true); ir(0, true); botonPlay.focus({ preventScroll: true }) })
+// En el móvil, tocar la captura pasa al siguiente paso (si no, parece una pantalla de la app que no responde).
+$('.d-movil').addEventListener('click', () => { if (enMovil.matches && final.hidden) siguiente() })
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-plat]')) b.addEventListener('click', () => cambiarPlataforma(b.dataset.plat as Plataforma))
 document.querySelector('[data-cambiar]')?.addEventListener('click', () => cambiarPlataforma(plat === 'apple' ? 'android' : 'apple'))
 // Al girar el móvil o cambiar el tamaño, se recoloca el paso actual.
@@ -252,12 +287,16 @@ let recolocar = 0
 window.addEventListener('resize', () => { window.clearTimeout(recolocar); recolocar = window.setTimeout(() => { if (final.hidden) colocarMovil(caja(plat, pasos[i]!)) }, 150) })
 enMovil.addEventListener('change', () => colocarMovil(final.hidden ? caja(plat, pasos[i]!) : null))
 
+// Teclas: no con Alt, Ctrl o Cmd (son atajos del navegador) ni dentro del cambio de móvil. El espacio, tampoco sobre
+// un botón o un enlace: ahí lo pulsa (con el foco en «Paso siguiente», espacio avanza en vez de pausar).
 document.addEventListener('keydown', e => {
-  if (e.target instanceof HTMLElement && e.target.closest('input,textarea,select')) return
-  if (e.key === ' ' && !final.hidden) return
+  if (e.altKey || e.ctrlKey || e.metaKey) return
+  const en = e.target instanceof Element ? e.target : null
+  if (en?.closest('input,textarea,select,.d-plat')) return
+  if (e.key === ' ' && (!final.hidden || en?.closest('button,a,summary'))) return
   if (e.key === ' ') { e.preventDefault(); ponerJugando(!jugando) }
-  else if (e.key === 'ArrowRight') { e.preventDefault(); if (i + 1 < pasos.length) ir(i + 1); else terminar() }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); ir(i - 1) }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); siguiente() }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); ir(i - 1, true) }
 })
 // Con la pestaña escondida no avanza (si no, al volver se habría perdido la mitad).
 document.addEventListener('visibilitychange', () => { if (document.hidden && jugando) ponerJugando(false) })

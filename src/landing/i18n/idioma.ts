@@ -164,7 +164,7 @@ export function crearTextos<D extends Record<string, string> & { 'idioma.boton':
   function pintarSelectores() {
     for (const s of selectores) {
       if (s.codigo) s.codigo.textContent = idioma.toUpperCase()
-      s.boton.setAttribute('aria-label', t('idioma.boton', { nombre: NOMBRES[idioma] }))
+      s.boton.setAttribute('aria-label', t('idioma.boton', { codigo: idioma.toUpperCase(), nombre: NOMBRES[idioma] }))
       for (const o of s.opciones) o.setAttribute('aria-checked', String(o.dataset.idiomaOpcion === idioma))
     }
   }

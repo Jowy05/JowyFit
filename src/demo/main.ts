@@ -6,7 +6,7 @@ import '@fontsource/barlow/latin-500.css'
 import '@fontsource/barlow/latin-600.css'
 import '@fontsource/barlow-semi-condensed/latin-700.css'
 import './demo.css'
-import { ALTO, ANCHO, cajaDe, duracion, guion, type Caja, type Plataforma, type PasoDemo } from './guion'
+import { ALTO, ANCHO, cajaDe, captura, duracion, guion, type Caja, type Plataforma, type PasoDemo } from './guion'
 import { t, textos } from './i18n'
 
 const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!
@@ -74,7 +74,9 @@ function colocarMovil(c: Caja | null) {
   tarjeta.dataset.donde = donde
 }
 
-const src = (p: Plataforma, cap: string) => `demo/${p}/${cap}.webp`
+// Las capturas y lo que se señala, del idioma que se ve.
+const src = (p: Plataforma, cap: string) => captura(textos.idioma(), p, cap)
+const caja = (p: Plataforma, paso: PasoDemo) => cajaDe(textos.idioma(), p, paso)
 
 /** Precarga las capturas de una plataforma (para que el cambio sea inmediato). */
 function precargar(p: Plataforma) {
@@ -109,6 +111,15 @@ function pintarPaso() {
   $('[data-texto]').textContent = t(paso.texto)
 }
 
+/** El recuadro sobre la caja c (en % de la captura, así sirve a cualquier tamaño). */
+function situarFoco(c: Caja) {
+  const m = 6
+  foco.style.left = `${((c[0] - m) / ANCHO) * 100}%`
+  foco.style.top = `${((c[1] - m) / ALTO) * 100}%`
+  foco.style.width = `${((c[2] + m * 2) / ANCHO) * 100}%`
+  foco.style.height = `${((c[3] + m * 2) / ALTO) * 100}%`
+}
+
 /** Pone el paso k: cambia la captura (fundido), apaga el foco, lo mueve y lo vuelve a encender. */
 function ir(k: number) {
   window.clearTimeout(reloj)
@@ -124,14 +135,10 @@ function ir(k: number) {
   const cambiar = !actual.src.endsWith(nueva)
   const ponerFoco = () => {
     if (yo !== turno) return
-    const c = cajaDe(plat, paso)
+    const c = caja(plat, paso)
     colocarMovil(c)
     if (!c) return
-    const m = 6
-    foco.style.left = `${((c[0] - m) / ANCHO) * 100}%`
-    foco.style.top = `${((c[1] - m) / ALTO) * 100}%`
-    foco.style.width = `${((c[2] + m * 2) / ANCHO) * 100}%`
-    foco.style.height = `${((c[3] + m * 2) / ALTO) * 100}%`
+    situarFoco(c)
     // En el móvil la captura se mueve: el foco se enciende cuando ya está quieta.
     window.setTimeout(() => requestAnimationFrame(() => { if (yo === turno) foco.classList.add('visible') }), enMovil.matches && !reducido ? 380 : 0)
   }
@@ -218,7 +225,14 @@ textos.alCambiar(() => {
   pintarPlataforma()
   pintarPlay()
   ;[...barras.children].forEach((b, k) => { const x = pasos[k]; if (x) b.setAttribute('aria-label', t('demo.control.barra', { n: k + 1, titulo: t(x.titulo) })) })
-  if (final.hidden) colocarMovil(cajaDe(plat, pasos[i]!))
+  // La captura del mismo paso en el nuevo idioma, sin fundido, y el recuadro donde cae en ella.
+  precargar(plat)
+  if (final.hidden) {
+    const paso = pasos[i]!, c = caja(plat, paso)
+    imgs[capa]!.src = src(plat, paso.cap)
+    colocarMovil(c)
+    if (c) situarFoco(c)
+  }
 })
 textos.iniciar().catch(e => console.error('Demo:', e))
 pintarPlataforma()
@@ -235,8 +249,8 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-plat]')) b.a
 document.querySelector('[data-cambiar]')?.addEventListener('click', () => cambiarPlataforma(plat === 'apple' ? 'android' : 'apple'))
 // Al girar el móvil o cambiar el tamaño, se recoloca el paso actual.
 let recolocar = 0
-window.addEventListener('resize', () => { window.clearTimeout(recolocar); recolocar = window.setTimeout(() => { if (final.hidden) colocarMovil(cajaDe(plat, pasos[i]!)) }, 150) })
-enMovil.addEventListener('change', () => colocarMovil(final.hidden ? cajaDe(plat, pasos[i]!) : null))
+window.addEventListener('resize', () => { window.clearTimeout(recolocar); recolocar = window.setTimeout(() => { if (final.hidden) colocarMovil(caja(plat, pasos[i]!)) }, 150) })
+enMovil.addEventListener('change', () => colocarMovil(final.hidden ? caja(plat, pasos[i]!) : null))
 
 document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLElement && e.target.closest('input,textarea,select')) return

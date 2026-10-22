@@ -12,7 +12,9 @@ import { Cab, cx, Ico, Pantalla } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { usePerfil } from '../../datos'
-import { diasTxt, iniciales, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
+import { diasTxt, enFrase, iniciales, tituloSeccion, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
+import { t, tn } from '../../../i18n'
+import { tr } from '../../../i18n/jsx'
 
 type Numeros = {
   peso: number | null
@@ -53,52 +55,52 @@ export function Perfil() {
   const n = useLiveQuery(calcular, [])
   const ini = iniciales(p.nombre)
 
-  const sub = [`${edad(p.nacimiento)} años`, `${p.alturaCm} cm`, n?.peso != null ? `${kg(n.peso)} kg` : null].filter(Boolean).join(' · ')
+  const sub = [t('{n} años', { n: edad(p.nacimiento) }), `${p.alturaCm} cm`, n?.peso != null ? `${kg(n.peso)} kg` : null].filter(Boolean).join(' · ')
 
   return (
     <Pantalla>
-      <Cab crumb="Tus datos" derecha={<button className="ib" aria-label="Ajustes" onClick={() => nav.ir('aju')}><Ico n="gear" /></button>}>
+      <Cab crumb={t('Tus datos')} derecha={<button className="ib" aria-label={t('Ajustes')} onClick={() => nav.ir('aju')}><Ico n="gear" /></button>}>
         <div className="prof">
           <span className="avatar">{ini || <Ico n="user" b />}</span>
           <div className="grow">
-            <h1>{p.nombre.trim() || 'Tu perfil'}</h1>
+            <h1>{p.nombre.trim() || t('Tu perfil')}</h1>
             <p className="sub">{sub}</p>
-            <span className="tag go mt4">{OBJETIVO_TXT[p.objetivo]}</span>
+            <span className="tag go mt4">{t(OBJETIVO_TXT[p.objetivo])}</span>
           </div>
         </div>
       </Cab>
       <div className="pg">
         <div className="sec">
-          <div className="sec-h"><h2>Tus números</h2></div>
+          <div className="sec-h"><h2>{t('Tus números')}</h2></div>
           <div className="grid2 nums">
             <button className="card kpi span2 per-obj" onClick={() => nav.ir('com-energia', undefined, 'com')}>
-              <span className="row jb"><span className="lbl">Tu objetivo al día</span><Ico n="caret-right" className="car" /></span>
-              <p className="k">{n ? n.kcal : '—'}<small>kcal</small>{n && <><span className="per-y">y</span>{n.proteina}<small>g de proteína</small></>}</p>
-              <p className="d">Lo que te conviene comer cada día. Toca para ver por qué.</p>
+              <span className="row jb"><span className="lbl">{t('Tu objetivo al día')}</span><Ico n="caret-right" className="car" /></span>
+              <p className="k">{n ? num(n.kcal, 0) : '—'}<small>kcal</small>{n && <><span className="per-y">{t('y')}</span>{n.proteina}<small>{t('g de proteína')}</small></>}</p>
+              <p className="d">{t('Lo que te conviene comer cada día. Toca para ver por qué.')}</p>
             </button>
           </div>
-          {n && n.peso == null && <p className="note plain mt8"><Ico n="scales" /><span>Aún no te has pesado: los cálculos usan 75 kg. <b>Pésate</b> para afinarlos.</span></p>}
+          {n && n.peso == null && <p className="note plain mt8"><Ico n="scales" /><span>{tr('Aún no te has pesado: los cálculos usan 75 kg. <b>Pésate</b> para afinarlos.', { b: s => <b>{s}</b> })}</span></p>}
           <details className="fold mt8">
-            <summary><Ico n="calculator" className="blue" />Ver más números <Ico n="caret-down" /></summary>
+            <summary><Ico n="calculator" className="blue" />{t('Ver más números')} <Ico n="caret-down" /></summary>
             <div className="in">
               <div className="grid2 nums">
-                <Kpi t="IMC" ayuda="IMC: tu peso entre la altura al cuadrado. Con músculo engaña: mira también la cintura." onAyuda={aviso}
+                <Kpi titulo={t('IMC')} ayuda={t('IMC: tu peso entre la altura al cuadrado. Con músculo engaña: mira también la cintura.')} onAyuda={aviso}
                   palabra={n?.imc != null && Number.isFinite(n.imc) ? veredictoImc(n.imc) : null}>
                   {num(n?.imc)}
                 </Kpi>
-                <Kpi t="Cintura/altura" ayuda="Tu cintura entre tu altura. Por debajo de 0,5 es lo saludable." onAyuda={aviso}
+                <Kpi titulo={t('Cintura/altura')} ayuda={t('Tu cintura entre tu altura. Por debajo de 0,5 es lo saludable.')} onAyuda={aviso}
                   palabra={n?.ratio != null ? veredictoCinturaAltura(n.ratio) : null}>
                   {num(n?.ratio, 2)}
                 </Kpi>
-                <Kpi t="% de grasa" ayuda="Estimado con tu última cintura, cuello y altura (método de la Marina). Si te falta alguna medida, apúntala en Progreso." onAyuda={aviso}
+                <Kpi titulo={t('% de grasa')} ayuda={t('Estimado con tu última cintura, cuello y altura (método de la Marina). Si te falta alguna medida, apúntala en Progreso.')} onAyuda={aviso}
                   palabra={n?.grasa != null ? veredictoGrasa(n.grasa, p.sexo) : null}>
                   {num(n?.grasa)}{n?.grasa != null && <small>%</small>}
                 </Kpi>
-                <Kpi t="Gasto en reposo" ayuda="Lo que gasta tu cuerpo sin moverte en todo el día (fórmula de Mifflin-St Jeor)." onAyuda={aviso}>
-                  {n ? n.basal : '—'}<small>kcal</small>
+                <Kpi titulo={t('Gasto en reposo')} ayuda={t('Lo que gasta tu cuerpo sin moverte en todo el día (fórmula de Mifflin-St Jeor).')} onAyuda={aviso}>
+                  {n ? num(n.basal, 0) : '—'}<small>kcal</small>
                 </Kpi>
-                <Kpi t="Gasto diario" ayuda="Lo que gastas en reposo, más tu trabajo y una parte del entreno." onAyuda={aviso}>
-                  {n ? `~${n.gasto}` : '—'}<small>kcal</small>
+                <Kpi titulo={t('Gasto diario')} ayuda={t('Lo que gastas en reposo, más tu trabajo y una parte del entreno.')} onAyuda={aviso}>
+                  {n ? `~${num(n.gasto, 0)}` : '—'}<small>kcal</small>
                 </Kpi>
               </div>
             </div>
@@ -106,12 +108,12 @@ export function Perfil() {
         </div>
 
         <div className="sec">
-          <div className="sec-h"><h2>Tu ficha</h2><span className="lbl">toca para cambiar</span></div>
+          <div className="sec-h"><h2>{t('Tu ficha')}</h2><span className="lbl">{t('toca para cambiar')}</span></div>
           <div className="list">
             {SECCIONES.filter(s => !s.mas).map(s => <FilaSeccion key={s.s} s={s} p={p} n={n} />)}
           </div>
           <details className="fold mt8">
-            <summary><Ico n="dots-three" className="blue" />Más secciones <Ico n="caret-down" /></summary>
+            <summary><Ico n="dots-three" className="blue" />{t('Más secciones')} <Ico n="caret-down" /></summary>
             <div className="in">
               <div className="list">
                 {SECCIONES.filter(s => s.mas).map(s => <FilaSeccion key={s.s} s={s} p={p} n={n} />)}
@@ -123,7 +125,7 @@ export function Perfil() {
         <div className="list mt16">
           <button className="it" onClick={() => nav.ir('aju')}>
             <span className="ico"><Ico n="gear" /></span>
-            <span className="tx"><b>Ajustes</b><small>Tamaño de letra, recordatorios, copia de seguridad</small></span>
+            <span className="tx"><b>{t('Ajustes')}</b><small>{t('Tamaño de letra, recordatorios, copia de seguridad')}</small></span>
             <Ico n="caret-right" className="car" />
           </button>
         </div>
@@ -132,12 +134,12 @@ export function Perfil() {
   )
 }
 
-function Kpi({ t, ayuda, onAyuda, palabra, children }: { t: string; ayuda: string; onAyuda: (texto: string) => void; palabra?: { palabra: string; tono: string } | null; children: ReactNode }) {
+function Kpi({ titulo, ayuda, onAyuda, palabra, children }: { titulo: string; ayuda: string; onAyuda: (texto: string) => void; palabra?: { palabra: string; tono: string } | null; children: ReactNode }) {
   return (
     <div className="card kpi">
       <span className="row jb">
-        <span className="lbl">{t}</span>
-        <button className="q" aria-label="¿Qué es esto?" onClick={() => onAyuda(ayuda)}><Ico n="question" /></button>
+        <span className="lbl">{titulo}</span>
+        <button className="q" aria-label={t('¿Qué es esto?')} onClick={() => onAyuda(ayuda)}><Ico n="question" /></button>
       </span>
       <p className="k">{children}</p>
       {palabra && <p className={cx('d', palabra.tono === 'ok' ? 'okc' : palabra.tono === 'bad' ? 'badc' : 'warnc')}>{capital(palabra.palabra)}</p>}
@@ -150,7 +152,7 @@ function FilaSeccion({ s, p, n }: { s: (typeof SECCIONES)[number]; p: TPerfil; n
   return (
     <button className="it" onClick={() => nav.ir('per-sec', { s: s.s })}>
       <span className="ico"><Ico n={s.ico} /></span>
-      <span className="tx"><b>{s.t}</b><small>{resumen(s.s, p, n)}</small></span>
+      <span className="tx"><b>{tituloSeccion(s)}</b><small>{resumen(s.s, p, n)}</small></span>
       <Ico n="caret-right" className="car" />
     </button>
   )
@@ -160,35 +162,35 @@ function FilaSeccion({ s, p, n }: { s: (typeof SECCIONES)[number]; p: TPerfil; n
 function resumen(s: ClaveSeccion, p: TPerfil, n: Numeros | undefined): string {
   switch (s) {
     case 'datos':
-      return [p.nombre.trim() || 'Sin nombre', `${edad(p.nacimiento)} años`, p.sexo, `${p.alturaCm} cm`].join(' · ')
+      return [p.nombre.trim() || t('Sin nombre'), t('{n} años', { n: edad(p.nacimiento) }), p.sexo === 'mujer' ? t('mujer') : t('hombre'), `${p.alturaCm} cm`].join(' · ')
     case 'cuerpo': {
-      const partes = [n?.peso != null ? `${kg(n.peso)} kg` : null, n?.cintura != null ? `cintura ${num(n.cintura)}` : null].filter(Boolean)
-      return partes.length ? partes.join(' · ') : 'Sin medidas todavía'
+      const partes = [n?.peso != null ? `${kg(n.peso)} kg` : null, n?.cintura != null ? t('cintura {n}', { n: num(n.cintura) }) : null].filter(Boolean)
+      return partes.length ? partes.join(' · ') : t('Sin medidas todavía')
     }
     case 'objetivos':
-      return [OBJETIVO_TXT[p.objetivo], ...p.prioridades.slice(0, 2)].join(' · ')
+      return [t(OBJETIVO_TXT[p.objetivo]), ...p.prioridades.slice(0, 2).map(x => t(x))].join(' · ')
     case 'salud': {
-      const zonas = ZONAS_SENSIBLES.filter(z => p.zonasSensibles.includes(z.v)).map(z => z.t.toLowerCase())
-      const les = p.lesiones.trim() ? 'con lesiones apuntadas' : 'sin lesiones'
-      return zonas.length ? `${capital(les)} · sensible: ${zonas.join(', ')}` : capital(les)
+      const zonas = ZONAS_SENSIBLES.filter(z => p.zonasSensibles.includes(z.v)).map(z => t(z.t).toLowerCase())
+      const les = p.lesiones.trim() ? t('con lesiones apuntadas') : t('sin lesiones')
+      return zonas.length ? t('{lesiones} · sensible: {zonas}', { lesiones: capital(les), zonas: zonas.join(', ') }) : capital(les)
     }
     case 'experiencia': {
       const refs = Object.values(p.referencias).filter(v => v.trim()).length
-      return `${NIVEL_TXT[p.nivel]}${refs ? ` · ${refs} peso${refs === 1 ? '' : 's'} apuntado${refs === 1 ? '' : 's'}` : ''}`
+      return `${t(NIVEL_TXT[p.nivel])}${refs ? ` · ${tn(refs, '{n} peso apuntado', '{n} pesos apuntados')}` : ''}`
     }
     case 'preferencias':
-      return `${PREFERENCIA_TXT[p.preferencia]} · repeticiones ${p.reps === 'mezcla' ? 'variadas' : REPS_TXT[p.reps].toLowerCase()}`
+      return t('{preferencia} · repeticiones {reps}', { preferencia: t(PREFERENCIA_TXT[p.preferencia]), reps: p.reps === 'mezcla' ? t('variadas') : t(REPS_TXT[p.reps]).toLowerCase() })
     case 'horario':
-      return p.diasFijos.length ? `${diasTxt(p.diasFijos)} a las ${p.horaEntreno.replace(/^0/, '')}` : 'Sin días fijos'
+      return p.diasFijos.length ? t('{dias} a las {hora}', { dias: diasTxt(p.diasFijos), hora: p.horaEntreno.replace(/^0/, '') }) : t('Sin días fijos')
     case 'alimentacion':
-      return p.suplementos.length ? `Suplementos: ${p.suplementos.join(' y ').toLowerCase()}` : 'Sin suplementos'
+      return p.suplementos.length ? t('Suplementos: {lista}', { lista: p.suplementos.map(x => t(x)).join(` ${t('y')} `).toLowerCase() }) : t('Sin suplementos')
     case 'vida':
-      return `Trabajo ${TRABAJO_TXT[p.trabajo].toLowerCase()}`
+      return t('Trabajo {tipo}', { tipo: t(TRABAJO_TXT[p.trabajo]).toLowerCase() })
     case 'seguimiento': {
-      const pesaje = p.diasPesaje.length ? `Pesaje ${diasTxt(p.diasPesaje).toLowerCase()}` : 'Sin días de pesaje'
-      return `${pesaje} · fotos ${p.fotosCadaSemanas > 0 ? `cada ${p.fotosCadaSemanas} semana${p.fotosCadaSemanas === 1 ? '' : 's'}` : 'no'}`
+      const pesaje = p.diasPesaje.length ? t('Pesaje {dias}', { dias: enFrase(diasTxt(p.diasPesaje)) }) : t('Sin días de pesaje')
+      return t('{pesaje} · fotos {fotos}', { pesaje, fotos: p.fotosCadaSemanas > 0 ? tn(p.fotosCadaSemanas, 'cada {n} semana', 'cada {n} semanas') : t('no') })
     }
   }
 }
 
-const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

@@ -11,6 +11,7 @@ import { Chip, cx, Ico, Pantalla, Stepper, useUnaVez, Vacio, recortar } from '..
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, apuntar, kp } from './comun'
+import { t } from '../../../i18n'
 
 const g = (v: number | null | undefined, u = 'g') => (v == null ? '—' : `${num(v)} ${u}`)
 
@@ -22,15 +23,15 @@ export function Producto({ ruta }: { ruta: Ruta }) {
   const franja = ruta.d?.franja as Franja | undefined
   const p = useLiveQuery(() => db.productos.get(codigo).then(x => x ?? null), [codigo])
   // Si ya está en Mis comidas, el botón de guardarlo sobra.
-  const enMisComidas = useLiveQuery(() => db.plantillas.filter(t => t.codigo === codigo).count().then(n => n > 0), [codigo]) ?? true
+  const enMisComidas = useLiveQuery(() => db.plantillas.filter(x => x.codigo === codigo).count().then(n => n > 0), [codigo]) ?? true
   const [racion, setRacion] = useState<Racion>('N')
   const [unidades, setUnidades] = useState(1)
   const [buscando, setBuscando] = useState(false)
   // Doble toque: dos comidas apuntadas, dos plantillas o dos «atrás».
   const unaVez = useUnaVez()
 
-  if (p === undefined) return <Pantalla><div className="cargando">Cargando…</div></Pantalla>
-  if (p === null) return <Pantalla><div className="pg vacio-pg"><Vacio icono="barcode" titulo="Producto no guardado" accion="Volver" onAccion={() => nav.atras()} /></div></Pantalla>
+  if (p === undefined) return <Pantalla><div className="cargando">{t('Cargando…')}</div></Pantalla>
+  if (p === null) return <Pantalla><div className="pg vacio-pg"><Vacio icono="barcode" titulo={t('Producto no guardado')} accion={t('Volver')} onAccion={() => nav.atras()} /></div></Pantalla>
 
   const { base: tipoBase, ...base } = porRacion(p)
   const f = factorRacion(racion) * unidades
@@ -43,24 +44,24 @@ export function Producto({ ruta }: { ruta: Ruta }) {
     setBuscando(true)
     const r = await buscarOFF(p.codigo)
     setBuscando(false)
-    if (r.estado === 'encontrado') { await db.productos.put(r.producto); aviso('Encontrado') }
-    else aviso(r.estado === 'no' ? 'No está en Open Food Facts: apúntalo a mano' : 'Sigue sin haber conexión')
+    if (r.estado === 'encontrado') { await db.productos.put(r.producto); aviso(t('Encontrado')) }
+    else aviso(r.estado === 'no' ? t('No está en Open Food Facts: apúntalo a mano') : t('Sigue sin haber conexión'))
   }
   const anadir = unaVez(async () => {
     const des = await apuntar({ fecha, franja, nombre: p.nombre, ...total, racion, tipo: 'producto', codigo: p.codigo })
     nav.atras()
-    aviso(`Añadido: ${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''}${racion !== 'N' ? ` (${textoRacion(racion)})` : ''}`, des)
+    aviso(t('Añadido: {nombre}', { nombre: `${p.nombre}${unidades !== 1 ? ` ×${num(unidades)}` : ''}${racion !== 'N' ? ` (${textoRacion(racion)})` : ''}` }), des)
   })
   const comoPlantilla = unaVez(async () => {
-    const ya = await db.plantillas.filter(t => t.codigo === p.codigo).first()
-    if (ya) { aviso('Ya está en Mis comidas'); return }
+    const ya = await db.plantillas.filter(x => x.codigo === p.codigo).first()
+    if (ya) { aviso(t('Ya está en Mis comidas')); return }
     await db.plantillas.add({ nombre: p.nombre, kcal: base.kcal, proteina: base.proteina, cafeina: base.cafeina, ...soloMacros(base), tipo: base.cafeina ? 'bebida' : 'comida', franja, usos: 0, codigo: p.codigo })
-    aviso('Guardado en Mis comidas')
+    aviso(t('Guardado en Mis comidas'))
   })
   const borrar = unaVez(async (x: TProducto) => {
     await db.productos.delete(x.codigo)
     nav.atras()
-    aviso(`Borrado: ${x.nombre}`, () => { void db.productos.put(x) })
+    aviso(t('Borrado: {nombre}', { nombre: x.nombre }), () => { void db.productos.put(x) })
   })
 
   // Solo imágenes de Open Food Facts: una copia ajena podía meter la de cualquier servidor («píxel espía»).
@@ -68,7 +69,7 @@ export function Producto({ ruta }: { ruta: Ruta }) {
   return (
     <Pantalla>
       <div className={cx('prod-hero', !imagen && a.fp)} style={imagen ? { background: '#fff' } : undefined}>
-        <button className="gal-back" aria-label="Atrás" onClick={() => nav.atras()}><Ico n="caret-left" b /></button>
+        <button className="gal-back" aria-label={t('Atrás')} onClick={() => nav.atras()}><Ico n="caret-left" b /></button>
         {imagen ? <img src={imagen} alt="" style={{ maxHeight: '78%', maxWidth: '70%', objectFit: 'contain', position: 'relative' }} /> : <Ico n={a.icono} className="prod-ic" />}
         <span className="gal-cnt tag mono">EAN {p.codigo}</span>
       </div>
@@ -78,65 +79,65 @@ export function Producto({ ruta }: { ruta: Ruta }) {
 
         {p.pendiente ? (
           <div className="card pd mt12">
-            <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>Pendiente de buscar</b><small>Se escaneó sin conexión. Se busca solo al volver la cobertura.</small></span></p>
-            <button className="btn mt12" disabled={buscando} onClick={() => void reintentar()}>{buscando ? 'Buscando…' : 'Buscar ahora'}</button>
+            <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>{t('Pendiente de buscar')}</b><small>{t('Se escaneó sin conexión. Se busca solo al volver la cobertura.')}</small></span></p>
+            <button className="btn mt12" disabled={buscando} onClick={() => void reintentar()}>{buscando ? t('Buscando…') : t('Buscar ahora')}</button>
           </div>
         ) : (
           <>
             <p className="ux-com-prod-res mt8">
               <b className="mono">{kp(base.kcal, base.proteina, base.cafeina)}</b>
-              <span className="small muted"> {tipoBase === 'racion' ? `por ración${p.racionG ? ` (${num(p.racionG)} g)` : ''}` : 'por cada 100 g'}</span>
+              <span className="small muted"> {tipoBase === 'racion' ? (p.racionG ? t('por ración ({n} g)', { n: num(p.racionG) }) : t('por ración')) : t('por cada 100 g')}</span>
             </p>
 
             <div className="sec">
-              <span className="lbl fl">¿Cuánto te has tomado?</span>
+              <span className="lbl fl">{t('¿Cuánto te has tomado?')}</span>
               <div className="chips eq">
                 {(['P', 'N', 'G'] as const).map(r => (
                   <Chip key={r} className="big ux-com-tam" on={racion === r} onClick={() => setRacion(r)}>
-                    <span>{NOMBRE_RACION[r]}<small className="mono">{Math.round(base.kcal * factorRacion(r))} kcal</small></span>
+                    <span>{t(NOMBRE_RACION[r])}<small className="mono">{Math.round(base.kcal * factorRacion(r))} kcal</small></span>
                   </Chip>
                 ))}
               </div>
-              <p className="small muted mt4">Poco = un ⅓ · Normal = {tipoBase === 'racion' ? 'la ración entera' : '100 g'} · Mucho = una vez y media.</p>
-              <span className="lbl fl mt12">¿Cuántas?</span>
-              <Stepper valor={unidades} onCambio={setUnidades} paso={0.5} min={0.5} sufijo={unidades === 1 ? (tipoBase === 'racion' ? 'ración' : '× 100 g') : (tipoBase === 'racion' ? 'raciones' : '× 100 g')} etiqueta="Unidades" />
-              <p className="small mt8 center"><b>Total: <span className="mono">{kp(total.kcal, total.proteina, total.cafeina)}</span></b>{total.cafeina ? <span className="muted"> · {total.proteina} g proteína</span> : null}</p>
+              <p className="small muted mt4">{tipoBase === 'racion' ? t('Poco = un ⅓ · Normal = la ración entera · Mucho = una vez y media.') : t('Poco = un ⅓ · Normal = 100 g · Mucho = una vez y media.')}</p>
+              <span className="lbl fl mt12">{t('¿Cuántas?')}</span>
+              <Stepper valor={unidades} onCambio={setUnidades} paso={0.5} min={0.5} sufijo={tipoBase !== 'racion' ? '× 100 g' : unidades === 1 ? t('ración') : t('raciones')} etiqueta={t('Unidades')} />
+              <p className="small mt8 center"><b>{t('Total:')} <span className="mono">{kp(total.kcal, total.proteina, total.cafeina)}</span></b>{total.cafeina ? <span className="muted"> · {t('{n} g proteína', { n: total.proteina })}</span> : null}</p>
               <LineaMacros m={total} className="center mt4" />
             </div>
 
-            <button className="btn mt16" onClick={() => void anadir()}>Añadir</button>
+            <button className="btn mt16" onClick={() => void anadir()}>{t('Añadir')}</button>
 
             <details className="fold mt20">
-              <summary>Ficha técnica (la etiqueta)<Ico n="caret-down" /></summary>
+              <summary>{t('Ficha técnica (la etiqueta)')}<Ico n="caret-down" /></summary>
               <div className="in">
                 <div className="spec-box">
                   <table className="tbl">
-                    <thead><tr><th /><th>Por ración</th><th>Por 100 g</th></tr></thead>
+                    <thead><tr><th /><th>{t('Por ración')}</th><th>{t('Por 100 g')}</th></tr></thead>
                     <tbody>
-                      <tr><td>Energía</td><td>{g(p.kcalRacion, 'kcal')}</td><td>{g(p.kcal100, 'kcal')}</td></tr>
-                      <tr><td>Proteína</td><td className="okc">{g(p.proteinaRacion)}</td><td>{g(p.proteina100)}</td></tr>
-                      <tr><td>Hidratos</td><td>{g(porRac(p.hidratos100))}</td><td>{g(p.hidratos100)}</td></tr>
-                      {p.azucares100 != null && <tr><td>de ellos, azúcares</td><td>{g(porRac(p.azucares100))}</td><td>{g(p.azucares100)}</td></tr>}
-                      <tr><td>Grasas</td><td>{g(porRac(p.grasas100))}</td><td>{g(p.grasas100)}</td></tr>
-                      {p.sal100 != null && <tr><td>Sal</td><td>{g(porRac(p.sal100))}</td><td>{g(p.sal100)}</td></tr>}
-                      {p.cafeina100 ? <tr><td>Cafeína</td><td>{g(porRac(p.cafeina100), 'mg')}</td><td>{g(p.cafeina100, 'mg')}</td></tr> : null}
-                      <tr><td>Ración</td><td>{p.racionG ? g(p.racionG) : '—'}</td><td>—</td></tr>
+                      <tr><td>{t('Energía')}</td><td>{g(p.kcalRacion, 'kcal')}</td><td>{g(p.kcal100, 'kcal')}</td></tr>
+                      <tr><td>{t('Proteína')}</td><td className="okc">{g(p.proteinaRacion)}</td><td>{g(p.proteina100)}</td></tr>
+                      <tr><td>{t('Hidratos')}</td><td>{g(porRac(p.hidratos100))}</td><td>{g(p.hidratos100)}</td></tr>
+                      {p.azucares100 != null && <tr><td>{t('de ellos, azúcares')}</td><td>{g(porRac(p.azucares100))}</td><td>{g(p.azucares100)}</td></tr>}
+                      <tr><td>{t('Grasas')}</td><td>{g(porRac(p.grasas100))}</td><td>{g(p.grasas100)}</td></tr>
+                      {p.sal100 != null && <tr><td>{t('Sal')}</td><td>{g(porRac(p.sal100))}</td><td>{g(p.sal100)}</td></tr>}
+                      {p.cafeina100 ? <tr><td>{t('Cafeína')}</td><td>{g(porRac(p.cafeina100), 'mg')}</td><td>{g(p.cafeina100, 'mg')}</td></tr> : null}
+                      <tr><td>{t('Ración')}</td><td>{p.racionG ? g(p.racionG) : '—'}</td><td>—</td></tr>
                     </tbody>
                   </table>
                 </div>
                 {!enMisComidas && (
                   <>
-                    <button className="btn ln sm mt12" onClick={() => void comoPlantilla()}>Guardar en Mis comidas</button>
-                    <p className="small muted mt4">Para tenerlo a un toque en «Añadir», sin buscarlo.</p>
+                    <button className="btn ln sm mt12" onClick={() => void comoPlantilla()}>{t('Guardar en Mis comidas')}</button>
+                    <p className="small muted mt4">{t('Para tenerlo a un toque en «Añadir», sin buscarlo.')}</p>
                   </>
                 )}
               </div>
             </details>
           </>
         )}
-        <button className="btn bad sm mt16" onClick={() => void borrar(p)}><Ico n="trash" /> Borrar producto</button>
-        {!p.manual && !p.pendiente && <p className="credit">Fuente: Open Food Facts · licencia ODbL</p>}
-        {p.manual && <p className="credit">Apuntado a mano</p>}
+        <button className="btn bad sm mt16" onClick={() => void borrar(p)}><Ico n="trash" /> {t('Borrar producto')}</button>
+        {!p.manual && !p.pendiente && <p className="credit">{t('Fuente: Open Food Facts · licencia ODbL')}</p>}
+        {p.manual && <p className="credit">{t('Apuntado a mano')}</p>}
       </div>
     </Pantalla>
   )

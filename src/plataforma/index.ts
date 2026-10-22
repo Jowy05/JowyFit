@@ -1,6 +1,7 @@
 // Todo lo que cambia entre Android (Capacitor) y el navegador / iPhone (PWA) pasa por aquí.
 // Cada función funciona en los dos sitios: en la web hace lo que puede o no hace nada.
 import { Capacitor } from '@capacitor/core'
+import { t } from '../i18n'
 
 export const esAndroid = (): boolean => Capacitor.getPlatform() === 'android'
 export const esNativo = (): boolean => Capacitor.isNativePlatform()
@@ -175,8 +176,8 @@ let canales = false
 async function crearCanales(ln: typeof import('@capacitor/local-notifications').LocalNotifications) {
   if (canales) return
   canales = true
-  await ln.createChannel({ id: 'descanso', name: 'Fin del descanso', description: 'Avisa cuando toca la siguiente serie (también en el reloj)', importance: 5, visibility: 1, vibration: true }).catch(() => {})
-  await ln.createChannel({ id: 'recordatorios', name: 'Recordatorios', description: 'Dormir, pesarse, suplementos, copias…', importance: 3, visibility: 1, vibration: true }).catch(() => {})
+  await ln.createChannel({ id: 'descanso', name: t('Fin del descanso'), description: t('Avisa cuando toca la siguiente serie (también en el reloj)'), importance: 5, visibility: 1, vibration: true }).catch(() => {})
+  await ln.createChannel({ id: 'recordatorios', name: t('Recordatorios'), description: t('Dormir, pesarse, suplementos, copias…'), importance: 3, visibility: 1, vibration: true }).catch(() => {})
 }
 
 // Todas las llamadas de notificaciones van en fila: si «Saltar» (cancelar) llegaba antes de que terminara de

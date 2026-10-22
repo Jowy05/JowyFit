@@ -25,8 +25,11 @@ import { Capacitor } from '@capacitor/core'
 import { App } from './ui/App'
 import { RedSeguridad } from './ui/Rescate'
 import { aplicarTemaGuardado } from './ui/tema'
+import { cargarIdioma } from './i18n'
 
 aplicarTemaGuardado()
+// El diccionario del idioma (si no es castellano) se empieza a bajar ya; App espera a que esté antes de pintar.
+void cargarIdioma()
 
 // Service worker solo en la web (iPhone): guarda la app para usarla sin conexión.
 // En Android la app ya va dentro del APK; un service worker guardaría la versión vieja tras actualizar.

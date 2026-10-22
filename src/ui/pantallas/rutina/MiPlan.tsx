@@ -6,8 +6,12 @@ import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAjustes, useRutina, useSesionEnCurso } from '../../datos'
 import { useAviso } from '../../aviso'
-import { abrevDia, CabRutina, capital, duracionPlan, filas, listaDias, minutos, nombreDia, nombreEj, SS, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
+import { abrevDia, CabRutina, capital, duracionPlan, filas, listaDias, minutos, nombreDia, nombreEj, nombreEntreno, nombreEstructura, SS, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
 import { abrirEntreno, iniciarEntreno } from '../entreno/iniciar'
+import { t, tn } from '../../../i18n'
+
+/** Lo que añade el CSS tras las series de lo que se quita con prisa (va en data-cut para poder traducirlo). */
+const cut = () => t('se quita si vas con prisa')
 
 export function MiPlan() {
   const nav = useNav()
@@ -17,7 +21,7 @@ export function MiPlan() {
   const enCurso = useSesionEnCurso()
   const hoy = hoyISO()
   const ds = diaSemana(deISO(hoy))
-  const crumb = a.inicio ? `Semana ${numeroSemana(a.inicio, hoy)}` : undefined
+  const crumb = a.inicio ? t('Semana {n}', { n: numeroSemana(a.inicio, hoy) }) : undefined
   // Entrenos de calibración que cuentan: los de esta rutina y no libres (igual que en el fin del entreno).
   const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === r.id && s.letra !== 'L').length), [r?.id]) ?? 0
   const unaVez = useUnaVez()
@@ -30,7 +34,7 @@ export function MiPlan() {
     <Pantalla>
       <CabRutina actual="rut" crumb={crumb} />
       <div className="pg"><div className="sec">
-        <Vacio icono="clipboard-text" titulo="Aún no tienes rutina" texto="La creamos con tus días, tu tiempo y tu gimnasio. Tarda 10 segundos." accion={<><Ico n="magic-wand" b />Crear mi rutina</>} onAccion={() => nav.ir('rut-gen')} />
+        <Vacio icono="clipboard-text" titulo={t('Aún no tienes rutina')} texto={t('La creamos con tus días, tu tiempo y tu gimnasio. Tarda 10 segundos.')} accion={<><Ico n="magic-wand" b />{t('Crear mi rutina')}</>} onAccion={() => nav.ir('rut-gen')} />
       </div></div>
     </Pantalla>
   )
@@ -39,7 +43,7 @@ export function MiPlan() {
   const opc = r.dias.filter(d => d.opcional)
   // Doble toque: dos entrenos libres en curso. Y «restaurar» no abría nada si la app se había cerrado a mitad.
   const libre = unaVez(async () => {
-    if (enCurso) { aviso('Ya tienes un entreno en curso'); abrirEntreno(nav); return }
+    if (enCurso) { aviso(t('Ya tienes un entreno en curso')); abrirEntreno(nav); return }
     await iniciarEntreno({ libre: true })
     nav.completa('entreno')
   })
@@ -47,7 +51,7 @@ export function MiPlan() {
   const conDia = fijos.filter(d => d.dia != null).map(d => d.dia!)
   // «Dos seguidos» (superserie) se explica la primera vez que sale en la pantalla.
   let ssVista = false
-  const ss = () => { const t = ssVista ? '' : ` · ${SS_EXPLICA}`; ssVista = true; return t }
+  const ss = () => { const x = ssVista ? '' : ` · ${SS_EXPLICA()}`; ssVista = true; return x }
 
   return (
     <Pantalla>
@@ -56,43 +60,43 @@ export function MiPlan() {
         <div className="sec">
           <div className="spec-box" data-tour="rutina">
             <div className="spec-h mt8">
-              <h2 className="h3">{r.estructura}</h2>
-              {r.calibracion ? <span className="tag warn"><Ico n="gauge" b />Semana de prueba</span> : <span className="tag ok"><Ico n="check" b />Definitiva</span>}
+              <h2 className="h3">{nombreEstructura(r.estructura)}</h2>
+              {r.calibracion ? <span className="tag warn"><Ico n="gauge" b />{t('Semana de prueba')}</span> : <span className="tag ok"><Ico n="check" b />{t('Definitiva')}</span>}
             </div>
             <div className="spec">
-              <p><span>Días</span><b className="ux-rut-wrap">{conDia.length ? capital(listaDias(conDia)) : `${fijos.length} a la semana`}</b></p>
-              {opc[0]?.dia != null && <p><span>Día extra</span><b className="ux-rut-wrap">{nombreDia(opc[0])}, si te apetece · ~{minutos(opc[0])} min</b></p>}
+              <p><span>{t('Días')}</span><b className="ux-rut-wrap">{conDia.length ? capital(listaDias(conDia)) : t('{n} a la semana', { n: fijos.length })}</b></p>
+              {opc[0]?.dia != null && <p><span>{t('Día extra')}</span><b className="ux-rut-wrap">{t('{dia}, si te apetece · ~{min} min', { dia: nombreDia(opc[0]), min: minutos(opc[0]) })}</b></p>}
               {/* Mismo rango que al crear la rutina («48-55 min»): antes aquí ponía solo el máximo y en Inicio el del día. */}
-              <p><span>Duración</span><b>{duracionPlan(r)}</b></p>
+              <p><span>{t('Duración')}</span><b>{duracionPlan(r)}</b></p>
             </div>
           </div>
-          {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>Esta semana, pesos cómodos.</b> {faltan > 0 ? <>Después de {faltan} entreno{faltan === 1 ? '' : 's'} más te propongo</> : <>Al guardar el próximo entreno te propongo</>} la rutina definitiva con tus tiempos reales.</span></p>}
+          {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>{t('Esta semana, pesos cómodos.')}</b> {faltan > 0 ? tn(faltan, 'Después de {n} entreno más te propongo la rutina definitiva con tus tiempos reales.', 'Después de {n} entrenos más te propongo la rutina definitiva con tus tiempos reales.') : t('Al guardar el próximo entreno te propongo la rutina definitiva con tus tiempos reales.')}</span></p>}
         </div>
 
         <div className="sec">
-          <div className="sec-h"><h2>Días</h2><span className="lbl">Toca uno para verlo</span></div>
+          <div className="sec-h"><h2>{t('Días')}</h2><span className="lbl">{t('Toca uno para verlo')}</span></div>
           {r.dias.map((d, i) => {
             const esHoy = d.dia === ds
             if (esHoy && !d.opcional) return (
               <div key={d.letra} className={cx('dayc card hot', i && 'mt8')}>
                 <button className="dayc-h" onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
-                  <span className="tx"><b>{tituloDia(d)}</b><small>{d.nombre} · ~{minutos(d)} min · con prisa ~{minutos(d, true)}</small></span>
-                  {hechoHoy ? <span className="tag ok"><Ico n="check" b />Hecho</span> : <span className="tag go">Hoy</span>}
+                  <span className="tx"><b>{tituloDia(d)}</b><small>{t('{nombre} · ~{min} min · con prisa ~{corta}', { nombre: nombreEntreno(d), min: minutos(d), corta: minutos(d, true) })}</small></span>
+                  {hechoHoy ? <span className="tag ok"><Ico n="check" b />{t('Hecho')}</span> : <span className="tag go">{t('Hoy')}</span>}
                 </button>
                 <div className="pl-list">
                   {filas(d.bloques).map(f => Array.isArray(f) ? (
                     <div key={f[0].uid} className="ssb">
-                      <span className="ss-l">{SS}{ss()}</span>
-                      {f.map(b => <p key={b.uid} className={cx('pl', b.fueraEnCorta && 'cut')}><span>{nombreEj(b.ejercicio)}</span><b>{seriesTxt(b)}</b></p>)}
+                      <span className="ss-l">{SS()}{ss()}</span>
+                      {f.map(b => <p key={b.uid} className={cx('pl', b.fueraEnCorta && 'cut')}><span>{nombreEj(b.ejercicio)}</span><b data-cut={b.fueraEnCorta ? cut() : undefined}>{seriesTxt(b)}</b></p>)}
                     </div>
-                  ) : <p key={f.uid} className={cx('pl', f.fueraEnCorta && 'cut')}><span>{nombreEj(f.ejercicio)}</span><b>{seriesTxt(f)}</b></p>)}
-                  <p className="small muted ux-rut-leyenda">«3 × 6-10» = 3 series de 6 a 10 repeticiones.</p>
+                  ) : <p key={f.uid} className={cx('pl', f.fueraEnCorta && 'cut')}><span>{nombreEj(f.ejercicio)}</span><b data-cut={f.fueraEnCorta ? cut() : undefined}>{seriesTxt(f)}</b></p>)}
+                  <p className="small muted ux-rut-leyenda">{t('«3 × 6-10» = 3 series de 6 a 10 repeticiones.')}</p>
                 </div>
                 <div className="pd">
                   {hechoHoy
-                    ? <button className="btn gry" onClick={() => nav.ir('pro-entreno', { id: hechoHoy.id }, 'pro')}><Ico n="check" b />Entreno de hoy hecho · verlo</button>
-                    : <button className="btn" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}><Ico n="play" b />Empezar rutina</button>}
+                    ? <button className="btn gry" onClick={() => nav.ir('pro-entreno', { id: hechoHoy.id }, 'pro')}><Ico n="check" b />{t('Entreno de hoy hecho · verlo')}</button>
+                    : <button className="btn" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}><Ico n="play" b />{t('Empezar rutina')}</button>}
                 </div>
               </div>
             )
@@ -102,7 +106,7 @@ export function MiPlan() {
               <button key={d.letra} className={cx('dayc card', i && 'mt8', d.opcional && 'optd')} onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
                 <span className="dayc-h">
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
-                  <span className="tx"><b>{d.opcional ? `${tituloDia(d)} · opcional` : tituloDia(d)}</b><small>{d.dia != null ? d.nombre : `Día ${d.letra}`} · {nEj} ejercicio{nEj === 1 ? '' : 's'} · ~{minutos(d)} min</small></span>
+                  <span className="tx"><b>{d.opcional ? t('{dia} · opcional', { dia: tituloDia(d) }) : tituloDia(d)}</b><small>{d.dia != null ? nombreEntreno(d) : t('Día {letra}', { letra: d.letra })} · {tn(nEj, '{n} ejercicio', '{n} ejercicios')} · ~{minutos(d)} min</small></span>
                   <Ico n="caret-right" className="car" />
                 </span>
               </button>
@@ -112,22 +116,22 @@ export function MiPlan() {
 
         <div className="sec">
           <div className="list">
-            <button className="it" onClick={() => nav.ir('rut-edit')}><span className="ico"><Ico n="pencil-simple" /></span><span className="tx"><b>Editar plan</b><small>Cambiar ejercicios o series, o rehacer la rutina</small></span><Ico n="caret-right" className="car" /></button>
+            <button className="it" onClick={() => nav.ir('rut-edit')}><span className="ico"><Ico n="pencil-simple" /></span><span className="tx"><b>{t('Editar plan')}</b><small>{t('Cambiar ejercicios o series, o rehacer la rutina')}</small></span><Ico n="caret-right" className="car" /></button>
           </div>
           {/* Lo que casi nunca hace falta, plegado: otro día de la rutina o un entreno sin plan. */}
           <details className="fold mt12">
-            <summary>Otras formas de entrenar<Ico n="caret-down" /></summary>
+            <summary>{t('Otras formas de entrenar')}<Ico n="caret-down" /></summary>
             <div className="in">
               <div className="list">
                 <div className="it">
                   <span className="ico"><Ico n="calendar-blank" /></span>
                   <span className="tx">
-                    <b>Empezar otro día</b>
-                    <small>Si hoy prefieres hacer otro entreno</small>
+                    <b>{t('Empezar otro día')}</b>
+                    <small>{t('Si hoy prefieres hacer otro entreno')}</small>
                     <span className="chips ux-rut-otro">{r.dias.map(d => <button key={d.letra} className="chip" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}>{tituloDia(d)}</button>)}</span>
                   </span>
                 </div>
-                <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>Entreno libre</b><small>Sin plan: añades ejercicios sobre la marcha</small></span><Ico n="caret-right" className="car" /></button>
+                <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>{t('Entreno libre')}</b><small>{t('Sin plan: añades ejercicios sobre la marcha')}</small></span><Ico n="caret-right" className="car" /></button>
               </div>
             </div>
           </details>

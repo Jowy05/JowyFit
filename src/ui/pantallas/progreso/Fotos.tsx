@@ -12,10 +12,13 @@ import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, usePerfil } from '../../datos'
 import { CabProgreso, useUrlsFotos } from './comun'
+import { t, tc, tn } from '../../../i18n'
+import { tr } from '../../../i18n/jsx'
 
 type Pose = Foto['pose']
-const POSES: { v: Pose; t: string }[] = [{ v: 'frente', t: 'Frente' }, { v: 'perfil', t: 'Perfil' }, { v: 'espalda', t: 'Espalda' }]
-const NOMBRE_POSE: Record<Pose, string> = { frente: 'Frente', perfil: 'Perfil', espalda: 'Espalda' }
+const POSES: { v: Pose }[] = [{ v: 'frente' }, { v: 'perfil' }, { v: 'espalda' }]
+/** Nombre de la pose en el idioma de la app («Perfil» de la foto no es la pestaña Perfil: va con contexto). */
+const nombrePose = (p: Pose) => (p === 'frente' ? t('Frente') : p === 'perfil' ? tc('pose', 'Perfil') : t('Espalda'))
 const IMG = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' } as const
 
 export function Fotos() {
@@ -35,13 +38,13 @@ export function Fotos() {
   const [abierta, setAbierta] = useState<number | null>(null)
   const hoy = hoyISO()
   const inicio = ajustes.inicio ?? perfil.creado.slice(0, 10)
-  const cab = <CabProgreso actual="pro-fotos" crumb="Lo que no dice la báscula" />
+  const cab = <CabProgreso actual="pro-fotos" crumb={t('Lo que no dice la báscula')} />
 
   const nueva = async () => {
     const imagen = await hacerFoto()
     if (!imagen) return
     await db.fotos.add({ fecha: `${hoy}T${horaActual()}`, pose: poseNueva, imagen })
-    aviso(`Foto guardada · ${NOMBRE_POSE[poseNueva].toLowerCase()}`)
+    aviso(t('Foto guardada · {pose}', { pose: nombrePose(poseNueva).toLowerCase() }))
     // Siguiente pose que falte hoy.
     const hechasHoy = new Set([...(fotos ?? []).filter(f => f.fecha.startsWith(hoy)).map(f => f.pose), poseNueva])
     const sig = POSES.find(p => !hechasHoy.has(p.v))
@@ -51,9 +54,9 @@ export function Fotos() {
   const dock = (
     <div className="dock" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div className="chips mini" style={{ flex: 'none' }}>
-        {POSES.map(p => <Chip key={p.v} on={poseNueva === p.v} onClick={() => setPoseNueva(p.v)}>{p.t}</Chip>)}
+        {POSES.map(p => <Chip key={p.v} on={poseNueva === p.v} onClick={() => setPoseNueva(p.v)}>{nombrePose(p.v)}</Chip>)}
       </div>
-      <button className="btn" style={{ flex: 1, minWidth: 0 }} onClick={() => void nueva()} aria-label={`Foto de ${NOMBRE_POSE[poseNueva].toLowerCase()}`}><Ico n="camera" b />Foto</button>
+      <button className="btn" style={{ flex: 1, minWidth: 0 }} onClick={() => void nueva()} aria-label={t('Foto de {pose}', { pose: nombrePose(poseNueva).toLowerCase() })}><Ico n="camera" b />{t('Foto')}</button>
     </div>
   )
 
@@ -62,10 +65,10 @@ export function Fotos() {
     <Pantalla>
       {cab}
       <div className="pg">
-        <p className="note plain"><Ico n="lock-simple" /><span>Las fotos están <b>solo en este móvil</b>. No se suben a ningún sitio.</span></p>
+        <p className="note plain"><Ico n="lock-simple" /><span>{tr('Las fotos están <b>solo en este móvil</b>. No se suben a ningún sitio.', { b: s => <b>{s}</b> })}</span></p>
         <div className="sec">
-          <Vacio icono="camera" titulo="Aún no hay fotos" texto="Una cada 2-4 semanas, con la misma luz, la misma ropa y la misma pose. Es lo que mejor enseña el cambio."
-            accion={<><Ico n="camera" b />Hacer la primera foto</>} onAccion={() => void nueva()} />
+          <Vacio icono="camera" titulo={t('Aún no hay fotos')} texto={t('Una cada 2-4 semanas, con la misma luz, la misma ropa y la misma pose. Es lo que mejor enseña el cambio.')}
+            accion={<><Ico n="camera" b />{t('Hacer la primera foto')}</>} onAccion={() => void nueva()} />
         </div>
       </div>
     </Pantalla>
@@ -93,15 +96,15 @@ export function Fotos() {
     <Pantalla>
       {cab}
       <div className="pg">
-        <p className="note plain"><Ico n="lock-simple" /><span>Las fotos están <b>solo en este móvil</b>. No se suben a ningún sitio: inclúyelas en tus copias de seguridad.</span></p>
+        <p className="note plain"><Ico n="lock-simple" /><span>{tr('Las fotos están <b>solo en este móvil</b>. No se suben a ningún sitio: inclúyelas en tus copias de seguridad.', { b: s => <b>{s}</b> })}</span></p>
 
         <div className="sec">
           <div className="sec-h">
-            <h2>Comparador</h2>
-            <div className="chips mini">{POSES.map(p => <Chip key={p.v} on={pose === p.v} onClick={() => elegirPose(p.v)}>{p.t}</Chip>)}</div>
+            <h2>{t('Comparador')}</h2>
+            <div className="chips mini">{POSES.map(p => <Chip key={p.v} on={pose === p.v} onClick={() => elegirPose(p.v)}>{nombrePose(p.v)}</Chip>)}</div>
           </div>
           {!puedeComparar ? (
-            <p className="note plain"><Ico n="images" /><span>Necesitas al menos dos fotos de {NOMBRE_POSE[pose].toLowerCase()} para compararlas.</span></p>
+            <p className="note plain"><Ico n="images" /><span>{t('Necesitas al menos dos fotos de {pose} para compararlas.', { pose: nombrePose(pose).toLowerCase() })}</span></p>
           ) : (
             <>
               <div className="cmp card">
@@ -109,19 +112,19 @@ export function Fotos() {
                   <div className="grid2" style={{ padding: 8 }}>
                     {[a, b].map(f => (
                       <div key={f.id} className="pthumb">
-                        <img src={urls.get(f.id!)} alt={`${NOMBRE_POSE[f.pose]} · ${fechaCorta(f.fecha)}`} style={IMG} />
+                        <img src={urls.get(f.id!)} alt={`${nombrePose(f.pose)} · ${fechaCorta(f.fecha)}`} style={IMG} />
                         <span>{fechaCorta(f.fecha)}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="cmp-v">
-                    <div className="cmp-a"><img src={urls.get(a.id!)} alt={`Antes · ${fechaCorta(a.fecha)}`} style={IMG} /></div>
-                    <div className="cmp-b" style={{ clipPath: `inset(0 0 0 ${corte}%)` }}><img src={urls.get(b.id!)} alt={`Después · ${fechaCorta(b.fecha)}`} style={IMG} /></div>
+                    <div className="cmp-a"><img src={urls.get(a.id!)} alt={t('Antes · {fecha}', { fecha: fechaCorta(a.fecha) })} style={IMG} /></div>
+                    <div className="cmp-b" style={{ clipPath: `inset(0 0 0 ${corte}%)` }}><img src={urls.get(b.id!)} alt={t('Después · {fecha}', { fecha: fechaCorta(b.fecha) })} style={IMG} /></div>
                     <span className="cmp-h" aria-hidden="true" style={{ left: `${corte}%` }}><Ico n="arrows-left-right" b /></span>
-                    <span className="cmp-l">{a.fecha.slice(0, 10) === primerDia ? 'Día 1' : fechaCorta(a.fecha)}</span>
-                    <span className="cmp-r">{b.fecha.startsWith(hoy) ? 'Hoy' : fechaCorta(b.fecha)}</span>
-                    <input type="range" min={0} max={100} value={corte} onChange={e => setCorte(Number(e.target.value))} aria-label="Deslizar para comparar"
+                    <span className="cmp-l">{a.fecha.slice(0, 10) === primerDia ? t('Día 1') : fechaCorta(a.fecha)}</span>
+                    <span className="cmp-r">{b.fecha.startsWith(hoy) ? t('Hoy') : fechaCorta(b.fecha)}</span>
+                    <input type="range" min={0} max={100} value={corte} onChange={e => setCorte(Number(e.target.value))} aria-label={t('Deslizar para comparar')}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'ew-resize', margin: 0 }} />
                   </div>
                 )}
@@ -131,47 +134,47 @@ export function Fotos() {
                 </div>
               </div>
               <div className="grid2 mt8">
-                <label className="fl"><span className="lbl fl">Antes</span>
+                <label className="fl"><span className="lbl fl">{t('Antes')}</span>
                   <select className="inp" value={a.id} onChange={e => setIdA(Number(e.target.value))}>
-                    {dePose.map(f => <option key={f.id} value={f.id}>{fechaCorta(f.fecha)} {f.fecha.slice(0, 4)}</option>)}
+                    {dePose.map(f => <option key={f.id} value={f.id}>{t('{fecha} {ano}', { fecha: fechaCorta(f.fecha), ano: f.fecha.slice(0, 4) })}</option>)}
                   </select>
                 </label>
-                <label className="fl"><span className="lbl fl">Después</span>
+                <label className="fl"><span className="lbl fl">{t('Después')}</span>
                   <select className="inp" value={b.id} onChange={e => setIdB(Number(e.target.value))}>
-                    {dePose.map(f => <option key={f.id} value={f.id}>{fechaCorta(f.fecha)} {f.fecha.slice(0, 4)}</option>)}
+                    {dePose.map(f => <option key={f.id} value={f.id}>{t('{fecha} {ano}', { fecha: fechaCorta(f.fecha), ano: f.fecha.slice(0, 4) })}</option>)}
                   </select>
                 </label>
               </div>
               <div className="chips eq mt8">
-                <Chip on={!lado} onClick={() => setLado(false)}><Ico n="arrows-left-right" />Deslizador</Chip>
-                <Chip on={lado} onClick={() => setLado(true)}><Ico n="columns" />Lado a lado</Chip>
+                <Chip on={!lado} onClick={() => setLado(false)}><Ico n="arrows-left-right" />{t('Deslizador')}</Chip>
+                <Chip on={lado} onClick={() => setLado(true)}><Ico n="columns" />{t('Lado a lado')}</Chip>
               </div>
             </>
           )}
         </div>
 
         <div className="sec">
-          <div className="sec-h"><h2>Galería</h2><span className="lbl">{perfil.fotosCadaSemanas > 0 && perfil.fotosCadaSemanas !== 2 ? `cada ${perfil.fotosCadaSemanas} semana${perfil.fotosCadaSemanas === 1 ? '' : 's'}` : 'cada 2-4 semanas'}</span></div>
+          <div className="sec-h"><h2>{t('Galería')}</h2><span className="lbl">{perfil.fotosCadaSemanas > 0 && perfil.fotosCadaSemanas !== 2 ? tn(perfil.fotosCadaSemanas, 'cada {n} semana', 'cada {n} semanas') : t('cada 2-4 semanas')}</span></div>
           {vista && (
             <div className="card pd" style={{ marginBottom: 12 }}>
-              <img src={urls.get(vista.id!)} alt={`${NOMBRE_POSE[vista.pose]} · ${fechaCorta(vista.fecha)}`} className="foto-prev" style={{ maxHeight: 420, objectFit: 'contain' }} />
+              <img src={urls.get(vista.id!)} alt={`${nombrePose(vista.pose)} · ${fechaCorta(vista.fecha)}`} className="foto-prev" style={{ maxHeight: 420, objectFit: 'contain' }} />
               <div className="row jb mt8">
-                <b>{NOMBRE_POSE[vista.pose]} · {fechaCorta(vista.fecha)}</b>
+                <b>{nombrePose(vista.pose)} · {fechaCorta(vista.fecha)}</b>
                 <div className="row" style={{ gap: 8 }}>
-                  <button className="ib" aria-label="Borrar foto" onClick={() => { setAbierta(null); nav.hoja('sheet-confirmar', { titulo: '¿Borrar esta foto?', texto: `${NOMBRE_POSE[vista.pose]} del ${fechaCorta(vista.fecha)}.`, si: 'Borrar', peligro: true, accion: 'borrar-foto', id: vista.id }) }}><Ico n="trash" /></button>
-                  <button className="ib" aria-label="Cerrar" onClick={() => setAbierta(null)}><Ico n="x" /></button>
+                  <button className="ib" aria-label={t('Borrar foto')} onClick={() => { setAbierta(null); nav.hoja('sheet-confirmar', { titulo: t('¿Borrar esta foto?'), texto: t('{pose} del {fecha}.', { pose: nombrePose(vista.pose), fecha: fechaCorta(vista.fecha) }), si: t('Borrar'), peligro: true, accion: 'borrar-foto', id: vista.id }) }}><Ico n="trash" /></button>
+                  <button className="ib" aria-label={t('Cerrar')} onClick={() => setAbierta(null)}><Ico n="x" /></button>
                 </div>
               </div>
             </div>
           )}
           {[...dias.entries()].map(([d, lista], i) => (
             <div key={d}>
-              <p className="gal-d"><b>{fechaCorta(d)}</b> · {d === primerDia ? 'día 1' : `semana ${Math.max(1, numeroSemana(inicio, d))}`}</p>
+              <p className="gal-d"><b>{fechaCorta(d)}</b> · {d === primerDia ? t('día 1') : t('semana {n}', { n: Math.max(1, numeroSemana(inicio, d)) })}</p>
               <div className="grid3">
                 {lista.map(f => (
                   <button key={f.id} className={cx('pthumb', i % 3 === 1 && 'b', i % 3 === 2 && 'c')} onClick={() => setAbierta(f.id ?? null)}>
                     <img src={urls.get(f.id!)} alt="" style={IMG} loading="lazy" />
-                    <span>{NOMBRE_POSE[f.pose]}</span>
+                    <span>{nombrePose(f.pose)}</span>
                   </button>
                 ))}
               </div>
@@ -194,7 +197,7 @@ function DatosDia({ f, ms, comparar }: { f: Foto; ms: Medicion[]; comparar?: Fot
   return (
     <div className="spec flat">
       <p><span>{fechaCorta(d)}</span><b className={cx(mejor && 'okc')}>{cin ? `${num(cin.valor)} cm` : '—'}</b></p>
-      <p><span>Peso</span><b>{peso ? `${num(peso.valor)} kg` : '—'}</b></p>
+      <p><span>{t('Peso')}</span><b>{peso ? `${num(peso.valor)} kg` : '—'}</b></p>
     </div>
   )
 }

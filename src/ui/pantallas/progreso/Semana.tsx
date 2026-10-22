@@ -5,32 +5,34 @@ import { db } from '../../../datos/db'
 import { objetivosEnergia, sesionesHechas } from '../../../datos/consultas'
 import { nombreEjercicio } from '../../../catalogo/catalogo'
 import { num, kg } from '../../../dominio/calculos'
-import { deISO, diaSemana, hoyISO, lunesDe, MESES_CORTOS, numeroSemana, semanaDe, sumarDias } from '../../../dominio/fechas'
+import { deISO, diaMes, diaSemana, hoyISO, lunesDe, MESES_CORTOS, numeroSemana, semanaDe, sumarDias } from '../../../dominio/fechas'
 import { consejoQuincenal, resumenSemana } from '../../../dominio/resumen'
 import { datosQuincena, estadoEntrenos, estadoPicoteo, lineasSemaforo, mediasSemanales, pendienteSemanal, puntosSpark, recordsEn, subidas, type EstadoTarjeta } from '../../../dominio/tendencias'
 import { cx, estilo, Ico, Pantalla, Vacio } from '../../comp'
 import { useNav } from '../../nav'
 import { useAjustes, usePerfil, useRutina } from '../../datos'
 import { CabProgreso, capital } from './comun'
+import { t, tk, tn } from '../../../i18n'
+import { tr } from '../../../i18n/jsx'
 
 function rango(dias: string[]): string {
   const a = deISO(dias[0]!), b = deISO(dias[6]!)
   return a.getMonth() === b.getMonth()
-    ? `${a.getDate()}-${b.getDate()} ${MESES_CORTOS[b.getMonth()]}`
-    : `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} - ${b.getDate()} ${MESES_CORTOS[b.getMonth()]}`
+    ? t('{desde}-{hasta} {mes}', { desde: a.getDate(), hasta: b.getDate(), mes: MESES_CORTOS[b.getMonth()]! })
+    : `${diaMes(a.getDate(), a.getMonth())} - ${diaMes(b.getDate(), b.getMonth())}`
 }
 
 const signo = (n: number, d = 1) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${num(Math.abs(n), d)}`
 
 type Estado = EstadoTarjeta | 'neutro'
-const PALABRA: Record<EstadoTarjeta, string> = { ok: 'bien', warn: 'casi', bad: 'a mejorar', nada: 'sin datos' }
+const PALABRA: Record<EstadoTarjeta, string> = { ok: tk('bien'), warn: tk('casi'), bad: tk('a mejorar'), nada: tk('sin datos') }
 /** Estado de cada tarjeta con icono y palabra (un icono solo no se entiende). */
 function Icono({ e, trofeo, texto }: { e: Estado; trofeo?: boolean; texto?: string }) {
-  if (trofeo) return <span className="tag gold est"><Ico n="trophy" b />{texto ?? 'récord'}</span>
+  if (trofeo) return <span className="tag gold est"><Ico n="trophy" b />{texto ?? t('récord')}</span>
   if (e === 'neutro') return null
-  if (e === 'nada') return <span className="tag est">{texto ?? PALABRA.nada}</span>
+  if (e === 'nada') return <span className="tag est">{texto ?? t(PALABRA.nada)}</span>
   const ico = e === 'ok' ? 'check-circle' : e === 'warn' ? 'minus-circle' : 'x-circle'
-  return <span className={cx('tag est', e)}><Ico n={ico} b />{texto ?? PALABRA[e]}</span>
+  return <span className={cx('tag est', e)}><Ico n={ico} b />{texto ?? t(PALABRA[e])}</span>
 }
 
 const COLOR = { verde: 'ok', ambar: 'warn', rojo: 'bad' } as const
@@ -60,13 +62,13 @@ export function Semana() {
   }, [lunes, domingo, perfil])
 
   const cab = (
-    <CabProgreso actual="pro-sem" crumb={atras === 0 ? 'Revisión del domingo' : 'Semanas anteriores'} />
+    <CabProgreso actual="pro-sem" crumb={atras === 0 ? t('Revisión del domingo') : t('Semanas anteriores')} />
   )
   const selector = (
     <div className="daysel">
-      <button className={cx('ib', nSemana <= 1 && 'dim')} aria-label="Semana anterior" disabled={nSemana <= 1} onClick={() => setAtras(a => a + 1)}><Ico n="caret-left" /></button>
-      <div><b>Semana {Math.max(1, nSemana)}</b><small>{atras === 0 ? `Esta semana · ${rango(dias)}` : rango(dias)}</small></div>
-      <button className={cx('ib', atras === 0 && 'dim')} aria-label="Semana siguiente" disabled={atras === 0} onClick={() => setAtras(a => Math.max(0, a - 1))}><Ico n="caret-right" /></button>
+      <button className={cx('ib', nSemana <= 1 && 'dim')} aria-label={t('Semana anterior')} disabled={nSemana <= 1} onClick={() => setAtras(a => a + 1)}><Ico n="caret-left" /></button>
+      <div><b>{t('Semana {n}', { n: Math.max(1, nSemana) })}</b><small>{atras === 0 ? t('Esta semana · {rango}', { rango: rango(dias) }) : rango(dias)}</small></div>
+      <button className={cx('ib', atras === 0 && 'dim')} aria-label={t('Semana siguiente')} disabled={atras === 0} onClick={() => setAtras(a => Math.max(0, a - 1))}><Ico n="caret-right" /></button>
     </div>
   )
 
@@ -94,9 +96,9 @@ export function Semana() {
       {cab}
       <div className="pg">
         {selector}
-        <Vacio icono="chart-line-up" titulo={atras === 0 ? 'Tu semana aún está vacía' : 'Sin datos esa semana'}
-          texto="Cuando entrenes, te peses o apuntes comidas, aquí verás en 10 segundos si vas bien."
-          accion={<><Ico n="ruler" b />Registrar medidas</>} onAccion={() => nav.ir('pro-reg')} />
+        <Vacio icono="chart-line-up" titulo={atras === 0 ? t('Tu semana aún está vacía') : t('Sin datos esa semana')}
+          texto={t('Cuando entrenes, te peses o apuntes comidas, aquí verás en 10 segundos si vas bien.')}
+          accion={<><Ico n="ruler" b />{t('Registrar medidas')}</>} onAccion={() => nav.ir('pro-reg')} />
       </div>
     </Pantalla>
   )
@@ -125,7 +127,7 @@ export function Semana() {
   const eProteina: Estado = r.proteina.media == null ? 'nada' : r.proteina.media >= r.proteina.objetivo * 0.9 ? 'ok' : r.proteina.media >= r.proteina.objetivo * 0.75 ? 'warn' : 'bad'
   const ePasos: Estado = r.pasos.media == null ? 'nada' : r.pasos.diasCumplidos >= 5 ? 'ok' : r.pasos.diasCumplidos >= 3 ? 'warn' : 'bad'
   const ePicoteo: Estado = estadoPicoteo(r.picoteo.dias, r.picoteo.anterior, r.proteina.media != null)
-  const lineas = lineasSemaforo({ frase: r.frase, semaforo: r.semaforo, entrenos: r.entrenos, fijos: r.fijos, esperados, enCurso })
+  const lineas = lineasSemaforo({ frase: r.frase, semaforo: r.semaforo, entrenos: r.entrenos, fijos: r.fijos, esperados, enCurso, bien: r.partes.bien, mal: r.partes.mal })
   // Semana 1 sin entrenos anteriores: aún no puede haber récords (llegan al repetir ejercicios).
   const sinHistorial = !sesiones.some(s => s.estado === 'hecha' && s.fecha < lunes)
   const entrenoSemana = sesiones.some(s => s.estado === 'hecha' && dias.includes(s.fecha))
@@ -151,58 +153,58 @@ export function Semana() {
             {lineas.map((l, i) => <p key={i} className={cx('sem-d', i > 0 && 'mt4')}>{l}.</p>)}
           </div>
         </div>
-        {enCurso && <p className="small muted mt8"><Ico n="clock" /> Semana en curso: el resumen definitivo, el domingo.</p>}
+        {enCurso && <p className="small muted mt8"><Ico n="clock" /> {t('Semana en curso: el resumen definitivo, el domingo.')}</p>}
 
         <div className="grid2 mt12">
           <button className="card kpi st" onClick={() => nav.reemplazar('pro-cuerpo')}>
-            <span className="row jb"><span className="lbl">Cintura</span><Icono e={eCintura} texto={eCintura === 'ok' ? 'bien' : eCintura === 'warn' ? 'sube' : undefined} /></span>
+            <span className="row jb"><span className="lbl">{t('Cintura')}</span><Icono e={eCintura} texto={eCintura === 'ok' ? t('bien') : eCintura === 'warn' ? t('sube') : undefined} /></span>
             <p className="k">{r.cintura.actual != null ? num(r.cintura.actual) : '—'}<small>cm</small></p>
-            <p className="d">{!midio ? (r.cintura.actual != null ? 'sin medir esta semana' : 'mídete la cintura') : r.cintura.delta != null ? <><b className={cx(r.cintura.delta <= 0 && 'up')}>{signo(r.cintura.delta)}</b> esta semana</> : r.cintura.actual != null ? 'sin cambios medidos' : 'mídete la cintura'}</p>
+            <p className="d">{!midio ? (r.cintura.actual != null ? t('sin medir esta semana') : t('mídete la cintura')) : r.cintura.delta != null ? tr('{cambio} esta semana', { cambio: <b className={cx(r.cintura.delta <= 0 && 'up')}>{signo(r.cintura.delta)}</b> }) : r.cintura.actual != null ? t('sin cambios medidos') : t('mídete la cintura')}</p>
           </button>
           <button className="card kpi st" onClick={() => nav.reemplazar('pro-fuerza')}>
-            <span className="row jb"><span className="lbl">Fuerza</span>{!fuerzaPronto && <Icono e={eFuerza} trofeo={r.records > 0} />}</span>
+            <span className="row jb"><span className="lbl">{t('Fuerza')}</span>{!fuerzaPronto && <Icono e={eFuerza} trofeo={r.records > 0} />}</span>
             {fuerzaPronto ? (
               <>
-                <p className="k pronto">Aún pronto</p>
-                <p className="d">Los récords llegan cuando repites ejercicios</p>
+                <p className="k pronto">{t('Aún pronto')}</p>
+                <p className="d">{t('Los récords llegan cuando repites ejercicios')}</p>
               </>
             ) : (
               <>
-                <p className="k">{r.records}<small>récord{r.records === 1 ? '' : 's'}</small></p>
-                <p className="d">{mejorSubida ? `+${kg(mejorSubida.ahora - mejorSubida.antes)} kg en ${nombreEjercicio(mejorSubida.ejercicio).toLowerCase()}` : r.subidas ? `${r.subidas} subidas de peso` : 'sin subidas de peso'}</p>
+                <p className="k">{r.records}<small>{tn(r.records, 'récord', 'récords')}</small></p>
+                <p className="d">{mejorSubida ? t('+{kg} kg en {ejercicio}', { kg: kg(mejorSubida.ahora - mejorSubida.antes), ejercicio: nombreEjercicio(mejorSubida.ejercicio).toLowerCase() }) : r.subidas ? t('{n} subidas de peso', { n: r.subidas }) : t('sin subidas de peso')}</p>
               </>
             )}
           </button>
           <div className="card kpi st">
-            <span className="row jb"><span className="lbl">Entrenos</span><Icono e={eEntrenos} texto={eEntrenos === 'ok' ? (r.entrenos >= r.fijos ? 'hechos' : enCurso ? 'al día' : undefined) : undefined} /></span>
-            <p className="k">{r.entrenos}<small>de {r.fijos}</small>{r.extra > 0 && <small>+ {r.extra} extra</small>}</p>
+            <span className="row jb"><span className="lbl">{t('Entrenos')}</span><Icono e={eEntrenos} texto={eEntrenos === 'ok' ? (r.entrenos >= r.fijos ? t('hechos') : enCurso ? t('al día') : undefined) : undefined} /></span>
+            <p className="k">{r.entrenos}<small>{t('de {n}', { n: r.fijos })}</small>{r.extra > 0 && <small>{t('+ {n} extra', { n: r.extra })}</small>}</p>
             <div className="pips mt8">
               {Array.from({ length: r.fijos }, (_, i) => <i key={i} className={cx(i < r.entrenos && 'on')} />)}
               {Array.from({ length: r.extra }, (_, i) => <i key={`x${i}`} className="ex" />)}
             </div>
           </div>
           <button className="card kpi st" onClick={() => nav.pestana('com')}>
-            <span className="row jb"><span className="lbl">Proteína</span><Icono e={eProteina} texto={eProteina === 'bad' ? 'baja' : undefined} /></span>
-            <p className="k">{r.proteina.media != null ? Math.round(r.proteina.media) : '—'}<small>g/día</small></p>
-            <p className="d">{r.proteina.media != null ? `objetivo ${r.proteina.objetivo} g` : 'apunta tus comidas'}</p>
+            <span className="row jb"><span className="lbl">{t('Proteína')}</span><Icono e={eProteina} texto={eProteina === 'bad' ? t('baja') : undefined} /></span>
+            <p className="k">{r.proteina.media != null ? Math.round(r.proteina.media) : '—'}<small>{t('g/día')}</small></p>
+            <p className="d">{r.proteina.media != null ? t('objetivo {n} g', { n: r.proteina.objetivo }) : t('apunta tus comidas')}</p>
           </button>
           <button className="card kpi st" onClick={() => nav.ir('pro-pasos')}>
-            <span className="row jb"><span className="lbl">Pasos</span><Icono e={ePasos} /></span>
-            <p className="k">{r.pasos.media != null ? num(r.pasos.media, 0) : '—'}<small>media</small></p>
-            <p className="d">{r.pasos.media != null ? `${r.pasos.diasCumplidos} de 7 días` : 'apunta tus pasos'}</p>
+            <span className="row jb"><span className="lbl">{t('Pasos')}</span><Icono e={ePasos} /></span>
+            <p className="k">{r.pasos.media != null ? num(r.pasos.media, 0) : '—'}<small>{t('media')}</small></p>
+            <p className="d">{r.pasos.media != null ? t('{n} de 7 días', { n: r.pasos.diasCumplidos }) : t('apunta tus pasos')}</p>
           </button>
           <button className="card kpi st" onClick={() => nav.pestana('com')}>
-            <span className="row jb"><span className="lbl">Picoteo</span><Icono e={ePicoteo} /></span>
-            <p className="k">{r.proteina.media == null ? '—' : <>{r.picoteo.dias}<small>día{r.picoteo.dias === 1 ? '' : 's'}</small></>}</p>
-            <p className="d">{r.proteina.media == null ? 'apunta tus comidas' : `semana pasada: ${r.picoteo.anterior}`}</p>
+            <span className="row jb"><span className="lbl">{t('Picoteo')}</span><Icono e={ePicoteo} /></span>
+            <p className="k">{r.proteina.media == null ? '—' : <>{r.picoteo.dias}<small>{tn(r.picoteo.dias, 'día', 'días')}</small></>}</p>
+            <p className="d">{r.proteina.media == null ? t('apunta tus comidas') : t('semana pasada: {n}', { n: r.picoteo.anterior })}</p>
           </button>
           <button className="card kpi st span2 row" onClick={() => nav.reemplazar('pro-cuerpo')}>
             <span className="grow">
-              <span className="lbl">Peso · tendencia</span>
+              <span className="lbl">{t('Peso · tendencia')}</span>
               <p className="d">
                 {medias.length >= 2
-                  ? <>{num(medias[0]!.valor)} → <b className="mono">{num(medias[medias.length - 1]!.valor)} kg</b>{pendiente != null && ` · ${signo(pendiente)} kg/semana`}</>
-                  : medias.length === 1 ? <><b className="mono">{num(medias[0]!.valor)} kg</b> · pésate más semanas para ver la tendencia</> : 'Aún no hay pesajes'}
+                  ? <>{num(medias[0]!.valor)} → <b className="mono">{num(medias[medias.length - 1]!.valor)} kg</b>{pendiente != null && ` · ${t('{n} kg/semana', { n: signo(pendiente) })}`}</>
+                  : medias.length === 1 ? <><b className="mono">{num(medias[0]!.valor)} kg</b> · {t('pésate más semanas para ver la tendencia')}</> : t('Aún no hay pesajes')}
               </p>
             </span>
             {spark.length >= 2 && ultSpark && (
@@ -216,7 +218,7 @@ export function Semana() {
 
         <div className="sec">
           <div className="card pd advice">
-            <span className="row jb"><span className="lbl">Consejo de la quincena</span><span className="tag blue">Cada 2 semanas</span></span>
+            <span className="row jb"><span className="lbl">{t('Consejo de la quincena')}</span><span className="tag blue">{t('Cada 2 semanas')}</span></span>
             <b className="adj-t">{consejoT}</b>
             {consejoD && <p className="small muted">{consejoD}</p>}
           </div>

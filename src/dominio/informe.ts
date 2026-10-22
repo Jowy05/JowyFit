@@ -2,10 +2,10 @@
 // Lógica pura (sin Dexie ni React): el dibujo del PDF solo pinta lo que hay aquí, sin hacer cuentas.
 // Regla de oro: lo que no se sabe es null (nunca un 0 inventado). Diseño: docs/INFORME-PDF-DISENO.md (§5).
 import type { Ajustes, Comida, DiaSuplementos, EjercicioSesion, Franja, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../datos/tipos'
-import { cinturaAltura, imc, kg, num, objetivos } from './calculos'
-import { NOMBRE_FRANJA, NOMBRE_RACION, datosQuincena } from './comida'
+import { cinturaAltura, conUnidad, imc, kg, num, objetivos } from './calculos'
+import { NOMBRE_RACION, datosQuincena, nombreFranja } from './comida'
 import { basalDia, kcalPasos, kcalSesion, zancada } from './energia'
-import { DIAS, MESES, MESES_CORTOS, aISO, deISO, diaSemana, diasEntre, edad, fechaCorta, fechaLarga, horaActual, hoyISO, lunesDe, sumarDias } from './fechas'
+import { DIAS, DIAS_ABREV, DIAS_CORTOS, MESES, MESES_CORTOS, aISO, deISO, diaSemana, diasEntre, edad, fechaCorta, fechaLarga, formatoHora, horaActual, hoyISO, lunesDe, sumarDias } from './fechas'
 import { mejorMarca, volumen } from './progresion'
 import { PUNTOS_MAXIMOS, resumenSemana, type Resumen } from './resumen'
 import { estadoSemana, racha, type EstadoDia, type Recolocada } from './semana'
@@ -14,6 +14,8 @@ import {
   pendienteSemanal, pesoMaximo, progresoMeta, recordsEn, repsMaximas, seriesDe, seriesPorGrupo, serieMedida, subidas, ultimoValor,
   veredictoCinturaAltura, veredictoGrasa, veredictoImc, type Logro, type PuntoFecha, type Subida, type Tono,
 } from './tendencias'
+import { idioma, regionNumeros, t, tc, tk, tn } from '../i18n'
+import { nombreEntreno } from './nombres'
 
 // ================================================================ tipos
 
@@ -56,9 +58,10 @@ export type RangoInforme = {
 }
 
 export type CabeceraInforme = {
-  titulo: 'Informe de progreso' | 'Tu día'
+  /** «Informe de progreso» o «Tu día» (ya en el idioma de la app). */
+  titulo: string
   nombre: string | null
-  sexo: 'Hombre' | 'Mujer' | null
+  sexo: string | null
   edad: number | null
   alturaCm: number | null
   /** «Último mes · 21 sep – 20 oct 2026» */
@@ -526,13 +529,12 @@ export type EntradaInforme = TablasInforme & { periodo: PeriodoInforme; ahora: D
 // ================================================================ utilidades
 
 const MENOS = '–'
-const DIAS_ABREV = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'] as const
 const r1 = (v: number) => Math.round(v * 10) / 10
 const suma = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 const media = (xs: number[]) => (xs.length ? suma(xs) / xs.length : null)
 const dia10 = (f: string) => f.slice(0, 10)
 const entre = (f: string, a: string, b: string) => f >= a && f <= b
-const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+const capital = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
 const anio = (f: string) => deISO(f).getFullYear()
 const trabajo = (s: Serie[]) => s.filter(x => x.hecha && !x.calentamiento)
 const conRpe = (s: Serie[]) => trabajo(s).filter(x => x.rpe != null && Number.isFinite(x.rpe))
@@ -547,16 +549,16 @@ export function mediana(xs: number[]): number | null {
 
 /** «+1,5», «–0,7», «0» (con el menos tipográfico del PDF). */
 export function conSigno(n: number, f: (v: number) => string = v => num(v)): string {
-  const t = f(Math.abs(n))
-  if (n === 0 || /^0([,.]0*)?$/.test(t)) return '0'
-  return n > 0 ? `+${t}` : `${MENOS}${t}`
+  const v = f(Math.abs(n))
+  if (n === 0 || /^0([,.]0*)?$/.test(v)) return '0'
+  return n > 0 ? `+${v}` : `${MENOS}${v}`
 }
 
 /** Número con un número fijo de decimales: «79,0», «–0,03». */
 export function fijo(v: number, d = 1): string {
   const f = 10 ** d
   const r = Math.round(v * f) / f
-  return (r === 0 ? 0 : r).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d })
+  return (r === 0 ? 0 : r).toLocaleString(regionNumeros(), { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 
 /** Formato común de una serie: si algún valor lleva decimal, todos lo llevan («79,0» junto a «80,1»). */
@@ -567,7 +569,7 @@ export function formatoSerie(vals: number[], d = 1): (v: number) => string {
 }
 
 /** «+10 %», «–8 %». */
-export const textoPct = (p: number) => `${conSigno(p, v => String(Math.round(v)))} %`
+export const textoPct = (p: number) => conUnidad(conSigno(p, v => String(Math.round(v))), '%')
 
 /** Porcentaje de cambio redondeado: Math.round((hoy − normal) / normal × 100). */
 export const pctCambio = (valor: number, normal: number): number | null => (normal ? Math.round(((valor - normal) / Math.abs(normal)) * 100) : null)
@@ -575,7 +577,9 @@ export const pctCambio = (valor: number, normal: number): number | null => (norm
 /** «a», «a y b», «a, b y c» */
 export function lista(xs: string[]): string {
   if (xs.length <= 1) return xs[0] ?? ''
-  return `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`
+  // Con tres o más, contexto «3+»: en inglés lleva coma antes de «and».
+  const v = { a: xs.slice(0, -1).join(', '), b: xs[xs.length - 1]! }
+  return xs.length > 2 ? tc('3+', '{a} y {b}', v) : t('{a} y {b}', v)
 }
 
 /** «1 h 8 min», «59 min», «1 h», «—». */
@@ -595,7 +599,7 @@ export const mesAnio = (f: string) => `${MESES[deISO(f).getMonth()]} ${anio(f)}`
 export function etiquetaSemana(desde: string, hasta: string): string {
   const a = deISO(desde), b = deISO(hasta)
   if (desde === hasta) return fechaCorta(desde)
-  return a.getMonth() === b.getMonth() ? `${a.getDate()}-${b.getDate()} ${MESES_CORTOS[b.getMonth()]}` : `${fechaCorta(desde)}-${fechaCorta(hasta)}`
+  return a.getMonth() === b.getMonth() ? t('{desde}-{hasta} {mes}', { desde: a.getDate(), hasta: b.getDate(), mes: MESES_CORTOS[b.getMonth()]! }) : `${fechaCorta(desde)}-${fechaCorta(hasta)}`
 }
 
 /** Días seguidos desde `inicio` hasta `fin` (incluidos). */
@@ -615,10 +619,10 @@ export function minutosSesion(s: Sesion): number | null {
 // ---------------------------------------------------------------- esfuerzo
 
 const ZONAS_ESFUERZO: { palabra: PalabraEsfuerzo; tono: TonoInforme; rango: string }[] = [
-  { palabra: 'fácil', tono: 'azul', rango: '6' },
-  { palabra: 'bien', tono: 'ok', rango: '7-8' },
-  { palabra: 'duro', tono: 'warn', rango: '9' },
-  { palabra: 'al límite', tono: 'bad', rango: '10' },
+  { palabra: tk('fácil'), tono: 'azul', rango: '6' },
+  { palabra: tk('bien'), tono: 'ok', rango: '7-8' },
+  { palabra: tk('duro'), tono: 'warn', rango: '9' },
+  { palabra: tk('al límite'), tono: 'bad', rango: '10' },
 ]
 
 /** Zona del esfuerzo redondeado a 1 decimal: hasta 6,4 fácil · 6,5-8,4 bien · 8,5-9,4 duro · desde 9,5 al límite. */
@@ -629,13 +633,14 @@ export function zonaEsfuerzo(v: number): number {
 
 export function palabraEsfuerzo(v: number): { palabra: PalabraEsfuerzo; tono: TonoInforme; rango: string; texto: string } {
   const z = ZONAS_ESFUERZO[zonaEsfuerzo(v)]!
-  return { palabra: z.palabra, tono: z.tono, rango: z.rango, texto: `${num(v)} ${z.palabra}` }
+  return { palabra: z.palabra, tono: z.tono, rango: z.rango, texto: `${num(v)} ${t(z.palabra)}` }
 }
 
 /** «Qué dice» frente al objetivo: se compara la palabra, no los decimales. */
 export function queDiceEsfuerzo(mediaV: number, objetivo: number): { texto: 'lo previsto' | 'más duro' | 'más fácil'; tono: TonoInforme } {
   const a = zonaEsfuerzo(mediaV), b = zonaEsfuerzo(objetivo)
-  return a === b ? { texto: 'lo previsto', tono: 'ok' } : a > b ? { texto: 'más duro', tono: 'warn' } : { texto: 'más fácil', tono: 'azul' }
+  // El texto se traduce al pintarlo (t(queDice)).
+  return a === b ? { texto: tk('lo previsto'), tono: 'ok' } : a > b ? { texto: tk('más duro'), tono: 'warn' } : { texto: tk('más fácil'), tono: 'azul' }
 }
 
 /** Media de las series de trabajo con esfuerzo marcado (las vacías no cuentan). */
@@ -658,7 +663,7 @@ export function esfuerzoDe(ejs: EjercicioSesion[]): EsfuerzoInforme {
     media: m == null ? null : r1(m),
     palabra: p?.palabra ?? null,
     tono: p?.tono ?? 'gris',
-    texto: p?.texto ?? 'sin marcar',
+    texto: p?.texto ?? t('sin marcar'),
     marcadas, total, pct,
     pocas: total > 0 && marcadas / total < 0.3,
     objetivo: obj == null ? null : r1(obj),
@@ -696,21 +701,21 @@ function serieTop(series: Serie[]): Serie {
 /** «55 kg», «ayuda 15 kg», «12 reps», «40 s» */
 export function textoFuerza(v: number, unidad: UnidadFuerza): string {
   if (unidad === 'kg') return `${kg(v)} kg`
-  if (unidad === 'asistido') return `ayuda ${kg(v)} kg`
-  if (unidad === 'reps') return `${num(v, 0)} reps`
+  if (unidad === 'asistido') return t('ayuda {kg} kg', { kg: kg(v) })
+  if (unidad === 'reps') return t('{n} reps', { n: num(v, 0) })
   return `${num(v, 0)} s`
 }
 
 /** «55 kg × 6», «12 reps», «40 s», «ayuda 15 kg × 6» */
 function textoSerie(series: Serie[], unidad: UnidadFuerza): string {
   if (unidad === 'kg' || unidad === 'asistido') {
-    const t = serieTop(series)
-    return `${unidad === 'kg' ? `${kg(t.peso!)} kg` : `ayuda ${kg(-t.peso!)} kg`} × ${t.reps}`
+    const top = serieTop(series)
+    return `${unidad === 'kg' ? `${kg(top.peso!)} kg` : t('ayuda {kg} kg', { kg: kg(-top.peso!) })} × ${top.reps}`
   }
   return textoFuerza(valorFuerza(series, unidad)!, unidad)
 }
 
-const unidadCorta = (u: UnidadFuerza) => (u === 'reps' ? 'reps' : u === 's' ? 's' : 'kg')
+const unidadCorta = (u: UnidadFuerza) => (u === 'reps' ? tc('unidad', 'reps') : u === 's' ? 's' : 'kg')
 
 /** Puntos de un ejercicio, sesión a sesión (de más antiguo a más reciente), con su unidad. */
 export function serieFuerza(sesiones: Sesion[], id: string, unidad = unidadFuerza(sesiones, id)): { fecha: string; sesionId: number | null; valor: number; series: Serie[] }[] {
@@ -725,15 +730,25 @@ export function serieFuerza(sesiones: Sesion[], id: string, unidad = unidadFuerz
 
 // ================================================================ periodo
 
-const PERIODOS: Record<PeriodoInforme, { etiqueta: string; archivo: string }> = {
-  hoy: { etiqueta: 'Hoy', archivo: 'hoy' },
-  ayer: { etiqueta: 'Ayer', archivo: 'ayer' },
-  semana: { etiqueta: 'Última semana', archivo: 'ultima-semana' },
-  mes: { etiqueta: 'Último mes', archivo: 'ultimo-mes' },
-  todo: { etiqueta: 'Todo', archivo: 'todo' },
+// Se traducen al pintarlas (t(etiqueta)): esto se evalúa antes de cargar el idioma.
+const PERIODOS: Record<PeriodoInforme, { etiqueta: string }> = {
+  hoy: { etiqueta: tk('Hoy') },
+  ayer: { etiqueta: tk('Ayer') },
+  semana: { etiqueta: tk('Última semana') },
+  mes: { etiqueta: tk('Último mes') },
+  todo: { etiqueta: tk('Todo') },
 }
 
-export const etiquetaPeriodo = (p: PeriodoInforme) => PERIODOS[p].etiqueta
+export const etiquetaPeriodo = (p: PeriodoInforme) => t(PERIODOS[p].etiqueta)
+
+/** El periodo en el nombre del archivo, sin acentos ni espacios: «ultimo-mes», «ultim-mes», «last-month». */
+export function archivoPeriodo(p: PeriodoInforme): string {
+  if (p === 'hoy') return tc('archivo', 'hoy')
+  if (p === 'ayer') return tc('archivo', 'ayer')
+  if (p === 'semana') return tc('archivo', 'ultima-semana')
+  if (p === 'mes') return tc('archivo', 'ultimo-mes')
+  return tc('archivo', 'todo')
+}
 
 /** El dato más antiguo de todo lo apuntado (sesiones hechas, mediciones, comidas y pasos). */
 export function primerDato(t: Pick<TablasInforme, 'sesiones' | 'mediciones' | 'comidas' | 'pasos'>): string | null {
@@ -756,17 +771,19 @@ export function rangoInforme(periodo: PeriodoInforme, ahora: Date, primer: strin
   else if (periodo === 'todo' && primer && primer < hoy) inicio = primer
   const unDia = periodo === 'hoy' || periodo === 'ayer'
   const mismoAnio = anio(inicio) === anio(fin)
+  const desde = fechaCorta(inicio), hasta = fechaCorta(fin), aI = anio(inicio), aF = anio(fin)
   const texto = inicio === fin
-    ? `${DIAS[diaSemana(deISO(fin))]} ${fechaCorta(fin)} ${anio(fin)}`
-    : mismoAnio ? `${fechaCorta(inicio)} – ${fechaCorta(fin)} ${anio(fin)}` : `${fechaCorta(inicio)} ${anio(inicio)} – ${fechaCorta(fin)} ${anio(fin)}`
+    ? t('{dia} {fecha} {anio}', { dia: DIAS[diaSemana(deISO(fin))], fecha: hasta, anio: aF })
+    : mismoAnio ? t('{desde} – {hasta} {anio}', { desde, hasta, anio: aF }) : t('{desde} {anioDesde} – {hasta} {anio}', { desde, anioDesde: aI, hasta, anio: aF })
+  const etiqueta = etiquetaPeriodo(periodo)
   let textoHoja: string
-  if (unDia) textoHoja = `${PERIODOS[periodo].etiqueta}, ${fechaLarga(fin)}`
-  else if (periodo === 'todo') textoHoja = primer ? `Desde el ${fechaCorta(inicio)} de ${anio(inicio)}, tu primer dato` : 'Aún no hay nada apuntado'
-  else textoHoja = mismoAnio ? `Del ${fechaCorta(inicio)} al ${fechaCorta(fin)} de ${anio(fin)}` : `Del ${fechaCorta(inicio)} de ${anio(inicio)} al ${fechaCorta(fin)} de ${anio(fin)}`
+  if (unDia) textoHoja = `${etiqueta}, ${fechaLarga(fin)}`
+  else if (periodo === 'todo') textoHoja = primer ? t('Desde el {fecha} de {anio}, tu primer dato', { fecha: desde, anio: aI }) : t('Aún no hay nada apuntado')
+  else textoHoja = mismoAnio ? t('Del {desde} al {hasta} de {anio}', { desde, hasta, anio: aF }) : t('Del {desde} de {anioDesde} al {hasta} de {anio}', { desde, anioDesde: aI, hasta, anio: aF })
   return {
-    periodo, etiqueta: PERIODOS[periodo].etiqueta, inicio, fin, dias: diasEntre(inicio, fin) + 1, hoy, unDia, texto, textoHoja,
-    notaHoja: unDia ? 'Con un solo día, el informe compara lo de ese día con lo que sueles hacer.' : null,
-    nombreArchivo: `JowyFit-informe-${hoy}-${PERIODOS[periodo].archivo}.pdf`,
+    periodo, etiqueta, inicio, fin, dias: diasEntre(inicio, fin) + 1, hoy, unDia, texto, textoHoja,
+    notaHoja: unDia ? t('Con un solo día, el informe compara lo de ese día con lo que sueles hacer.') : null,
+    nombreArchivo: t('JowyFit-informe-{fecha}-{periodo}.pdf', { fecha: hoy, periodo: archivoPeriodo(periodo) }),
   }
 }
 
@@ -916,9 +933,9 @@ export const puntuacionDe = (puntos: number) => Math.round((puntos / PUNTOS_MAXI
 
 /** Palabra y color de una puntuación: desde 78 «Vas bien», desde 44 «Casi», debajo flojo. */
 export function palabraPuntuacion(v: number, varias: boolean): { palabra: string; tono: TonoInforme } {
-  if (v >= 78) return { palabra: 'Vas bien', tono: 'ok' }
-  if (v >= 44) return { palabra: 'Casi', tono: 'warn' }
-  return { palabra: varias ? 'Periodo flojo' : 'Semana floja', tono: 'bad' }
+  if (v >= 78) return { palabra: t('Vas bien'), tono: 'ok' }
+  if (v >= 44) return { palabra: t('Casi'), tono: 'warn' }
+  return { palabra: varias ? t('Periodo flojo') : t('Semana floja'), tono: 'bad' }
 }
 
 const TONO_SEMAFORO: Record<Resumen['semaforo'], TonoInforme> = { verde: 'ok', ambar: 'warn', rojo: 'bad' }
@@ -963,7 +980,7 @@ function semanasInforme(c: Ctx): SemanaInforme[] {
       lunes: l, domingo: dom, desde, hasta, etiqueta: etiquetaSemana(desde, hasta), enCurso,
       completa: !enCurso && l >= c.inicio,
       puntos: rs?.puntos ?? null, puntuacion: punt, tono: punt == null ? 'gris' : palabraPuntuacion(punt, false).tono,
-      palabra: rs?.titulo ?? null, tonoPalabra: rs ? TONO_SEMAFORO[rs.semaforo] : 'gris',
+      palabra: rs ? t(rs.titulo) : null, tonoPalabra: rs ? TONO_SEMAFORO[rs.semaforo] : 'gris',
       entrenos: { hechos: hechosSem, fijos: c.fijos, circulos },
       kg: kgV, toneladas: r1(kgV / 1000), series: suma(ejs.map(e => trabajo(e.series).length)),
       esfuerzo: esfuerzoDe(ejs).media,
@@ -982,13 +999,13 @@ function puntuacionInforme(semanas: SemanaInforme[]): PuntuacionInforme | null {
     const pal = completas.length === 1 ? { palabra: completas[0]!.palabra!, tono: completas[0]!.tonoPalabra } : palabraPuntuacion(valor, true)
     return {
       valor, ...pal, semanas: completas.length, enCurso: false,
-      nota: completas.length === 1 ? '* La semana completa del periodo. La semana en curso no cuenta hasta el domingo.' : `* Media de las ${completas.length} semanas completas. La semana en curso no cuenta hasta el domingo.`,
+      nota: completas.length === 1 ? t('* La semana completa del periodo. La semana en curso no cuenta hasta el domingo.') : t('* Media de las {n} semanas completas. La semana en curso no cuenta hasta el domingo.', { n: completas.length }),
     }
   }
   // El periodo acaba hoy: la semana en curso siempre está; puede no tener nada apuntado.
   const curso = semanas.find(s => s.enCurso)!
   if (curso.puntuacion == null) return null
-  return { valor: curso.puntuacion, palabra: curso.palabra!, tono: curso.tonoPalabra, semanas: 0, enCurso: true, nota: '* La semana en curso, con los entrenos que ya tocaban hasta hoy.' }
+  return { valor: curso.puntuacion, palabra: curso.palabra!, tono: curso.tonoPalabra, semanas: 0, enCurso: true, nota: t('* La semana en curso, con los entrenos que ya tocaban hasta hoy.') }
 }
 
 function agrupar<T>(xs: T[], clave: (x: T) => string): Map<string, T[]> {
@@ -1040,10 +1057,10 @@ const zonaDe = (v: number, [a, b]: [number, number]) => (v < a ? 'bajo' : v < b 
 export function evaluarCuerpo(delta: number, objetivo: Perfil['objetivo'], campo: 'peso' | 'grasa' | 'cintura'): Evaluacion {
   const d = r1(delta)
   // Cambios de menos de 0,2 (kg, puntos o cm) son el ruido de la báscula o de la cinta: «Estable» (como en «Tu día», §5.7).
-  if (campo === 'peso' && objetivo === 'fuerza') return { texto: d >= 0.2 ? 'Sube' : d <= -0.2 ? 'Baja' : 'Estable', tono: 'gris' }
-  if (d <= -0.2) return { texto: 'Baja: bien', tono: 'ok' }
-  if (d > 0.3) return { texto: 'Sube: ojo', tono: 'warn' }
-  return { texto: 'Estable', tono: 'gris' }
+  if (campo === 'peso' && objetivo === 'fuerza') return { texto: d >= 0.2 ? t('Sube') : d <= -0.2 ? t('Baja') : t('Estable'), tono: 'gris' }
+  if (d <= -0.2) return { texto: t('Baja: bien'), tono: 'ok' }
+  if (d > 0.3) return { texto: t('Sube: ojo'), tono: 'warn' }
+  return { texto: t('Estable'), tono: 'gris' }
 }
 
 function cambioDe(delta: number, tono: TonoInforme, f: (v: number) => string = v => num(v)): Cambio {
@@ -1090,25 +1107,38 @@ function cuerpoInforme(c: Ctx): CuerpoInforme {
   const gAhora = grasaEn(c, c.fin)
   const cAhora = ultimoValor(c.ms, leerCintura, c.fin)?.valor ?? null
   const tabla: CuerpoInforme['tabla'] = []
-  const ev = (v: { palabra: string; tono: Tono }): Evaluacion => ({ texto: v.palabra, tono: v.tono })
-  if (pAhora != null) tabla.push({ medicion: 'Peso', valor: `${fijo(pAhora)} kg`, rango: h ? `${num(18.5 * (h / 100) ** 2)}–${num(25 * (h / 100) ** 2)} kg` : '—', evaluacion: h ? ev(veredictoImc(imc(pAhora, h))) : { texto: '—', tono: 'gris' } })
+  // Las palabras de los veredictos son de Progreso (tendencias.ts): t() las deja igual si ya vienen traducidas.
+  const ev = (v: { palabra: string; tono: Tono }): Evaluacion => ({ texto: t(v.palabra), tono: v.tono })
+  if (pAhora != null) tabla.push({ medicion: t('Peso'), valor: `${fijo(pAhora)} kg`, rango: h ? `${num(18.5 * (h / 100) ** 2)}–${num(25 * (h / 100) ** 2)} kg` : '—', evaluacion: h ? ev(veredictoImc(imc(pAhora, h))) : { texto: '—', tono: 'gris' } })
   if (gAhora) {
     const z = zonasGrasa(c.p.sexo).cortes
-    tabla.push({ medicion: gAhora.fuente === 'medidas' ? 'Grasa corporal (por medidas)' : 'Grasa corporal', valor: `${fijo(gAhora.valor)} %`, rango: `${z[0]}–${z[1]} %`, evaluacion: ev(veredictoGrasa(gAhora.valor, c.p.sexo)) })
+    tabla.push({ medicion: gAhora.fuente === 'medidas' ? t('Grasa corporal (por medidas)') : t('Grasa corporal'), valor: conUnidad(fijo(gAhora.valor), '%'), rango: `${z[0]}–${z[1]} %`, evaluacion: ev(veredictoGrasa(gAhora.valor, c.p.sexo)) })
   }
   if (cAhora != null) {
-    tabla.push({ medicion: 'Cintura', valor: `${num(cAhora)} cm`, rango: h ? `hasta ${num(h * 0.5)} cm` : '—', evaluacion: h ? ev(veredictoCinturaAltura(cinturaAltura(cAhora, h))) : { texto: '—', tono: 'gris' } })
-    if (h) tabla.push({ medicion: 'Cintura / altura', valor: num(cinturaAltura(cAhora, h), 2), rango: '0,40–0,50', evaluacion: ev(veredictoCinturaAltura(cinturaAltura(cAhora, h))) })
+    tabla.push({ medicion: t('Cintura'), valor: `${num(cAhora)} cm`, rango: h ? t('hasta {n} cm', { n: num(h * 0.5) }) : '—', evaluacion: h ? ev(veredictoCinturaAltura(cinturaAltura(cAhora, h))) : { texto: '—', tono: 'gris' } })
+    if (h) tabla.push({ medicion: t('Cintura / altura'), valor: num(cinturaAltura(cAhora, h), 2), rango: `${fijo(0.4, 2)}–${fijo(0.5, 2)}`, evaluacion: ev(veredictoCinturaAltura(cinturaAltura(cAhora, h))) })
   }
   if (pAhora != null && h) {
-    tabla.push({ medicion: 'IMC', valor: fijo(imc(pAhora, h)), rango: '18,5–25', evaluacion: ev(veredictoImc(imc(pAhora, h))) })
+    tabla.push({ medicion: t('IMC'), valor: fijo(imc(pAhora, h)), rango: `${num(18.5)}–25`, evaluacion: ev(veredictoImc(imc(pAhora, h))) })
     // El mismo gasto en reposo que «Otros indicadores» (el de la báscula); sin báscula, el calculado y se dice.
     const bas = basalBascula(c)
     const e = edadEn(c.p.nacimiento, c.fin)
-    if (bas != null) tabla.push({ medicion: 'Gasto en reposo', valor: `${num(bas, 0)} kcal`, rango: '—', evaluacion: { texto: '—', tono: 'gris' } })
-    else if (e != null) tabla.push({ medicion: 'Gasto en reposo (calculado)', valor: `${basalDia({ pesoKg: pAhora, alturaCm: h, edad: e, sexo: c.p.sexo, grasaPct: gAhora?.valor }).kcal} kcal`, rango: '—', evaluacion: { texto: '—', tono: 'gris' } })
+    if (bas != null) tabla.push({ medicion: t('Gasto en reposo'), valor: `${num(bas, 0)} kcal`, rango: '—', evaluacion: { texto: '—', tono: 'gris' } })
+    else if (e != null) tabla.push({ medicion: t('Gasto en reposo (calculado)'), valor: `${basalDia({ pesoKg: pAhora, alturaCm: h, edad: e, sexo: c.p.sexo, grasaPct: gAhora?.valor }).kcal} kcal`, rango: '—', evaluacion: { texto: '—', tono: 'gris' } })
   }
-  return { peso, grasa, cintura, tabla, nota: h ? null : 'Falta tu altura en Perfil' }
+  return { peso, grasa, cintura, tabla, nota: h ? null : t('Falta tu altura en Perfil') }
+}
+
+/**
+ * En la barra de zonas, la palabra corta de cintura/altura (la larga no cabe), con los mismos tramos que
+ * veredictoCinturaAltura (tendencias.ts). Sale del número y no de la palabra larga, que puede venir ya traducida.
+ */
+function palabraCortaCintura(ratio: number): string {
+  if (ratio < 0.4) return t('por debajo')
+  if (ratio < 0.5) return t('saludable')
+  if (ratio < 0.55) return t('un poco por encima')
+  if (ratio < 0.6) return t('por encima')
+  return t('bastante por encima')
 }
 
 function zonasInforme(c: Ctx): { zonas: ZonaCuerpo[]; subtitulo: string | null } {
@@ -1120,19 +1150,19 @@ function zonasInforme(c: Ctx): { zonas: ZonaCuerpo[]; subtitulo: string | null }
   const tonoV = (t: Tono): TonoInforme => t
   if (p && h) {
     const v = r1(imc(p.valor, h)), w = veredictoImc(v)
-    zonas.push({ nombre: 'IMC (kg/m²)', valor: v, texto: num(v), palabra: w.palabra, tono: tonoV(w.tono), zona: zonaDe(v, ZONAS_IMC.cortes), ...ZONAS_IMC })
+    zonas.push({ nombre: t('IMC (kg/m²)'), valor: v, texto: num(v), palabra: t(w.palabra), tono: tonoV(w.tono), zona: zonaDe(v, ZONAS_IMC.cortes), ...ZONAS_IMC })
   }
   if (g) {
     const z = zonasGrasa(c.p.sexo), w = veredictoGrasa(g.valor, c.p.sexo)
-    zonas.push({ nombre: g.fuente === 'medidas' ? 'Grasa corporal (%) (por medidas)' : 'Grasa corporal (%)', valor: g.valor, texto: num(g.valor), palabra: w.palabra, tono: tonoV(w.tono), zona: zonaDe(g.valor, z.cortes), ...z, fuente: g.fuente })
+    zonas.push({ nombre: g.fuente === 'medidas' ? t('Grasa corporal (%) (por medidas)') : t('Grasa corporal (%)'), valor: g.valor, texto: num(g.valor), palabra: t(w.palabra), tono: tonoV(w.tono), zona: zonaDe(g.valor, z.cortes), ...z, fuente: g.fuente })
   }
   if (cin && h) {
     const v = Math.round(cinturaAltura(cin.valor, h) * 100) / 100, w = veredictoCinturaAltura(v)
     // En la barra de zonas, la palabra corta («por encima»), como en la maqueta: la larga no cabe.
-    zonas.push({ nombre: 'Cintura / altura', valor: v, texto: num(v, 2), palabra: w.palabra.replace(/ de lo (saludable|habitual)$/, ''), tono: tonoV(w.tono), zona: zonaDe(v, ZONAS_CA.cortes), ...ZONAS_CA })
+    zonas.push({ nombre: t('Cintura / altura'), valor: v, texto: num(v, 2), palabra: palabraCortaCintura(v), tono: tonoV(w.tono), zona: zonaDe(v, ZONAS_CA.cortes), ...ZONAS_CA })
   }
   const bas = ultimoValor(c.ms, leerGrasaBascula, c.fin)
-  const partes = [bas && g?.fuente === 'bascula' ? `báscula del ${fechaCorta(bas.fecha)}` : p ? `peso del ${fechaCorta(p.fecha)}` : null, cin ? `cinta del ${fechaCorta(cin.fecha)}` : null].filter((x): x is string => !!x)
+  const partes = [bas && g?.fuente === 'bascula' ? t('báscula del {fecha}', { fecha: fechaCorta(bas.fecha) }) : p ? t('peso del {fecha}', { fecha: fechaCorta(p.fecha) }) : null, cin ? t('cinta del {fecha}', { fecha: fechaCorta(cin.fecha) }) : null].filter((x): x is string => !!x)
   return { zonas, subtitulo: partes.length ? partes.join(' · ') : null }
 }
 
@@ -1158,11 +1188,11 @@ function controlPeso(c: Ctx): ControlPeso | null {
   // Si queda a más de 2 años, no es una previsión creíble: no sale (como cuando el peso no baja).
   const semanasMeta = sobra != null && sobra > 0 && pendG != null && pendG < 0 && ritmo !== 0 ? sobra / -pendG : null
   const fechaMeta = semanasMeta != null && semanasMeta <= 104 ? mesAnio(sumarDias(c.fin, Math.round(semanasMeta * 7))) : null
-  const filas = [{ nombre: 'Peso ahora', valor: `${fijo(p.valor)} kg` }]
-  if (pesoConMeta != null) filas.push({ nombre: metaG ? `Peso con tu meta de grasa (${num(meta)} %)` : `Peso con un ${num(meta)} % de grasa`, valor: `${fijo(pesoConMeta)} kg` })
-  if (sobra != null) filas.push({ nombre: 'Grasa que sobra para la meta', valor: sobra > 0 ? `${MENOS}${fijo(sobra)} kg` : 'ya estás' })
-  if (ritmo != null) filas.push({ nombre: c.r.periodo === 'mes' ? 'Ritmo del mes' : 'Ritmo', valor: ritmo === 0 ? 'estable' : `${conSigno(ritmo, v => (v < 0.1 ? fijo(v, 2) : fijo(v)))} kg/sem` })
-  if (fechaMeta) filas.push({ nombre: 'A este ritmo, meta de grasa', valor: fechaMeta })
+  const filas = [{ nombre: t('Peso ahora'), valor: `${fijo(p.valor)} kg` }]
+  if (pesoConMeta != null) filas.push({ nombre: metaG ? t('Peso con tu meta de grasa ({n} %)', { n: num(meta) }) : t('Peso con un {n} % de grasa', { n: num(meta) }), valor: `${fijo(pesoConMeta)} kg` })
+  if (sobra != null) filas.push({ nombre: t('Grasa que sobra para la meta'), valor: sobra > 0 ? `${MENOS}${fijo(sobra)} kg` : t('ya estás') })
+  if (ritmo != null) filas.push({ nombre: c.r.periodo === 'mes' ? t('Ritmo del mes') : t('Ritmo'), valor: ritmo === 0 ? t('estable') : t('{n} kg/sem', { n: conSigno(ritmo, v => (v < 0.1 ? fijo(v, 2) : fijo(v))) }) })
+  if (fechaMeta) filas.push({ nombre: t('A este ritmo, meta de grasa'), valor: fechaMeta })
   return { peso: p.valor, pesoFecha: p.fecha, grasa: g?.valor ?? null, grasaFuente: g?.fuente ?? null, meta, metaPropia: !!metaG, pesoConMeta, sobra, ritmo, fechaMeta, filas }
 }
 
@@ -1177,8 +1207,9 @@ function metasInforme(c: Ctx): MetaInforme[] {
     else if (m.tipo === 'dominadas') {
       const d = hitosDominadas(ses)
       actual = d.estrictas
-      const act = d.hitos.find(x => x.estado === 'actual')
-      hito = d.hay && act && d.estrictas === 0 ? (/Asistidas/.test(act.titulo) ? 'vas por las asistidas' : /Negativas/.test(act.titulo) ? 'vas por las negativas' : null) : null
+      // El primer hito es el de las asistidas y el segundo, el de las negativas (por su sitio: el título puede ir traducido).
+      const act = d.hitos.findIndex(x => x.estado === 'actual')
+      hito = d.hay && act >= 0 && d.estrictas === 0 ? (act === 0 ? t('vas por las asistidas') : act === 1 ? t('vas por las negativas') : null) : null
     } else if (m.tipo === 'ejercicio' && m.ejercicio) {
       const p = ses.map(s => pesoMaximo(seriesDe(s, m.ejercicio!))).filter((v): v is number => v != null)
       actual = p.length ? Math.max(...p) : null
@@ -1186,31 +1217,31 @@ function metasInforme(c: Ctx): MetaInforme[] {
     const libre = m.tipo === 'libre'
     const falta = libre ? null : faltaMeta(m.inicio, actual, m.objetivo)
     const conseguida = !!m.hecha || falta === 0
-    const unidadFalta = m.tipo === 'grasa' ? 'puntos' : m.unidad
-    const val = (v: number, u: string) => `${u === 'kg' ? kg(v) : num(v)}${u ? ` ${u}` : ''}`
+    const unidadFalta = m.tipo === 'grasa' ? t('puntos') : m.unidad
+    const val = (v: number, u: string) => conUnidad(u === 'kg' ? kg(v) : num(v), u)
     return {
       titulo: m.titulo, tipo: m.tipo, unidad: m.unidad, objetivo: m.objetivo, actual,
-      actualTexto: actual != null ? val(actual, m.unidad) : libre ? (m.hecha ? 'Hecha' : 'Pendiente') : '—',
+      actualTexto: actual != null ? val(actual, m.unidad) : libre ? (m.hecha ? t('Hecha') : t('Pendiente')) : '—',
       progreso: libre ? (m.hecha ? 1 : 0) : conseguida ? 1 : progresoMeta(m.inicio, actual, m.objetivo),
       falta,
-      faltaTexto: conseguida ? '¡Conseguida!' : hito ?? (falta != null ? `faltan ${val(falta, unidadFalta)}` : ''),
+      faltaTexto: conseguida ? t('¡Conseguida!') : hito ?? (falta != null ? t('faltan {n}', { n: val(falta, unidadFalta) }) : ''),
       conseguida, fecha: m.fecha ?? null, mes: m.fecha ? mesAnio(m.fecha) : null,
     }
   })
 }
 
 const INDICADORES: { k: keyof NonNullable<Medicion['bascula']>; nombre: string; u: string }[] = [
-  { k: 'basalKcal', nombre: 'Gasto en reposo', u: 'kcal' },
-  { k: 'masaGrasaKg', nombre: 'Masa grasa', u: 'kg' },
-  { k: 'masaLibreKg', nombre: 'Masa magra', u: 'kg' },
-  { k: 'musculoKg', nombre: 'Músculo', u: 'kg' },
-  { k: 'musculoEsqKg', nombre: 'Músculo esquelético', u: 'kg' },
-  { k: 'aguaPct', nombre: 'Agua', u: '%' },
-  { k: 'proteinaPct', nombre: 'Proteína', u: '%' },
-  { k: 'oseaKg', nombre: 'Masa ósea', u: 'kg' },
-  { k: 'subcutaneaPct', nombre: 'Grasa subcutánea', u: '%' },
-  { k: 'visceral', nombre: 'Grasa visceral', u: '' },
-  { k: 'edadCorporal', nombre: 'Edad corporal', u: '' },
+  { k: 'basalKcal', nombre: tk('Gasto en reposo'), u: 'kcal' },
+  { k: 'masaGrasaKg', nombre: tk('Masa grasa'), u: 'kg' },
+  { k: 'masaLibreKg', nombre: tk('Masa magra'), u: 'kg' },
+  { k: 'musculoKg', nombre: tk('Músculo'), u: 'kg' },
+  { k: 'musculoEsqKg', nombre: tk('Músculo esquelético'), u: 'kg' },
+  { k: 'aguaPct', nombre: tk('Agua'), u: '%' },
+  { k: 'proteinaPct', nombre: tk('Proteína'), u: '%' },
+  { k: 'oseaKg', nombre: tk('Masa ósea'), u: 'kg' },
+  { k: 'subcutaneaPct', nombre: tk('Grasa subcutánea'), u: '%' },
+  { k: 'visceral', nombre: tk('Grasa visceral'), u: '' },
+  { k: 'edadCorporal', nombre: tk('Edad corporal'), u: '' },
 ]
 
 /** La última pesada con báscula del periodo (o de los 120 días anteriores al fin) que trae algún indicador. */
@@ -1225,7 +1256,7 @@ function indicadores(c: Ctx): ResumenInforme['indicadores'] {
   // Kilos y porcentajes con un decimal siempre («56,0 kg» junto a «55,6 %»); kcal, visceral y edad, enteros.
   const filas = INDICADORES.filter(i => m.bascula![i.k] != null).map(i => {
     const v = m.bascula![i.k]!
-    return { nombre: i.nombre, valor: `${i.u === 'kg' || i.u === '%' ? fijo(v) : num(v, 0)}${i.u ? ` ${i.u}` : ''}` }
+    return { nombre: t(i.nombre), valor: conUnidad(i.u === 'kg' || i.u === '%' ? fijo(v) : num(v, 0), i.u ?? '') }
   })
   return { fecha: dia10(m.fecha), filas }
 }
@@ -1247,13 +1278,13 @@ function filaPrincipal(c: Ctx): FilaResumen | null {
   const mejora = menos ? baja : sube
   const ultimaSuave = c.enPeriodo.filter(s => trabajo(seriesDe(s, id)).length).at(-1)?.suave
   const tono: TonoInforme = a === b ? 'gris' : mejora ? 'ok' : ultimaSuave ? 'gris' : 'bad'
-  const ev: Evaluacion = record ? { texto: 'Récord', tono: 'oro' } : a === b ? { texto: 'Igual', tono: 'gris' } : mejora ? { texto: menos ? 'Menos ayuda' : 'Sube', tono: 'ok' } : { texto: ultimaSuave ? 'Semana suave' : menos ? 'Más ayuda' : 'Baja', tono }
+  const ev: Evaluacion = record ? { texto: tc('evaluación', 'Récord'), tono: 'oro' } : a === b ? { texto: t('Igual'), tono: 'gris' } : mejora ? { texto: menos ? t('Menos ayuda') : t('Sube'), tono: 'ok' } : { texto: ultimaSuave ? t('Semana suave') : menos ? t('Más ayuda') : t('Baja'), tono }
   const f = (v: number) => (u === 'kg' || u === 'asistido' ? kg(v) : num(v, 0))
   return {
-    dato: `${nombreDe(c, id)} (${u === 'asistido' ? 'ayuda, kg' : unidadCorta(u)})`,
+    dato: `${nombreDe(c, id)} (${u === 'asistido' ? t('ayuda, kg') : unidadCorta(u)})`,
     inicio: pts.length >= 2 ? f(a) : null, ahora: f(b), junto: null,
     cambio: pts.length >= 2 ? cambioDe(b - a, tono, v => f(v)) : null, cambioTexto: null, evaluacion: ev,
-    nota: pts.length === 1 ? 'Un solo entreno en estos días' : null,
+    nota: pts.length === 1 ? t('Un solo entreno en estos días') : null,
   }
 }
 
@@ -1262,26 +1293,26 @@ function filaCuerpo(c: Ctx, dato: string, s: SerieCuerpo, campo: 'peso' | 'grasa
   // Los dos valores con los mismos decimales («80,1 → 79,0»).
   const f = formatoSerie([s.inicio, s.ahora, s.antes?.valor].filter((v): v is number => v != null))
   if (s.ahora == null) {
-    return { dato, inicio: f(s.antes!.valor), ahora: null, junto: null, cambio: null, cambioTexto: null, evaluacion: { texto: 'Sin medir', tono: 'gris' }, nota: `último: ${f(s.antes!.valor)} (${fechaCorta(s.antes!.fecha)})` }
+    return { dato, inicio: f(s.antes!.valor), ahora: null, junto: null, cambio: null, cambioTexto: null, evaluacion: { texto: t('Sin medir'), tono: 'gris' }, nota: t('último: {valor} ({fecha})', { valor: f(s.antes!.valor), fecha: fechaCorta(s.antes!.fecha) }) }
   }
-  const ev = s.inicio == null ? { texto: 'Un solo dato', tono: 'gris' as const } : evaluarCuerpo(s.ahora - s.inicio, c.p.objetivo, campo)
+  const ev = s.inicio == null ? { texto: t('Un solo dato'), tono: 'gris' as const } : evaluarCuerpo(s.ahora - s.inicio, c.p.objetivo, campo)
   return {
     dato, inicio: s.inicio == null ? null : f(s.inicio), ahora: f(s.ahora), junto: null, cambio: s.cambio, cambioTexto: null, evaluacion: ev,
-    nota: s.inicioAntes && s.inicioFecha ? `al empezar, tu medida del ${fechaCorta(s.inicioFecha)} (de antes de estos días; dentro solo hay una)` : null,
+    nota: s.inicioAntes && s.inicioFecha ? t('al empezar, tu medida del {fecha} (de antes de estos días; dentro solo hay una)', { fecha: fechaCorta(s.inicioFecha) }) : null,
   }
 }
 
 function tablaResumen(c: Ctx, cuerpo: CuerpoInforme, ent: ReturnType<typeof cuentaEntrenos>, semanas: SemanaInforme[], comida: ComidaInforme | null, pasos: PasosInforme | null): FilaResumen[] {
   const filas: (FilaResumen | null)[] = [
-    filaCuerpo(c, 'Peso (kg)', cuerpo.peso, 'peso'),
-    filaCuerpo(c, cuerpo.grasa.puntos.some(x => x.fuente === 'medidas') && !cuerpo.grasa.puntos.some(x => x.fuente === 'bascula') ? 'Grasa corporal (%, por medidas)' : 'Grasa corporal (%)', cuerpo.grasa, 'grasa'),
-    filaCuerpo(c, 'Cintura (cm)', cuerpo.cintura, 'cintura'),
+    filaCuerpo(c, t('Peso (kg)'), cuerpo.peso, 'peso'),
+    filaCuerpo(c, cuerpo.grasa.puntos.some(x => x.fuente === 'medidas') && !cuerpo.grasa.puntos.some(x => x.fuente === 'bascula') ? t('Grasa corporal (%, por medidas)') : t('Grasa corporal (%)'), cuerpo.grasa, 'grasa'),
+    filaCuerpo(c, t('Cintura (cm)'), cuerpo.cintura, 'cintura'),
     filaPrincipal(c),
   ]
   // Sin ningún entreno no hay fila: lo dice la línea «Entrenos: 0 de N» del resumen.
   if (ent.hechos) {
     const pct = ent.tocaban ? Math.round((ent.enFijos / ent.tocaban) * 100) : null
-    filas.push({ dato: 'Entrenos', inicio: null, ahora: null, junto: ent.tocaban ? `${ent.enFijos} de ${ent.tocaban}` : `${ent.hechos}`, cambio: null, cambioTexto: pct == null ? null : `${pct} %`, evaluacion: evaluarEntrenos(pct), nota: ent.extra ? `${ent.extra} extra` : null })
+    filas.push({ dato: t('Entrenos'), inicio: null, ahora: null, junto: ent.tocaban ? t('{a} de {b}', { a: ent.enFijos, b: ent.tocaban }) : `${ent.hechos}`, cambio: null, cambioTexto: pct == null ? null : conUnidad(String(pct), '%'), evaluacion: evaluarEntrenos(pct), nota: ent.extra ? t('{n} extra', { n: ent.extra }) : null })
   }
   const conE = semanas.filter(s => s.esfuerzo != null)
   if (conE.length) {
@@ -1289,15 +1320,15 @@ function tablaResumen(c: Ctx, cuerpo: CuerpoInforme, ent: ReturnType<typeof cuen
     const total = esfuerzoDe(c.enPeriodo.flatMap(s => s.ejercicios))
     const pal = palabraEsfuerzo(total.media!)
     filas.push({
-      dato: 'Esfuerzo medio', inicio: conE.length >= 2 ? fijo(a) : null, ahora: fijo(conE.length >= 2 ? b : total.media!), junto: null,
+      dato: t('Esfuerzo medio'), inicio: conE.length >= 2 ? fijo(a) : null, ahora: fijo(conE.length >= 2 ? b : total.media!), junto: null,
       cambio: conE.length >= 2 ? cambioDe(b - a, 'gris', v => fijo(v)) : null, cambioTexto: null,
-      evaluacion: { texto: `${capital(pal.palabra)} (${pal.rango})`, tono: pal.tono }, nota: total.pocas ? 'pocas series marcadas' : null,
+      evaluacion: { texto: `${capital(t(pal.palabra))} (${pal.rango})`, tono: pal.tono }, nota: total.pocas ? t('pocas series marcadas') : null,
     })
   }
-  if (comida?.proteina.media != null) filas.push({ dato: 'Proteína al día (g)', inicio: null, ahora: null, junto: `${num(comida.proteina.media, 0)} de media`, cambio: null, cambioTexto: `obj. ${num(comida.proteina.objetivo, 0)}`, evaluacion: comida.proteina.evaluacion, nota: null })
+  if (comida?.proteina.media != null) filas.push({ dato: t('Proteína al día (g)'), inicio: null, ahora: null, junto: t('{n} de media', { n: num(comida.proteina.media, 0) }), cambio: null, cambioTexto: t('obj. {n}', { n: num(comida.proteina.objetivo, 0) }), evaluacion: comida.proteina.evaluacion, nota: null })
   if (pasos?.media != null) {
     const r = pasos.media / pasos.objetivo
-    filas.push({ dato: 'Pasos al día', inicio: null, ahora: null, junto: `${num(pasos.media, 0)} de media`, cambio: null, cambioTexto: `obj. ${num(pasos.objetivo, 0)}`, evaluacion: r >= 1 ? { texto: 'Bien', tono: 'ok' } : r >= 0.8 ? { texto: 'A mejorar', tono: 'warn' } : { texto: 'Pocos', tono: 'bad' }, nota: null })
+    filas.push({ dato: t('Pasos al día'), inicio: null, ahora: null, junto: t('{n} de media', { n: num(pasos.media, 0) }), cambio: null, cambioTexto: t('obj. {n}', { n: num(pasos.objetivo, 0) }), evaluacion: r >= 1 ? { texto: t('Bien'), tono: 'ok' } : r >= 0.8 ? { texto: t('A mejorar'), tono: 'warn' } : { texto: t('Pocos'), tono: 'bad' }, nota: null })
   }
   return filas.filter((x): x is FilaResumen => !!x)
 }
@@ -1305,12 +1336,12 @@ function tablaResumen(c: Ctx, cuerpo: CuerpoInforme, ent: ReturnType<typeof cuen
 /** Entrenos hechos de los que tocaban: desde el 90 % «Bien», desde el 70 % «Casi», si no «Pocos». */
 export function evaluarEntrenos(pct: number | null): Evaluacion {
   if (pct == null) return { texto: '—', tono: 'gris' }
-  return pct >= 90 ? { texto: 'Bien', tono: 'ok' } : pct >= 70 ? { texto: 'Casi', tono: 'warn' } : { texto: 'Pocos', tono: 'bad' }
+  return pct >= 90 ? { texto: t('Bien'), tono: 'ok' } : pct >= 70 ? { texto: t('Casi'), tono: 'warn' } : { texto: t('Pocos'), tono: 'bad' }
 }
 
 /** Proteína media frente al objetivo: desde el 90 % «Bien», desde el 75 % «Algo corta», si no «Corta» (como Progreso). */
 export function evaluarProteina(mediaV: number, objetivo: number): Evaluacion {
-  return mediaV >= objetivo * 0.9 ? { texto: 'Bien', tono: 'ok' } : mediaV >= objetivo * 0.75 ? { texto: 'Algo corta', tono: 'warn' } : { texto: 'Corta', tono: 'bad' }
+  return mediaV >= objetivo * 0.9 ? { texto: t('Bien'), tono: 'ok' } : mediaV >= objetivo * 0.75 ? { texto: tc('proteína', 'Algo corta'), tono: 'warn' } : { texto: tc('proteína', 'Corta'), tono: 'bad' }
 }
 
 /** Color de la proteína de un día: verde desde el 90 % del objetivo, ámbar del 70 al 90 %, rojo debajo. */
@@ -1319,7 +1350,7 @@ export const tonoProteinaDia = (g: number, objetivo: number): TonoInforme => (g 
 function destacado(c: Ctx, cuerpo: CuerpoInforme, rachaV: number): LineaDestacado[] {
   const out: LineaDestacado[] = []
   const nRec = c.logros.length, nSub = c.subidas.length
-  if (nRec || nSub) out.push({ icono: 'estrella', tono: 'oro', texto: [nRec ? `${nRec} récord${nRec === 1 ? '' : 's'}` : '', nSub ? `${nSub} subida${nSub === 1 ? '' : 's'} de peso` : ''].filter(Boolean).join(' · ') })
+  if (nRec || nSub) out.push({ icono: 'estrella', tono: 'oro', texto: [nRec ? tn(nRec, '{n} récord', '{n} récords') : '', nSub ? tn(nSub, '{n} subida de peso', '{n} subidas de peso') : ''].filter(Boolean).join(' · ') })
   // El mayor salto de fuerza (en kg) de los 6 ejercicios más repetidos, del primer al último entreno de cada uno:
   // en % ganaría siempre un ejercicio ligero (de 5 a 6,25 kg es un +25 %).
   let mejor: { id: string; a: number; b: number } | null = null
@@ -1330,16 +1361,17 @@ function destacado(c: Ctx, cuerpo: CuerpoInforme, rachaV: number): LineaDestacad
     const a = pts[0]!.valor, b = pts[pts.length - 1]!.valor
     if (b > a && (!mejor || b - a > mejor.b - mejor.a)) mejor = { id, a, b }
   }
-  if (mejor) out.push({ icono: 'sube', tono: 'ok', texto: `${nombreDe(c, mejor.id)}: de ${kg(mejor.a)} a ${kg(mejor.b)} kg` })
+  if (mejor) out.push({ icono: 'sube', tono: 'ok', texto: t('{nombre}: de {a} a {b} kg', { nombre: nombreDe(c, mejor.id), a: kg(mejor.a), b: kg(mejor.b) }) })
   const ci = cuerpo.cintura.cambio
   if (ci) {
-    const desde = cuerpo.cintura.inicioAntes && cuerpo.cintura.inicioFecha ? ` desde el ${fechaCorta(cuerpo.cintura.inicioFecha)}` : ''
+    const desde = cuerpo.cintura.inicioAntes && cuerpo.cintura.inicioFecha ? fechaCorta(cuerpo.cintura.inicioFecha) : null
     out.push({
       icono: ci.direccion === 'baja' ? 'baja' : ci.direccion === 'sube' ? 'sube' : 'igual', tono: ci.tono,
-      texto: ci.direccion === 'igual' ? `Cintura: igual (${num(cuerpo.cintura.ahora!)} cm)` : `Cintura: ${ci.texto} cm${desde}`,
+      texto: ci.direccion === 'igual' ? t('Cintura: igual ({n} cm)', { n: num(cuerpo.cintura.ahora!) })
+        : desde ? t('Cintura: {cambio} cm desde el {fecha}', { cambio: ci.texto, fecha: desde }) : t('Cintura: {cambio} cm', { cambio: ci.texto }),
     })
   }
-  if (rachaV > 0) out.push({ icono: 'igual', tono: 'tinta', texto: `Racha: ${rachaV} semana${rachaV === 1 ? '' : 's'} cumplida${rachaV === 1 ? '' : 's'}` })
+  if (rachaV > 0) out.push({ icono: 'igual', tono: 'tinta', texto: tn(rachaV, 'Racha: {n} semana cumplida', 'Racha: {n} semanas cumplidas') })
   return out
 }
 
@@ -1353,7 +1385,7 @@ function recordsDe(c: Ctx, s: Sesion): RecordSesion[] {
 }
 
 function etiquetasDe(s: Sesion): string[] {
-  return [s.calibracion && 'semana de prueba', s.suave && 'semana suave', s.version === 'corta' && 'corta', s.letra === 'L' && 'libre'].filter((x): x is string => !!x)
+  return [s.calibracion && t('semana de prueba'), s.suave && t('semana suave'), s.version === 'corta' && t('corta'), s.letra === 'L' && t('libre')].filter((x): x is string => !!x)
 }
 
 function filaEntreno(c: Ctx, s: Sesion): FilaEntreno {
@@ -1361,7 +1393,7 @@ function filaEntreno(c: Ctx, s: Sesion): FilaEntreno {
   const ejs = s.ejercicios
   const esf = esfuerzoDe(ejs)
   return {
-    fecha: s.fecha, fechaTexto: fechaDia(s.fecha), sesionId: s.id ?? null, nombre: s.nombre, estado: 'hecho', minutos: min, duracion: textoDuracion(min),
+    fecha: s.fecha, fechaTexto: fechaDia(s.fecha), sesionId: s.id ?? null, nombre: nombreEntreno(s), estado: 'hecho', minutos: min, duracion: textoDuracion(min),
     series: suma(ejs.map(e => trabajo(e.series).length)), kg: Math.round(suma(ejs.map(e => volumen(e.series)))),
     esfuerzo: esf, etiquetas: etiquetasDe(s), records: recordsDe(c, s), saltados: ejs.filter(e => e.estado === 'saltado').length,
   }
@@ -1385,7 +1417,10 @@ function evolucionEsfuerzo(c: Ctx, total: EsfuerzoInforme): EntrenosInforme['evo
   }
   return {
     puntos, agrupado, mostrar: porSesion.length >= 2, objetivo: total.objetivo,
-    nota: `Media de las series con esfuerzo marcado (las que se dejan en blanco no cuentan): ${total.marcadas} de ${total.total} series${total.pct != null ? ` (${total.pct} %)` : ''}.${total.pocas ? ' Pocas series marcadas.' : ''}`,
+    nota: (total.pct != null
+      ? t('Media de las series con esfuerzo marcado (las que se dejan en blanco no cuentan): {a} de {b} series ({pct} %).', { a: total.marcadas, b: total.total, pct: total.pct })
+      : t('Media de las series con esfuerzo marcado (las que se dejan en blanco no cuentan): {a} de {b} series.', { a: total.marcadas, b: total.total }))
+      + (total.pocas ? ` ${t('Pocas series marcadas.')}` : ''),
   }
 }
 
@@ -1398,8 +1433,8 @@ function entrenosInforme(c: Ctx, ent: ReturnType<typeof cuentaEntrenos>): Entren
   const filas: FilaEntreno[] = [
     ...ses.map(s => filaEntreno(c, s)),
     ...ent.estados.filter(e => e.estado === 'perdido' || e.estado === 'movido').map((e): FilaEntreno => ({
-      fecha: e.fecha, fechaTexto: fechaDia(e.fecha), sesionId: null, nombre: e.dia!.nombre, estado: e.estado === 'perdido' ? 'perdido' : 'movido',
-      minutos: null, duracion: e.estado === 'perdido' ? 'No hecho' : 'Movido', series: null, kg: null, esfuerzo: null, etiquetas: [], records: [], saltados: 0,
+      fecha: e.fecha, fechaTexto: fechaDia(e.fecha), sesionId: null, nombre: nombreEntreno(e.dia!), estado: e.estado === 'perdido' ? 'perdido' : 'movido',
+      minutos: null, duracion: e.estado === 'perdido' ? t('No hecho') : t('Movido'), series: null, kg: null, esfuerzo: null, etiquetas: [], records: [], saltados: 0,
     })),
   ].sort((a, b) => a.fecha.localeCompare(b.fecha))
   const fila = (l: string, etiqueta: string, xs: Sesion[]): FilaSemanaEntrenos => {
@@ -1431,14 +1466,14 @@ function entrenosInforme(c: Ctx, ent: ReturnType<typeof cuentaEntrenos>): Entren
     const q = queDiceEsfuerzo(e.media, e.objetivo!)
     porEj.push({ id, nombre: nombreDe(c, id), media: e.media, palabra: p.palabra, tono: p.tono, objetivo: e.objetivo!, queDice: q.texto, tonoQueDice: q.tono, marcadas: e.marcadas, total: e.total })
   }
-  const perdidos = ent.perdidos.map(e => ({ fecha: e.fecha, nombre: e.dia!.nombre }))
+  const perdidos = ent.perdidos.map(e => ({ fecha: e.fecha, nombre: nombreEntreno(e.dia!) }))
   const pct = ent.tocaban ? Math.round((ent.enFijos / ent.tocaban) * 100) : null
   return {
     sesiones: ses.length, hechos: ent.hechos, enFijos: ent.enFijos, tocaban: ent.tocaban, extra: ent.extra,
-    texto: ent.tocaban ? `${ent.enFijos} de ${ent.tocaban}` : `${ent.hechos}`, pct, evaluacion: evaluarEntrenos(pct),
+    texto: ent.tocaban ? t('{a} de {b}', { a: ent.enFijos, b: ent.tocaban }) : `${ent.hechos}`, pct, evaluacion: evaluarEntrenos(pct),
     perdidos,
     // Con uno se dice cuál; con varios, solo cuántos (la tabla dice cuáles).
-    perdidosTexto: perdidos.length === 1 ? `1 perdido (${fechaDia(perdidos[0]!.fecha)})` : perdidos.length ? `${perdidos.length} perdidos` : null,
+    perdidosTexto: perdidos.length === 1 ? t('1 perdido ({fecha})', { fecha: fechaDia(perdidos[0]!.fecha) }) : perdidos.length ? t('{n} perdidos', { n: perdidos.length }) : null,
     movidos: ent.movidos,
     minutos, minutosMedia: mins.length ? Math.round(minutos! / mins.length) : null, tiempo: textoDuracion(minutos),
     series: total.total, saltados: ejs.filter(e => e.estado === 'saltado').length, kg: Math.round(suma(ejs.map(e => volumen(e.series)))),
@@ -1470,8 +1505,8 @@ function graficaFuerza(c: Ctx, id: string): GraficaFuerza | null {
     id, nombre: nombreDe(c, id), unidad, menosEsMejor,
     puntos: pts.map(p => ({ fecha: p.fecha, valor: p.valor, record: recs.has(p.fecha) })),
     desde, hasta, cambio, pct, veces: pts.length, direccion, tono,
-    titulo: pts.length === 1 ? `${f(hasta)} ${u}` : direccion === 'igual' ? `${f(hasta)} ${u}, igual` : `de ${f(desde)} a ${f(hasta)} ${u}`,
-    pie: `${pts.length >= 2 ? (cambio === 0 ? '' : `${conSigno(cambio, f)} ${u} (${textoPct(pct)}) · `) : ''}${pts.length} ${pts.length === 1 ? 'vez' : 'veces'}`,
+    titulo: pts.length === 1 ? `${f(hasta)} ${u}` : direccion === 'igual' ? t('{valor} {u}, igual', { valor: f(hasta), u }) : t('de {a} a {b} {u}', { a: f(desde), b: f(hasta), u }),
+    pie: `${pts.length >= 2 ? (cambio === 0 ? '' : `${conSigno(cambio, f)} ${u} (${textoPct(pct)}) · `) : ''}${tn(pts.length, '{n} vez', '{n} veces')}`,
     unSolo: pts.length === 1 ? textoSerie(pts[0]!.series, unidad) : null,
   }
 }
@@ -1493,7 +1528,7 @@ function mejoresSeries(c: Ctx): MejorSerie[] {
     const pe = serie.rpe != null ? palabraEsfuerzo(serie.rpe) : null
     out.push({
       id, nombre: nombreDe(c, id), peso: m.peso, reps: m.reps, e1rm: Math.round(m.e1rm), fecha: s.fecha,
-      rpe: serie.rpe, esfuerzo: pe?.texto ?? 'sin marcar', tono: pe?.tono ?? 'gris',
+      rpe: serie.rpe, esfuerzo: pe?.texto ?? t('sin marcar'), tono: pe?.tono ?? 'gris',
       record: c.logros.some(l => l.ejercicio === id), contraAnterior: contra, contraTexto: contra == null ? '—' : textoPct(contra),
     })
   }
@@ -1504,14 +1539,16 @@ function mejoresSeries(c: Ctx): MejorSerie[] {
  * Si los datos empiezan a mitad del periodo anterior (el de «contra el mes anterior»), la comparación es con pocos días:
  * «El mes anterior está a medias: tus entrenos empiezan el 8 sep.» Null si está entero o si no hay nada en él.
  */
-function anteriorIncompleto(c: Ctx, fechas: string[], que: string): string | null {
+function anteriorIncompleto(c: Ctx, fechas: string[]): string | null {
   const antesIni = sumarDias(c.inicio, -c.r.dias), antesFin = sumarDias(c.inicio, -1)
   const enAnterior = fechas.filter(f => entre(f, antesIni, antesFin))
   if (!enAnterior.length) return null
   const primero = fechas.reduce((a, b) => (b < a ? b : a))
   if (primero <= antesIni) return null
-  const cual = c.r.periodo === 'mes' ? 'El mes anterior' : c.r.periodo === 'semana' ? 'La semana anterior' : 'El periodo anterior'
-  return `${cual} está a medias: tus ${que} empiezan el ${fechaCorta(primero)}.`
+  const fecha = fechaCorta(primero)
+  if (c.r.periodo === 'mes') return t('El mes anterior está a medias: tus entrenos empiezan el {fecha}.', { fecha })
+  if (c.r.periodo === 'semana') return t('La semana anterior está a medias: tus entrenos empiezan el {fecha}.', { fecha })
+  return t('El periodo anterior está a medias: tus entrenos empiezan el {fecha}.', { fecha })
 }
 
 function fuerzaInforme(c: Ctx, semanas: SemanaInforme[], meses: MesInforme[] | null): FuerzaInforme {
@@ -1524,7 +1561,7 @@ function fuerzaInforme(c: Ctx, semanas: SemanaInforme[], meses: MesInforme[] | n
   return {
     ejercicios: ejerciciosHechos(c.enPeriodo).slice(0, 6).map(id => graficaFuerza(c, id)).filter((x): x is GraficaFuerza => !!x),
     semanas: semanas.map(s => ({ lunes: s.lunes, etiqueta: s.etiqueta, kg: s.kg, toneladas: s.toneladas, enCurso: s.enCurso })),
-    grupos, mejores: mejoresSeries(c), contraNota: anteriorIncompleto(c, c.hechas.map(s => s.fecha), 'entrenos'), meses,
+    grupos, mejores: mejoresSeries(c), contraNota: anteriorIncompleto(c, c.hechas.map(s => s.fecha)), meses,
   }
 }
 
@@ -1532,7 +1569,7 @@ function fuerzaInforme(c: Ctx, semanas: SemanaInforme[], meses: MesInforme[] | n
 
 function filaComida(x: Comida): ComidaFila {
   return {
-    hora: x.hora, franja: x.franja, franjaTexto: NOMBRE_FRANJA[x.franja], nombre: x.nombre, racion: NOMBRE_RACION[x.racion],
+    hora: x.hora, franja: x.franja, franjaTexto: nombreFranja(x.franja), nombre: x.nombre, racion: t(NOMBRE_RACION[x.racion]),
     picoteo: x.tipo === 'picoteo', kcal: Math.round(x.kcal), proteina: Math.round(x.proteina), cafeina: x.cafeina ? Math.round(x.cafeina) : null,
   }
 }
@@ -1561,7 +1598,7 @@ function comidaInforme(c: Ctx, detalle: boolean): ComidaInforme {
   const antes = c.comidas.filter(x => entre(x.fecha, antesIni, antesFin))
   const picoteo = totales.filter(t => t.picoteo).length
   const picoteoAnt = antes.length ? new Set(antes.filter(x => x.tipo === 'picoteo').map(x => x.fecha)).size : null
-  const nombreAnterior = c.r.periodo === 'mes' ? 'el mes anterior' : c.r.periodo === 'semana' ? 'la semana anterior' : 'antes'
+  const nombreAnterior = c.r.periodo === 'mes' ? t('el mes anterior') : c.r.periodo === 'semana' ? t('la semana anterior') : t('antes')
   // Si las comidas empiezan a mitad del periodo anterior, se dice con cuántos días se compara.
   const diasAnt = new Set(antes.map(x => x.fecha)).size
   const primeraComida = c.comidas.reduce<string | null>((a, x) => (a == null || x.fecha < a ? x.fecha : a), null)
@@ -1577,29 +1614,29 @@ function comidaInforme(c: Ctx, detalle: boolean): ComidaInforme {
   const sumaM = (k: 'hidratos' | 'azucares' | 'grasas' | 'sal') => { const v = conMacros.filter(x => x[k] != null).map(x => x[k]!); return v.length ? r1(suma(v)) : null }
   const macros = conMacros.length ? (() => {
     const m = { hidratos: sumaM('hidratos'), azucares: sumaM('azucares'), grasas: sumaM('grasas'), sal: sumaM('sal') }
-    const partes = [m.hidratos != null && `hidratos ${num(m.hidratos, 0)} g`, m.azucares != null && `azúcares ${num(m.azucares, 0)} g`, m.grasas != null && `grasas ${num(m.grasas, 0)} g`, m.sal != null && `sal ${num(m.sal)} g`].filter(Boolean)
-    return { ...m, comidas: conMacros.length, texto: `De lo escaneado: ${partes.join(', ')} (solo productos con etiqueta).` }
+    const partes = [m.hidratos != null && t('hidratos {n} g', { n: num(m.hidratos, 0) }), m.azucares != null && t('azúcares {n} g', { n: num(m.azucares, 0) }), m.grasas != null && t('grasas {n} g', { n: num(m.grasas, 0) }), m.sal != null && t('sal {n} g', { n: num(m.sal) })].filter(Boolean)
+    return { ...m, comidas: conMacros.length, texto: t('De lo escaneado: {partes} (solo productos con etiqueta).', { partes: partes.join(', ') }) }
   })() : null
   const protMedia = medias('proteina')
   const sup = new Map<string, number>()
   for (const d of c.suplementos) if (entre(d.fecha, c.inicio, c.fin)) for (const s of unico(d.tomados)) sup.set(s, (sup.get(s) ?? 0) + 1)
   return {
-    diasApuntados: diasAp, diasPeriodo: c.r.dias, texto: `${diasAp} de ${c.r.dias} día${c.r.dias === 1 ? '' : 's'} apuntado${c.r.dias === 1 ? '' : 's'}`,
-    objetivoNota: c.r.periodo === 'todo' ? 'Los objetivos de proteína y energía son los de hoy; pueden haber cambiado con tu peso.' : null,
+    diasApuntados: diasAp, diasPeriodo: c.r.dias, texto: tn(c.r.dias, '{a} de {n} día apuntado', '{a} de {n} días apuntados', { a: diasAp }),
+    objetivoNota: c.r.periodo === 'todo' ? t('Los objetivos de proteína y energía son los de hoy; pueden haber cambiado con tu peso.') : null,
     proteina: { media: protMedia, objetivo: objP, diasCumplidos: totales.filter(t => t.proteina >= objP * 0.9).length, evaluacion: evaluarProteina(protMedia, objP) },
     kcal: { media: medias('kcal'), objetivo: objK, franja: [Math.round(objK * 0.9), Math.round(objK * 1.1)] },
-    picoteo: { dias: picoteo, anterior: picoteoAnt, texto: picoteoAnt == null ? `${nombreAnterior}: sin datos` : aMedias ? `${nombreAnterior}: ${picoteoAnt} (en ${diasAnt} día${diasAnt === 1 ? '' : 's'})` : `${nombreAnterior}: ${picoteoAnt}` },
+    picoteo: { dias: picoteo, anterior: picoteoAnt, texto: picoteoAnt == null ? t('{antes}: sin datos', { antes: nombreAnterior }) : aMedias ? tn(diasAnt, '{antes}: {v} (en {n} día)', '{antes}: {v} (en {n} días)', { antes: nombreAnterior, v: picoteoAnt }) : `${nombreAnterior}: ${picoteoAnt}` },
     cafeina: { media: medias('cafeina'), limite, diasPorEncima: totales.filter(t => t.cafeina > limite).length },
     dias,
     porFranja: (['desayuno', 'comida', 'merienda', 'cena'] as Franja[]).map(f => {
       const xs = enP.filter(x => x.franja === f)
-      return { franja: f, nombre: NOMBRE_FRANJA[f], kcal: Math.round(suma(xs.map(x => x.kcal)) / diasAp), proteina: Math.round(suma(xs.map(x => x.proteina)) / diasAp) }
+      return { franja: f, nombre: nombreFranja(f), kcal: Math.round(suma(xs.map(x => x.kcal)) / diasAp), proteina: Math.round(suma(xs.map(x => x.proteina)) / diasAp) }
     }).filter(x => enP.some(y => y.franja === x.franja)),
     top: [...contar.values()].sort((a, b) => b.veces - a.veces || a.nombre.localeCompare(b.nombre, 'es')).slice(0, 5),
     macros,
-    consejo: protMedia < objP * 0.9 ? { titulo: 'Para la proteína', texto: 'Un batido o la versión con pollo o atún de lo que ya comes.' } : null,
+    consejo: protMedia < objP * 0.9 ? { titulo: t('Para la proteína'), texto: t('Un batido o la versión con pollo o atún de lo que ya comes.') } : null,
     suplementos: [...sup.entries()].map(([nombre, d]) => ({ nombre, dias: d })).sort((a, b) => b.dias - a.dias || a.nombre.localeCompare(b.nombre, 'es')),
-    detalle: detalle ? [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([fecha, xs]) => ({ fecha, filas: [...xs].sort((a, b) => a.hora.localeCompare(b.hora)).map(filaComida), total: totalDe(xs) })) : null,
+    detalle: detalle ? [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([fecha, xs]) => ({ fecha, filas: [...xs].sort((a, b) => String(a.hora).localeCompare(String(b.hora))).map(filaComida), total: totalDe(xs) })) : null,
   }
 }
 
@@ -1646,7 +1683,7 @@ function pasosInforme(c: Ctx): PasosInforme {
 
 /** Comparación de «más es mejor» (proteína, pasos) contra lo normal, con un umbral de igualdad en %. */
 function comparar(valor: number | null, normal: number | null, umbralPct: number, unidad: string, f: (v: number) => string = v => num(v, 0)): Comparacion {
-  const normalTexto = normal == null ? 'lo normal: —' : `lo normal: ${f(normal)}${unidad ? ` ${unidad}` : ''}`
+  const normalTexto = normal == null ? t('lo normal: —') : t('lo normal: {valor}', { valor: conUnidad(f(normal), unidad ?? '') })
   if (valor == null || normal == null) return { valor, normal, diferencia: null, pct: null, direccion: null, juicio: null, tono: 'gris', texto: '', normalTexto }
   const pct = pctCambio(valor, normal)
   const crudo = normal ? ((valor - normal) / Math.abs(normal)) * 100 : 0
@@ -1668,9 +1705,9 @@ function filaHoyNormal(c: Ctx, id: string, delDia: Sesion[], antes: Sesion[]): F
   const suave = delDia.some(s => s.suave && s.ejercicios.some(e => e.ejercicio === id))
   const record = c.logros.some(l => l.ejercicio === id && delDia.some(s => s.fecha === l.fecha))
   const menos = unidad === 'asistido'
-  const t = (v: number) => textoFuerza(v, unidad)
+  const tf = (v: number) => textoFuerza(v, unidad)
   let juicio: Juicio = 'neutro', direccion: Direccion | null = null, frase: string, pct: number | null = null, por: FilaHoyNormal['por'] = null
-  if (normal == null) frase = 'Primera vez: aún no hay con qué comparar'
+  if (normal == null) frase = t('Primera vez: aún no hay con qué comparar')
   else {
     pct = pctCambio(hoy, normal)
     const crudo = ((hoy - normal) / Math.abs(normal)) * 100
@@ -1678,10 +1715,10 @@ function filaHoyNormal(c: Ctx, id: string, delDia: Sesion[], antes: Sesion[]): F
     if (direccion !== 'igual') {
       juicio = (direccion === 'sube') !== menos ? 'mejor' : 'peor'
       por = 'peso'
-      frase = `${t(hoy)} · lo normal: ${t(normal)} · ${textoPct(pct!)}`
+      frase = t('{hoy} · lo normal: {normal} · {pct}', { hoy: tf(hoy), normal: tf(normal), pct: textoPct(pct!) })
     } else {
       juicio = 'igual'
-      frase = `${t(hoy)} · igual que lo normal`
+      frase = t('{hoy} · igual que lo normal', { hoy: tf(hoy) })
       if (unidad === 'kg' && hoy === normal) {
         // Mismo peso: se mira si hoy salieron más repeticiones con ese peso que lo normal.
         const repsA = (series: Serie[]) => Math.max(...trabajo(series).filter(x => x.peso === hoy).map(x => x.reps!))
@@ -1691,12 +1728,12 @@ function filaHoyNormal(c: Ctx, id: string, delDia: Sesion[], antes: Sesion[]): F
           juicio = d > 0 ? 'mejor' : 'peor'
           por = 'reps'
           const n = Math.round(Math.abs(d))
-          frase = `Mismo peso, ${n} rep${n === 1 ? '' : 's'} ${d > 0 ? 'más' : 'menos'} que lo normal`
+          frase = d > 0 ? tn(n, 'Mismo peso, {n} rep más que lo normal', 'Mismo peso, {n} reps más que lo normal') : tn(n, 'Mismo peso, {n} rep menos que lo normal', 'Mismo peso, {n} reps menos que lo normal')
         }
       }
     }
     if (suave) {
-      if (juicio === 'peor') frase = 'semana suave: –10 % previsto'
+      if (juicio === 'peor') frase = t('semana suave: –10 % previsto')
       juicio = 'neutro'
     }
   }
@@ -1712,12 +1749,12 @@ function filaHoyNormal(c: Ctx, id: string, delDia: Sesion[], antes: Sesion[]): F
   const costo = eHoy != null && eNormal != null && mismoPeso && Math.abs(eHoy - eNormal) >= 1 ? (eHoy > eNormal ? 'más' : 'menos') : null
   const pe = eHoy == null ? null : palabraEsfuerzo(eHoy)
   return {
-    id, nombre: nombreDe(c, id), unidad, hoyTexto: `${c.r.periodo === 'ayer' ? 'ayer' : 'hoy'} ${textoSerie(hoySeries, unidad)}`, hoy, normal,
+    id, nombre: nombreDe(c, id), unidad, hoyTexto: c.r.periodo === 'ayer' ? t('ayer {serie}', { serie: textoSerie(hoySeries, unidad) }) : t('hoy {serie}', { serie: textoSerie(hoySeries, unidad) }), hoy, normal,
     min: vals.length ? Math.min(...vals) : null, max: vals.length ? Math.max(...vals) : null, pct, juicio, direccion, tono, frase, por, record, primera: normal == null, suave,
     esfuerzo: {
       // Una media lleva un decimal, como en el resto del informe («9,0 duro»).
-      hoy: eHoy, normal: ref, deObjetivo: eNormal == null, texto: pe ? `${fijo(eHoy!)} ${pe.palabra}` : 'sin marcar', tono: pe?.tono ?? 'gris',
-      normalTexto: eNormal != null ? `lo normal: ${fijo(eNormal)}` : `objetivo: ${num(obj)}`,
+      hoy: eHoy, normal: ref, deObjetivo: eNormal == null, texto: pe ? `${fijo(eHoy!)} ${t(pe.palabra)}` : t('sin marcar'), tono: pe?.tono ?? 'gris',
+      normalTexto: eNormal != null ? t('lo normal: {valor}', { valor: fijo(eNormal) }) : t('objetivo: {n}', { n: num(obj) }),
       costo,
     },
   }
@@ -1754,8 +1791,13 @@ function tuDiaInforme(c: Ctx): TuDiaInforme {
   const normalMin = mismas.length ? Math.round(media(mismas)!) : null
   const difMin = minutos != null && normalMin != null ? minutos - normalMin : null
   const entreno: TuDiaInforme['entreno'] = s0
-    ? { estado: 'hecho', nombre: s0.nombre, minutos, normal: normalMin, diferencia: difMin, texto: difMin == null ? textoDuracion(minutos) : `${conSigno(difMin, v => String(v))} min`, normalTexto: normalMin != null ? `lo normal: ${normalMin} min · ${palabra} ${textoDuracion(minutos)}` : `${palabra} ${textoDuracion(minutos)}` }
-    : { estado: estado?.estado === 'perdido' || estado?.estado === 'plan' ? 'no hecho' : 'descanso', nombre: estado?.dia?.nombre ?? null, minutos: null, normal: null, diferencia: null, texto: estado?.estado === 'perdido' || estado?.estado === 'plan' ? 'No hecho' : 'Descanso', normalTexto: '' }
+    ? {
+      estado: 'hecho', nombre: nombreEntreno(s0), minutos, normal: normalMin, diferencia: difMin, texto: difMin == null ? textoDuracion(minutos) : `${conSigno(difMin, v => String(v))} min`,
+      normalTexto: normalMin != null
+        ? (palabra === 'ayer' ? t('lo normal: {n} min · ayer {serie}', { n: normalMin, serie: textoDuracion(minutos) }) : t('lo normal: {n} min · hoy {serie}', { n: normalMin, serie: textoDuracion(minutos) }))
+        : (palabra === 'ayer' ? t('ayer {serie}', { serie: textoDuracion(minutos) }) : t('hoy {serie}', { serie: textoDuracion(minutos) })),
+    }
+    : { estado: estado?.estado === 'perdido' || estado?.estado === 'plan' ? 'no hecho' : 'descanso', nombre: estado?.dia ? nombreEntreno(estado.dia) : null, minutos: null, normal: null, diferencia: null, texto: estado?.estado === 'perdido' || estado?.estado === 'plan' ? t('No hecho') : t('Descanso'), normalTexto: '' }
   const cuentan = [...ejercicios.map(e => e.juicio), proteina.juicio, pasos.juicio, peso.juicio].filter((j): j is Juicio => j === 'mejor' || j === 'peor' || j === 'igual')
   const recuento = primerDia ? null : { mejor: cuentan.filter(j => j === 'mejor').length, peor: cuentan.filter(j => j === 'peor').length, igual: cuentan.filter(j => j === 'igual').length }
   // Ejercicio principal: el de la meta, o el más repetido de los de ese día (o de siempre, si descansó).
@@ -1768,7 +1810,7 @@ function tuDiaInforme(c: Ctx): TuDiaInforme {
     const recs = new Set(logros(c.hechas).filter(l => l.ejercicio === idP).map(l => l.fecha))
     const previos = (pts.at(-1)?.fecha === dia ? pts.slice(0, -1) : pts).slice(-4).map(p => p.valor)
     principal = {
-      id: idP, nombre: nombreDe(c, idP), unidad: u, titulo: `${nombreDe(c, idP)}, tus últimas ${pts.length} ${pts.length === 1 ? 'vez' : 'veces'}`,
+      id: idP, nombre: nombreDe(c, idP), unidad: u, titulo: tn(pts.length, '{nombre}, tus últimas {n} vez', '{nombre}, tus últimas {n} veces', { nombre: nombreDe(c, idP) }),
       puntos: pts.map(p => ({ fecha: p.fecha, valor: p.valor, record: recs.has(p.fecha) })),
       banda: previos.length ? { min: Math.min(...previos), max: Math.max(...previos), mediana: mediana(previos)! } : null,
     }
@@ -1781,7 +1823,7 @@ function tuDiaInforme(c: Ctx): TuDiaInforme {
     const r10 = dif == null ? 0 : Math.round(Math.abs(dif) / 10) * 10
     gasto = {
       ...g, comido, diferencia: dif,
-      texto: dif == null ? null : r10 === 0 ? 'lo mismo que lo gastado' : dif < 0 ? `unas ${r10} menos de lo gastado` : `unas ${r10} más de lo gastado`,
+      texto: dif == null ? null : r10 === 0 ? t('lo mismo que lo gastado') : dif < 0 ? t('unas {n} menos de lo gastado', { n: r10 }) : t('unas {n} más de lo gastado', { n: r10 }),
       tono: dif == null ? 'gris' : dif <= 0 ? 'ok' : 'warn',
     }
   }
@@ -1789,11 +1831,11 @@ function tuDiaInforme(c: Ctx): TuDiaInforme {
   const cafe = total ? total.cafeina : null
   return {
     fecha: dia, palabra, primerDia, recuento,
-    frase: primerDia ? 'Es tu primer día con datos: a partir de ahora el informe te comparará contigo mismo.' : fraseDia(ejercicios, proteina, pasos, peso, palabra),
+    frase: primerDia ? t('Es tu primer día con datos: a partir de ahora el informe te comparará contigo mismo.') : fraseDia(ejercicios, proteina, pasos, peso, palabra),
     entreno, proteina, pasos, peso, kcal,
     cafeina: { valor: cafe, limite, tono: cafe == null ? 'gris' : cafe > limite ? 'bad' : 'tinta' },
     ejercicios, principal, gasto,
-    comidas: [...comidasDia].sort((a, b) => a.hora.localeCompare(b.hora)).map(filaComida), total,
+    comidas: [...comidasDia].sort((a, b) => String(a.hora).localeCompare(String(b.hora))).map(filaComida), total,
     tonoProteina: total ? (total.proteina >= c.obj.proteina * 0.9 ? 'ok' : total.proteina >= c.obj.proteina * 0.75 ? 'warn' : 'bad') : 'gris',
     cuerpo: cuerpoDelDia(c, dia, palabra),
   }
@@ -1802,7 +1844,7 @@ function tuDiaInforme(c: Ctx): TuDiaInforme {
 /** Peso del día contra lo normal según el objetivo: perder o recomposición, bajar es mejor; fuerza, no se juzga. */
 export function compararPeso(valor: number | null, normal: number | null, objetivo: Perfil['objetivo']): Comparacion {
   const f = (v: number) => kg(v)
-  const normalTexto = normal == null ? 'lo normal: —' : `media de los 7 días antes: ${f(normal)} kg`
+  const normalTexto = normal == null ? t('lo normal: —') : t('media de los 7 días antes: {n} kg', { n: f(normal) })
   if (valor == null || normal == null) return { valor, normal, diferencia: null, pct: null, direccion: null, juicio: null, tono: 'gris', texto: '', normalTexto }
   const d = r1(valor - normal)
   const direccion: Direccion = Math.abs(d) < 0.2 ? 'igual' : d > 0 ? 'sube' : 'baja'
@@ -1812,37 +1854,37 @@ export function compararPeso(valor: number | null, normal: number | null, objeti
 
 /** kcal del día frente al objetivo ±10 %: dentro, bien; fuera, ámbar (nunca rojo: son orientativas). */
 export function compararKcal(valor: number | null, objetivo: number): Comparacion {
-  const normalTexto = `objetivo: ${num(objetivo, 0)} kcal`
+  const normalTexto = t('objetivo: {n} kcal', { n: num(objetivo, 0) })
   if (valor == null) return { valor, normal: objetivo, diferencia: null, pct: null, direccion: null, juicio: null, tono: 'gris', texto: '', normalTexto }
   const pct = pctCambio(valor, objetivo)
   const dentro = valor >= objetivo * 0.9 && valor <= objetivo * 1.1
-  return { valor, normal: objetivo, diferencia: valor - objetivo, pct, direccion: dentro ? 'igual' : valor > objetivo ? 'sube' : 'baja', juicio: 'neutro', tono: dentro ? 'ok' : 'warn', texto: dentro ? 'dentro del objetivo' : textoPct(pct!), normalTexto }
+  return { valor, normal: objetivo, diferencia: valor - objetivo, pct, direccion: dentro ? 'igual' : valor > objetivo ? 'sube' : 'baja', juicio: 'neutro', tono: dentro ? 'ok' : 'warn', texto: dentro ? t('dentro del objetivo') : textoPct(pct!), normalTexto }
 }
 
 function fraseDia(ejs: FilaHoyNormal[], prot: Comparacion, pasos: Comparacion, peso: Comparacion, palabra: string): string {
   const comparables = ejs.filter(e => e.juicio === 'mejor' || e.juicio === 'peor' || e.juicio === 'igual')
   const nMejor = comparables.filter(e => e.juicio === 'mejor').length, nPeor = comparables.filter(e => e.juicio === 'peor').length
-  const inicio = !ejs.length ? 'Día sin entreno.' : !comparables.length ? 'Día de entreno.' : nMejor >= nPeor ? 'Buen día de fuerza.' : 'Día flojo de fuerza.'
+  const inicio = !ejs.length ? t('Día sin entreno.') : !comparables.length ? t('Día de entreno.') : nMejor >= nPeor ? t('Buen día de fuerza.') : t('Día flojo de fuerza.')
   const min = nombreEnFrase
   const bien: string[] = []
-  for (const e of ejs.filter(x => x.record)) bien.push(`récord en ${min(e.nombre)} (${textoFuerza(e.hoy, e.unidad)})`)
+  for (const e of ejs.filter(x => x.record)) bien.push(t('récord en {nombre} ({valor})', { nombre: min(e.nombre), valor: textoFuerza(e.hoy, e.unidad) }))
   const masPeso = ejs.filter(e => !e.record && e.juicio === 'mejor' && e.por === 'peso').map(e => min(e.nombre))
   const masReps = ejs.filter(e => !e.record && e.juicio === 'mejor' && e.por === 'reps').map(e => min(e.nombre))
-  if (masPeso.length) bien.push(`${ejs.some(e => e.unidad === 'asistido' && masPeso.includes(min(e.nombre))) ? 'mejor' : 'más peso'} en ${lista(masPeso)}`)
-  if (masReps.length) bien.push(`más repeticiones en ${lista(masReps)}`)
-  if (prot.juicio === 'mejor') bien.push('más proteína')
-  if (pasos.juicio === 'mejor') bien.push('más pasos')
-  if (peso.juicio === 'mejor') bien.push('bajas de peso')
+  if (masPeso.length) bien.push(ejs.some(e => e.unidad === 'asistido' && masPeso.includes(min(e.nombre))) ? t('mejor en {lista}', { lista: lista(masPeso) }) : t('más peso en {lista}', { lista: lista(masPeso) }))
+  if (masReps.length) bien.push(t('más repeticiones en {lista}', { lista: lista(masReps) }))
+  if (prot.juicio === 'mejor') bien.push(t('más proteína'))
+  if (pasos.juicio === 'mejor') bien.push(t('más pasos'))
+  if (peso.juicio === 'mejor') bien.push(t('bajas de peso'))
   const peor = [
     ...ejs.filter(e => e.juicio === 'peor').map(e => min(e.nombre)),
-    ...(prot.juicio === 'peor' ? ['la proteína'] : []),
-    ...(pasos.juicio === 'peor' ? ['los pasos'] : []),
-    ...(peso.juicio === 'peor' ? ['el peso (sube)'] : []),
+    ...(prot.juicio === 'peor' ? [t('la proteína')] : []),
+    ...(pasos.juicio === 'peor' ? [t('los pasos')] : []),
+    ...(peso.juicio === 'peor' ? [t('el peso (sube)')] : []),
   ]
   const partes = [inicio]
   if (bien.length) partes.push(`${capital(lista(bien))}.`)
-  if (peor.length) partes.push(`Peor: ${lista(peor)}.`)
-  if (!bien.length && !peor.length && ejs.length) partes.push(`${capital(palabra)}, como lo normal.`)
+  if (peor.length) partes.push(t('Peor: {lista}.', { lista: lista(peor) }))
+  if (!bien.length && !peor.length && ejs.length) partes.push(palabra === 'ayer' ? t('Ayer, como lo normal.') : t('Hoy, como lo normal.'))
   return partes.join(' ')
 }
 
@@ -1855,11 +1897,11 @@ function cuerpoDelDia(c: Ctx, dia: string, palabra: string): string | null {
   const cin = ultimoValor(delDia, leerCintura)?.valor
   const ultCin = ultimoValor(c.ms, leerCintura, dia)
   const partes = [
-    peso != null ? `${fijo(peso)} kg` : 'peso sin apuntar',
-    grasaB != null ? `${num(grasaB)} %` : grasaM != null ? `${num(grasaM)} % (por medidas)` : null,
-    cin != null ? `cintura ${num(cin)} cm` : ultCin ? `cintura sin medir (última: ${num(ultCin.valor)} cm el ${fechaCorta(ultCin.fecha)})` : 'cintura sin medir',
+    peso != null ? `${fijo(peso)} kg` : t('peso sin apuntar'),
+    grasaB != null ? conUnidad(num(grasaB), '%') : grasaM != null ? t('{n} % (por medidas)', { n: num(grasaM) }) : null,
+    cin != null ? t('cintura {n} cm', { n: num(cin) }) : ultCin ? t('cintura sin medir (última: {n} cm el {fecha})', { n: num(ultCin.valor), fecha: fechaCorta(ultCin.fecha) }) : t('cintura sin medir'),
   ].filter((x): x is string => !!x)
-  return `Cuerpo ${palabra}: ${partes.join(' · ')}`
+  return palabra === 'ayer' ? t('Cuerpo ayer: {partes}', { partes: partes.join(' · ') }) : t('Cuerpo hoy: {partes}', { partes: partes.join(' · ') })
 }
 
 // ================================================================ anexo «una a una»
@@ -1870,7 +1912,7 @@ function detalleEntrenos(c: Ctx): DetalleEntreno[] {
     const min = minutosSesion(s)
     return {
       fecha: s.fecha,
-      titulo: [fechaDia(s.fecha), s.nombre, min != null ? textoDuracion(min) : null].filter(Boolean).join(' · '),
+      titulo: [fechaDia(s.fecha), nombreEntreno(s), min != null ? textoDuracion(min) : null].filter(Boolean).join(' · '),
       ejercicios: s.ejercicios.map(e => ({
         id: e.ejercicio, nombre: nombreDe(c, e.ejercicio), saltado: e.estado === 'saltado',
         enVezDe: e.planificado && e.planificado !== e.ejercicio ? nombreDe(c, e.planificado) : null,
@@ -1903,32 +1945,41 @@ export function calcularInforme(e: EntradaInforme): Informe {
   const pasosD = hayPasos ? pasosInforme(c) : null
   const lineas: Evaluacion[] = []
   const ult = cuerpo.peso.antes
-  const ultTexto = ult ? ` (último peso: ${fijo(ult.valor)} kg, ${fechaCorta(ult.fecha)})` : ''
+  const ultV = ult ? { peso: fijo(ult.valor), fecha: fechaCorta(ult.fecha) } : null
   if (r.unDia) {
     // Un solo día: frases con «hoy»/«ayer». Lo del entreno ya lo dice su ficha («Descanso», «No hecho»).
-    const P = capital(r.periodo === 'ayer' ? 'ayer' : 'hoy')
-    if (secciones.comida && !hayComidas) lineas.push({ texto: `${P} no has apuntado comidas`, tono: 'gris' })
-    if (secciones.cuerpo && !hayCuerpo) lineas.push({ texto: `${P} no te has pesado${ultTexto}`, tono: 'gris' })
-    if (secciones.pasos && !hayPasos) lineas.push({ texto: `${P} no has apuntado pasos`, tono: 'gris' })
+    const ayer = r.periodo === 'ayer'
+    if (secciones.comida && !hayComidas) lineas.push({ texto: ayer ? t('Ayer no has apuntado comidas') : t('Hoy no has apuntado comidas'), tono: 'gris' })
+    if (secciones.cuerpo && !hayCuerpo) {
+      const texto = ultV
+        ? (ayer ? t('Ayer no te has pesado (último peso: {peso} kg, {fecha})', ultV) : t('Hoy no te has pesado (último peso: {peso} kg, {fecha})', ultV))
+        : (ayer ? t('Ayer no te has pesado') : t('Hoy no te has pesado'))
+      lineas.push({ texto, tono: 'gris' })
+    }
+    if (secciones.pasos && !hayPasos) lineas.push({ texto: ayer ? t('Ayer no has apuntado pasos') : t('Hoy no has apuntado pasos'), tono: 'gris' })
   } else {
-    if (secciones.entrenos && !c.enPeriodo.length) lineas.push(ent.tocaban ? { texto: `Entrenos: 0 de ${ent.tocaban}`, tono: 'bad' } : { texto: 'Entrenos: no hay entrenos de estos días', tono: 'gris' })
-    if (secciones.comida && !hayComidas) lineas.push({ texto: 'Comida: no hay comidas apuntadas de estos días', tono: 'gris' })
-    if (secciones.cuerpo && !hayCuerpo) lineas.push({ texto: `Cuerpo: no te has pesado ni medido estos días${ultTexto}`, tono: 'gris' })
-    if (secciones.pasos && !hayPasos) lineas.push({ texto: 'Pasos: no hay pasos apuntados de estos días', tono: 'gris' })
+    if (secciones.entrenos && !c.enPeriodo.length) lineas.push(ent.tocaban ? { texto: t('Entrenos: 0 de {n}', { n: ent.tocaban }), tono: 'bad' } : { texto: t('Entrenos: no hay entrenos de estos días'), tono: 'gris' })
+    if (secciones.comida && !hayComidas) lineas.push({ texto: t('Comida: no hay comidas apuntadas de estos días'), tono: 'gris' })
+    if (secciones.cuerpo && !hayCuerpo) lineas.push({ texto: ultV ? t('Cuerpo: no te has pesado ni medido estos días (último peso: {peso} kg, {fecha})', ultV) : t('Cuerpo: no te has pesado ni medido estos días'), tono: 'gris' })
+    if (secciones.pasos && !hayPasos) lineas.push({ texto: t('Pasos: no hay pasos apuntados de estos días'), tono: 'gris' })
   }
-  if (c.hayPerfil && !(c.p.alturaCm > 0)) lineas.push({ texto: 'Falta tu altura en Perfil', tono: 'warn' })
+  if (c.hayPerfil && !(c.p.alturaCm > 0)) lineas.push({ texto: t('Falta tu altura en Perfil'), tono: 'warn' })
   const z = zonasInforme(c)
   const rachaV = racha(c.rutina, c.todas, sumarDias(r.fin, 1))
   const q = c.ms.length || c.comidas.length ? datosQuincena({ hoy: r.fin, mediciones: c.ms.filter(m => dia10(m.fecha) <= r.fin), comidas: c.comidas.filter(x => x.fecha <= r.fin), objetivoProteina: c.obj.proteina, objetivo: c.p.objetivo }) : null
   const metasFechas = unico(c.metas.filter(m => m.fecha).map(m => mesAnio(m.fecha!)))
-  const sexo = c.hayPerfil ? (c.p.sexo === 'mujer' ? 'Mujer' : 'Hombre') : null
+  const sexo = c.hayPerfil ? (c.p.sexo === 'mujer' ? t('Mujer') : t('Hombre')) : null
   const nombre = c.p.nombre?.trim() || null
-  const creado = `${String(e.ahora.getDate()).padStart(2, '0')}/${String(e.ahora.getMonth() + 1).padStart(2, '0')}/${e.ahora.getFullYear()}`
-  const hora = horaActual(e.ahora)
+  // «20/10/2026»; en inglés (EE. UU.), el mes delante: «10/20/2026».
+  const dd = String(e.ahora.getDate()).padStart(2, '0'), mm = String(e.ahora.getMonth() + 1).padStart(2, '0')
+  const creado = idioma() === 'en' ? `${mm}/${dd}/${e.ahora.getFullYear()}` : `${dd}/${mm}/${e.ahora.getFullYear()}`
+  const hora = formatoHora(horaActual(e.ahora))
   const resumen: ResumenInforme = {
     tabla: tablaResumen(c, cuerpo, ent, semanas, comidaD, pasosD),
     zonas: z.zonas, zonasSubtitulo: z.subtitulo,
-    zonasNota: `Zonas de la app: IMC de la OMS, grasa de la ACE para ${c.p.sexo === 'mujer' ? 'mujeres (14-32 %)' : 'hombres (6-25 %)'}, cintura/altura saludable entre 0,40 y 0,50.`,
+    zonasNota: c.p.sexo === 'mujer'
+      ? t('Zonas de la app: IMC de la OMS, grasa de la ACE para mujeres (14-32 %), cintura/altura saludable entre {a} y {b}.', { a: fijo(0.4, 2), b: fijo(0.5, 2) })
+      : t('Zonas de la app: IMC de la OMS, grasa de la ACE para hombres (6-25 %), cintura/altura saludable entre {a} y {b}.', { a: fijo(0.4, 2), b: fijo(0.5, 2) }),
     puntuacion: r.unDia ? null : puntuacionInforme(semanas),
     casillas: r.periodo === 'semana' ? estadosDias(c, r.inicio, r.fin).map((d): CasillaDia => {
       const com = c.comidas.filter(x => x.fecha === d.fecha)
@@ -1936,7 +1987,7 @@ export function calcularInforme(e: EntradaInforme): Informe {
       const pas = c.pasos.find(x => x.fecha === d.fecha)?.pasos ?? null
       const pes = ultimoValor(c.ms.filter(m => dia10(m.fecha) === d.fecha), leerPeso)?.valor ?? null
       return {
-        fecha: d.fecha, inicial: 'LMXJVSD'[diaSemana(deISO(d.fecha))]!, estado: d.estado, nombre: d.dia?.nombre ?? null,
+        fecha: d.fecha, inicial: DIAS_CORTOS[diaSemana(deISO(d.fecha))], estado: d.estado, nombre: d.dia?.nombre ?? null,
         proteina: prot, tonoProteina: prot == null ? 'gris' : tonoProteinaDia(prot, c.obj.proteina), pasos: pas, cumplePasos: pas != null && pas >= c.p.pasosObjetivo, peso: pes,
       }
     }) : null,
@@ -1950,9 +2001,9 @@ export function calcularInforme(e: EntradaInforme): Informe {
   return {
     periodo: r.periodo, rango: r, secciones,
     cabecera: {
-      titulo: r.unDia ? 'Tu día' : 'Informe de progreso', nombre, sexo, edad: edadEn(c.p.nacimiento, r.fin), alturaCm: c.p.alturaCm > 0 ? c.p.alturaCm : null,
-      periodo: `${r.etiqueta} · ${r.texto}`, creado: `${creado} ${hora}`, creadoPie: `Creado el ${creado} a las ${hora}`,
-      tituloPdf: `Informe JowyFit · ${r.etiqueta}`, autor: nombre ?? '', comparado: r.unDia ? 'Comparado con tus últimas 4 semanas' : null,
+      titulo: r.unDia ? t('Tu día') : t('Informe de progreso'), nombre, sexo, edad: edadEn(c.p.nacimiento, r.fin), alturaCm: c.p.alturaCm > 0 ? c.p.alturaCm : null,
+      periodo: `${r.etiqueta} · ${r.texto}`, creado: `${creado} ${hora}`, creadoPie: t('Creado el {fecha} a las {hora}', { fecha: creado, hora }),
+      tituloPdf: t('Informe JowyFit · {periodo}', { periodo: r.etiqueta }), autor: nombre ?? '', comparado: r.unDia ? t('Comparado con tus últimas 4 semanas') : null,
     },
     hayDatos: hayDatosEn(e, r.inicio, r.fin),
     resumen, semanas, meses,

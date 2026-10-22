@@ -247,6 +247,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-4-0.cab': '<b>Versió 0.4.0</b> · 22 d’octubre del 2026',
+  'nov.0-4-0.texto': "L'app, en tres idiomes: castellà, català i anglès. Per defecte continua en castellà; canvia-ho a Configuració → Aparença → Idioma. Dates, hores, números i els exercicis (en anglès) surten en el teu idioma.",
   'nov.0-3-0.cab': '<b>Versió 0.3.0</b> · 21 d’octubre del 2026',
   'nov.0-3-0.texto': "Tutorial dins de l'app: la primera vegada t'ofereix un passeig pel més important, i el tens sempre a Configuració. A l'iPhone explica el que allà es fa d'una altra manera. I en aquesta pàgina, una demo d'un minut.",
   'nov.0-2-1.cab': '<b>Versió 0.2.1</b> · 21 d’octubre del 2026',

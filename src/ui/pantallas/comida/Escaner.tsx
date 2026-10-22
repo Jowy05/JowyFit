@@ -10,6 +10,7 @@ import { cx, Ico, Pantalla, Stepper, useUnaVez, recortar, LARGO } from '../../co
 import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { LineaMacros, Mini, apuntar, kp } from './comun'
+import { t } from '../../../i18n'
 
 type Estado =
   | { e: 'camara' }
@@ -66,7 +67,7 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
         const cam = await abrirCamara(video.current, c => { if (!cancelado) void buscar(c) })
         if (cancelado) cam.parar(); else { camara.current = cam; setHayLuz(cam.tieneLinterna) }
       } catch (e) {
-        if (!cancelado) setEstado({ e: 'sincamara', motivo: String(e).includes('NotAllowed') ? 'No hay permiso para usar la cámara.' : 'No se ha podido abrir la cámara.' })
+        if (!cancelado) setEstado({ e: 'sincamara', motivo: String(e).includes('NotAllowed') ? t('No hay permiso para usar la cámara.') : t('No se ha podido abrir la cámara.') })
       }
     })()
     return () => { cancelado = true; camara.current?.parar(); camara.current = null }
@@ -81,11 +82,11 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
     // Con lo que traiga la etiqueta: hidratos, azúcares, grasas y sal se apuntan también.
     const des = await apuntar({ fecha, franja, nombre: p.nombre, ...v, racion: 'N', tipo: 'producto', codigo: p.codigo })
     nav.atras()
-    aviso(`Añadido: ${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
+    aviso(t('Añadido: {nombre}', { nombre: `${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})` }), des)
   }
   const anadir = unaVez(apuntarProducto)
   const anadirAMano = unaVez(async (codigo: string) => {
-    const p: Producto = { codigo, nombre: nombre.trim() || `Producto ${codigo}`, marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: kcal, proteinaRacion: prot, guardado: new Date().toISOString(), manual: true }
+    const p: Producto = { codigo, nombre: nombre.trim() || t('Producto {codigo}', { codigo }), marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: kcal, proteinaRacion: prot, guardado: new Date().toISOString(), manual: true }
     await db.productos.put(p)
     await apuntarProducto(p)
   })
@@ -93,10 +94,10 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
     await guardarPendiente(codigo)
     nav.atras()
     if (comoNota) nav.hoja('sheet-add', { fecha, franja, nota: true })
-    else aviso('Guardado para buscarlo luego')
+    else aviso(t('Guardado para buscarlo luego'))
   })
   const guardarPendiente = async (codigo: string) => {
-    await db.productos.put({ codigo, nombre: `Código ${codigo}`, marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: null, proteinaRacion: null, guardado: new Date().toISOString(), pendiente: true })
+    await db.productos.put({ codigo, nombre: t('Código {codigo}', { codigo }), marca: '', kcal100: null, proteina100: null, racionG: null, kcalRacion: null, proteinaRacion: null, guardado: new Date().toISOString(), pendiente: true })
   }
 
   const enCamara = estado.e === 'camara' && !escribir
@@ -106,10 +107,10 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
       <div className={cx('cam', enCamara && 'live')}>
         {enCamara && <video ref={video} className="scanner-video" playsInline muted aria-hidden="true" />}
         <div className="cam-top" style={{ position: 'relative' }}>
-          <button className="cam-b" aria-label="Cerrar" onClick={() => nav.atras()}><Ico n="x" b /></button>
-          <span className="cam-t">Escanear código</span>
+          <button className="cam-b" aria-label={t('Cerrar')} onClick={() => nav.atras()}><Ico n="x" b /></button>
+          <span className="cam-t">{t('Escanear código')}</span>
           {enCamara && !esAndroid() && hayLuz
-            ? <button className={cx('cam-b', luz && 'on')} aria-label="Linterna" onClick={async () => { const ok = await camara.current?.linterna(!luz); if (ok) setLuz(!luz); else aviso('Este móvil no deja encender la linterna desde aquí') }}><Ico n="flashlight" b /></button>
+            ? <button className={cx('cam-b', luz && 'on')} aria-label={t('Linterna')} onClick={async () => { const ok = await camara.current?.linterna(!luz); if (ok) setLuz(!luz); else aviso(t('Este móvil no deja encender la linterna desde aquí')) }}><Ico n="flashlight" b /></button>
             : <span style={{ width: 48 }} />}
         </div>
         {enCamara && (
@@ -118,30 +119,30 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
               <span className="vf-c tl" /><span className="vf-c tr" /><span className="vf-c bl" /><span className="vf-c br" />
               <span className="laser" />
             </div>
-            <p className="cam-hint" style={{ position: 'relative' }}>Apunta al código de barras del envase: se lee solo</p>
+            <p className="cam-hint" style={{ position: 'relative' }}>{t('Apunta al código de barras del envase: se lee solo')}</p>
           </>
         )}
         <div className="chips cam-demo">
-          {enCamara && <button className="chip" onClick={() => setEscribir(true)}><Ico n="keyboard" /> Escribir el código</button>}
-          {escribir && estado.e === 'camara' && <button className="chip" onClick={otraVez}><Ico n="camera" /> Usar la cámara</button>}
+          {enCamara && <button className="chip" onClick={() => setEscribir(true)}><Ico n="keyboard" /> {t('Escribir el código')}</button>}
+          {escribir && estado.e === 'camara' && <button className="chip" onClick={otraVez}><Ico n="camera" /> {t('Usar la cámara')}</button>}
         </div>
 
         {(escribir && estado.e === 'camara') && (
           <div className="cam-panel">
-            <p className="lbl fl">Escribe el número que hay debajo de las barras</p>
-            <input className="inp inp-num" inputMode="numeric" autoFocus maxLength={14} value={codigoMano} onChange={e => setCodigoMano(e.target.value.replace(/\D/g, ''))} placeholder="8480000123458" aria-label="Código de barras" />
-            <button className="btn mt12" disabled={!codigoValido(codigoMano)} onClick={() => void buscar(codigoMano)}>Buscar</button>
+            <p className="lbl fl">{t('Escribe el número que hay debajo de las barras')}</p>
+            <input className="inp inp-num" inputMode="numeric" autoFocus maxLength={14} value={codigoMano} onChange={e => setCodigoMano(e.target.value.replace(/\D/g, ''))} placeholder="8480000123458" aria-label={t('Código de barras')} />
+            <button className="btn mt12" disabled={!codigoValido(codigoMano)} onClick={() => void buscar(codigoMano)}>{t('Buscar')}</button>
           </div>
         )}
 
         {estado.e === 'buscando' && (
-          <div className="cam-panel"><p className="row"><Ico n="spinner" className="blue" /> <b>Buscando {estado.codigo}…</b></p></div>
+          <div className="cam-panel"><p className="row"><Ico n="spinner" className="blue" /> <b>{t('Buscando {codigo}…', { codigo: estado.codigo })}</b></p></div>
         )}
 
         {estado.e === 'sincamara' && (
           <div className="cam-panel">
-            <p className="row"><span className="ico badb"><Ico n="camera-slash" /></span><span className="tx"><b>{estado.motivo}</b><small>No pasa nada: escribe el número que hay debajo de las barras.</small></span></p>
-            <button className="btn mt12" onClick={() => { setEstado({ e: 'camara' }); setEscribir(true) }}><Ico n="keyboard" b />Escribir el código</button>
+            <p className="row"><span className="ico badb"><Ico n="camera-slash" /></span><span className="tx"><b>{estado.motivo}</b><small>{t('No pasa nada: escribe el número que hay debajo de las barras.')}</small></span></p>
+            <button className="btn mt12" onClick={() => { setEstado({ e: 'camara' }); setEscribir(true) }}><Ico n="keyboard" b />{t('Escribir el código')}</button>
           </div>
         )}
 
@@ -152,43 +153,43 @@ export function Escaner({ ruta }: { ruta: Ruta }) {
               <div className="row">
                 <Mini nombre={estado.p.nombre} imagen={estado.p.imagen} className="l" />
                 <div className="grow">
-                  {estado.ya ? <span className="tag blue"><Ico n="check" b />Ya lo tenías</span> : <span className="tag ok"><Ico n="check" b />Encontrado</span>}
+                  {estado.ya ? <span className="tag blue"><Ico n="check" b />{t('Ya lo tenías')}</span> : <span className="tag ok"><Ico n="check" b />{t('Encontrado')}</span>}
                   <b className="d-block">{recortar(estado.p.nombre)}</b>
-                  <small className="muted">{estado.p.marca ? `${estado.p.marca} · ` : ''}<span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span> {v.base === 'racion' ? 'por ración' : 'por 100 g'}</small>
+                  <small className="muted">{estado.p.marca ? `${estado.p.marca} · ` : ''}<span className="mono">{kp(v.kcal, v.proteina, v.cafeina)}</span> {v.base === 'racion' ? t('por ración') : t('por 100 g')}</small>
                 </div>
               </div>
               <LineaMacros m={v} className="mt8" />
-              <button className="btn mt12" onClick={() => void anadir(estado.p)}><Ico n="plus" b />Añadir</button>
+              <button className="btn mt12" onClick={() => void anadir(estado.p)}><Ico n="plus" b />{t('Añadir')}</button>
               <div className="btns mt8">
-                <button className="btn gry sm" onClick={() => nav.reemplazar('com-prod', { codigo: estado.p.codigo, fecha, franja })}>Ver producto</button>
-                <button className="btn ln sm" onClick={otraVez}><Ico n="barcode" /> Escanear otro</button>
+                <button className="btn gry sm" onClick={() => nav.reemplazar('com-prod', { codigo: estado.p.codigo, fecha, franja })}>{t('Ver producto')}</button>
+                <button className="btn ln sm" onClick={otraVez}><Ico n="barcode" /> {t('Escanear otro')}</button>
               </div>
-              <p className="small muted mt8">En «Ver producto» puedes elegir otra cantidad.</p>
+              <p className="small muted mt8">{t('En «Ver producto» puedes elegir otra cantidad.')}</p>
             </div>
           )
         })()}
 
         {estado.e === 'no' && (
           <div className="cam-panel">
-            <p className="row"><span className="tag warn">No está</span><b>No está en la base de datos</b></p>
-            <p className="small muted mt4">Apúntalo tú: mira la etiqueta del envase.</p>
-            <input className="inp mt8" maxLength={LARGO.nombre} value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto" aria-label="Nombre del producto" />
+            <p className="row"><span className="tag warn">{t('No está')}</span><b>{t('No está en la base de datos')}</b></p>
+            <p className="small muted mt4">{t('Apúntalo tú: mira la etiqueta del envase.')}</p>
+            <input className="inp mt8" maxLength={LARGO.nombre} value={nombre} onChange={e => setNombre(e.target.value)} placeholder={t('Nombre del producto')} aria-label={t('Nombre del producto')} />
             <div className="grid2 mt8">
-              <Stepper className="sm" valor={kcal} onCambio={setKcal} paso={10} min={0} sufijo="kcal" etiqueta="kcal por envase" />
-              <Stepper className="sm" valor={prot} onCambio={setProt} paso={1} min={0} sufijo="g prot." etiqueta="Proteína por envase" />
+              <Stepper className="sm" valor={kcal} onCambio={setKcal} paso={10} min={0} sufijo="kcal" etiqueta={t('kcal por envase')} />
+              <Stepper className="sm" valor={prot} onCambio={setProt} paso={1} min={0} sufijo={t('g prot.')} etiqueta={t('Proteína por envase')} />
             </div>
-            <p className="small muted mt8">Lo que trae el envase entero o la ración que te comes. Se guarda para la próxima vez.</p>
-            <button className="btn mt8" onClick={() => void anadirAMano(estado.codigo)}>Añadir a mano</button>
-            <button className="lnk mt12" onClick={otraVez}><Ico n="barcode" /> Escanear otro</button>
+            <p className="small muted mt8">{t('Lo que trae el envase entero o la ración que te comes. Se guarda para la próxima vez.')}</p>
+            <button className="btn mt8" onClick={() => void anadirAMano(estado.codigo)}>{t('Añadir a mano')}</button>
+            <button className="lnk mt12" onClick={otraVez}><Ico n="barcode" /> {t('Escanear otro')}</button>
           </div>
         )}
 
         {estado.e === 'offline' && (
           <div className="cam-panel">
-            <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>Sin conexión</b><small>Lo guardamos y lo buscamos solo al volver la cobertura (lo verás en Comida → Mis comidas).</small></span></p>
+            <p className="row"><span className="ico badb"><Ico n="wifi-slash" /></span><span className="tx"><b>{t('Sin conexión')}</b><small>{t('Lo guardamos y lo buscamos solo al volver la cobertura (lo verás en Comida → Mis comidas).')}</small></span></p>
             <div className="btns mt12">
-              <button className="btn gry sm" onClick={() => void salirPendiente(estado.codigo, false)}>Vale</button>
-              <button className="btn sm" onClick={() => void salirPendiente(estado.codigo, true)}>Apuntar como nota</button>
+              <button className="btn gry sm" onClick={() => void salirPendiente(estado.codigo, false)}>{t('Vale')}</button>
+              <button className="btn sm" onClick={() => void salirPendiente(estado.codigo, true)}>{t('Apuntar como nota')}</button>
             </div>
           </div>
         )}

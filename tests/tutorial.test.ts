@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { pasosTutorial } from '../src/ui/tutorial/pasos'
+import { pasosTutorial, type PlataformaTutorial } from '../src/ui/tutorial/pasos'
+import { usarIdiomaEnPruebas } from '../src/i18n'
+import ca from '../src/i18n/ca'
+import en from '../src/i18n/en'
 
 const ids = (p: ReturnType<typeof pasosTutorial>) => p.map(x => x.id)
 const todo = (p: ReturnType<typeof pasosTutorial>) => p.map(x => `${x.titulo} ${x.texto}`).join(' ')
@@ -9,6 +12,12 @@ describe('guion del tutorial', () => {
   const iphone = pasosTutorial({ apple: true, android: false, instalada: false })
   const iphoneInstalada = pasosTutorial({ apple: true, android: false, instalada: true })
   const web = pasosTutorial({ apple: false, android: false, instalada: false })
+  // Cada plataforma con su guion en castellano (para comparar con las traducciones).
+  const guiones: [PlataformaTutorial, ReturnType<typeof pasosTutorial>][] = [
+    [{ apple: false, android: true, instalada: true }, android],
+    [{ apple: true, android: false, instalada: false }, iphone],
+    [{ apple: false, android: false, instalada: false }, web],
+  ]
 
   it('empieza con la bienvenida y acaba en «Ver el tutorial» de Ajustes', () => {
     for (const p of [android, iphone, web]) {
@@ -46,10 +55,26 @@ describe('guion del tutorial', () => {
     expect(todo(web)).not.toMatch(/reloj|Health Connect|Compartir/)
   })
 
-  it('textos cortos: título de una línea y una frase que se lee de un vistazo', () => {
-    for (const p of [android, iphone, web]) for (const x of p) {
-      expect(x.titulo.length, x.id).toBeLessThanOrEqual(34)
-      expect(x.texto.length, x.id).toBeLessThanOrEqual(125)
+  it('textos cortos: título de una línea y una frase que se lee de un vistazo (en los tres idiomas)', () => {
+    const idiomas = [['es', {}], ['ca', ca], ['en', en]] as const
+    try {
+      for (const [i, dic] of idiomas) {
+        usarIdiomaEnPruebas(i, dic)
+        for (const [plataforma, castellano] of guiones) {
+          const p = pasosTutorial(plataforma)
+          p.forEach((x, n) => {
+            expect(x.titulo.length, `${i} ${x.id}`).toBeLessThanOrEqual(34)
+            expect(x.texto.length, `${i} ${x.id}`).toBeLessThanOrEqual(125)
+            // Traducido de verdad: no queda el castellano.
+            if (i !== 'es') {
+              expect(x.titulo, `${i} ${x.id}`).not.toBe(castellano[n]!.titulo)
+              expect(x.texto, `${i} ${x.id}`).not.toBe(castellano[n]!.texto)
+            }
+          })
+        }
+      }
+    } finally {
+      usarIdiomaEnPruebas('es')
     }
   })
 

@@ -14,6 +14,9 @@ import { useNav, type Ruta } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useAjustes, useGimnasio, usePerfil, useRutina } from '../../datos'
 import { duracionDia } from '../../../dominio/generador'
+import { t, tn } from '../../../i18n'
+import { tr } from '../../../i18n/jsx'
+import { nombreEntreno } from '../../../dominio/nombres'
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -70,32 +73,32 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
     })
     void cancelar([9001])
     nav.completa(null)
-    if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso('Semana de prueba terminada') }
-    else { nav.raiz('ini'); aviso(`Guardado. ${cap(DIAS[(new Date().getDay() + 6) % 7]!)} ✓`) }
+    if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso(t('Semana de prueba terminada')) }
+    else { nav.raiz('ini'); aviso(t('Guardado. {dia} ✓', { dia: cap(DIAS[(new Date().getDay() + 6) % 7]!) })) }
   })
 
   return (
     <Pantalla full>
-      <Cab className="fin-hd" crumb={<span className="tag ok"><Ico n="flag-checkered" b />Entreno terminado</span>} titulo={s.nombre} sub={`${cap(fechaLarga(s.fecha))}${g ? ` · ${g.nombre}` : ''}`}
-        derecha={<button className="ib" aria-label="Volver al entreno" onClick={() => nav.completa('entreno')}><Ico n="x" /></button>} />
+      <Cab className="fin-hd" crumb={<span className="tag ok"><Ico n="flag-checkered" b />{t('Entreno terminado')}</span>} titulo={nombreEntreno(s)} sub={`${cap(fechaLarga(s.fecha))}${g ? ` · ${g.nombre}` : ''}`}
+        derecha={<button className="ib" aria-label={t('Volver al entreno')} onClick={() => nav.completa('entreno')}><Ico n="x" /></button>} />
       <div className="pg">
         <div className="spec-box"><div className="spec c2">
           {/* Solo lo que importa; sustituidos y saltados, solo si los hay (el horario y el volumen están en Progreso). */}
-          <p><span>Duración</span><b>{duracion(res.segundos)}</b></p>
-          <p><span>Ejercicios hechos</span><b className="okc">{res.hechos < res.ejercicios ? `${res.hechos} de ${res.ejercicios}` : res.hechos}</b></p>
-          <p><span>Series</span><b>{res.series}</b></p>
-          {res.sustituidos > 0 && <p><span>Cambiados por otro</span><b>{res.sustituidos}</b></p>}
-          {res.saltados > 0 && <p><span>Saltados</span><b>{res.saltados}</b></p>}
+          <p><span>{t('Duración')}</span><b>{duracion(res.segundos)}</b></p>
+          <p><span>{t('Ejercicios hechos')}</span><b className="okc">{res.hechos < res.ejercicios ? t('{n} de {total}', { n: res.hechos, total: res.ejercicios }) : res.hechos}</b></p>
+          <p><span>{t('Series')}</span><b>{res.series}</b></p>
+          {res.sustituidos > 0 && <p><span>{t('Cambiados por otro')}</span><b>{res.sustituidos}</b></p>}
+          {res.saltados > 0 && <p><span>{t('Saltados')}</span><b>{res.saltados}</b></p>}
         </div></div>
 
         {logros.length > 0 && (
           <div className="sec">
-            <div className="sec-h"><h2>Logros</h2><span className="lbl">{logros.length} desbloqueado{logros.length === 1 ? '' : 's'}</span></div>
+            <div className="sec-h"><h2>{t('Logros')}</h2><span className="lbl">{tn(logros.length, '{n} desbloqueado', '{n} desbloqueados')}</span></div>
             <div className="achs">
               {logros.map(({ e, x }, i) => (
                 <div key={i} className="ach">
                   <span className="tro"><Ico n={i === 0 ? 'trophy' : 'medal'} b /></span>
-                  <span className="tx"><small className="au">Desbloqueado{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>Récord en {nombreEjercicio(e.ejercicio).toLowerCase()}</b><small className="mono">{kg(x.peso)} kg × {x.reps}</small></span>
+                  <span className="tx"><small className="au">{t('Desbloqueado')}{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>{t('Récord en {ejercicio}', { ejercicio: nombreEjercicio(e.ejercicio).toLowerCase() })}</b><small className="mono">{kg(x.peso)} kg × {x.reps}</small></span>
                 </div>
               ))}
             </div>
@@ -104,7 +107,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
 
         {subidas.length > 0 && (
           <div className="sec">
-            <div className="sec-h"><h2>Subidas de peso</h2></div>
+            <div className="sec-h"><h2>{t('Subidas de peso')}</h2></div>
             <div className="list">
               {subidas.map(u => (
                 <div key={u.id} className="it">
@@ -117,32 +120,32 @@ export function FinEntreno({ ruta }: { ruta: Ruta }) {
           </div>
         )}
 
-        {calibCompleta && <p className="note ok mt16"><Ico n="gauge" /><span><b>Semana de prueba terminada.</b> Al guardar verás tu rutina definitiva, ajustada a lo que tardas de verdad.</span></p>}
+        {calibCompleta && <p className="note ok mt16"><Ico n="gauge" /><span>{tr('<b>Semana de prueba terminada.</b> Al guardar verás tu rutina definitiva, ajustada a lo que tardas de verdad.', { b: x => <b>{x}</b> })}</span></p>}
 
         {prox?.dia && (
           <div className="sec">
             <div className="card pd row">
               <span className="ico"><Ico n="calendar-blank" /></span>
-              <span className="tx"><span className="lbl">Próxima sesión</span><b>{cap(DIAS[diaSemana(deISO(prox.fecha))]!)} · {formatoHora(perfil.horaEntreno)} · {prox.dia.nombre}</b><small>~{Math.round(duracionDia(prox.dia.bloques) / 60)} min</small></span>
+              <span className="tx"><span className="lbl">{t('Próxima sesión')}</span><b>{cap(DIAS[diaSemana(deISO(prox.fecha))]!)} · {formatoHora(perfil.horaEntreno)} · {nombreEntreno(prox.dia)}</b><small>~{Math.round(duracionDia(prox.dia.bloques) / 60)} min</small></span>
             </div>
           </div>
         )}
 
         <div className="sec">
-          <div className="sec-h"><h2>Antes de guardar</h2><span className="lbl">opcional</span></div>
+          <div className="sec-h"><h2>{t('Antes de guardar')}</h2><span className="lbl">{t('opcional')}</span></div>
           <div className="qq">
-            <p className="lbl">¿Alguna molestia?</p>
+            <p className="lbl">{t('¿Alguna molestia?')}</p>
             <div className="chips">
-              <Chip on={!hayMolestia} onClick={() => setHayMolestia(false)}>Ninguna</Chip>
-              <Chip on={hayMolestia} onClick={() => setHayMolestia(true)}>Sí, te digo dónde</Chip>
+              <Chip on={!hayMolestia} onClick={() => setHayMolestia(false)}>{t('Ninguna')}</Chip>
+              <Chip on={hayMolestia} onClick={() => setHayMolestia(true)}>{t('Sí, te digo dónde')}</Chip>
             </div>
-            {hayMolestia && <input className="inp" maxLength={LARGO.frase} value={molestia} onChange={e => setMolestia(e.target.value)} placeholder="Hombro derecho en el press…" />}
-            <p className="lbl">Nota</p>
-            <textarea className="inp" maxLength={LARGO.nota} value={nota} onChange={e => setNota(e.target.value)} placeholder="Algo que quieras recordar" aria-label="Nota del entreno" />
+            {hayMolestia && <input className="inp" maxLength={LARGO.frase} value={molestia} onChange={e => setMolestia(e.target.value)} placeholder={t('Hombro derecho en el press…')} />}
+            <p className="lbl">{t('Nota')}</p>
+            <textarea className="inp" maxLength={LARGO.nota} value={nota} onChange={e => setNota(e.target.value)} placeholder={t('Algo que quieras recordar')} aria-label={t('Nota del entreno')} />
           </div>
         </div>
         {/* Hasta saber si se completa la calibración no se guarda: si no, no se abriría la rutina definitiva. */}
-        <div className="dock"><button className="btn xl" disabled={calibCompleta === undefined} onClick={() => void guardar()}>Guardar</button></div>
+        <div className="dock"><button className="btn xl" disabled={calibCompleta === undefined} onClick={() => void guardar()}>{t('Guardar')}</button></div>
       </div>
     </Pantalla>
   )

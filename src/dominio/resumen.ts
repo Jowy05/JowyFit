@@ -2,6 +2,7 @@
 import type { Comida, Medicion, PasosDia, Sesion } from '../datos/tipos'
 import { semanaDe, sumarDias } from './fechas'
 import { num } from './calculos'
+import { t, tn } from '../i18n'
 
 export type Resumen = {
   semaforo: 'verde' | 'ambar' | 'rojo'
@@ -9,6 +10,8 @@ export type Resumen = {
   puntos: number
   titulo: string
   frase: string
+  /** Lo bueno y lo malo de la frase en trozos cortos (sin los entrenos ni el «OK»), para las líneas del semáforo. */
+  partes: { bien: string[]; mal: string[] }
   entrenos: number
   fijos: number
   extra: number
@@ -75,34 +78,40 @@ export function resumenSemana(o: {
   const pasosMedia = media(pasosSem.map(p => p.pasos))
   const cumplidos = pasosSem.filter(p => p.pasos >= o.objetivoPasos).length
 
-  // Puntuación sencilla
+  // Puntuación sencilla. Cada punto va a la frase y, en corto (sin «OK»; los entrenos no), a las líneas del semáforo.
   let puntos = 0
   const bien: string[] = [], mal: string[] = []
+  const partes = { bien: [] as string[], mal: [] as string[] }
+  const anotar = (lista: 'bien' | 'mal', frase: string, corto: string | null = frase) => {
+    ;(lista === 'bien' ? bien : mal).push(frase)
+    if (corto) partes[lista].push(corto)
+  }
   const meta = Math.min(o.fijos, o.esperados ?? o.fijos)
+  const entrenos = t('{n}/{total} entrenos', { n: fijasHechas, total: o.fijos })
   if (meta === 0) puntos += 1.5
-  else if (fijasHechas >= meta) { puntos += 2; bien.push(`${fijasHechas}/${o.fijos} entrenos`) }
-  else if (fijasHechas >= meta - 1 && meta > 1) { puntos += 1; mal.push(`${fijasHechas}/${o.fijos} entrenos`) }
-  else mal.push(`${fijasHechas}/${o.fijos} entrenos`)
+  else if (fijasHechas >= meta) { puntos += 2; anotar('bien', entrenos, null) }
+  else if (fijasHechas >= meta - 1 && meta > 1) { puntos += 1; anotar('mal', entrenos, null) }
+  else anotar('mal', entrenos, null)
   if (protMedia == null) puntos += 0.5
-  else if (protMedia >= o.objetivoProteina * 0.9) { puntos += 1; bien.push('proteína OK') }
-  else mal.push('proteína baja')
+  else if (protMedia >= o.objetivoProteina * 0.9) { puntos += 1; anotar('bien', t('proteína OK'), t('proteína')) }
+  else anotar('mal', t('proteína baja'))
   const dC = cActual != null && cAntes != null ? cActual - cAntes : null
   if (dC == null) puntos += 0.5
-  else if (dC <= 0) { puntos += 1; bien.push(dC < 0 ? `${num(dC)} cm de cintura` : 'cintura estable') }
-  else mal.push(`+${num(dC)} cm de cintura`)
-  if (o.recordsSemana > 0) bien.push(`${o.recordsSemana} récord${o.recordsSemana === 1 ? '' : 's'}`)
-  if (pasosSem.length) { if (cumplidos >= 4) { puntos += 0.5; bien.push('pasos OK') } }
+  else if (dC <= 0) { puntos += 1; anotar('bien', dC < 0 ? t('{n} cm de cintura', { n: num(dC) }) : t('cintura estable')) }
+  else anotar('mal', t('{n} cm de cintura', { n: `+${num(dC)}` }))
+  if (o.recordsSemana > 0) anotar('bien', tn(o.recordsSemana, '{n} récord', '{n} récords'))
+  if (pasosSem.length) { if (cumplidos >= 4) { puntos += 0.5; anotar('bien', t('pasos OK'), t('pasos')) } }
   else puntos += 0.25
 
   // Al día con los entrenos y nada en contra: verde aunque falten datos de comida, cintura o pasos.
   const semaforo = puntos >= 3.5 || (!mal.length && meta > 0 && fijasHechas >= meta) ? 'verde' : puntos >= 2 ? 'ambar' : 'rojo'
-  const titulo = semaforo === 'verde' ? 'Vas bien' : semaforo === 'ambar' ? 'Casi' : 'Semana floja'
+  const titulo = semaforo === 'verde' ? t('Vas bien') : semaforo === 'ambar' ? t('Casi') : t('Semana floja')
   const frase = semaforo === 'verde'
     ? bien.join(', ') + '.'
-    : [bien.length ? `Bien: ${bien.join(', ')}` : '', mal.length ? `A mejorar: ${mal.join(', ')}` : ''].filter(Boolean).join('. ') + '.'
+    : [bien.length ? t('Bien: {lista}', { lista: bien.join(', ') }) : '', mal.length ? t('A mejorar: {lista}', { lista: mal.join(', ') }) : ''].filter(Boolean).join('. ') + '.'
 
   return {
-    semaforo, puntos, titulo, frase,
+    semaforo, puntos, titulo, frase, partes,
     entrenos: fijasHechas, fijos: o.fijos, extra,
     records: o.recordsSemana, subidas: o.subidasSemana,
     cintura: { actual: cActual, delta: dC },
@@ -114,14 +123,35 @@ export function resumenSemana(o: {
   }
 }
 
-/** Consejo quincenal por tendencias (no por calorías apuntadas). */
-export function consejoQuincenal(o: { cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }): string {
-  if (o.cinturaDelta == null && o.pesoDelta == null) return 'Pésate y mide la cintura un par de veces para poder ver tu tendencia.'
-  if (o.proteinaMedia != null && o.proteinaMedia < o.objetivoProteina * 0.8) return 'La proteína va corta: un batido o la versión con pollo o atún de lo que ya comes.'
+type DatosConsejo = { cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }
+export type TipoConsejo = 'faltan-datos' | 'proteina' | 'sube-peso' | 'peso-estable' | 'baja-cintura' | 'menos-picoteo' | 'recorta-cenas' | 'estable-picoteo' | 'estable'
+
+/** Qué consejo toca, sin depender del idioma (para decidir el tono sin mirar la frase). */
+export function tipoConsejo(o: DatosConsejo): TipoConsejo {
+  if (o.cinturaDelta == null && o.pesoDelta == null) return 'faltan-datos'
+  if (o.proteinaMedia != null && o.proteinaMedia < o.objetivoProteina * 0.8) return 'proteina'
   const bajaCintura = (o.cinturaDelta ?? 0) < -0.3
   const subePeso = (o.pesoDelta ?? 0) > 0.4
-  if (o.objetivo === 'fuerza') return subePeso ? 'Subes de peso: bien si la cintura no crece.' : 'Peso estable: si quieres ganar fuerza más rápido, come un poco más.'
-  if (bajaCintura) return 'Tu cintura baja: vas bien, sigue igual.'
-  if (subePeso || (o.cinturaDelta ?? 0) > 0.3) return o.picoteoDias >= 2 ? 'Esta quincena: menos picoteo por la tarde.' : 'Esta quincena: recorta un poco las cenas o las bebidas con azúcar.'
-  return o.picoteoDias >= 2 ? 'Todo estable. Para bajar cintura, quita el picoteo de la tarde.' : 'Todo estable. Sigue así y revisamos en dos semanas.'
+  if (o.objetivo === 'fuerza') return subePeso ? 'sube-peso' : 'peso-estable'
+  if (bajaCintura) return 'baja-cintura'
+  if (subePeso || (o.cinturaDelta ?? 0) > 0.3) return o.picoteoDias >= 2 ? 'menos-picoteo' : 'recorta-cenas'
+  return o.picoteoDias >= 2 ? 'estable-picoteo' : 'estable'
+}
+
+/**
+ * Consejo quincenal por tendencias (no por calorías apuntadas). Progreso lo parte por el primer «: » o «. »
+ * (titular y detalle): las traducciones mantienen ese corte.
+ */
+export function consejoQuincenal(o: DatosConsejo): string {
+  switch (tipoConsejo(o)) {
+    case 'faltan-datos': return t('Pésate y mide la cintura un par de veces para poder ver tu tendencia.')
+    case 'proteina': return t('La proteína va corta: un batido o la versión con pollo o atún de lo que ya comes.')
+    case 'sube-peso': return t('Subes de peso: bien si la cintura no crece.')
+    case 'peso-estable': return t('Peso estable: si quieres ganar fuerza más rápido, come un poco más.')
+    case 'baja-cintura': return t('Tu cintura baja: vas bien, sigue igual.')
+    case 'menos-picoteo': return t('Esta quincena: menos picoteo por la tarde.')
+    case 'recorta-cenas': return t('Esta quincena: recorta un poco las cenas o las bebidas con azúcar.')
+    case 'estable-picoteo': return t('Todo estable. Para bajar cintura, quita el picoteo de la tarde.')
+    case 'estable': return t('Todo estable. Sigue así y revisamos en dos semanas.')
+  }
 }

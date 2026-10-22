@@ -4,6 +4,7 @@
 // entraban y dejaban la app en blanco o sin poder apuntar nada.
 import { imagenOFF } from '../dominio/comida'
 import { TABLAS, type NombreTabla } from './db'
+import { t, tk } from '../i18n'
 
 type Fila = Record<string, unknown>
 /** Comprueba un valor y lo devuelve limpio. `undefined` = quitar el campo. Lanza si no vale. */
@@ -11,7 +12,7 @@ type Regla = (v: unknown, donde: string) => unknown
 
 export class CopiaNoValida extends Error {}
 const mal = (donde: string, que: string): never => {
-  throw new CopiaNoValida(`La copia tiene datos que no son de JowyFit (${donde}: ${que}). No se ha cambiado nada.`)
+  throw new CopiaNoValida(t('La copia tiene datos que no son de JowyFit ({donde}: {que}). No se ha cambiado nada.', { donde, que }))
 }
 
 // ---------- límites ----------
@@ -28,20 +29,21 @@ export const LIMITES = {
 export const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'] as const
 
 // ---------- reglas básicas ----------
-const texto = (max: number): Regla => (v, d) => (typeof v === 'string' ? (v.length <= max ? v : mal(d, `texto de ${v.length} letras`)) : mal(d, 'no es un texto'))
+// Lo que se comprueba se dice en el idioma de la app; los nombres de los campos (› nombre, › fecha…) van tal cual.
+const texto = (max: number): Regla => (v, d) => (typeof v === 'string' ? (v.length <= max ? v : mal(d, t('texto de {n} letras', { n: v.length }))) : mal(d, t('no es un texto')))
 const corto = texto(LIMITES.corto)
 const nombre = texto(LIMITES.nombre)
 const nota = texto(LIMITES.nota)
-const fecha: Regla = (v, d) => (typeof v === 'string' && v.length <= 40 && /^\d{4}-\d{2}-\d{2}/.test(v) ? v : mal(d, 'no es una fecha'))
-const hora: Regla = (v, d) => (typeof v === 'string' && /^\d{1,2}:\d{2}$/.test(v) ? v : mal(d, 'no es una hora'))
-const num: Regla = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : mal(d, 'no es un número'))
-const ent = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : mal(d, 'no es un número válido'))
-const bool: Regla = (v, d) => (typeof v === 'boolean' ? v : mal(d, 'no es sí/no'))
+const fecha: Regla = (v, d) => (typeof v === 'string' && v.length <= 40 && /^\d{4}-\d{2}-\d{2}/.test(v) ? v : mal(d, t('no es una fecha')))
+const hora: Regla = (v, d) => (typeof v === 'string' && /^\d{1,2}:\d{2}$/.test(v) ? v : mal(d, t('no es una hora')))
+const num: Regla = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : mal(d, t('no es un número')))
+const ent = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : mal(d, t('no es un número válido')))
+const bool: Regla = (v, d) => (typeof v === 'boolean' ? v : mal(d, t('no es sí/no')))
 const nulo = (r: Regla): Regla => (v, d) => (v === null ? null : r(v, d))
-const constante = (x: string): Regla => (v, d) => (v === x ? v : mal(d, 'no es el esperado'))
-const rango = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : mal(d, 'número fuera de lo normal'))
+const constante = (x: string): Regla => (v, d) => (v === x ? v : mal(d, t('no es el esperado')))
+const rango = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : mal(d, t('número fuera de lo normal')))
 /** Uno de los valores que usa la app (si no, la pantalla no sabía qué pintar y fallaba). */
-const uno = (...valores: string[]): Regla => (v, d) => (typeof v === 'string' && valores.includes(v) ? v : mal(d, 'valor desconocido'))
+const uno = (...valores: string[]): Regla => (v, d) => (typeof v === 'string' && valores.includes(v) ? v : mal(d, t('valor desconocido')))
 /** Igual, pero un valor desconocido se quita (y se usa el de siempre): para el perfil y los ajustes. */
 const unoO = (...valores: string[]): Regla => v => (typeof v === 'string' && valores.includes(v) ? v : undefined)
 /** id de las tablas que lo generan solas (y referencias a ellas: rutinaId, gimnasioId…). */
@@ -50,8 +52,8 @@ const dia = ent(0, 6)
 
 function lista(r: Regla, max = LIMITES.lista): Regla {
   return (v, d) => {
-    if (!Array.isArray(v)) return mal(d, 'no es una lista')
-    if (v.length > max) return mal(d, `lista de ${v.length}`)
+    if (!Array.isArray(v)) return mal(d, t('no es una lista'))
+    if (v.length > max) return mal(d, t('lista de {n}', { n: v.length }))
     // Lo que una regla quita (undefined) no entra en la lista.
     return v.map((x, i) => r(x, `${d} ${i + 1}`)).filter(x => x !== undefined)
   }
@@ -62,12 +64,12 @@ const esObjeto = (v: unknown): v is Fila => !!v && typeof v === 'object' && !Arr
 /** Diccionario libre (referencias, dosis): claves de texto corto y valores con su regla. */
 function dic(r: Regla, max = 200): Regla {
   return (v, d) => {
-    if (!esObjeto(v)) return mal(d, 'no es una lista de valores')
+    if (!esObjeto(v)) return mal(d, t('no es una lista de valores'))
     const e = Object.entries(v)
-    if (e.length > max) return mal(d, 'demasiados valores')
+    if (e.length > max) return mal(d, t('demasiados valores'))
     const out: Fila = {}
     for (const [k, x] of e) {
-      if (k.length > LIMITES.nombre) mal(d, 'nombre demasiado largo')
+      if (k.length > LIMITES.nombre) mal(d, t('nombre demasiado largo'))
       // defineProperty: una clave «__proto__» queda como dato normal, sin cambiar el prototipo.
       Object.defineProperty(out, k, { value: r(x, `${d} › ${k}`), enumerable: true, writable: true, configurable: true })
     }
@@ -82,11 +84,11 @@ const opc = (r: Regla) => ({ r, opc: true })
 /** Objeto con sus campos: los que faltan y son obligatorios rechazan; los desconocidos se quitan. */
 function obj(campos: Campos): Regla {
   return (v, d) => {
-    if (!esObjeto(v)) return mal(d, 'no es un registro')
+    if (!esObjeto(v)) return mal(d, t('no es un registro'))
     const out: Fila = {}
     for (const [k, c] of Object.entries(campos)) {
       const x = Object.prototype.hasOwnProperty.call(v, k) ? v[k] : undefined
-      if (x === undefined) { if (!c.opc) mal(d, `falta «${k}»`); continue }
+      if (x === undefined) { if (!c.opc) mal(d, t('falta «{campo}»', { campo: k })); continue }
       const limpio = c.r(x, `${d} › ${k}`)
       if (limpio !== undefined) out[k] = limpio
     }
@@ -101,8 +103,8 @@ export type RefArchivo = { __archivo: string; tipo: string }
  * abierta en otra pestaña podía ejecutar código con los datos de la app.
  */
 const archivo: Regla = (v, d) => {
-  if (!esObjeto(v) || typeof v.__archivo !== 'string' || typeof v.tipo !== 'string') return mal(d, 'no es una foto')
-  if (!/^archivos\/[A-Za-z0-9._-]{1,100}$/.test(v.__archivo) || v.__archivo.includes('..')) return mal(d, 'nombre de archivo raro')
+  if (!esObjeto(v) || typeof v.__archivo !== 'string' || typeof v.tipo !== 'string') return mal(d, t('no es una foto'))
+  if (!/^archivos\/[A-Za-z0-9._-]{1,100}$/.test(v.__archivo) || v.__archivo.includes('..')) return mal(d, t('nombre de archivo raro'))
   const tipo = v.tipo.trim().toLowerCase()
   if (!(TIPOS_FOTO as readonly string[]).includes(tipo)) return undefined
   return { __archivo: v.__archivo, tipo } satisfies RefArchivo
@@ -212,9 +214,10 @@ const ESQUEMA: Record<NombreTabla, Regla> = {
   perfil: PERFIL, ajustes: AJUSTES, mediciones: MEDICION, fotos: FOTO, gimnasios: GIMNASIO, marcas: MARCA, rutinas: RUTINA, sesiones: SESION,
   comidas: COMIDA, plantillas: PLANTILLA, productos: PRODUCTO, pasos: PASOS, suplementos: SUPLEMENTOS, metas: META,
 }
+// Con tk(): se traducen al usarlos (validarDatos), no al importar.
 const NOMBRE_TABLA: Record<NombreTabla, string> = {
-  perfil: 'perfil', ajustes: 'ajustes', mediciones: 'medidas', fotos: 'fotos', gimnasios: 'gimnasios', marcas: 'notas de ejercicios', rutinas: 'rutinas',
-  sesiones: 'entrenos', comidas: 'comidas', plantillas: 'mis comidas', productos: 'productos', pasos: 'pasos', suplementos: 'suplementos', metas: 'metas',
+  perfil: tk('perfil'), ajustes: tk('ajustes'), mediciones: tk('medidas'), fotos: tk('fotos'), gimnasios: tk('gimnasios'), marcas: tk('notas de ejercicios'), rutinas: tk('rutinas'),
+  sesiones: tk('entrenos'), comidas: tk('comidas'), plantillas: tk('mis comidas'), productos: tk('productos'), pasos: tk('pasos'), suplementos: tk('suplementos'), metas: tk('metas'),
 }
 
 /** Versión del formato de la copia que entiende esta app. */
@@ -222,10 +225,10 @@ export const VERSION_COPIA = 1
 
 /** Comprueba la cabecera (app y versión). */
 export function comprobarCabecera(obj: unknown): asserts obj is { app: 'JowyFit'; version: number; datos: unknown } {
-  if (!esObjeto(obj) || obj.app !== 'JowyFit') throw new CopiaNoValida('El archivo no es una copia de JowyFit')
+  if (!esObjeto(obj) || obj.app !== 'JowyFit') throw new CopiaNoValida(t('El archivo no es una copia de JowyFit'))
   const v = obj.version
-  if (typeof v === 'number' && Number.isInteger(v) && v > VERSION_COPIA) throw new CopiaNoValida('La copia es de una versión más nueva de JowyFit: actualiza la app')
-  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) throw new CopiaNoValida('La copia es de una versión desconocida de JowyFit')
+  if (typeof v === 'number' && Number.isInteger(v) && v > VERSION_COPIA) throw new CopiaNoValida(t('La copia es de una versión más nueva de JowyFit: actualiza la app'))
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) throw new CopiaNoValida(t('La copia es de una versión desconocida de JowyFit'))
 }
 
 /**
@@ -233,21 +236,22 @@ export function comprobarCabecera(obj: unknown): asserts obj is { app: 'JowyFit'
  * y los archivos del zip que hacen falta. Lanza `CopiaNoValida` si algo no cuadra.
  */
 export function validarDatos(datos: unknown): { tablas: Record<NombreTabla, Fila[]>; archivos: Set<string> } {
-  if (!esObjeto(datos)) throw new CopiaNoValida('La copia está dañada: no tiene datos')
-  if (!TABLAS.some(t => Array.isArray(datos[t]))) throw new CopiaNoValida('La copia está dañada: no tiene ninguna tabla de JowyFit')
+  if (!esObjeto(datos)) throw new CopiaNoValida(t('La copia está dañada: no tiene datos'))
+  if (!TABLAS.some(tb => Array.isArray(datos[tb]))) throw new CopiaNoValida(t('La copia está dañada: no tiene ninguna tabla de JowyFit'))
   const tablas = {} as Record<NombreTabla, Fila[]>
-  for (const t of TABLAS) {
-    const v = Object.prototype.hasOwnProperty.call(datos, t) ? datos[t] : undefined
-    if (v == null) { tablas[t] = []; continue }
-    if (!Array.isArray(v)) throw new CopiaNoValida(`La copia está dañada (${NOMBRE_TABLA[t]})`)
-    if (v.length > LIMITES.filas) throw new CopiaNoValida(`La copia tiene demasiados datos (${NOMBRE_TABLA[t]})`)
-    tablas[t] = v.map((f, i) => ESQUEMA[t](f, `${NOMBRE_TABLA[t]} ${i + 1}`) as Fila)
+  for (const tb of TABLAS) {
+    const v = Object.prototype.hasOwnProperty.call(datos, tb) ? datos[tb] : undefined
+    if (v == null) { tablas[tb] = []; continue }
+    const nombreTabla = t(NOMBRE_TABLA[tb])
+    if (!Array.isArray(v)) throw new CopiaNoValida(t('La copia está dañada ({tabla})', { tabla: nombreTabla }))
+    if (v.length > LIMITES.filas) throw new CopiaNoValida(t('La copia tiene demasiados datos ({tabla})', { tabla: nombreTabla }))
+    tablas[tb] = v.map((f, i) => ESQUEMA[tb](f, `${nombreTabla} ${i + 1}`) as Fila)
   }
   // Sin un perfil con el alta hecha, restaurar dejaba el móvil vacío (borraba todo y no ponía nada).
   if (tablas.perfil.length !== 1 || tablas.perfil[0]!.altaCompleta !== true) {
-    throw new CopiaNoValida('La copia está vacía o incompleta: no trae tu perfil. No se ha cambiado nada.')
+    throw new CopiaNoValida(t('La copia está vacía o incompleta: no trae tu perfil. No se ha cambiado nada.'))
   }
-  if (tablas.ajustes.length > 1) throw new CopiaNoValida('La copia está dañada (ajustes)')
+  if (tablas.ajustes.length > 1) throw new CopiaNoValida(t('La copia está dañada ({tabla})', { tabla: t(NOMBRE_TABLA.ajustes) }))
   // Las fotos sin imagen válida (tipo raro o archivo que falta) no se restauran: la pantalla de fotos fallaba con ellas.
   tablas.fotos = tablas.fotos.filter(f => f.imagen !== undefined)
   const archivos = new Set<string>()

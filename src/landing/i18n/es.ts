@@ -247,6 +247,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-4-0.cab': '<b>Versión 0.4.0</b> · 22 de octubre de 2026',
+  'nov.0-4-0.texto': 'La app, en tres idiomas: castellano, catalán e inglés. Por defecto sigue en castellano; cámbialo en Ajustes → Apariencia → Idioma. Fechas, horas, números y los ejercicios (en inglés) salen en tu idioma.',
   'nov.0-3-0.cab': '<b>Versión 0.3.0</b> · 21 de octubre de 2026',
   'nov.0-3-0.texto': 'Tutorial dentro de la app: la primera vez te ofrece un paseo por lo importante, y lo tienes siempre en Ajustes. En iPhone explica lo que allí se hace de otra forma. Y en esta página, una demo de un minuto.',
   'nov.0-2-1.cab': '<b>Versión 0.2.1</b> · 21 de octubre de 2026',

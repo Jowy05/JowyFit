@@ -5,6 +5,7 @@
 import type { Serie, Sesion } from '../datos/tipos'
 import { epley } from './calculos'
 import { lunesDe, sumarDias } from './fechas'
+import { t } from '../i18n'
 
 const trabajo = (s: Serie[]) => s.filter(x => x.hecha && !x.calentamiento && x.peso != null && x.reps != null && x.peso > 0 && x.reps > 0)
 
@@ -79,12 +80,12 @@ export function propuestaDescarga(o: {
   const historial = (id: string) => normales.flatMap(s => s.ejercicios.filter(e => e.ejercicio === id).map(e => ({ series: e.series })))
   const estancados = [...new Set(o.ejerciciosRutina)].filter(id => estancado(historial(id)))
   if (estancados.length >= 3) {
-    return { motivo: `${estancados.length} ejercicios llevan ${SESIONES_ESTANCADO} sesiones sin mejorar (${estancados.slice(0, 3).map(o.nombre).join(', ')}…)`, estancados }
+    return { motivo: t('{n} ejercicios llevan {sesiones} sesiones sin mejorar ({lista}…)', { n: estancados.length, sesiones: SESIONES_ESTANCADO, lista: estancados.slice(0, 3).map(o.nombre).join(', ') }), estancados }
   }
   // Semanas seguidas con entreno, contando hacia atrás desde la pasada (6 sesiones sueltas tras un parón no cuentan).
   const conEntreno = new Set(normales.filter(s => lunesDe(s.fecha) < lunes).map(s => lunesDe(s.fecha)))
   let semanas = 0
   for (let w = sumarDias(lunes, -7); conEntreno.has(w); w = sumarDias(w, -7)) semanas++
-  if (semanas >= SEMANAS_SIN_DESCARGA) return { motivo: `Llevas ${semanas} semanas seguidas entrenando`, estancados }
+  if (semanas >= SEMANAS_SIN_DESCARGA) return { motivo: t('Llevas {n} semanas seguidas entrenando', { n: semanas }), estancados }
   return null
 }

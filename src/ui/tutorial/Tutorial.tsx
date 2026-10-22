@@ -8,6 +8,7 @@ import { esAndroid, esWebApple, estaInstalada } from '../../plataforma'
 import { cx, Hoja, Ico } from '../comp'
 import { RAIZ, useNav } from '../nav'
 import { pasosTutorial } from './pasos'
+import { t } from '../../i18n'
 import '../estilos/tutorial.css'
 
 const CLAVE_OFRECIDO = 'jf-tutorial-ofrecido'
@@ -140,14 +141,14 @@ export function Tutorial({ alCerrar }: { alCerrar: () => void }) {
   // El foco sigue al ancla si algo se recoloca (letra grande, una imagen que acaba de cargar…).
   useEffect(() => {
     if (!listo || !paso.sel) return
-    const t = window.setInterval(() => {
+    const reloj = window.setInterval(() => {
       const el = ancla(paso.sel!)
       if (!el) return
       const r = el.getBoundingClientRect()
       // Solo se recoloca (el alto, si se recortó, se mantiene).
       setCaja(c => (!c || (Math.abs(c.x - r.left) < 2 && Math.abs(c.y - r.top) < 2 && Math.abs(c.w - r.width) < 2) ? c : { ...c, x: r.left, y: r.top, w: r.width }))
     }, 300)
-    return () => window.clearInterval(t)
+    return () => window.clearInterval(reloj)
   }, [listo, paso.sel])
 
   useEffect(() => { if (listo) siguienteRef.current?.focus({ preventScroll: true }) }, [listo, i])
@@ -170,15 +171,15 @@ export function Tutorial({ alCerrar }: { alCerrar: () => void }) {
       {caja && <div className="tut-foco" data-tut-foco="" style={{ left: caja.x - MARGEN, top: caja.y - MARGEN, width: caja.w + MARGEN * 2, height: caja.h + MARGEN * 2 }} />}
       <div ref={tarjetaRef} className={cx('tut-tarjeta', caja ? donde : 'centro', listo && 'visible')} role="dialog" aria-modal="true" aria-labelledby="tut-t" data-tut-tarjeta="">
         <div className="tut-cab">
-          <span className="tut-n">{i + 1} de {pasos.length}</span>
-          <button className="tut-x" aria-label="Salir del tutorial" onClick={cerrar}><Ico n="x" b /></button>
+          <span className="tut-n">{t('{n} de {total}', { n: i + 1, total: pasos.length })}</span>
+          <button className="tut-x" aria-label={t('Salir del tutorial')} onClick={cerrar}><Ico n="x" b /></button>
         </div>
         <h2 id="tut-t">{paso.titulo}</h2>
         <p>{paso.texto}</p>
         <div className="tut-barra" aria-hidden="true"><i style={{ width: `${((i + 1) / pasos.length) * 100}%` }} /></div>
         <div className="tut-btns">
-          {i > 0 ? <button className="btn gry sm" onClick={() => ir(-1)}><Ico n="caret-left" b />Atrás</button> : <button className="btn gry sm" onClick={cerrar}>Ahora no</button>}
-          <button ref={siguienteRef} className="btn sm" onClick={() => ir(1)}>{ultimo ? <><Ico n="check" b />Terminar</> : <>Siguiente<Ico n="caret-right" b /></>}</button>
+          {i > 0 ? <button className="btn gry sm" onClick={() => ir(-1)}><Ico n="caret-left" b />{t('Atrás')}</button> : <button className="btn gry sm" onClick={cerrar}>{t('Ahora no')}</button>}
+          <button ref={siguienteRef} className="btn sm" onClick={() => ir(1)}>{ultimo ? <><Ico n="check" b />{t('Terminar')}</> : <>{t('Siguiente')}<Ico n="caret-right" b /></>}</button>
         </div>
       </div>
     </div>,
@@ -192,11 +193,11 @@ export function HojaOfertaTutorial() {
   return (
     <Hoja className="tut-oferta">
       <img src={`${import.meta.env.BASE_URL}iconos/icono-192.png`} alt="" width={84} height={84} />
-      <h2>¿Te enseño cómo funciona JowyFit?</h2>
-      <p>Un paseo rápido por lo importante: tu rutina, el entreno, la comida y cómo vas. Menos de un minuto.</p>
-      <button className="btn mt16" onClick={() => { nav.hoja(null); lanzarTutorial() }}><Ico n="play" b />Sí, enséñamelo</button>
-      <button className="btn ln mt8" onClick={() => nav.hoja(null)}>Ahora no</button>
-      <p className="small muted mt12 center">Lo tienes siempre en Perfil → Ajustes → «Ver el tutorial».</p>
+      <h2>{t('¿Te enseño cómo funciona JowyFit?')}</h2>
+      <p>{t('Un paseo rápido por lo importante: tu rutina, el entreno, la comida y cómo vas. Menos de un minuto.')}</p>
+      <button className="btn mt16" onClick={() => { nav.hoja(null); lanzarTutorial() }}><Ico n="play" b />{t('Sí, enséñamelo')}</button>
+      <button className="btn ln mt8" onClick={() => nav.hoja(null)}>{t('Ahora no')}</button>
+      <p className="small muted mt12 center">{t('Lo tienes siempre en Perfil → Ajustes → «Ver el tutorial».')}</p>
     </Hoja>
   )
 }

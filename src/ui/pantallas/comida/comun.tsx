@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { db } from '../../../datos/db'
 import type { Comida, Plantilla } from '../../../datos/tipos'
 import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, buscarOFF, imagenOFF, conRacion, escalarMacros, factorRacion, franjaPorHora, tipoRacion, type Macros, type Racion } from '../../../dominio/comida'
+import { t } from '../../../i18n'
 import { num } from '../../../dominio/calculos'
 import { horaActual } from '../../../dominio/fechas'
 import { Cab, cx, Ico, recortar, Seg } from '../../comp'
@@ -16,8 +17,8 @@ export function CabComida({ vista, crumb, fecha }: { vista: Vista; crumb: string
   const nav = useNav()
   // Si se está viendo otro día, lo escaneado se apunta en ese día (antes iba siempre a hoy).
   return (
-    <Cab crumb={crumb} titulo="Comida" derecha={<button className="ib" aria-label="Escanear" onClick={() => nav.ir('com-scan', fecha ? { fecha } : undefined)}><Ico n="barcode" /></button>}>
-      <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: 'Día' }, { v: 'com-plant', t: 'Mis comidas' }]} />
+    <Cab crumb={crumb} titulo={t('Comida')} derecha={<button className="ib" aria-label={t('Escanear')} onClick={() => nav.ir('com-scan', fecha ? { fecha } : undefined)}><Ico n="barcode" /></button>}>
+      <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: t('Día') }, { v: 'com-plant', t: t('Mis comidas') }]} />
     </Cab>
   )
 }
@@ -85,7 +86,7 @@ export function Deslizable({ children, onBorrar, onAbrir }: { children: ReactNod
       >
         {children}
       </div>
-      <button className="swipe-del" aria-label="Borrar" onClick={() => { setAbierta(false); onBorrar() }}><Ico n="trash" b />Borrar</button>
+      <button className="swipe-del" aria-label={t('Borrar')} onClick={() => { setAbierta(false); onBorrar() }}><Ico n="trash" b />{t('Borrar')}</button>
     </div>
   )
 }
@@ -94,12 +95,14 @@ export function Deslizable({ children, onBorrar, onAbrir }: { children: ReactNod
 export function LineaMacros({ m, className }: { m: Macros; className?: string }) {
   const hay = CLAVES_MACROS.filter(k => m[k] != null)
   if (!hay.length) return null
-  return <p className={cx('small muted', className)}>{hay.map(k => `${NOMBRE_MACRO[k]} ${num(m[k]!)} g`).join(' · ')}</p>
+  return <p className={cx('small muted', className)}>{hay.map(k => `${t(NOMBRE_MACRO[k])} ${num(m[k]!)} g`).join(' · ')}</p>
 }
 
 /** kcal y proteína en una línea («600 kcal · 22 g proteína»), siempre con la unidad. */
 export const kp = (kcal: number, prot: number, cafeina?: number) =>
-  cafeina ? `${Math.round(kcal)} kcal · ${Math.round(cafeina)} mg cafeína` : `${Math.round(kcal)} kcal · ${Math.round(prot)} g proteína`
+  cafeina
+    ? t('{kcal} kcal · {mg} mg cafeína', { kcal: Math.round(kcal), mg: Math.round(cafeina) })
+    : t('{kcal} kcal · {g} g proteína', { kcal: Math.round(kcal), g: Math.round(prot) })
 
 /** Busca en Open Food Facts los códigos escaneados sin conexión. Devuelve cuántos encontró. */
 export async function buscarPendientes(): Promise<number> {
@@ -130,24 +133,24 @@ export function baseDeApuntada(c: Comida): ParaElegir['base'] {
  */
 export function ElegirCuanto({ x, onCerrar }: { x: ParaElegir | null; onCerrar: () => void }) {
   if (!x) return null
-  const tr = tipoRacion(x.tipo)
+  const tipo = tipoRacion(x.tipo)
   const destino = document.querySelector('.app') ?? document.body
   return createPortal(
     <div className="popup-fondo" onClick={onCerrar}>
-      <div className="popup" role="dialog" aria-modal="true" aria-label={`Cuánto de ${x.nombre}`} onClick={e => e.stopPropagation()}>
-        <p className="lbl">¿Cuánto has tomado?</p>
+      <div className="popup" role="dialog" aria-modal="true" aria-label={t('Cuánto de {nombre}', { nombre: x.nombre })} onClick={e => e.stopPropagation()}>
+        <p className="lbl">{t('¿Cuánto has tomado?')}</p>
         <h3 className="h3 mt4">{recortar(x.nombre)}</h3>
         <div className="popup-op">
           {(['P', 'N', 'G'] as const).map(r => {
             const v = conRacion(x.base, r, x.tipo)
             return (
               <button key={r} className={cx('chip big ux-com-tam', r === 'N' && 'on')} onClick={() => x.elegir(r)}>
-                <span>{NOMBRE_RACION[r]}<small className="mono">{v.kcal} kcal</small><small>{PISTA_RACION[tr][r]}</small></span>
+                <span>{t(NOMBRE_RACION[r])}<small className="mono">{v.kcal} kcal</small><small>{t(PISTA_RACION[tipo][r])}</small></span>
               </button>
             )
           })}
         </div>
-        <button className="btn gry sm mt12" onClick={onCerrar}>Cancelar</button>
+        <button className="btn gry sm mt12" onClick={onCerrar}>{t('Cancelar')}</button>
       </div>
     </div>,
     destino,

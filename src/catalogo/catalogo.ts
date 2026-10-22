@@ -1,7 +1,10 @@
-// Catálogo de ejercicios RepDB: carga, búsqueda, imágenes y nombres en español.
+// Catálogo de ejercicios RepDB: carga, búsqueda, imágenes y nombres en el idioma de la app.
+// En inglés se usan los textos de RepDB en inglés (catalogo.en.json). En catalán RepDB no trae textos y se quedan en
+// castellano (decisión pendiente del dueño: traducirlos aparte o dejarlos así).
 import { useEffect, useState } from 'react'
-import type { Catalogo, Ejercicio } from './tipos'
+import type { Catalogo, Ejercicio, TextosCatalogo } from './tipos'
 import { propio } from '../dominio/claves'
+import { idioma, t } from '../i18n'
 
 let cache: Catalogo | null = null
 let promesa: Promise<Catalogo> | null = null
@@ -23,28 +26,63 @@ export function textoComun(t: string): string {
   return t.replace(/\b([Mm])áquina Smith\b/g, '$1áquina de barra guiada').replace(/\bbarra Smith\b/g, 'barra guiada')
 }
 
-export function usarCatalogo(c: Catalogo) {
+/**
+ * Deja listo el catálogo. Con textos en inglés, cada ejercicio, material, músculo y etiqueta que los tenga los usa
+ * tal cual; lo que se queda en castellano lleva los arreglos de nombreComun/textoComun (son solo del castellano).
+ */
+export function usarCatalogo(c: Catalogo, ingles?: TextosCatalogo | null) {
   for (const e of c.ejercicios) {
+    const en = ingles ? propio(ingles.ejercicios, e.id) : undefined
+    if (en) {
+      e.nombre = en.nombre
+      e.descripcion = en.descripcion
+      e.instrucciones = en.instrucciones
+      e.consejos = en.consejos
+      continue
+    }
     e.nombre = nombreComun(e.nombre)
     e.descripcion = textoComun(e.descripcion)
     e.instrucciones = e.instrucciones.map(textoComun)
     e.consejos = e.consejos.map(textoComun)
   }
-  for (const m of Object.values(c.material)) m.nombre = textoComun(m.nombre)
+  for (const [k, m] of Object.entries(c.material)) {
+    const en = ingles ? propio(ingles.material, k) : undefined
+    m.nombre = en?.nombre || textoComun(m.nombre)
+  }
+  if (ingles) {
+    for (const [k, m] of Object.entries(c.musculos)) {
+      const en = propio(ingles.musculos, k)
+      if (en?.nombre) { m.nombre = en.nombre; if (en.cientifico) m.cientifico = en.cientifico }
+    }
+    for (const [g, etiquetas] of Object.entries(c.etiquetas)) {
+      const en = propio(ingles.etiquetas, g)
+      if (en) for (const k of Object.keys(etiquetas)) { const v = propio(en, k); if (v) etiquetas[k] = v }
+    }
+  }
   cache = c
   indice = new Map(c.ejercicios.map(e => [e.id, e]))
 }
 
 export async function cargarCatalogo(): Promise<Catalogo> {
   if (cache) return cache
-  promesa ??= fetch(`${base()}repdb/catalogo.json`).then(r => {
-    if (!r.ok) throw new Error(`No se pudo cargar el catálogo (${r.status})`)
-    return r.json() as Promise<Catalogo>
-  }).then(c => { usarCatalogo(c); return c })
+  promesa ??= Promise.all([
+    fetch(`${base()}repdb/catalogo.json`).then(r => {
+      if (!r.ok) throw new Error(t('No se pudo cargar el catálogo ({estado})', { estado: r.status }))
+      return r.json() as Promise<Catalogo>
+    }),
+    idioma() === 'en' ? cargarIngles() : null,
+  ]).then(([c, en]) => { usarCatalogo(c, en); return c })
   // Si falla (sin conexión, archivo a medio bajar), la próxima vez se vuelve a intentar: antes el fallo se quedaba
   // guardado y el catálogo ya no cargaba hasta cerrar la app.
   promesa.catch(() => { promesa = null })
   return promesa
+}
+
+/** Textos en inglés; si no llegan, el catálogo sale en castellano en vez de no abrir. */
+function cargarIngles(): Promise<TextosCatalogo | null> {
+  return fetch(`${base()}repdb/catalogo.en.json`)
+    .then(r => (r.ok ? (r.json() as Promise<TextosCatalogo>) : null))
+    .catch(() => null)
 }
 
 export function catalogoCargado(): Catalogo | null {
@@ -64,7 +102,7 @@ export function ejercicio(id: string | null | undefined): Ejercicio | undefined 
 }
 
 export function nombreEjercicio(id: string | null | undefined): string {
-  return ejercicio(id)?.nombre ?? 'Ejercicio'
+  return ejercicio(id)?.nombre ?? t('Ejercicio')
 }
 
 /** URL de la imagen grande. pose: 'start' | 'peak' | 'main'. */
@@ -86,7 +124,7 @@ export function imagenMusculo(clave: string): string | undefined {
 }
 
 export const nombreMaterial = (clave: string | null) =>
-  clave ? (propio(cache?.material, clave)?.nombre ?? clave) : 'Peso corporal'
+  clave ? (propio(cache?.material, clave)?.nombre ?? clave) : t('Peso corporal')
 export const nombreMusculo = (clave: string) => propio(cache?.musculos, clave)?.nombre ?? clave
 export const etiqueta = (grupo: string, clave: string) => propio(propio(cache?.etiquetas, grupo), clave) ?? clave
 

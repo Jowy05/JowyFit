@@ -10,6 +10,7 @@ import { edad, hoyISO } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
 import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
 import { grasaPorMedidas } from '../dominio/tendencias'
+import { regionNumeros, t } from '../i18n'
 import { calcularInforme, hayDatosEn, primerDato, rangoInforme, type CatalogoInforme, type Informe, type PeriodoInforme, type RangoInforme, type SeccionesInforme, type TablasInforme } from '../dominio/informe'
 
 export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
@@ -61,7 +62,9 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
     const sinCalibrar = historialEn(todas.filter(x => !x.calibracion), id, excluir)
     if (estancado(sinCalibrar)) {
       const p = pesoReinicio(s.peso, lista)
-      if (p < s.peso) return { ...s, accion: 'bajar', peso: p, reps: objetivo.repsMin, texto: `Llevas ${SESIONES_ESTANCADO} sesiones sin mejorar: baja a ${String(p).replace('.', ',')} kg y vuelve a subir` }
+      // En inglés, punto decimal.
+      const pesoTxt = regionNumeros() === 'en-US' ? String(p) : String(p).replace('.', ',')
+      if (p < s.peso) return { ...s, accion: 'bajar', peso: p, reps: objetivo.repsMin, texto: t('Llevas {n} sesiones sin mejorar: baja a {peso} kg y vuelve a subir', { n: SESIONES_ESTANCADO, peso: pesoTxt }) }
     }
   }
   // Sin historial: si el perfil tiene un peso de referencia para este ejercicio, se parte de él.
@@ -86,11 +89,11 @@ export async function sugerenciasDia(dia: DiaRutina, g?: Gimnasio | null): Promi
 }
 
 export function totalesComida(lista: Comida[]) {
-  return lista.reduce((t, c) => ({ kcal: t.kcal + c.kcal, proteina: t.proteina + c.proteina, cafeina: t.cafeina + (c.cafeina ?? 0) }), { kcal: 0, proteina: 0, cafeina: 0 })
+  return lista.reduce((suma, c) => ({ kcal: suma.kcal + c.kcal, proteina: suma.proteina + c.proteina, cafeina: suma.cafeina + (c.cafeina ?? 0) }), { kcal: 0, proteina: 0, cafeina: 0 })
 }
 
 export async function comidasDe(fecha: string): Promise<Comida[]> {
-  return (await db.comidas.where('fecha').equals(fecha).toArray()).sort((a, b) => a.hora.localeCompare(b.hora))
+  return (await db.comidas.where('fecha').equals(fecha).toArray()).sort((a, b) => String(a.hora).localeCompare(String(b.hora)))
 }
 
 export async function ultimaMedicion(campo: 'peso' | 'cintura' | 'cuello' | 'cadera' | 'bascula'): Promise<Medicion | undefined> {

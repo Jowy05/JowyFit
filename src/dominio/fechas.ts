@@ -1,10 +1,45 @@
-// Fechas en hora local, semanas de lunes a domingo, en español.
+// Fechas en hora local, semanas de lunes a domingo, con los nombres en el idioma de la app.
 import type { Dia } from '../datos/tipos'
+import { idioma, t, type Idioma } from '../i18n'
 
-export const DIAS_CORTOS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
-export const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] as const
-export const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] as const
-export const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const
+type Siete = readonly [string, string, string, string, string, string, string]
+type Doce = readonly [string, string, string, string, string, string, string, string, string, string, string, string]
+type Nombres = { dias: Siete; cortos: Siete; abrev: Siete; meses: Doce; mesesCortos: Doce }
+
+// En minúscula salvo en inglés (allí días y meses van siempre con mayúscula). Los cortos caben en un cuadradito.
+const NOMBRES: Record<Idioma, Nombres> = {
+  es: {
+    dias: ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'],
+    cortos: ['L', 'M', 'X', 'J', 'V', 'S', 'D'],
+    abrev: ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'],
+    meses: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+    mesesCortos: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
+  },
+  ca: {
+    dias: ['dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte', 'diumenge'],
+    cortos: ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'],
+    abrev: ['dl.', 'dt.', 'dc.', 'dj.', 'dv.', 'ds.', 'dg.'],
+    meses: ['gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', 'agost', 'setembre', 'octubre', 'novembre', 'desembre'],
+    mesesCortos: ['gen', 'febr', 'març', 'abr', 'maig', 'juny', 'jul', 'ag', 'set', 'oct', 'nov', 'des'],
+  },
+  en: {
+    dias: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    cortos: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+    abrev: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    meses: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    mesesCortos: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  },
+}
+// El idioma no cambia con la app abierta (cambiarlo recarga): se eligen una vez, al cargar.
+const N = NOMBRES[idioma()]
+
+/** Letra de cada día (L M X…; en inglés se repiten T y S: no usarlas como key de React). */
+export const DIAS_CORTOS: Siete = N.cortos
+export const DIAS: Siete = N.dias
+/** «lun», «dl.», «Mon». */
+export const DIAS_ABREV: Siete = N.abrev
+export const MESES: Doce = N.meses
+export const MESES_CORTOS: Doce = N.mesesCortos
 
 const dos = (n: number) => String(n).padStart(2, '0')
 
@@ -60,25 +95,37 @@ export function minutosDe(hhmm: string): number {
   return hh * 60 + mm
 }
 
+/** «18:30»; en inglés, con AM/PM como en EE. UU. («6:30 PM»). */
 export function formatoHora(hhmm: string): string {
   const [h, m] = (hhmm ?? '').split(':')
-  return `${Number(h) || 0}:${(m ?? '00').padStart(2, '0')}`
+  return reloj(Number(h) || 0, (m ?? '00').padStart(2, '0'))
 }
+const reloj = (h: number, mm: string) => (idioma() === 'en' ? `${h % 12 || 12}:${mm} ${h < 12 ? 'AM' : 'PM'}` : `${h}:${mm}`)
 
+/** «martes 13 de octubre» · «dimarts 13 d'octubre» · «Tuesday, October 13». */
 export function fechaLarga(s: string): string {
   const d = deISO(s)
-  return `${DIAS[diaSemana(d)]} ${d.getDate()} de ${MESES[d.getMonth()]}`
+  const dia = DIAS[diaSemana(d)], mes = MESES[d.getMonth()]!
+  if (idioma() === 'en') return `${dia}, ${mes} ${d.getDate()}`
+  if (idioma() === 'ca') return `${dia} ${d.getDate()} ${/^[aeiouàèéíòóú]/i.test(mes) ? "d'" : 'de '}${mes}`
+  return `${dia} ${d.getDate()} de ${mes}`
+}
+
+/** Día y mes corto en el orden del idioma: «13 oct» · «Oct 13». mes: 0 = enero. */
+export function diaMes(dia: number, mes: number): string {
+  const m = MESES_CORTOS[mes] ?? ''
+  return idioma() === 'en' ? `${m} ${dia}` : `${dia} ${m}`
 }
 
 export function fechaCorta(s: string): string {
   const d = deISO(s)
-  return `${d.getDate()} ${MESES_CORTOS[d.getMonth()]}`
+  return diaMes(d.getDate(), d.getMonth())
 }
 
-/** «5:31» a partir de una marca de tiempo. */
+/** «5:31» a partir de una marca de tiempo («5:31 AM» en inglés). */
 export function horaDe(ts: number): string {
   const d = new Date(ts)
-  return `${d.getHours()}:${dos(d.getMinutes())}`
+  return reloj(d.getHours(), dos(d.getMinutes()))
 }
 
 /** Duración «54:12» o «1:02:05». */
@@ -90,10 +137,10 @@ export function duracion(segundos: number): string {
 
 export function saludo(ahora = new Date()): string {
   const h = ahora.getHours()
-  if (h < 6) return 'Buenos días'
-  if (h < 14) return 'Buenos días'
-  if (h < 21) return 'Buenas tardes'
-  return 'Buenas noches'
+  if (h < 6) return t('Buenos días')
+  if (h < 14) return t('Buenos días')
+  if (h < 21) return t('Buenas tardes')
+  return t('Buenas noches')
 }
 
 /** Número de semana desde una fecha de inicio (1 = la primera). */

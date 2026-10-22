@@ -11,12 +11,13 @@ import { useAviso } from '../../aviso'
 import { usePerfilCargado } from '../../datos'
 import type { Perfil } from '../../../datos/tipos'
 import { propio } from '../../../dominio/claves'
+import { t } from '../../../i18n'
 
 export function HojaSuplemento({ ruta }: { ruta: Ruta }) {
   // El formulario se monta con el perfil ya cargado: con el de por defecto, «Guardar» pisaba el batido con 24 g.
   const perfil = usePerfilCargado()
   const s = String(ruta.d?.nombre ?? '')
-  if (!perfil) return <Hoja titulo={s}><p className="muted">Cargando…</p></Hoja>
+  if (!perfil) return <Hoja titulo={t(s)}><p className="muted">{t('Cargando…')}</p></Hoja>
   return <Formulario perfil={perfil} s={s} />
 }
 
@@ -34,29 +35,31 @@ function Formulario({ perfil, s }: { perfil: Perfil; s: string }) {
     await guardarPerfil({ dosisSuplementos: { ...perfil.dosisSuplementos, [s]: dosis.trim() }, ...(batido ? { batido: b } : {}) })
     if (batido) {
       // Lo mismo en el batido de Mis comidas y en el que ya se haya marcado hoy.
-      await db.plantillas.filter(p => p.nombre.toLowerCase() === s.toLowerCase()).modify({ kcal: b.kcal, proteina: b.proteina })
+      // La de Mis comidas puede llevar el nombre traducido (las comidas de partida se crean en el idioma de la app).
+      const nombres = [s.toLowerCase(), t(s).toLowerCase()]
+      await db.plantillas.filter(p => nombres.includes(p.nombre.toLowerCase())).modify({ kcal: b.kcal, proteina: b.proteina })
       await db.comidas.where('fecha').equals(hoyISO()).filter(c => c.suplemento === s).modify({ kcal: b.kcal, proteina: b.proteina })
     }
     nav.hoja(null)
-    aviso(`Guardado: ${s}${dosis.trim() ? ` · ${dosis.trim()}` : ''}`)
+    aviso(t('Guardado: {nombre}', { nombre: `${t(s)}${dosis.trim() ? ` · ${dosis.trim()}` : ''}` }))
   })
 
   return (
-    <Hoja titulo={s} sub="Cuánto tomas">
-      <span className="lbl fl">Cantidad</span>
-      <input className="inp" maxLength={LARGO.corto} value={dosis} onChange={e => setDosis(e.target.value)} placeholder={dosisPorDefecto(s) || 'p. ej. 1 cápsula'} aria-label={`Cantidad de ${s}`} />
-      <p className="small muted mt4">Escríbelo como lo tomas: «10 g», «2 cápsulas»… {dosisPorDefecto(s) ? `Si lo dejas vacío, pone «${dosisDe(undefined, s)}».` : ''}</p>
+    <Hoja titulo={t(s)} sub={t('Cuánto tomas')}>
+      <span className="lbl fl">{t('Cantidad')}</span>
+      <input className="inp" maxLength={LARGO.corto} value={dosis} onChange={e => setDosis(e.target.value)} placeholder={dosisPorDefecto(s) || t('p. ej. 1 cápsula')} aria-label={t('Cantidad de {nombre}', { nombre: t(s) })} />
+      <p className="small muted mt4">{t('Escríbelo como lo tomas: «10 g», «2 cápsulas»…')} {dosisPorDefecto(s) ? t('Si lo dejas vacío, pone «{dosis}».', { dosis: dosisDe(undefined, s) }) : ''}</p>
       {batido && (
         <>
-          <p className="lbl fl mt16">Lo que lleva cada batido</p>
+          <p className="lbl fl mt16">{t('Lo que lleva cada batido')}</p>
           <div className="grid2">
-            <Stepper className="sm" valor={b.proteina} onCambio={v => setB({ proteina: v, kcal: kcalTocadas ? b.kcal : kcalBatido(v) })} paso={1} min={0} sufijo="g prot." etiqueta="Proteína del batido" />
-            <Stepper className="sm" valor={b.kcal} onCambio={v => { setKcalTocadas(true); setB({ ...b, kcal: v }) }} paso={10} min={0} sufijo="kcal" etiqueta="kcal del batido" />
+            <Stepper className="sm" valor={b.proteina} onCambio={v => setB({ proteina: v, kcal: kcalTocadas ? b.kcal : kcalBatido(v) })} paso={1} min={0} sufijo={t('g prot.')} etiqueta={t('Proteína del batido')} />
+            <Stepper className="sm" valor={b.kcal} onCambio={v => { setKcalTocadas(true); setB({ ...b, kcal: v }) }} paso={10} min={0} sufijo="kcal" etiqueta={t('kcal del batido')} />
           </div>
-          <p className="small muted mt4">Mira el bote: viene por cacito. Al marcarlo en Comida, se suma al día.</p>
+          <p className="small muted mt4">{t('Mira el bote: viene por cacito. Al marcarlo en Comida, se suma al día.')}</p>
         </>
       )}
-      <button className="btn mt20" onClick={() => void guardar()}><Ico n="check" b />Guardar</button>
+      <button className="btn mt20" onClick={() => void guardar()}><Ico n="check" b />{t('Guardar')}</button>
     </Hoja>
   )
 }

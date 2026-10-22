@@ -2,7 +2,8 @@
 // rayas de objetivo fuera del área de dibujo y marcas (último dato, récord); y las filas de zonas al estilo Fitdays.
 // Se dibujan sobre el Lienzo en mm; las medidas son las de la maqueta (.cache/pdf-maqueta/generar-maqueta.mjs).
 import { num } from '../dominio/calculos'
-import { MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../dominio/fechas'
+import { DIAS_CORTOS, MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../dominio/fechas'
+import { t } from '../i18n'
 import { C, ESTILO, fondoCab, fondoCasilla, letraCab, type Ancla, type Lienzo } from './lienzo'
 
 export type Eje = { min: number; max: number; marcas: number[] }
@@ -189,7 +190,7 @@ export function etiquetasFechas(dias: string[], anchoMm: number, minGap = 13, ba
   if (n <= 8) {
     const hueco = barras ? anchoMm / n : anchoMm / (n - 1)
     const cada = hueco >= 7 ? 1 : 2
-    return dias.flatMap((f, i) => (i % cada ? [] : [{ i, t: `${'LMXJVSD'[(deISO(f).getDay() + 6) % 7]} ${deISO(f).getDate()}`, anc: barras || (i > 0 && i < n - 1) ? 'middle' as const : i === 0 ? 'start' as const : 'end' as const }]))
+    return dias.flatMap((f, i) => (i % cada ? [] : [{ i, t: `${DIAS_CORTOS[(deISO(f).getDay() + 6) % 7]} ${deISO(f).getDate()}`, anc: barras || (i > 0 && i < n - 1) ? 'middle' as const : i === 0 ? 'start' as const : 'end' as const }]))
   }
   const paso = anchoMm / (n - 1)
   const largo = n > 62
@@ -234,7 +235,7 @@ export const altoZonas = (filas: number) => 5.5 + 0.6 + filas * (10.5 + 0.6)
  * siempre lo mismo; una barra oscura hasta el valor, el número en negrita y la palabra de la app en su color.
  */
 export function filasZonas(l: Lienzo, x: number, y: number, o: { w: number; filas: FilaZonas[]; nombres?: string[]; anchos?: number[]; col?: number }) {
-  const nombres = o.nombres ?? ['Bajo', 'Estándar', 'Alto']
+  const nombres = o.nombres ?? [t('Bajo'), t('Estándar'), t('Alto')]
   const anchos = o.anchos ?? [0.24, 0.32, 0.44]
   const col = o.col ?? 34, w = o.w
   const fh = 10.5, hh = 5.5, gap = 0.6

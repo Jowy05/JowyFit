@@ -1,10 +1,12 @@
 // Comida: franjas por hora, raciones P/N/G, lectura de Open Food Facts, picoteo y cafeína.
 import type { Comida, Franja, Medicion, Plantilla, Producto } from '../datos/tipos'
+import { t, tc, tk } from '../i18n'
 import { propio } from './claves'
 import { minutosDe } from './fechas'
-import { consejoQuincenal } from './resumen'
+import { consejoQuincenal, tipoConsejo } from './resumen'
 import { datosQuincena as numerosQuincena } from './tendencias'
 
+// En castellano (para las cuentas y el informe); lo que se pinta va con nombreFranja().
 export const FRANJAS: { v: Franja; t: string; icono: string }[] = [
   { v: 'desayuno', t: 'Desayuno', icono: 'sun-horizon' },
   { v: 'comida', t: 'Comida', icono: 'sun' },
@@ -13,6 +15,16 @@ export const FRANJAS: { v: Franja; t: string; icono: string }[] = [
 ]
 
 export const NOMBRE_FRANJA: Record<Franja, string> = { desayuno: 'Desayuno', comida: 'Comida', merienda: 'Merienda', cena: 'Cena' }
+
+/** El momento del día en el idioma de la app. «Comida» lleva contexto: la pestaña es otra cosa (ca «Dinar», en «Lunch»). */
+export function nombreFranja(f: Franja): string {
+  switch (f) {
+    case 'desayuno': return t('Desayuno')
+    case 'comida': return tc('franja', 'Comida')
+    case 'merienda': return t('Merienda')
+    default: return t('Cena')
+  }
+}
 
 /** Franja según la hora: de 5 a 11 desayuno, hasta las 16:30 comida, hasta las 19:30 merienda y luego cena (también de madrugada). */
 export function franjaPorHora(hhmm: string): Franja {
@@ -35,19 +47,20 @@ const FACTORES: Record<TipoRacion, Record<Racion, number>> = { plato: { P: 1 / 3
 export const tipoRacion = (tipo?: string): TipoRacion => (tipo === 'picoteo' ? 'picoteo' : 'plato')
 export const factorRacion = (r: Racion, tipo?: string) => FACTORES[tipoRacion(tipo)][r]
 /** Las raciones con palabras: nada de «P N G» sueltas. Las mismas en Añadir, la nota, el producto y Mis comidas. */
-export const NOMBRE_RACION: Record<Racion, string> = { P: 'Poco', N: 'Normal', G: 'Mucho' }
+// Marcados con tk(): se traducen al pintarlos con t().
+export const NOMBRE_RACION: Record<Racion, string> = { P: tk('Poco'), N: tk('Normal'), G: tk('Mucho') }
 /** Qué es cada ración, en pequeño debajo del botón. */
 export const PISTA_RACION: Record<TipoRacion, Record<Racion, string>> = {
-  plato: { P: '⅓ del plato', N: 'el plato', G: 'plato y medio' },
-  picoteo: { P: 'un ⅓', N: 'la mitad', G: 'todo' },
+  plato: { P: tk('⅓ del plato'), N: tk('el plato'), G: tk('plato y medio') },
+  picoteo: { P: tk('un ⅓'), N: tk('la mitad'), G: tk('todo') },
 }
 /** Coletilla de la ración para avisos y listas: nada si es la normal, «poco» o «mucho» si no. */
-export const textoRacion = (r: Racion) => (r === 'N' ? '' : NOMBRE_RACION[r].toLowerCase())
+export const textoRacion = (r: Racion) => (r === 'N' ? '' : t(NOMBRE_RACION[r]).toLowerCase())
 
 /** Hidratos, grasas, azúcares y sal en gramos (solo si se saben: los escaneados los traen). */
 export type Macros = { hidratos?: number; grasas?: number; azucares?: number; sal?: number }
 export const CLAVES_MACROS = ['hidratos', 'azucares', 'grasas', 'sal'] as const
-export const NOMBRE_MACRO: Record<keyof Macros, string> = { hidratos: 'Hidratos', azucares: 'de ellos, azúcares', grasas: 'Grasas', sal: 'Sal' }
+export const NOMBRE_MACRO: Record<keyof Macros, string> = { hidratos: tk('Hidratos'), azucares: tk('de ellos, azúcares'), grasas: tk('Grasas'), sal: tk('Sal') }
 /** Multiplica los macros que haya (con un decimal); los que no se saben siguen sin saberse. */
 export function escalarMacros(m: Macros, f: number): Macros {
   const out: Macros = {}
@@ -75,7 +88,7 @@ function empieza(n: string, palabras: string, entera = false): boolean {
 /** Color e icono de la miniatura según lo que parece el nombre. */
 export function aspecto(nombre: string, tipo?: string): { fp: string; icono: string } {
   const n = nombre.toLowerCase()
-  const cafe = empieza(n, 'café|cafe|cafés|cafes', true)
+  const cafe = empieza(n, 'café|cafe|cafés|cafes|cafè|cafès|coffee', true)
   if (tipo === 'bebida' || cafe || empieza(n, 'monster|red ?bull|energética|energetica|bebida energ|fuze|fuse|refresco|zumo|bebida|cerveza|cola|coca') || empieza(n, 'agua|aguas|té|te verde|te negro|infusión|infusion', true)) {
     return { fp: 'f-dr', icono: cafe ? 'coffee' : 'lightning' }
   }
@@ -134,7 +147,7 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
   return {
     codigo,
     // Recortados: un nombre enorme congelaba las listas al pintarlas.
-    nombre: (nombre || `Producto ${codigo}`).slice(0, 150),
+    nombre: (nombre || t('Producto {codigo}', { codigo })).slice(0, 150),
     marca: (typeof p.brands === 'string' ? p.brands : '').split(',')[0]!.trim().slice(0, 80),
     imagen: imagenOFF(p.image_front_small_url) ?? imagenOFF(p.image_front_url),
     kcal100: kcal100 == null ? null : Math.round(kcal100),
@@ -162,9 +175,9 @@ export async function buscarOFF(codigo: string, f: typeof fetch = fetch): Promis
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { estado: 'offline' }
   try {
     const ctl = new AbortController()
-    const t = setTimeout(() => ctl.abort(), 9000)
+    const temporizador = setTimeout(() => ctl.abort(), 9000)
     const res = await f(URL_OFF(codigo), { signal: ctl.signal })
-    clearTimeout(t)
+    clearTimeout(temporizador)
     if (res.status === 404) return { estado: 'no' }
     if (!res.ok) return { estado: 'offline' }
     const p = leerOFF(codigo, await res.json())
@@ -211,9 +224,10 @@ export function picoteoDeSemana(comidas: Comida[], dias: string[]) {
 
 /** Aviso de cafeína: pasado el límite diario o a partir de la hora tope (6 h antes de dormir por defecto). */
 export function avisoCafeina(mg: number, limite: number, horaTope: string, ahora: string): { tono: 'ok' | 'warn' | 'bad'; texto: string } {
-  if (mg > limite) return { tono: 'bad', texto: `Te has pasado del límite de ${limite} mg de hoy.` }
-  if (minutosDe(ahora) >= minutosDe(horaTope)) return { tono: 'warn', texto: `Desde las ${horaTope.replace(/^0/, '')}, mejor sin cafeína: te quita sueño.` }
-  return { tono: mg > limite * 0.75 ? 'warn' : 'ok', texto: `A partir de las ${horaTope.replace(/^0/, '')} te avisamos para que duermas bien.` }
+  const hora = horaTope.replace(/^0/, '')
+  if (mg > limite) return { tono: 'bad', texto: t('Te has pasado del límite de {n} mg de hoy.', { n: limite }) }
+  if (minutosDe(ahora) >= minutosDe(horaTope)) return { tono: 'warn', texto: t('Desde las {hora}, mejor sin cafeína: te quita sueño.', { hora }) }
+  return { tono: mg > limite * 0.75 ? 'warn' : 'ok', texto: t('A partir de las {hora} te avisamos para que duermas bien.', { hora }) }
 }
 
 /** Plantillas ordenadas: más usadas primero y, a igualdad, por nombre. */
@@ -233,17 +247,21 @@ export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas:
   const pesoDelta = r1(base.pesoDelta)
   const picoteoDias = base.picoteoDias
   const proteinaMedia = base.proteinaMedia == null ? null : Math.round(base.proteinaMedia)
-  const consejo = consejoQuincenal({ cinturaDelta, pesoDelta, picoteoDias, proteinaMedia, objetivoProteina: o.objetivoProteina, objetivo: o.objetivo })
-  if (cinturaDelta == null && pesoDelta == null) return { consejo, tono: 'neutral', etiqueta: 'Faltan datos', cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
-  const bien = (cinturaDelta ?? 0) < -0.3 || (/^Todo estable\. Sigue/.test(consejo)) || (o.objetivo === 'fuerza' && !/come un poco más/.test(consejo))
-  return { consejo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? 'Vas bien' : 'Un ajuste', cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
+  const datos = { cinturaDelta, pesoDelta, picoteoDias, proteinaMedia, objetivoProteina: o.objetivoProteina, objetivo: o.objetivo }
+  const consejo = consejoQuincenal(datos)
+  if (cinturaDelta == null && pesoDelta == null) return { consejo, tono: 'neutral', etiqueta: t('Faltan datos'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
+  // Por el tipo de consejo y no por su frase, que cambia con el idioma. Va bien si baja la cintura, si está todo
+  // estable sin picoteo o, con «fuerza», si no toca «come un poco más».
+  const tipo = tipoConsejo(datos)
+  const bien = (cinturaDelta ?? 0) < -0.3 || tipo === 'estable' || (o.objetivo === 'fuerza' && tipo !== 'peso-estable')
+  return { consejo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? t('Vas bien') : t('Un ajuste'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
 }
 
 // ---------- «Lo de ayer» y «Recientes» al añadir ----------
 
 /** Lo que se apuntó ayer en esa franja (para repetirlo de un toque). */
 export function deAyer(comidas: Comida[], ayer: string, franja: Franja): Comida[] {
-  return comidas.filter(c => c.fecha === ayer && c.franja === franja).sort((a, b) => a.hora.localeCompare(b.hora))
+  return comidas.filter(c => c.fecha === ayer && c.franja === franja).sort((a, b) => String(a.hora).localeCompare(String(b.hora)))
 }
 
 /**
@@ -254,7 +272,7 @@ export function recientes(comidas: Comida[], antesDe: string, plantillas: { nomb
   const yaPlantilla = new Set(plantillas.map(p => p.nombre.trim().toLowerCase()))
   const vistos = new Set<string>()
   const out: Comida[] = []
-  for (const c of [...comidas].filter(c => c.fecha < antesDe || c.fecha === antesDe).sort((a, b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora))) {
+  for (const c of [...comidas].filter(c => c.fecha < antesDe || c.fecha === antesDe).sort((a, b) => (b.fecha + String(b.hora)).localeCompare(a.fecha + String(a.hora)))) {
     const k = c.nombre.trim().toLowerCase()
     if (!k || vistos.has(k) || yaPlantilla.has(k) || c.plantillaId != null) continue
     vistos.add(k)
@@ -277,17 +295,17 @@ export const TAMANOS_NOTA: { v: TamanoNota; t: string }[] = [
  * Valores típicos de una comida según su tamaño, para quien no sabe las kcal de lo que ha comido.
  * Desayuno y merienda suelen ser más pequeños que la comida y la cena.
  */
-export function notaPorTamano(t: TamanoNota, franja: Franja): { kcal: number; proteina: number } {
+export function notaPorTamano(tam: TamanoNota, franja: Franja): { kcal: number; proteina: number } {
   const pequena = franja === 'desayuno' || franja === 'merienda'
   const plato = pequena ? { kcal: 350, proteina: 15 } : { kcal: 600, proteina: 25 }
   // Las mismas proporciones que las raciones de un plato: ⅓, el plato y plato y medio (kcal redondeadas a 10).
-  const f = factorRacion(t === 'ligera' ? 'P' : t === 'normal' ? 'N' : 'G')
+  const f = factorRacion(tam === 'ligera' ? 'P' : tam === 'normal' ? 'N' : 'G')
   return { kcal: Math.round((plato.kcal * f) / 10) * 10, proteina: Math.round(plato.proteina * f) }
 }
 
 /** Qué tamaño corresponde a unos valores (para marcar el botón al editar algo escrito a mano); null si se afinaron. */
 export function tamanoDe(kcal: number, proteina: number, franja: Franja): TamanoNota | null {
-  return TAMANOS_NOTA.find(t => { const v = notaPorTamano(t.v, franja); return v.kcal === kcal && v.proteina === proteina })?.v ?? null
+  return TAMANOS_NOTA.find(x => { const v = notaPorTamano(x.v, franja); return v.kcal === kcal && v.proteina === proteina })?.v ?? null
 }
 
 /** Productos escaneados que aún no están guardados en «Mis comidas» (para no enseñarlos dos veces). */
@@ -298,11 +316,12 @@ export function escaneadosSueltos<P extends { codigo: string }>(productos: P[], 
 
 // ---------- suplementos ----------
 /** El batido de proteína se apunta como comida (suma proteína al día); el resto solo se marca. */
-export const esBatido = (s: string) => /prote|batido/i.test(s)
+// También en catalán e inglés, por si el suplemento se escribe así.
+export const esBatido = (s: string) => /prote|batido|batut|shake/i.test(s)
 /** Lo habitual si el dueño no ha escrito su cantidad. */
 export function dosisPorDefecto(s: string): string {
-  if (/creatina/i.test(s)) return '3-5 g'
-  if (esBatido(s)) return '1 cacito'
+  if (/creatin/i.test(s)) return '3-5 g'
+  if (esBatido(s)) return t('1 cacito')
   return ''
 }
 /** La cantidad que toma (la suya o la habitual). */

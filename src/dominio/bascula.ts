@@ -2,6 +2,7 @@
 // Health Connect da el peso y la grasa por separado: aquí se juntan los de la misma pesada y se quitan
 // los que ya están en la app (traídos antes o apuntados a mano), para no tener la misma medida dos veces.
 import type { Medicion } from '../datos/tipos'
+import { t } from '../i18n'
 
 /** Un dato suelto de Health Connect: cuándo (ISO), el valor, su id y la app que lo escribió. */
 export type MuestraHC = { fecha: string; valor: number; id?: string; fuente?: string }
@@ -13,7 +14,7 @@ const MISMA_PESADA_MS = 10 * 60_000
 const valido = { peso: (v: number) => v >= 25 && v <= 300, grasa: (v: number) => v >= 2 && v <= 70 }
 
 export function juntarBascula(pesos: MuestraHC[], grasas: MuestraHC[]): LecturaBascula[] {
-  const t = (m: { fecha: string }) => new Date(m.fecha).getTime()
+  const ms = (m: { fecha: string }) => new Date(m.fecha).getTime()
   const out: LecturaBascula[] = pesos
     .filter(p => valido.peso(p.valor))
     .map(p => ({ fecha: p.fecha, pesoKg: Math.round(p.valor * 10) / 10, ids: p.id ? [p.id] : [], fuente: p.fuente }))
@@ -21,7 +22,7 @@ export function juntarBascula(pesos: MuestraHC[], grasas: MuestraHC[]): LecturaB
   // Cada grasa con el peso más cercano, empezando por las parejas más juntas. Antes se iban emparejando en el orden
   // en que llegaban: una grasa de 8 minutos antes se quedaba el peso y la de la misma pesada (a 10 s) iba suelta.
   const pares: { p: number; g: number; d: number }[] = []
-  out.forEach((l, p) => gs.forEach((g, i) => { const d = Math.abs(t(l) - t(g)); if (d <= MISMA_PESADA_MS) pares.push({ p, g: i, d }) }))
+  out.forEach((l, p) => gs.forEach((g, i) => { const d = Math.abs(ms(l) - ms(g)); if (d <= MISMA_PESADA_MS) pares.push({ p, g: i, d }) }))
   pares.sort((a, b) => a.d - b.d)
   const pareja = new Map<number, number>()
   const conGrasa = new Set<number>()
@@ -101,7 +102,7 @@ const APPS: [RegExp, string][] = [
   [/shealth|samsung/i, 'Samsung Health'], [/google.*fitness|fitbit/i, 'Google Fit'], [/withings/i, 'Withings'], [/renpho/i, 'Renpho'],
 ]
 export function nombreFuente(fuente?: string): string {
-  if (!fuente) return 'tu báscula'
+  if (!fuente) return t('tu báscula')
   const conocida = APPS.find(([re]) => re.test(fuente))
   if (conocida) return conocida[1]
   if (!fuente.includes('.')) return fuente

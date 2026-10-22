@@ -424,6 +424,7 @@ button.card.row{display:flex}
 .pl b{font:600 13.5px var(--font-mono);white-space:nowrap}
 .pl.cut{color:var(--muted)}
 .pl.cut b::after{content:" · se quita si vas con prisa";font:600 11.5px var(--font-body);color:var(--warn)}
+.pl.cut b[data-cut]::after{content:" · " attr(data-cut)}
 .ssb{border-left:3px solid var(--go);padding-left:10px;margin:0 0 2px}
 .ss-l{display:block;font:600 11px var(--font-display);letter-spacing:.09em;text-transform:uppercase;color:var(--go);padding-top:6px}
 .pl-sum{display:block;padding:0 14px 12px 66px;color:var(--muted);font-size:13.5px;line-height:1.45}

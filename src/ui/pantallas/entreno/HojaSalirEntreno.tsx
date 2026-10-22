@@ -6,14 +6,15 @@ import { Hoja, Ico, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
 import { useSesionEnCurso } from '../../datos'
+import { t } from '../../../i18n'
 
 export function HojaSalirEntreno() {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
   const unaVez = useUnaVez()
-  if (s === undefined) return <Hoja titulo="Entreno"><p className="muted">Cargando…</p></Hoja>
-  if (!s) return <Hoja titulo="Entreno"><p className="muted">No hay entreno en curso.</p></Hoja>
+  if (s === undefined) return <Hoja titulo={t('Entreno')}><p className="muted">{t('Cargando…')}</p></Hoja>
+  if (!s) return <Hoja titulo={t('Entreno')}><p className="muted">{t('No hay entreno en curso.')}</p></Hoja>
 
   const libre = s.letra === 'L'
   const hayAlgo = s.ejercicios.some(e => e.series.some(x => x.hecha))
@@ -24,15 +25,15 @@ export function HojaSalirEntreno() {
     void cancelar([9001])
     nav.hoja(null)
     nav.completa(null)
-    aviso(libre ? 'Entreno libre cerrado' : 'Entreno cerrado sin guardar: no habías hecho ninguna serie')
+    aviso(libre ? t('Entreno libre cerrado') : t('Entreno cerrado sin guardar: no habías hecho ninguna serie'))
   })
 
   return (
-    <Hoja titulo={libre ? 'Estás en un entreno libre' : 'Estás entrenando'} sub="¿Quieres acabarlo?">
-      <p className="muted">{hayAlgo ? 'Al acabar verás el resumen y se guarda lo que has hecho.' : 'Aún no has hecho ninguna serie: al acabar no se guarda nada.'}</p>
+    <Hoja titulo={libre ? t('Estás en un entreno libre') : t('Estás entrenando')} sub={t('¿Quieres acabarlo?')}>
+      <p className="muted">{hayAlgo ? t('Al acabar verás el resumen y se guarda lo que has hecho.') : t('Aún no has hecho ninguna serie: al acabar no se guarda nada.')}</p>
       <div className="btns mt16">
-        <button className="btn gry" onClick={() => void acabar()}><Ico n="flag-checkered" b />Acabar</button>
-        <button className="btn" onClick={() => nav.hoja(null)}><Ico n="play" b />Continuar</button>
+        <button className="btn gry" onClick={() => void acabar()}><Ico n="flag-checkered" b />{t('Acabar')}</button>
+        <button className="btn" onClick={() => nav.hoja(null)}><Ico n="play" b />{t('Continuar')}</button>
       </div>
     </Hoja>
   )

@@ -2,6 +2,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState, type ComponentType } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cargarCatalogo } from '../catalogo/catalogo'
+import { cargarIdioma, t, tk } from '../i18n'
 import { db, pedirPersistencia } from '../datos/db'
 import { prepararBase } from '../datos/repos'
 import { alPulsarAtras, marcarPlataforma, prepararSonido } from '../plataforma'
@@ -32,7 +33,8 @@ export function App() {
   const [listo, setListo] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    Promise.all([cargarCatalogo(), prepararBase()])
+    // El idioma (si no es castellano) se carga antes de pintar nada: así todo sale ya traducido.
+    Promise.all([cargarIdioma(), cargarCatalogo(), prepararBase()])
       .then(() => { setListo(true); void pedirPersistencia() })
       .catch(e => setError(String(e?.message ?? e)))
   }, [])
@@ -42,7 +44,7 @@ export function App() {
   useEffect(() => alPedirInstrucciones(() => setInstalar(true)), [])
   const cerrarInstalar = () => { marcarVistas(); setInstalar(false) }
   // Antes solo decía «No se pudo abrir la app» y no había salida: ahora se puede recuperar una copia o borrar los datos.
-  if (error) return <PantallaRescate detalle={`No se pudo abrir la app: ${error}`} />
+  if (error) return <PantallaRescate detalle={t('No se pudo abrir la app: {error}', { error })} />
   if (!listo || perfil === null) return <div className="app"><div className="cargando">JowyFit</div></div>
   return (
     <ProveedorAviso>
@@ -65,12 +67,13 @@ function MarcoAlta() {
   return <div className="app is-full" data-letra={letra}><div className="screens"><Alta /></div></div>
 }
 
+// Los nombres se traducen al pintarlos (esta lista se crea antes de cargar el idioma).
 const TABS: { t: Pestana; n: string; i: string }[] = [
-  { t: 'ini', n: 'Inicio', i: 'house' },
-  { t: 'rut', n: 'Rutina', i: 'barbell' },
-  { t: 'com', n: 'Comida', i: 'fork-knife' },
-  { t: 'pro', n: 'Progreso', i: 'chart-line-up' },
-  { t: 'per', n: 'Perfil', i: 'user' },
+  { t: 'ini', n: tk('Inicio'), i: 'house' },
+  { t: 'rut', n: tk('Rutina'), i: 'barbell' },
+  { t: 'com', n: tk('Comida'), i: 'fork-knife' },
+  { t: 'pro', n: tk('Progreso'), i: 'chart-line-up' },
+  { t: 'per', n: tk('Perfil'), i: 'user' },
 ]
 
 function Marco() {
@@ -148,10 +151,10 @@ function Marco() {
         </RedSeguridad>
       </div>
       {enCurso && <MiniBarra sesion={sesion} />}
-      <nav className="tabbar" aria-label="Pestañas">
-        {TABS.map(t => (
-          <button key={t.t} className={cx(nav.estado.pestana === t.t && !full && 'on')} aria-label={t.n} aria-current={nav.estado.pestana === t.t ? 'page' : undefined} onClick={() => nav.pestana(t.t)}>
-            <Ico n={t.i} />{t.n}
+      <nav className="tabbar" aria-label={t('Pestañas')}>
+        {TABS.map(x => (
+          <button key={x.t} className={cx(nav.estado.pestana === x.t && !full && 'on')} aria-label={t(x.n)} aria-current={nav.estado.pestana === x.t ? 'page' : undefined} onClick={() => nav.pestana(x.t)}>
+            <Ico n={x.i} />{t(x.n)}
           </button>
         ))}
       </nav>

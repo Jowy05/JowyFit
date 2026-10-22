@@ -8,23 +8,24 @@ import { deISO, MESES } from '../../../dominio/fechas'
 import { grasaPorMedidas, hitosDominadas, pesoMaximo, seriesDe, ultimoValor } from '../../../dominio/tendencias'
 import { Cab, Seg } from '../../comp'
 import { useNav } from '../../nav'
+import { t, tk } from '../../../i18n'
 
 export type PestanaProgreso = 'pro-sem' | 'pro-fuerza' | 'pro-cuerpo' | 'pro-fotos' | 'pro-obj'
 
 const PESTANAS: { v: PestanaProgreso; t: string }[] = [
-  { v: 'pro-sem', t: 'Semana' },
-  { v: 'pro-fuerza', t: 'Fuerza' },
-  { v: 'pro-cuerpo', t: 'Cuerpo' },
-  { v: 'pro-fotos', t: 'Fotos' },
-  { v: 'pro-obj', t: 'Metas' },
+  { v: 'pro-sem', t: tk('Semana') },
+  { v: 'pro-fuerza', t: tk('Fuerza') },
+  { v: 'pro-cuerpo', t: tk('Cuerpo') },
+  { v: 'pro-fotos', t: tk('Fotos') },
+  { v: 'pro-obj', t: tk('Metas') },
 ]
 
 /** Cabecera común de las cinco pantallas raíz de Progreso, con sus pestañas superiores. */
 export function CabProgreso({ actual, crumb, derecha, children }: { actual: PestanaProgreso; crumb?: ReactNode; derecha?: ReactNode; children?: ReactNode }) {
   const nav = useNav()
   return (
-    <Cab crumb={crumb} titulo="Progreso" derecha={derecha}>
-      <div data-tour="progreso"><Seg valor={actual} onCambio={v => { if (v !== actual) nav.reemplazar(v) }} opciones={PESTANAS} /></div>
+    <Cab crumb={crumb} titulo={t('Progreso')} derecha={derecha}>
+      <div data-tour="progreso"><Seg valor={actual} onCambio={v => { if (v !== actual) nav.reemplazar(v) }} opciones={PESTANAS.map(p => ({ v: p.v, t: t(p.t) }))} /></div>
       {children}
     </Cab>
   )
@@ -32,10 +33,10 @@ export function CabProgreso({ actual, crumb, derecha, children }: { actual: Pest
 
 export const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-/** «13/10» para el eje de las gráficas. */
+/** «13/10» para el eje de las gráficas (en inglés, «10/13»). */
 export function fechaPunto(iso: string): string {
   const d = deISO(iso)
-  return `${d.getDate()}/${d.getMonth() + 1}`
+  return t('{dia}/{mes}', { dia: d.getDate(), mes: d.getMonth() + 1 })
 }
 
 /** «Junio 2027» a partir de AAAA-MM-DD. */
@@ -44,37 +45,38 @@ export function mesAno(iso: string): string {
   return `${capital(MESES[d.getMonth()]!)} ${d.getFullYear()}`
 }
 
+// Los textos de estas listas van sin traducir (tk): se traducen al pintarlos con t(x.t).
 export const ORIGENES: { v: OrigenMedicion; t: string; icono: string }[] = [
-  { v: 'casa', t: 'Báscula de casa', icono: 'house' },
-  { v: 'gimnasio', t: 'Del gimnasio', icono: 'barbell' },
-  { v: 'cinta', t: 'Cinta métrica', icono: 'ruler' },
-  { v: 'manual', t: 'A mano', icono: 'pencil-simple' },
-  { v: 'otra', t: 'Otra', icono: 'dots-three' },
+  { v: 'casa', t: tk('Báscula de casa'), icono: 'house' },
+  { v: 'gimnasio', t: tk('Del gimnasio'), icono: 'barbell' },
+  { v: 'cinta', t: tk('Cinta métrica'), icono: 'ruler' },
+  { v: 'manual', t: tk('A mano'), icono: 'pencil-simple' },
+  { v: 'otra', t: tk('Otra'), icono: 'dots-three' },
 ]
 
 export const NOMBRE_ORIGEN: Record<OrigenMedicion, string> = {
-  casa: 'Báscula de casa', gimnasio: 'Báscula del gimnasio', cinta: 'Cinta métrica', manual: 'Apuntado a mano', otra: 'Otra',
+  casa: tk('Báscula de casa'), gimnasio: tk('Báscula del gimnasio'), cinta: tk('Cinta métrica'), manual: tk('Apuntado a mano'), otra: tk('Otra'),
 }
 export const ICONO_ORIGEN: Record<OrigenMedicion, string> = { casa: 'scales', gimnasio: 'barbell', cinta: 'ruler', manual: 'pencil-simple', otra: 'dots-three' }
 
 export type Perimetro = keyof NonNullable<Medicion['perimetros']>
 
 export const PERIMETROS: { k: Perimetro; t: string; corto: string }[] = [
-  { k: 'cintura', t: 'Cintura', corto: 'Cintura' },
-  { k: 'cuello', t: 'Cuello', corto: 'cuello' },
-  { k: 'cadera', t: 'Cadera', corto: 'cadera' },
-  { k: 'pecho', t: 'Pecho', corto: 'pecho' },
-  { k: 'brazo', t: 'Brazo relajado', corto: 'brazo' },
-  { k: 'brazoContraido', t: 'Brazo contraído', corto: 'brazo contr.' },
-  { k: 'muslo', t: 'Muslo', corto: 'muslo' },
+  { k: 'cintura', t: tk('Cintura'), corto: tk('Cintura') },
+  { k: 'cuello', t: tk('Cuello'), corto: tk('cuello') },
+  { k: 'cadera', t: tk('Cadera'), corto: tk('cadera') },
+  { k: 'pecho', t: tk('Pecho'), corto: tk('pecho') },
+  { k: 'brazo', t: tk('Brazo relajado'), corto: tk('brazo') },
+  { k: 'brazoContraido', t: tk('Brazo contraído'), corto: tk('brazo contr.') },
+  { k: 'muslo', t: tk('Muslo'), corto: tk('muslo') },
 ]
 
 /** Texto de una serie: «47,5 × 8», «asist. 15 kg × 6», «45 s», «10 reps». */
 export function textoSerie(x: Serie, registro: EjercicioSesion['registro']): string {
   if (registro === 'tiempo') return `${x.segundos ?? x.reps ?? 0} s`
   if (registro === 'cardio') return x.segundos ? `${Math.round(x.segundos / 60)} min` : `${x.reps ?? 0} min`
-  if (registro === 'corporal' || x.peso == null) return `${x.reps ?? 0} reps`
-  if (registro === 'asistido') return `asist. ${kg(Math.abs(x.peso))} × ${x.reps ?? 0}`
+  if (registro === 'corporal' || x.peso == null) return t('{n} reps', { n: x.reps ?? 0 })
+  if (registro === 'asistido') return t('asist. {peso} × {reps}', { peso: kg(Math.abs(x.peso)), reps: x.reps ?? 0 })
   return `${kg(x.peso)} × ${x.reps ?? 0}`
 }
 
@@ -96,12 +98,12 @@ export function useUrlsFotos(fotos: Foto[]): Map<number, string> {
 // ---------- metas ----------
 
 export const TIPOS_META: { v: Meta['tipo']; t: string; unidad: string; paso: number; icono: string }[] = [
-  { v: 'cintura', t: 'Cintura', unidad: 'cm', paso: 0.5, icono: 'ruler' },
-  { v: 'ejercicio', t: 'Ejercicio', unidad: 'kg', paso: 2.5, icono: 'barbell' },
-  { v: 'dominadas', t: 'Dominadas', unidad: 'reps', paso: 1, icono: 'arrow-fat-lines-up' },
-  { v: 'grasa', t: '% grasa', unidad: '%', paso: 0.5, icono: 'drop' },
-  { v: 'peso', t: 'Peso', unidad: 'kg', paso: 0.5, icono: 'scales' },
-  { v: 'libre', t: 'Otra', unidad: '', paso: 1, icono: 'flag' },
+  { v: 'cintura', t: tk('Cintura'), unidad: 'cm', paso: 0.5, icono: 'ruler' },
+  { v: 'ejercicio', t: tk('Ejercicio'), unidad: 'kg', paso: 2.5, icono: 'barbell' },
+  { v: 'dominadas', t: tk('Dominadas'), unidad: 'reps', paso: 1, icono: 'arrow-fat-lines-up' },
+  { v: 'grasa', t: tk('% grasa'), unidad: '%', paso: 0.5, icono: 'drop' },
+  { v: 'peso', t: tk('Peso'), unidad: 'kg', paso: 0.5, icono: 'scales' },
+  { v: 'libre', t: tk('Otra'), unidad: '', paso: 1, icono: 'flag' },
 ]
 
 /**

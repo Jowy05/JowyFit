@@ -5,7 +5,8 @@
 import { useEffect, useState } from 'react'
 import { db } from '../../../datos/db'
 import type { Franja, Plantilla } from '../../../datos/tipos'
-import { FRANJAS, NOMBRE_FRANJA, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora, tipoRacion } from '../../../dominio/comida'
+import { FRANJAS, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora, nombreFranja, tipoRacion } from '../../../dominio/comida'
+import { t, tc, tk } from '../../../i18n'
 import { horaActual, hoyISO } from '../../../dominio/fechas'
 import { hacerFoto } from '../../../plataforma'
 import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, LARGO } from '../../comp'
@@ -17,7 +18,7 @@ import { LineaMacros, apuntarPlantilla, useUrlBlob } from './comun'
 const POR_DEFECTO = { comida: { kcal: 600, proteina: 25 }, picoteo: { kcal: 300, proteina: 4 }, bebida: { kcal: 100, proteina: 0 } } as const
 const nueva = (): Plantilla => ({ nombre: '', ...POR_DEFECTO.comida, tipo: 'comida', usos: 0 })
 /** Qué se escribe arriba de los números, según el tipo. */
-const QUE_TRAE = { comida: 'Lo que trae el plato', picoteo: 'Lo que trae entero (la bolsa, el paquete…)', bebida: 'Lo que trae (la lata, el vaso…)' } as const
+const QUE_TRAE = { comida: tk('Lo que trae el plato'), picoteo: tk('Lo que trae entero (la bolsa, el paquete…)'), bebida: tk('Lo que trae (la lata, el vaso…)') } as const
 
 export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -33,18 +34,19 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
   // Una comida nueva no tiene id: con un doble toque en «Guardar» se creaban dos.
   const unaVez = useUnaVez()
   useEffect(() => {
-    if (id != null) void db.plantillas.get(id).then(x => setP(x ?? nueva()))
+    // Las comidas de partida se guardan en castellano: al editarlas, el nombre sale (y se guarda) en el idioma de la app.
+    if (id != null) void db.plantillas.get(id).then(x => setP(x ? { ...x, nombre: t(x.nombre) } : nueva()))
   }, [id])
-  if (!p) return <Hoja titulo="Mis comidas"><p className="muted">Cargando…</p></Hoja>
+  if (!p) return <Hoja titulo={t('Mis comidas')}><p className="muted">{t('Cargando…')}</p></Hoja>
   const cambia = (c: Partial<Plantilla>) => setP({ ...p, ...c })
   const numeros = (c: Partial<Plantilla>) => { setTocados(true); cambia(c) }
   const a = aspecto(p.nombre || 'comida', p.tipo)
   const ponTipo = (tipo: Plantilla['tipo']) => cambia({ tipo, ...(tocados ? {} : POR_DEFECTO[tipo]) })
-  const tr = tipoRacion(p.tipo)
+  const tipo = tipoRacion(p.tipo)
 
   /** La comida lista para guardar, o null (con aviso) si falta el nombre. */
   const limpia = (): Plantilla | null => {
-    if (!p.nombre.trim()) { aviso('Ponle un nombre'); return null }
+    if (!p.nombre.trim()) { aviso(t('Ponle un nombre')); return null }
     return { ...p, nombre: p.nombre.trim(), cafeina: p.tipo === 'bebida' ? p.cafeina ?? 0 : p.cafeina || undefined }
   }
   const guardar = unaVez(async () => {
@@ -53,7 +55,7 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
     await db.plantillas.put(x)
     nav.hoja(null)
     // Crear no es apuntar: el aviso lo dice para que nadie crea que ya está en el Día.
-    aviso(id == null ? `Creada «${x.nombre}» (aún sin apuntar)` : 'Cambios guardados')
+    aviso(id == null ? t('Creada «{nombre}» (aún sin apuntar)', { nombre: x.nombre }) : t('Cambios guardados'))
   })
   const guardarYApuntar = unaVez(async () => {
     const x = limpia()
@@ -67,65 +69,65 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
     const deshacer = await apuntarPlantilla({ ...x, id: nuevoId }, 'N', fecha, franja)
     nav.hoja(null)
     // Deshacer quita lo apuntado; la comida sigue en Mis comidas.
-    aviso(`Apuntado: ${x.nombre}`, deshacer)
+    aviso(t('Apuntado: {nombre}', { nombre: x.nombre }), deshacer)
   })
   const borrar = async () => {
     if (p.id == null) return
     const copia = p
     await db.plantillas.delete(p.id)
     nav.hoja(null)
-    aviso(`Borrado de Mis comidas: ${p.nombre}`, () => { void db.plantillas.put(copia) })
+    aviso(t('Borrado de Mis comidas: {nombre}', { nombre: p.nombre }), () => { void db.plantillas.put(copia) })
   }
   const foto = async () => { const f = await hacerFoto(600); if (f) cambia({ foto: f }) }
 
   return (
-    <Hoja titulo={id == null ? 'Crear comida nueva' : 'Editar'} sub={id == null ? 'Queda en Mis comidas para apuntarla con un toque' : 'Mis comidas · se apunta con un toque'} className="tall">
+    <Hoja titulo={id == null ? t('Crear comida nueva') : t('Editar')} sub={id == null ? t('Queda en Mis comidas para apuntarla con un toque') : t('Mis comidas · se apunta con un toque')} className="tall">
       <div className="row">
-        <button className={cx('fp xl', !fotoUrl && a.fp)} aria-label="Foto (opcional)" onClick={() => void foto()} style={fotoUrl ? { background: '#fff' } : undefined}>
+        <button className={cx('fp xl', !fotoUrl && a.fp)} aria-label={t('Foto (opcional)')} onClick={() => void foto()} style={fotoUrl ? { background: '#fff' } : undefined}>
           {fotoUrl ? <img src={fotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Ico n="camera" b />}
         </button>
         <div className="grow">
-          <span className="lbl fl">Nombre</span>
-          <input className="inp" maxLength={LARGO.nombre} value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder="p. ej. Lentejas de mi madre" aria-label="Nombre de la comida" />
-          <small className="small muted">Foto opcional: toca la cámara.</small>
+          <span className="lbl fl">{t('Nombre')}</span>
+          <input className="inp" maxLength={LARGO.nombre} value={p.nombre} onChange={e => cambia({ nombre: e.target.value })} placeholder={t('p. ej. Lentejas de mi madre')} aria-label={t('Nombre de la comida')} />
+          <small className="small muted">{t('Foto opcional: toca la cámara.')}</small>
         </div>
       </div>
 
-      <p className="lbl fl mt16">Qué es</p>
+      <p className="lbl fl mt16">{t('Qué es')}</p>
       <div className="chips eq">
-        <Chip on={p.tipo === 'comida'} onClick={() => ponTipo('comida')}>Comida</Chip>
-        <Chip on={p.tipo === 'picoteo'} onClick={() => ponTipo('picoteo')}>Picoteo</Chip>
-        <Chip on={p.tipo === 'bebida'} onClick={() => ponTipo('bebida')}>Bebida</Chip>
+        <Chip on={p.tipo === 'comida'} onClick={() => ponTipo('comida')}>{tc('plato', 'Comida')}</Chip>
+        <Chip on={p.tipo === 'picoteo'} onClick={() => ponTipo('picoteo')}>{t('Picoteo')}</Chip>
+        <Chip on={p.tipo === 'bebida'} onClick={() => ponTipo('bebida')}>{t('Bebida')}</Chip>
       </div>
 
-      <p className="lbl fl mt16">{QUE_TRAE[p.tipo]}</p>
+      <p className="lbl fl mt16">{t(QUE_TRAE[p.tipo])}</p>
       <div className="grid2">
         <Stepper className="sm" valor={p.kcal} onCambio={v => numeros({ kcal: v })} paso={10} min={0} sufijo="kcal" etiqueta="kcal" />
-        <Stepper className="sm" valor={p.proteina} onCambio={v => numeros({ proteina: v })} paso={1} min={0} sufijo="g prot." etiqueta="Proteína" />
+        <Stepper className="sm" valor={p.proteina} onCambio={v => numeros({ proteina: v })} paso={1} min={0} sufijo={t('g prot.')} etiqueta={t('Proteína')} />
       </div>
       {p.tipo === 'bebida' && (
-        <div className="mt8"><Stepper className="sm" valor={p.cafeina ?? 0} onCambio={v => cambia({ cafeina: v })} paso={10} min={0} sufijo="mg cafeína" etiqueta="Cafeína" /></div>
+        <div className="mt8"><Stepper className="sm" valor={p.cafeina ?? 0} onCambio={v => cambia({ cafeina: v })} paso={10} min={0} sufijo={t('mg cafeína')} etiqueta={t('Cafeína')} /></div>
       )}
       <LineaMacros m={p} className="mt4" />
       <p className="small muted mt4">
-        Toca un número para escribirlo. {p.tipo === 'comida' ? 'Si no lo sabes, deja lo que viene: es un plato normal.' : p.tipo === 'bebida' ? 'Una lata de energética lleva unos 160 mg de cafeína; un café, unos 80 mg.' : 'Mira la etiqueta del paquete, o deja lo que viene.'}
+        {t('Toca un número para escribirlo.')} {p.tipo === 'comida' ? t('Si no lo sabes, deja lo que viene: es un plato normal.') : p.tipo === 'bebida' ? t('Una lata de energética lleva unos 160 mg de cafeína; un café, unos 80 mg.') : t('Mira la etiqueta del paquete, o deja lo que viene.')}
       </p>
 
       {/* Cómo queda al apuntarla: los mismos tres botones que verás en Añadir, con estos números. */}
-      <p className="lbl fl mt16">Al apuntarla</p>
-      <div className="ux-com-prev" aria-label="Cuánto es cada ración">
+      <p className="lbl fl mt16">{t('Al apuntarla')}</p>
+      <div className="ux-com-prev" aria-label={t('Cuánto es cada ración')}>
         {(['P', 'N', 'G'] as const).map(r => (
-          <span key={r}><b>{NOMBRE_RACION[r]}</b><span className="mono">{conRacion(p, r, p.tipo).kcal} kcal</span><small>{PISTA_RACION[tr][r]}</small></span>
+          <span key={r}><b>{t(NOMBRE_RACION[r])}</b><span className="mono">{conRacion(p, r, p.tipo).kcal} kcal</span><small>{t(PISTA_RACION[tipo][r])}</small></span>
         ))}
       </div>
 
       {p.tipo === 'comida' && (
         <details className="fold mt16">
-          <summary>Más opciones (opcional)<Ico n="caret-down" /></summary>
+          <summary>{t('Más opciones (opcional)')}<Ico n="caret-down" /></summary>
           <div className="in">
-            <p className="lbl fl">Cuándo la sueles tomar (opcional)</p>
+            <p className="lbl fl">{t('Cuándo la sueles tomar (opcional)')}</p>
             <div className="chips eq">
-              {FRANJAS.map(f => <Chip key={f.v} on={p.franja === f.v} onClick={() => cambia({ franja: p.franja === f.v ? undefined : f.v })}>{NOMBRE_FRANJA[f.v]}</Chip>)}
+              {FRANJAS.map(f => <Chip key={f.v} on={p.franja === f.v} onClick={() => cambia({ franja: p.franja === f.v ? undefined : f.v })}>{nombreFranja(f.v)}</Chip>)}
             </div>
           </div>
         </details>
@@ -133,14 +135,14 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta }) {
 
       {id == null ? (
         <>
-          <button className="btn mt20" onClick={() => void guardarYApuntar()}><Ico n="check" b />Guardar y apuntar</button>
-          <button className="btn ln sm mt8" onClick={() => void guardar()}>Solo guardar</button>
+          <button className="btn mt20" onClick={() => void guardarYApuntar()}><Ico n="check" b />{t('Guardar y apuntar')}</button>
+          <button className="btn ln sm mt8" onClick={() => void guardar()}>{t('Solo guardar')}</button>
         </>
       ) : (
         <>
-          <button className="btn mt20" onClick={() => void guardar()}><Ico n="check" b />Guardar cambios</button>
-          <button className="btn ln sm mt8" onClick={() => void guardarYApuntar()}><Ico n="plus" b />Guardar y apuntar ahora</button>
-          <button className="btn bad sm mt8" onClick={() => void borrar()}><Ico n="trash" /> Borrar de Mis comidas</button>
+          <button className="btn mt20" onClick={() => void guardar()}><Ico n="check" b />{t('Guardar cambios')}</button>
+          <button className="btn ln sm mt8" onClick={() => void guardarYApuntar()}><Ico n="plus" b />{t('Guardar y apuntar ahora')}</button>
+          <button className="btn bad sm mt8" onClick={() => void borrar()}><Ico n="trash" /> {t('Borrar de Mis comidas')}</button>
         </>
       )}
     </Hoja>

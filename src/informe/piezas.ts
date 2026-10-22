@@ -3,6 +3,7 @@
 import type { PDFDocument, PDFImage } from 'pdf-lib'
 import type { Informe, TonoInforme } from '../dominio/informe'
 import { ALTO_A4, ANCHO_A4, C, ESTILO, Lienzo, MM, fondoCab, fondoCasilla, letraCab, type Ancla, type Fuentes, type Peso, type Trozo } from './lienzo'
+import { t, tc } from '../i18n'
 
 type PdfLib = typeof import('pdf-lib')
 
@@ -58,12 +59,12 @@ export class Maqueta {
       l.linea(IZQ, y0 + h, DER, y0 + h, C.linea, 0.25)
     } else l.rect(IZQ, y0, ANCHO, h, C.banda)
     const items: Trozo[][] = []
-    if (cab.nombre) items.push([{ t: 'Nombre: ' }, { t: cab.nombre, peso: 'negrita' }])
+    if (cab.nombre) items.push([{ t: `${t('Nombre:')} ` }, { t: cab.nombre, peso: 'negrita' }])
     if (cab.sexo) items.push([{ t: cab.sexo }])
-    if (cab.edad != null) items.push([{ t: `${cab.edad} años` }])
+    if (cab.edad != null) items.push([{ t: tc('pdf', '{n} años', { n: cab.edad }) }])
     if (cab.alturaCm != null) items.push([{ t: `${cab.alturaCm} cm` }])
-    items.push([{ t: 'Periodo: ' }, { t: cab.periodo, peso: 'negrita' }])
-    const ultimo = cab.comparado ?? `Creado: ${cab.creado}`
+    items.push([{ t: `${t('Periodo:')} ` }, { t: cab.periodo, peso: 'negrita' }])
+    const ultimo = cab.comparado ?? t('Creado: {fecha}', { fecha: cab.creado })
     let tam = 8.5
     const anchos = () => items.map(it => it.reduce((s, tr) => s + l.ancho(tr.t, tam, tr.peso), 0))
     const wUlt = () => l.ancho(ultimo, tam - 1.5)
@@ -117,8 +118,8 @@ export class Maqueta {
     this.paginas.forEach((l, i) => {
       l.linea(IZQ, 284.6, DER, 284.6, C.linea, 0.25)
       const w = l.texto(IZQ, 288.4, 'JowyFit', { tam: 7, peso: 'negrita', color: C.naranja })
-      l.texto(IZQ + w, 288.4, ` · ${cab.creadoPie} · Tus datos solo están en tu móvil`, { tam: 7, color: C.gris })
-      l.texto(DER, 288.4, `Página ${i + 1} de ${total}`, { tam: 7, color: C.gris, anc: 'end' })
+      l.texto(IZQ + w, 288.4, ` · ${cab.creadoPie} · ${t('Tus datos solo están en tu móvil')}`, { tam: 7, color: C.gris })
+      l.texto(DER, 288.4, t('Página {n} de {total}', { n: i + 1, total }), { tam: 7, color: C.gris, anc: 'end' })
     })
   }
 }

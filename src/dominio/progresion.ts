@@ -1,8 +1,9 @@
 // Doble progresión con esfuerzo (RPE) y récords.
 import type { Serie, TipoRegistro } from '../datos/tipos'
-import { epley } from './calculos'
+import { epley, kg } from './calculos'
 import { propio } from './claves'
 import { BARRAS, siguiente } from './pesos'
+import { t, tk } from '../i18n'
 
 export type Sugerencia = {
   accion: 'primera' | 'subir' | 'mantener' | 'bajar'
@@ -23,7 +24,7 @@ const trabajo = (s: Serie[]) => s.filter(x => x.hecha && !x.calentamiento && (fi
  */
 export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; repsMax: number; rpe: number }, registro: TipoRegistro, lista: number[]): Sugerencia {
   const hechas = ultimas ? trabajo(ultimas) : []
-  if (!hechas.length) return { accion: 'primera', peso: null, reps: objetivo.repsMin, ultima: null, texto: 'Primera vez: elige un peso cómodo (esfuerzo 6-7)' }
+  if (!hechas.length) return { accion: 'primera', peso: null, reps: objetivo.repsMin, ultima: null, texto: t('Primera vez: elige un peso cómodo (esfuerzo 6-7)') }
 
   // La serie de referencia es la de más peso entre las que tienen peso apuntado. Antes una serie sin
   // peso contaba como 0 kg y, en las asistidas (pesos negativos), «ganaba» y se perdía el peso.
@@ -41,8 +42,8 @@ export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; re
   if (registro === 'corporal' || registro === 'tiempo' || registro === 'cardio' || top.peso == null) {
     const paso = registro === 'tiempo' ? 5 : 1
     const mejor = Math.max(...reps)
-    if (todasArriba && !muyDuro) return { accion: 'subir', peso: top.peso, reps: mejor + paso, ultima, texto: registro === 'tiempo' ? `Hoy: aguanta ${mejor + paso} s` : `Hoy: ${mejor + paso} reps` }
-    return { accion: 'mantener', peso: top.peso, reps: Math.max(objetivo.repsMin, mejor), ultima, texto: 'Repite y busca una repetición más' }
+    if (todasArriba && !muyDuro) return { accion: 'subir', peso: top.peso, reps: mejor + paso, ultima, texto: registro === 'tiempo' ? t('Hoy: aguanta {n} s', { n: mejor + paso }) : t('Hoy: {n} reps', { n: mejor + paso }) }
+    return { accion: 'mantener', peso: top.peso, reps: Math.max(objetivo.repsMin, mejor), ultima, texto: t('Repite y busca una repetición más') }
   }
 
   const peso = top.peso
@@ -51,19 +52,19 @@ export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; re
     // Si le costó muy poco (esfuerzo ≤ 6), salto doble.
     if (rpeMin != null && rpeMax != null && rpeMax <= 6) nuevo = siguiente(lista, nuevo, 1)
     // Ya está en el peso más alto que hay: no se puede subir, se buscan más reps.
-    if (nuevo <= peso + 1e-9) return { accion: 'mantener', peso, reps: objetivo.repsMax, ultima, texto: 'Es el peso más alto disponible: busca más reps' }
-    return { accion: 'subir', peso: nuevo, reps: objetivo.repsMin, ultima, texto: 'Completaste el rango: toca subir' }
+    if (nuevo <= peso + 1e-9) return { accion: 'mantener', peso, reps: objetivo.repsMax, ultima, texto: t('Es el peso más alto disponible: busca más reps') }
+    return { accion: 'subir', peso: nuevo, reps: objetivo.repsMin, ultima, texto: t('Completaste el rango: toca subir') }
   }
   // Bajar solo si de verdad costó: faltaron 2+ reps sin que el esfuerzo apuntado fuera bajo
   // (con esfuerzo ≤ 8 sobraban reps: se paró antes, no es que pese demasiado), o se llegó al fallo sin el mínimo.
   const esfuerzoAlto = rpeMax == null || rpeMax >= 9
   if ((algunaCorta && esfuerzoAlto && reps.some(r => r <= objetivo.repsMin - 2)) || (rpeMax != null && rpeMax >= 10 && algunaCorta)) {
     const menos = siguiente(lista, peso, -1)
-    if (menos < peso - 1e-9) return { accion: 'bajar', peso: menos, reps: objetivo.repsMin, ultima, texto: 'Costó demasiado: baja un poco y suma reps' }
-    return { accion: 'mantener', peso, reps: objetivo.repsMin, ultima, texto: 'Mantén el peso y busca más reps' }
+    if (menos < peso - 1e-9) return { accion: 'bajar', peso: menos, reps: objetivo.repsMin, ultima, texto: t('Costó demasiado: baja un poco y suma reps') }
+    return { accion: 'mantener', peso, reps: objetivo.repsMin, ultima, texto: t('Mantén el peso y busca más reps') }
   }
-  if (muyDuro || algunaCorta) return { accion: 'mantener', peso, reps: objetivo.repsMin, ultima, texto: 'Mantén el peso y busca más reps' }
-  return { accion: 'mantener', peso, reps: Math.min(objetivo.repsMax, Math.max(...reps) + 1), ultima, texto: 'Mismo peso, una rep más' }
+  if (muyDuro || algunaCorta) return { accion: 'mantener', peso, reps: objetivo.repsMin, ultima, texto: t('Mantén el peso y busca más reps') }
+  return { accion: 'mantener', peso, reps: Math.min(objetivo.repsMax, Math.max(...reps) + 1), ultima, texto: t('Mismo peso, una rep más') }
 }
 
 export type Marca = { peso: number; reps: number; e1rm: number }
@@ -87,9 +88,9 @@ export function esRecord(s: Serie, historial: Serie[]): Logro | null {
   const prev = trabajo(historial).filter(x => x.peso != null && x.reps != null)
   if (!prev.length) return null
   const maxPeso = Math.max(...prev.map(x => x.peso!))
-  if (s.peso > maxPeso) return { tipo: 'peso', texto: 'Nuevo récord de peso', peso: s.peso, reps: s.reps }
+  if (s.peso > maxPeso) return { tipo: 'peso', texto: t('Nuevo récord de peso'), peso: s.peso, reps: s.reps }
   const mismas = prev.filter(x => x.peso === s.peso)
-  if (mismas.length && s.reps > Math.max(...mismas.map(x => x.reps!))) return { tipo: 'reps', texto: 'Récord de repeticiones', peso: s.peso, reps: s.reps }
+  if (mismas.length && s.reps > Math.max(...mismas.map(x => x.reps!))) return { tipo: 'reps', texto: t('Récord de repeticiones'), peso: s.peso, reps: s.reps }
   return null
 }
 
@@ -132,12 +133,12 @@ export function desdeReferencia(id: string, referencias: Record<string, string> 
   const enLista = lista.length ? [...lista].reverse().find(v => v <= bruto + 1e-9) ?? lista[0]! : Math.floor(bruto / 2.5) * 2.5
   const peso = Math.max(0, enLista)
   if (!peso) return null
-  return { accion: 'primera', peso, reps: objetivo.repsMin, ultima: null, texto: `Por tu referencia (${referencias![m.ref]}): empieza con ${String(peso).replace('.', ',')} kg y ajusta` }
+  return { accion: 'primera', peso, reps: objetivo.repsMin, ultima: null, texto: t('Por tu referencia ({ref}): empieza con {peso} kg y ajusta', { ref: referencias![m.ref]!, peso: kg(peso) }) }
 }
 
 // ---------- primera vez sin historial ni referencia: peso de partida ----------
 
-export const TEXTO_PARTIDA = 'Empieza con este y súbelo si va fácil'
+export const TEXTO_PARTIDA = tk('Empieza con este y súbelo si va fácil')
 
 /** Mínimo «razonable» para empezar según el material (antes de buscarlo en la lista de pesos reales). */
 function minimoPartida(material: string | null | undefined, registro: TipoRegistro, lista: number[]): number {
@@ -168,5 +169,5 @@ export function pesoPartida(material: string | null | undefined, registro: TipoR
 export function conPartida(s: Sugerencia, material: string | null | undefined, registro: TipoRegistro, lista: number[]): Sugerencia {
   if (s.accion !== 'primera' || s.peso != null) return s
   const peso = pesoPartida(material, registro, lista)
-  return peso == null ? s : { ...s, peso, partida: true, texto: TEXTO_PARTIDA }
+  return peso == null ? s : { ...s, peso, partida: true, texto: t(TEXTO_PARTIDA) }
 }

@@ -11,14 +11,16 @@ import { compartirArchivo, compartirNativo, dispositivoApple, esNativo, guardarA
 import { cx, Hoja, Ico, useUnaVez } from '../../comp'
 import { useAviso } from '../../aviso'
 import { useAjustes } from '../../datos'
+import { t, tk } from '../../../i18n'
 
-type Casilla = { k: keyof SeccionesInforme; t: string; d: string }
+// Los textos se traducen al pintarlos (t(c.titulo)): esto se evalúa antes de cargar el idioma.
+type Casilla = { k: keyof SeccionesInforme; titulo: string; d: string }
 const CASILLAS: Casilla[] = [
-  { k: 'entrenos', t: 'Entrenos y subidas de peso', d: 'Cada entreno, récords, esfuerzo y gráficas de fuerza' },
-  { k: 'comida', t: 'Comida', d: 'Proteína, energía, picoteo y cafeína de cada día' },
-  { k: 'cuerpo', t: 'Cuerpo', d: 'Peso, % de grasa, cintura y cómo están' },
-  { k: 'pasos', t: 'Pasos y gasto', d: 'Pasos de cada día y lo que gastas' },
-  { k: 'detalle', t: 'Cada serie y cada comida, una a una', d: 'La lista completa (más páginas)' },
+  { k: 'entrenos', titulo: tk('Entrenos y subidas de peso'), d: tk('Cada entreno, récords, esfuerzo y gráficas de fuerza') },
+  { k: 'comida', titulo: tk('Comida'), d: tk('Proteína, energía, picoteo y cafeína de cada día') },
+  { k: 'cuerpo', titulo: tk('Cuerpo'), d: tk('Peso, % de grasa, cintura y cómo están') },
+  { k: 'pasos', titulo: tk('Pasos y gasto'), d: tk('Pasos de cada día y lo que gastas') },
+  { k: 'detalle', titulo: tk('Cada serie y cada comida, una a una'), d: tk('La lista completa (más páginas)') },
 ]
 
 type Hecho = { nombre: string; bytes: Uint8Array; titulo: string }
@@ -26,10 +28,10 @@ type Hecho = { nombre: string; bytes: Uint8Array; titulo: string }
 /** Mensaje claro si algo falla al crear o guardar el PDF. */
 function textoError(e: unknown): string {
   const m = String((e as Error)?.message ?? e ?? '')
-  if (/quota|space|espacio|ENOSPC/i.test(m)) return 'No queda sitio en el móvil para guardarlo. Libera algo de espacio y vuelve a probar.'
-  if (/permission|permiso|denied/i.test(m)) return 'El móvil no ha dejado guardar el archivo. Revisa los permisos de JowyFit y vuelve a probar.'
-  if (/import|chunk|fetch|module/i.test(m)) return 'No se ha podido cargar lo necesario para hacer el PDF. Cierra la app, ábrela otra vez y vuelve a probar.'
-  return 'No se ha podido crear el PDF. Vuelve a probar en un momento.'
+  if (/quota|space|espacio|ENOSPC/i.test(m)) return t('No queda sitio en el móvil para guardarlo. Libera algo de espacio y vuelve a probar.')
+  if (/permission|permiso|denied/i.test(m)) return t('El móvil no ha dejado guardar el archivo. Revisa los permisos de JowyFit y vuelve a probar.')
+  if (/import|chunk|fetch|module/i.test(m)) return t('No se ha podido cargar lo necesario para hacer el PDF. Cierra la app, ábrela otra vez y vuelve a probar.')
+  return t('No se ha podido crear el PDF. Vuelve a probar en un momento.')
 }
 
 export function HojaInforme() {
@@ -75,22 +77,22 @@ export function HojaInforme() {
   const entregar = async (h: Hecho) => {
     if (nativo) {
       await guardarArchivo(h.nombre, h.bytes, 'application/pdf')
-      aviso(`PDF guardado en Documentos/JowyFit: ${h.nombre}`)
+      aviso(t('PDF guardado en Documentos/JowyFit: {nombre}', { nombre: h.nombre }))
       return
     }
     if (apple) {
       const r = await compartirArchivo(h.nombre, h.bytes, 'application/pdf')
       setPendiente(r === 'sin-gesto')
-      if (r === 'compartido') aviso('PDF listo. Guárdalo en Archivos o envíalo')
-      else if (r === 'cancelado') aviso('No se ha guardado el PDF')
+      if (r === 'compartido') aviso(t('PDF listo. Guárdalo en Archivos o envíalo'))
+      else if (r === 'cancelado') aviso(t('No se ha guardado el PDF'))
       else if (r === 'no-se-puede') {
         await guardarArchivo(h.nombre, h.bytes, 'application/pdf')
-        aviso(`PDF guardado en Archivos → Descargas: ${h.nombre}`)
+        aviso(t('PDF guardado en Archivos → Descargas: {nombre}', { nombre: h.nombre }))
       }
       return
     }
     await guardarArchivo(h.nombre, h.bytes, 'application/pdf')
-    aviso(`PDF descargado: ${h.nombre}`)
+    aviso(t('PDF descargado: {nombre}', { nombre: h.nombre }))
   }
 
   const crear = unaVez(async () => {
@@ -114,7 +116,7 @@ export function HojaInforme() {
     try {
       if (nativo) {
         const r = await compartirNativo(hecho.nombre, hecho.bytes, hecho.titulo)
-        if (r === 'cancelado') aviso('No se ha enviado el PDF')
+        if (r === 'cancelado') aviso(t('No se ha enviado el PDF'))
       } else await entregar(hecho)
     } catch (e) {
       setError(textoError(e))
@@ -125,9 +127,9 @@ export function HojaInforme() {
   const ninguna = !sec.entrenos && !sec.comida && !sec.cuerpo && !sec.pasos
 
   return (
-    <Hoja titulo="Informe en PDF" sub="Un resumen de tus entrenos, tu comida y tu cuerpo para guardar o enseñar." className="hoja-informe">
-      <p className="lbl mt8">¿De qué días?</p>
-      <div className="chips inf-periodos mt8" role="radiogroup" aria-label="De qué días">
+    <Hoja titulo={t('Informe en PDF')} sub={t('Un resumen de tus entrenos, tu comida y tu cuerpo para guardar o enseñar.')} className="hoja-informe">
+      <p className="lbl mt8">{t('¿De qué días?')}</p>
+      <div className="chips inf-periodos mt8" role="radiogroup" aria-label={t('De qué días')}>
         {ORDEN_PERIODOS.map(p => (
           <button key={p} type="button" role="radio" aria-checked={periodo === p} className={cx('chip', periodo === p && 'on')} onClick={() => elegirPeriodo(p)}>{etiquetaPeriodo(p)}</button>
         ))}
@@ -135,39 +137,39 @@ export function HojaInforme() {
       <p className="small muted mt8" aria-live="polite">{rango?.textoHoja ?? ' '}</p>
       {rango?.notaHoja && <p className="small muted">{rango.notaHoja}</p>}
 
-      <p className="lbl mt20">¿Qué quieres que lleve?</p>
+      <p className="lbl mt20">{t('¿Qué quieres que lleve?')}</p>
       <div className="list mt8 inf-casillas">
         {CASILLAS.map(c => (
           <button key={c.k} type="button" role="checkbox" aria-checked={sec[c.k]} className={cx('it', sec[c.k] && 'on')} onClick={() => cambiarCasilla(c.k)}>
             <span className={cx('casilla', sec[c.k] && 'on')} aria-hidden="true">{sec[c.k] && <Ico n="check" b />}</span>
-            <span className="tx"><b>{c.t}</b><small>{c.d}</small></span>
+            <span className="tx"><b>{t(c.titulo)}</b><small>{t(c.d)}</small></span>
           </button>
         ))}
       </div>
-      {ninguna && <p className="small muted mt8">Solo llevará la primera página, con el resumen.</p>}
+      {ninguna && <p className="small muted mt8">{t('Solo llevará la primera página, con el resumen.')}</p>}
 
-      {rango && !hayDatos && <p className="note warn mt12"><Ico n="warning" /><span>No hay nada apuntado de esos días. Prueba con otro periodo.</span></p>}
+      {rango && !hayDatos && <p className="note warn mt12"><Ico n="warning" /><span>{t('No hay nada apuntado de esos días. Prueba con otro periodo.')}</span></p>}
       {error && <p className="note bad mt12" role="alert"><Ico n="warning-circle" /><span>{error}</span></p>}
 
       {creando ? (
         <div className="inf-creando mt16" role="status">
           <span className="bar go carga"><i /></span>
-          <span className="small">Haciendo tu PDF…</span>
+          <span className="small">{t('Haciendo tu PDF…')}</span>
         </div>
       ) : null}
       <button className={cx('btn mt16', pendiente && 'gry')} disabled={!hayDatos || creando} onClick={() => void crear()}>
-        <Ico n="file-pdf" b />{creando ? 'Creando…' : 'Crear el PDF'}
+        <Ico n="file-pdf" b />{creando ? t('Creando…') : t('Crear el PDF')}
       </button>
 
       {hecho && !creando && (
         <div className="inf-hecho mt12">
-          <p className="note ok"><Ico n="check-circle" /><span><b>{pendiente ? 'Tu PDF está listo.' : nativo ? 'Guardado en Documentos/JowyFit.' : apple ? 'Tu PDF está hecho.' : 'Descargado.'}</b> <span className="small">{hecho.nombre}</span></span></p>
+          <p className="note ok"><Ico n="check-circle" /><span><b>{pendiente ? t('Tu PDF está listo.') : nativo ? t('Guardado en Documentos/JowyFit.') : apple ? t('Tu PDF está hecho.') : t('Descargado.')}</b> <span className="small">{hecho.nombre}</span></span></p>
           <button className={cx('btn mt8', !pendiente && 'ln')} onClick={() => void compartir()}>
-            <Ico n={nativo || apple || pendiente ? 'share-network' : 'download-simple'} />{pendiente ? 'Guardar o enviar el PDF' : nativo || apple ? 'Compartir' : 'Descargar otra vez'}
+            <Ico n={nativo || apple || pendiente ? 'share-network' : 'download-simple'} />{pendiente ? t('Guardar o enviar el PDF') : nativo || apple ? t('Compartir') : t('Descargar otra vez')}
           </button>
         </div>
       )}
-      <p className="small muted mt12 center">El PDF se hace en tu móvil. No se envía a ningún sitio.</p>
+      <p className="small muted mt12 center">{t('El PDF se hace en tu móvil. No se envía a ningún sitio.')}</p>
     </Hoja>
   )
 }

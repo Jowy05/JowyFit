@@ -12,19 +12,20 @@ import { kg } from '../../../dominio/calculos'
 import { cx, Ico, Stepper } from '../../comp'
 import { useAviso } from '../../aviso'
 import { useGimnasio } from '../../datos'
+import { t } from '../../../i18n'
 
 type Datos = Pick<Serie, 'peso' | 'reps' | 'segundos'>
 
 export const conPesoReg = (e: EjercicioSesion) => e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
-export const etiquetaPeso = (e: EjercicioSesion) => (e.registro === 'asistido' ? 'Ayuda (kg)' : e.registro === 'mancuerna' ? 'Kg por mancuerna' : 'Peso (kg)')
-export const etiquetaReps = (e: EjercicioSesion) => (e.registro === 'cardio' ? '¿Cuántos minutos?' : '¿Cuántas has hecho?')
+export const etiquetaPeso = (e: EjercicioSesion) => (e.registro === 'asistido' ? t('Ayuda (kg)') : e.registro === 'mancuerna' ? t('Kg por mancuerna') : t('Peso (kg)'))
+export const etiquetaReps = (e: EjercicioSesion) => (e.registro === 'cardio' ? t('¿Cuántos minutos?') : t('¿Cuántas has hecho?'))
 
 /** Lo apuntado en una serie hecha, en corto: «20 kg × 8», «8 reps», «30 s». */
 export function valorSerie(x: Serie, e: EjercicioSesion): string {
   if (e.registro === 'tiempo') return `${x.segundos ?? x.reps} s`
   if (e.registro === 'cardio') return `${x.reps} min`
-  if (e.registro === 'corporal' || x.peso == null) return `${x.reps} reps`
-  return `${e.registro === 'asistido' ? `ayuda ${kg(Math.abs(x.peso))}` : kg(x.peso)} kg × ${x.reps}`
+  if (e.registro === 'corporal' || x.peso == null) return t('{n} reps', { n: String(x.reps) })
+  return `${e.registro === 'asistido' ? t('ayuda {n}', { n: kg(Math.abs(x.peso)) }) : kg(x.peso)} kg × ${x.reps}`
 }
 
 /** Guarda la corrección y vuelve a mirar si la serie es récord frente a lo anterior. */
@@ -54,28 +55,28 @@ export function FormCorregir({ s, idx, k, className, onCerrar }: { s: Sesion; id
   const num = e.series.filter(x => !x.calentamiento).indexOf(serie) + 1
   const guardar = async () => {
     if (guardando) return
-    if (conPeso && peso == null) { aviso('Pon el peso con + o −'); return }
+    if (conPeso && peso == null) { aviso(t('Pon el peso con + o −')); return }
     setGuardando(true)
     try {
       await guardarCorreccion(s, idx, k, { peso: conPeso ? peso : null, reps: e.registro === 'tiempo' ? null : reps, segundos: e.registro === 'tiempo' ? seg : null })
-      aviso('Serie corregida')
+      aviso(t('Serie corregida'))
       onCerrar()
     } finally { setGuardando(false) }
   }
   return (
     <div className={cx('ux-corr-f', className)}>
-      <p className="ux-corr-t"><Ico n="pencil-simple" b />Corregir {serie.calentamiento || num < 1 ? 'el calentamiento' : `la serie ${num}`}</p>
+      <p className="ux-corr-t"><Ico n="pencil-simple" b />{serie.calentamiento || num < 1 ? t('Corregir el calentamiento') : t('Corregir la serie {n}', { n: num })}</p>
       <div className="pn-row">
         {e.registro === 'tiempo' ? (
-          <div className="pn-f w"><span className="lbl ux-pn-lbl">¿Cuántos segundos?</span><Stepper className="tall" valor={seg} paso={5} min={5} onCambio={setSeg} etiqueta="Segundos" /></div>
+          <div className="pn-f w"><span className="lbl ux-pn-lbl">{t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={seg} paso={5} min={5} onCambio={setSeg} etiqueta={t('Segundos')} /></div>
         ) : <>
-          {conPeso && <div className="pn-f w"><span className="lbl ux-pn-lbl">{etiquetaPeso(e)}</span><Stepper className="tall" valor={peso} lista={lista} paso={2.5} onCambio={setPeso} etiqueta="Peso" /></div>}
-          <div className={cx('pn-f', !conPeso && 'w')}><span className="lbl ux-pn-lbl">{etiquetaReps(e)}</span><Stepper className="tall" valor={reps} paso={1} min={1} onCambio={setReps} etiqueta={e.registro === 'cardio' ? 'Minutos' : 'Repeticiones'} /></div>
+          {conPeso && <div className="pn-f w"><span className="lbl ux-pn-lbl">{etiquetaPeso(e)}</span><Stepper className="tall" valor={peso} lista={lista} paso={2.5} onCambio={setPeso} etiqueta={t('Peso')} /></div>}
+          <div className={cx('pn-f', !conPeso && 'w')}><span className="lbl ux-pn-lbl">{etiquetaReps(e)}</span><Stepper className="tall" valor={reps} paso={1} min={1} onCambio={setReps} etiqueta={e.registro === 'cardio' ? t('Minutos') : t('Repeticiones')} /></div>
         </>}
       </div>
       <div className="pn-main">
-        <button className="btn gry" onClick={onCerrar}>Cancelar</button>
-        <button className="btn xl" onClick={() => void guardar()}><Ico n="check" b />Guardar cambio</button>
+        <button className="btn gry" onClick={onCerrar}>{t('Cancelar')}</button>
+        <button className="btn xl" onClick={() => void guardar()}><Ico n="check" b />{t('Guardar cambio')}</button>
       </div>
     </div>
   )

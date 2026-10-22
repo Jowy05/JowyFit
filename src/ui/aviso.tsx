@@ -1,5 +1,6 @@
 // Aviso breve inferior («toast»), con «Deshacer» opcional.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { t } from '../i18n'
 
 type Aviso = { id: number; texto: string; deshacer?: () => void }
 type Ctx = (texto: string, deshacer?: () => void) => void
@@ -30,7 +31,7 @@ export function ProveedorAviso({ children }: { children: ReactNode }) {
           <span className="toast-msg" onClick={() => setAviso(null)}>{aviso.texto}</span>
           {aviso.deshacer && (
             <button className="toast-act" type="button" onClick={() => { aviso.deshacer?.(); setAviso(null) }}>
-              Deshacer
+              {t('Deshacer')}
             </button>
           )}
         </div>

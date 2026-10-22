@@ -51,3 +51,5 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 @keyframes inf-carga{from{transform:translateX(-10%)}to{transform:translateX(160%)}}
 @media (prefers-reduced-motion:reduce){.bar.carga>i{animation:none;width:100%;opacity:.6}}
 .inf-hecho .note .small{overflow-wrap:anywhere}
+/* Catalán e inglés: los títulos largos de «Ver más números» (Perfil) se parten en dos líneas y el «?» se queda a su derecha. */
+:root:not([lang="es"]) .kpi .row.jb:has(> button.q){flex-wrap:nowrap;align-items:flex-start}

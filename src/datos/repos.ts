@@ -3,6 +3,7 @@ import { dispositivoApple } from '../plataforma'
 import { db } from './db'
 import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Plantilla } from './tipos'
 import { hoyISO } from '../dominio/fechas'
+import { t, tk } from '../i18n'
 
 export function perfilPorDefecto(): Perfil {
   return {
@@ -89,7 +90,7 @@ export function ajustesPorDefecto(): Ajustes {
 }
 
 /** Gimnasio nuevo con material básico ya marcado (lo que tiene casi cualquier gimnasio). */
-export function gimnasioNuevo(nombre = 'Mi gimnasio'): Gimnasio {
+export function gimnasioNuevo(nombre = t('Mi gimnasio')): Gimnasio {
   return {
     nombre,
     notas: '',
@@ -102,17 +103,20 @@ export function gimnasioNuevo(nombre = 'Mi gimnasio'): Gimnasio {
   }
 }
 
-/** Botones de picoteo y bebida de un toque (valores aproximados; se pueden editar). */
+/**
+ * Botones de picoteo y bebida de un toque (valores aproximados; se pueden editar). Se guardan en castellano
+ * (se crean al abrir la app la primera vez, antes de elegir idioma): marcados con tk() para pintarlos con t(nombre).
+ */
 export function plantillasIniciales(): Plantilla[] {
   return [
-    { nombre: 'Bolsa de patatas grande', kcal: 800, proteina: 9, tipo: 'picoteo', usos: 0 },
-    { nombre: 'Bolsa de patatas pequeña', kcal: 210, proteina: 2, tipo: 'picoteo', usos: 0 },
-    { nombre: 'Quicos (bolsa)', kcal: 450, proteina: 8, tipo: 'picoteo', usos: 0 },
-    { nombre: 'Bebida energética', kcal: 230, proteina: 0, cafeina: 160, tipo: 'bebida', usos: 0 },
-    { nombre: 'Energética sin azúcar', kcal: 10, proteina: 0, cafeina: 160, tipo: 'bebida', usos: 0 },
-    { nombre: 'Refresco zero', kcal: 1, proteina: 0, cafeina: 0, tipo: 'bebida', usos: 0 },
-    { nombre: 'Café', kcal: 5, proteina: 0, cafeina: 80, tipo: 'bebida', usos: 0 },
-    { nombre: 'Batido de proteína', kcal: 120, proteina: 24, tipo: 'comida', franja: 'merienda', usos: 0 },
+    { nombre: tk('Bolsa de patatas grande'), kcal: 800, proteina: 9, tipo: 'picoteo', usos: 0 },
+    { nombre: tk('Bolsa de patatas pequeña'), kcal: 210, proteina: 2, tipo: 'picoteo', usos: 0 },
+    { nombre: tk('Quicos (bolsa)'), kcal: 450, proteina: 8, tipo: 'picoteo', usos: 0 },
+    { nombre: tk('Bebida energética'), kcal: 230, proteina: 0, cafeina: 160, tipo: 'bebida', usos: 0 },
+    { nombre: tk('Energética sin azúcar'), kcal: 10, proteina: 0, cafeina: 160, tipo: 'bebida', usos: 0 },
+    { nombre: tk('Refresco zero'), kcal: 1, proteina: 0, cafeina: 0, tipo: 'bebida', usos: 0 },
+    { nombre: tk('Café'), kcal: 5, proteina: 0, cafeina: 80, tipo: 'bebida', usos: 0 },
+    { nombre: tk('Batido de proteína'), kcal: 120, proteina: 24, tipo: 'comida', franja: 'merienda', usos: 0 },
   ]
 }
 

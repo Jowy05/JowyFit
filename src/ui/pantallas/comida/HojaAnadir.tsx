@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../datos/db'
 import type { Comida, Franja, Plantilla, Producto } from '../../../datos/tipos'
-import { FRANJAS, NOMBRE_FRANJA, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, notaPorTamano, ordenarPlantillas, porRacion, recientes, soloMacros, textoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
+import { FRANJAS, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, nombreFranja, notaPorTamano, ordenarPlantillas, porRacion, recientes, soloMacros, textoRacion, type Racion, type TamanoNota } from '../../../dominio/comida'
+import { idioma, t, tc } from '../../../i18n'
 import { horaActual, hoyISO, sumarDias } from '../../../dominio/fechas'
 import { normalizar } from '../../../catalogo/catalogo'
 import { hacerFoto } from '../../../plataforma'
@@ -19,7 +20,7 @@ const MAX_RECIENTES = 4
 
 /** Texto del botón de picoteo/bebida, siempre con unidades. */
 const textoSnack = (p: Plantilla) => p.cafeina != null
-  ? `${p.kcal < 20 ? '~' : ''}${p.kcal} kcal · ${p.cafeina} mg cafeína`
+  ? `${p.kcal < 20 ? '~' : ''}${t('{kcal} kcal · {mg} mg cafeína', { kcal: p.kcal, mg: p.cafeina })}`
   : `~${p.kcal} kcal`
 
 export function HojaAnadir({ ruta }: { ruta: Ruta }) {
@@ -70,7 +71,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   }
 
   const hora = esHoy ? horaActual() : franja === 'desayuno' ? '08:00' : franja === 'comida' ? '14:00' : franja === 'merienda' ? '17:30' : '21:00'
-  const listo = (txt: string, deshacer: () => void) => { setElegir(null); nav.hoja(null); aviso(`Añadido: ${txt}`, deshacer) }
+  const listo = (txt: string, deshacer: () => void) => { setElegir(null); nav.hoja(null); aviso(t('Añadido: {nombre}', { nombre: txt }), deshacer) }
   // Tocar cualquier cosa abre «¿Cuánto?» (Poco · Normal · Mucho); se apunta lo que se elija.
   const [elegir, setElegir] = useState<ParaElegir | null>(null)
   // Los botones de un toque (picoteo, bebida, Mis comidas) apuntaban dos veces con un doble toque.
@@ -79,7 +80,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const usar = unaVez(async (p: Plantilla, r: Racion) => {
     const des = await apuntarPlantilla(p, r, fecha, p.tipo === 'comida' ? franja : esHoy ? franjaPorHora(hora) : franja)
     const v = conRacion(p, r, p.tipo)
-    listo(p.tipo === 'comida' ? `${p.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}` : `${p.nombre} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
+    listo(p.tipo === 'comida' ? `${t(p.nombre)}${r !== 'N' ? ` (${textoRacion(r)})` : ''}` : `${t(p.nombre)} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
   })
   const usarProducto = unaVez(async (p: Producto, r: Racion) => {
     const { base: _, ...v } = porRacion(p)
@@ -90,19 +91,20 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const copia = (c: Comida) => apuntar({ fecha, hora, franja, nombre: c.nombre, kcal: c.kcal, proteina: c.proteina, cafeina: c.cafeina, ...soloMacros(c), racion: c.racion, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
   const repetirAyer = unaVez(async () => {
     const deshacer = await Promise.all(ayer.map(copia))
-    listo(ayer.length === 1 ? ayer[0]!.nombre : `${NOMBRE_FRANJA[franja].toLowerCase()} de ayer (${ayer.length})`, () => deshacer.forEach(d => d()))
+    listo(ayer.length === 1 ? t(ayer[0]!.nombre) : t('{franja} de ayer ({n})', { franja: nombreFranja(franja).toLowerCase(), n: ayer.length }), () => deshacer.forEach(d => d()))
   })
   // Lo reciente se repite en la ración que se elija, contando desde lo que era su «Normal».
   const usarReciente = unaVez(async (c: Comida, r: Racion) => {
     const v = conRacion(baseDeApuntada(c), r, c.tipo)
     const des = await apuntar({ fecha, hora, franja, nombre: c.nombre, ...v, racion: r, tipo: c.tipo, plantillaId: c.plantillaId, codigo: c.codigo })
-    listo(`${c.nombre}${r !== 'N' ? ` (${textoRacion(r)})` : ''}`, des)
+    listo(`${t(c.nombre)}${r !== 'N' ? ` (${textoRacion(r)})` : ''}`, des)
   })
-  const pedirPlantilla = (p: Plantilla) => setElegir({ nombre: p.nombre, base: p, tipo: p.tipo, elegir: r => void usar(p, r) })
+  const pedirPlantilla = (p: Plantilla) => setElegir({ nombre: t(p.nombre), base: p, tipo: p.tipo, elegir: r => void usar(p, r) })
   const pedirProducto = (p: Producto) => { const { base: _, ...v } = porRacion(p); setElegir({ nombre: p.nombre, base: v, tipo: 'producto', elegir: r => void usarProducto(p, r) }) }
-  const pedirReciente = (c: Comida) => setElegir({ nombre: c.nombre, base: baseDeApuntada(c), tipo: c.tipo, elegir: r => void usarReciente(c, r) })
+  const pedirReciente = (c: Comida) => setElegir({ nombre: t(c.nombre), base: baseDeApuntada(c), tipo: c.tipo, elegir: r => void usarReciente(c, r) })
   const guardarNota = unaVez(async () => {
-    const nombre = texto.trim() || (foto ? 'Comida (foto)' : 'Comida')
+    // El nombre que se pone solo, en el idioma de la app («Comida» aquí es un plato: en inglés «Meal», no «Food»).
+    const nombre = texto.trim() || (foto ? t('Comida (foto)') : tc('plato', 'Comida'))
     const des = await apuntar({ fecha, hora, franja, nombre, kcal, proteina: prot, racion: 'N', tipo: foto ? 'foto' : 'nota', foto })
     listo(`${nombre} (~${kcal} kcal)`, des)
   })
@@ -117,60 +119,63 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
   const q = normalizar(busca.trim())
   const encontrados = q.length >= 2
     ? [
-        ...plantillas.filter(p => normalizar(p.nombre).includes(q)).map(p => ({ k: `p${p.id}`, nombre: p.nombre, sub: kp(p.kcal, p.proteina, p.cafeina), tipo: p.tipo as string, foto: p.foto, imagen: undefined as string | undefined, ir: () => pedirPlantilla(p) })),
+        ...plantillas.filter(p => normalizar(t(p.nombre)).includes(q)).map(p => ({ k: `p${p.id}`, nombre: t(p.nombre), sub: kp(p.kcal, p.proteina, p.cafeina), tipo: p.tipo as string, foto: p.foto, imagen: undefined as string | undefined, ir: () => pedirPlantilla(p) })),
         ...productos.filter(p => !p.pendiente && (normalizar(p.nombre).includes(q) || normalizar(p.marca).includes(q))).map(p => { const v = porRacion(p); return { k: p.codigo, nombre: p.nombre, sub: `${p.marca ? `${p.marca} · ` : ''}${kp(v.kcal, v.proteina, v.cafeina)}`, tipo: 'producto', foto: undefined as Blob | undefined, imagen: p.imagen, ir: () => pedirProducto(p) } }),
       ].slice(0, 8)
     : []
   const comidasVista = todas ? comidas : comidas.slice(0, MAX_COMIDAS)
+  // «13/10»; en inglés, mes delante («10/13»).
+  const [, mes, dia] = fecha.split('-')
+  const diaYMes = idioma() === 'en' ? `${mes}/${dia}` : `${dia}/${mes}`
 
   return (
-    <Hoja titulo="Añadir" sub={esHoy ? 'Toca lo que has tomado y elige cuánto' : `Para el ${fecha.split('-').reverse().slice(0, 2).join('/')}`} className="tall">
-      <p className="lbl fl">Cuándo{esHoy ? ' · elegido por la hora' : ''}</p>
+    <Hoja titulo={t('Añadir')} sub={esHoy ? t('Toca lo que has tomado y elige cuánto') : t('Para el {fecha}', { fecha: diaYMes })} className="tall">
+      <p className="lbl fl">{esHoy ? t('Cuándo · elegido por la hora') : t('Cuándo')}</p>
       <div className="chips eq">
-        {FRANJAS.map(f => <Chip key={f.v} on={franja === f.v} onClick={() => setFranja(f.v)}>{NOMBRE_FRANJA[f.v]}</Chip>)}
+        {FRANJAS.map(f => <Chip key={f.v} on={franja === f.v} onClick={() => setFranja(f.v)}>{nombreFranja(f.v)}</Chip>)}
       </div>
 
       {/* Lo que sirve para cualquier plato, arriba del todo: escribirlo (en el centro, más ancho), escanearlo o hacerle una foto. */}
       <div className="grid3 ux-com-qa3 mt12">
-        <button className="qa" onClick={() => nav.ir('com-scan', { fecha, franja }, 'com')}><Ico n="barcode" /><span>Escanear</span></button>
-        <button className={cx('qa ux-com-escribir', nota && 'on')} aria-expanded={nota} onClick={() => (nota ? setNota(false) : abrirNota())}><Ico n="note-pencil" /><span>Escribir lo que he comido</span></button>
-        <button className="qa" onClick={() => void sacarFoto()}><Ico n="camera" /><span>Foto</span></button>
+        <button className="qa" onClick={() => nav.ir('com-scan', { fecha, franja }, 'com')}><Ico n="barcode" /><span>{t('Escanear')}</span></button>
+        <button className={cx('qa ux-com-escribir', nota && 'on')} aria-expanded={nota} onClick={() => (nota ? setNota(false) : abrirNota())}><Ico n="note-pencil" /><span>{t('Escribir lo que he comido')}</span></button>
+        <button className="qa" onClick={() => void sacarFoto()}><Ico n="camera" /><span>{t('Foto')}</span></button>
       </div>
 
       <div ref={notaRef} className={cx('nota-r card pd mt8', nota && 'show')}>
-        {fotoUrl && <img className="foto-prev mb8" src={fotoUrl} alt="Foto de la comida" />}
-        <input ref={notaInput} className="inp" maxLength={LARGO.nombre} value={texto} onChange={e => setTexto(e.target.value)} placeholder={foto ? 'Qué es (opcional)' : 'Qué has comido · p. ej. Lentejas'} aria-label="Qué has comido" />
-        <p className="lbl fl mt12">¿Cuánto has comido?</p>
+        {fotoUrl && <img className="foto-prev mb8" src={fotoUrl} alt={t('Foto de la comida')} />}
+        <input ref={notaInput} className="inp" maxLength={LARGO.nombre} value={texto} onChange={e => setTexto(e.target.value)} placeholder={foto ? t('Qué es (opcional)') : t('Qué has comido · p. ej. Lentejas')} aria-label={t('Qué has comido')} />
+        <p className="lbl fl mt12">{t('¿Cuánto has comido?')}</p>
         <div className="chips eq">
-          {TAMANOS_NOTA.map(t => {
-            const v = notaPorTamano(t.v, franja)
+          {TAMANOS_NOTA.map(x => {
+            const v = notaPorTamano(x.v, franja)
             return (
-              <Chip key={t.v} className="big ux-com-tam" on={tam === t.v} onClick={() => setTam(t.v)}>
-                <span>{t.t}<small className="mono">~{v.kcal} kcal</small></span>
+              <Chip key={x.v} className="big ux-com-tam" on={tam === x.v} onClick={() => setTam(x.v)}>
+                <span>{t(x.t)}<small className="mono">~{v.kcal} kcal</small></span>
               </Chip>
             )
           })}
         </div>
         <details className="ux-com-afinar mt8">
           <summary>
-            <span>Afinar: <span className="mono">{kcal} kcal · {prot} g proteína</span></span>
+            <span>{t('Afinar:')} <span className="mono">{t('{kcal} kcal · {g} g proteína', { kcal, g: prot })}</span></span>
             <Ico n="caret-down" />
           </summary>
           <div className="grid2 mt8">
-            <Stepper className="sm" valor={kcal} onCambio={v => afinar({ kcal: v })} paso={50} min={0} sufijo="kcal" etiqueta="kcal aproximadas" />
-            <Stepper className="sm" valor={prot} onCambio={v => afinar({ prot: v })} paso={5} min={0} sufijo="g prot." etiqueta="Proteína aproximada" />
+            <Stepper className="sm" valor={kcal} onCambio={v => afinar({ kcal: v })} paso={50} min={0} sufijo="kcal" etiqueta={t('kcal aproximadas')} />
+            <Stepper className="sm" valor={prot} onCambio={v => afinar({ prot: v })} paso={5} min={0} sufijo={t('g prot.')} etiqueta={t('Proteína aproximada')} />
           </div>
         </details>
-        <p className="small muted mt8">Aproximado vale: lo importante es apuntarlo.</p>
-        <button className="btn mt8" onClick={() => void guardarNota()}>Apuntar</button>
+        <p className="small muted mt8">{t('Aproximado vale: lo importante es apuntarlo.')}</p>
+        <button className="btn mt8" onClick={() => void guardarNota()}>{t('Apuntar')}</button>
       </div>
 
       {ayer.length > 0 && (
         <button className="card pd row w100 mt12" style={{ textAlign: 'left' }} onClick={() => void repetirAyer()}>
           <span className="ico okb"><Ico n="arrow-counter-clockwise" /></span>
           <span className="tx grow">
-            <b>Lo de ayer: {NOMBRE_FRANJA[franja].toLowerCase()}</b>
-            <small>{ayer.map(c => c.nombre).join(' + ')} · <span className="mono">{kp(ayer.reduce((t, c) => t + c.kcal, 0), ayer.reduce((t, c) => t + c.proteina, 0))}</span></small>
+            <b>{t('Lo de ayer: {franja}', { franja: nombreFranja(franja).toLowerCase() })}</b>
+            <small>{ayer.map(c => t(c.nombre)).join(' + ')} · <span className="mono">{kp(ayer.reduce((s, c) => s + c.kcal, 0), ayer.reduce((s, c) => s + c.proteina, 0))}</span></small>
           </span>
           <Ico n="plus" b className="car" />
         </button>
@@ -178,12 +183,12 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
 
       {recien.length > 0 && (
         <>
-          <div className="sec-h mt16"><h2 className="h3">Recientes</h2><span className="lbl">Toca para apuntar</span></div>
+          <div className="sec-h mt16"><h2 className="h3">{t('Recientes')}</h2><span className="lbl">{t('Toca para apuntar')}</span></div>
           <div className="list">
             {recien.map(c => (
               <button key={`${c.fecha}-${c.hora}-${c.nombre}`} className="it" onClick={() => pedirReciente(c)}>
                 <Mini nombre={c.nombre} tipo={c.tipo} />
-                <span className="tx"><b>{recortar(c.nombre)}</b><small className="mono">{kp(c.kcal, c.proteina, c.cafeina)}</small></span>
+                <span className="tx"><b>{recortar(t(c.nombre))}</b><small className="mono">{kp(c.kcal, c.proteina, c.cafeina)}</small></span>
                 <Ico n="plus" b className="car" />
               </button>
             ))}
@@ -193,50 +198,50 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
 
       {comidas.length > 0 && (
         <>
-          <div className="sec-h mt16"><h2 className="h3">Comidas</h2><span className="lbl">Toca para apuntar</span></div>
+          <div className="sec-h mt16"><h2 className="h3">{t('Comidas')}</h2><span className="lbl">{t('Toca para apuntar')}</span></div>
           <div className="list">
             {comidasVista.map(p => (
               <button key={p.id} className="it" onClick={() => pedirPlantilla(p)}>
                 <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-                <span className="tx"><b>{recortar(p.nombre)}</b><small className="mono">{kp(p.kcal, p.proteina)}</small></span>
+                <span className="tx"><b>{recortar(t(p.nombre))}</b><small className="mono">{kp(p.kcal, p.proteina)}</small></span>
                 <Ico n="plus" b className="car" />
               </button>
             ))}
           </div>
           {comidas.length > MAX_COMIDAS && (
-            <button className="lnk mt12" onClick={() => setTodas(t => !t)}>
-              {todas ? 'Ver menos' : `Ver las ${comidas.length}`} <Ico n={todas ? 'caret-up' : 'caret-down'} />
+            <button className="lnk mt12" onClick={() => setTodas(v => !v)}>
+              {todas ? t('Ver menos') : t('Ver las {n}', { n: comidas.length })} <Ico n={todas ? 'caret-up' : 'caret-down'} />
             </button>
           )}
         </>
       )}
 
-      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">Picoteo</h2><span className="lbl">Toca para apuntar</span></div>
+      <div ref={picoteoRef} className="sec-h mt16"><h2 className="h3">{t('Picoteo')}</h2><span className="lbl">{t('Toca para apuntar')}</span></div>
       {picoteos.length > 0 && (
         <div className="list">
           {picoteos.map(p => (
             <button key={p.id} className="it" onClick={() => pedirPlantilla(p)}>
               <Mini nombre={p.nombre} tipo={p.tipo} foto={p.foto} />
-              <span className="tx"><b>{recortar(p.nombre)}</b><small className="mono">entero: {p.kcal} kcal</small></span>
+              <span className="tx"><b>{recortar(t(p.nombre))}</b><small className="mono">{t('entero: {n} kcal', { n: p.kcal })}</small></span>
               <Ico n="plus" b className="car" />
             </button>
           ))}
         </div>
       )}
-      <div className="sec-h mt16"><h2 className="h3">Bebida</h2><span className="lbl">Toca para apuntar</span></div>
+      <div className="sec-h mt16"><h2 className="h3">{t('Bebida')}</h2><span className="lbl">{t('Toca para apuntar')}</span></div>
       <div className="snk">
         {bebidas.map(p => (
           <button key={p.id} onClick={() => pedirPlantilla(p)}>
-            <b>{recortar(p.nombre)}</b>
+            <b>{recortar(t(p.nombre))}</b>
             <small className="mono">{textoSnack(p)}</small>
           </button>
         ))}
       </div>
 
-      <div className="sec-h mt20"><h2 className="h3">¿No está aquí?</h2></div>
+      <div className="sec-h mt20"><h2 className="h3">{t('¿No está aquí?')}</h2></div>
       <label className="search">
         <Ico n="magnifying-glass" />
-        <input className="inp" type="search" maxLength={LARGO.buscar} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar en lo guardado" aria-label="Buscar en Mis comidas y escaneados" />
+        <input className="inp" type="search" maxLength={LARGO.buscar} value={busca} onChange={e => setBusca(e.target.value)} placeholder={t('Buscar en lo guardado')} aria-label={t('Buscar en Mis comidas y escaneados')} />
       </label>
       {q.length >= 2 && encontrados.length > 0 && (
         <div className="list mt8">
@@ -251,14 +256,14 @@ export function HojaAnadir({ ruta }: { ruta: Ruta }) {
       )}
       {q.length >= 2 && !encontrados.length && (
         <div className="mt8">
-          <p className="small muted">No tienes nada guardado con ese nombre. Apúntalo igual:</p>
-          <button className="btn ln sm mt8 ux-com-apuntar" onClick={() => abrirNota(busca.trim())}><Ico n="note-pencil" />Apuntar «{busca.trim()}»</button>
+          <p className="small muted">{t('No tienes nada guardado con ese nombre. Apúntalo igual:')}</p>
+          <button className="btn ln sm mt8 ux-com-apuntar" onClick={() => abrirNota(busca.trim())}><Ico n="note-pencil" />{t('Apuntar «{texto}»', { texto: busca.trim() })}</button>
         </div>
       )}
 
       <div className="row jb mt16">
-        <button className="lnk" onClick={() => nav.hoja('sheet-plant', { fecha, franja })}><Ico n="bowl-food" /> Crear comida nueva</button>
-        <button className="lnk" onClick={() => nav.ir('com-plant', undefined, 'com')}>Mis comidas <Ico n="caret-right" /></button>
+        <button className="lnk" onClick={() => nav.hoja('sheet-plant', { fecha, franja })}><Ico n="bowl-food" /> {t('Crear comida nueva')}</button>
+        <button className="lnk" onClick={() => nav.ir('com-plant', undefined, 'com')}>{t('Mis comidas')} <Ico n="caret-right" /></button>
       </div>
       <ElegirCuanto x={elegir} onCerrar={() => setElegir(null)} />
     </Hoja>

@@ -10,24 +10,28 @@ import { lineaSpark, tendenciaPeso } from '../../../dominio/peso'
 import { Chip, Hoja, Ico, useUnaVez } from '../../comp'
 import { useNav } from '../../nav'
 import { useAviso } from '../../aviso'
+import { regionNumeros, t, tc, tk } from '../../../i18n'
 
+// Nombres marcados con tk(): se traducen al pintarlos (con nombreCampo).
 const CAMPOS: { k: keyof Bascula; t: string; u: string; paso: number }[] = [
   { k: 'grasaPct', t: '% grasa', u: '%', paso: 0.1 },
-  { k: 'musculoKg', t: 'Músculo', u: 'kg', paso: 0.1 },
-  { k: 'aguaPct', t: 'Agua', u: '%', paso: 0.1 },
-  { k: 'visceral', t: 'G. visceral', u: '', paso: 1 },
-  { k: 'oseaKg', t: 'Masa ósea', u: 'kg', paso: 0.1 },
-  { k: 'basalKcal', t: 'Basal', u: 'kcal', paso: 1 },
+  { k: 'musculoKg', t: tk('Músculo'), u: 'kg', paso: 0.1 },
+  { k: 'aguaPct', t: tk('Agua'), u: '%', paso: 0.1 },
+  { k: 'visceral', t: tk('G. visceral'), u: '', paso: 1 },
+  { k: 'oseaKg', t: tk('Masa ósea'), u: 'kg', paso: 0.1 },
+  { k: 'basalKcal', t: tk('Basal'), u: 'kcal', paso: 1 },
 ]
 
 const MIN = 25, MAX = 300
+// La grasa con contexto: en catalán y en inglés el «%» ya va detrás, entre paréntesis.
+const nombreCampo = (c: typeof CAMPOS[number]) => (c.k === 'grasaPct' ? tc('báscula', '% grasa') : t(c.t))
 
 const textoTendencia = (k: number | null) =>
-  k == null ? 'Aún pocos datos' : Math.abs(k) < 0.1 ? 'Estable' : `${k > 0 ? '+' : '−'}${num(Math.abs(k))} kg/semana`
+  k == null ? t('Aún pocos datos') : Math.abs(k) < 0.1 ? t('Estable') : t('{n} kg/semana', { n: `${k > 0 ? '+' : '−'}${num(Math.abs(k))}` })
 
-const formato = (v: number) => v.toLocaleString('es-ES', { maximumFractionDigits: 1 })
-const leer = (t: string): number | null => {
-  const v = parseFloat(t.replace(',', '.'))
+const formato = (v: number) => v.toLocaleString(regionNumeros(), { maximumFractionDigits: 1 })
+const leer = (s: string): number | null => {
+  const v = parseFloat(s.replace(',', '.'))
   return Number.isFinite(v) ? v : null
 }
 
@@ -48,7 +52,7 @@ export function HojaPeso() {
     const ultima = [...mediciones].filter(m => m.pesoKg != null).sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
     setTexto(formato(ultima?.pesoKg ?? 75))
   }, [mediciones, texto])
-  const t = tendenciaPeso(mediciones ?? [], hoy)
+  const tend = tendenciaPeso(mediciones ?? [], hoy)
   const peso = texto == null ? null : leer(texto)
 
   // − y + van de medio en medio kilo (de 82 a 80 eran 20 toques) y caen en múltiplos de 0,5: 82,3 → + → 82,5.
@@ -59,7 +63,7 @@ export function HojaPeso() {
   }
 
   const guardar = unaVez(async () => {
-    if (peso == null || peso < MIN || peso > MAX) { aviso('Revisa el peso'); return }
+    if (peso == null || peso < MIN || peso > MAX) { aviso(t('Revisa el peso')); return }
     const datos: Bascula = {}
     for (const c of CAMPOS) {
       const v = parseFloat((bascula[c.k] ?? '').replace(',', '.'))
@@ -69,16 +73,17 @@ export function HojaPeso() {
     const id = await db.mediciones.add({ fecha: `${hoy}T${hora}`, origen, pesoKg: kg, bascula: Object.keys(datos).length ? datos : undefined })
     const nueva = tendenciaPeso([...(mediciones ?? []), { fecha: `${hoy}T${hora}`, origen, pesoKg: kg }], hoy)
     nav.hoja(null)
-    aviso(`Guardado: ${num(kg)} kg. ${nueva.kgSemana == null ? 'Sigue apuntándolo para ver la tendencia' : `Tendencia: ${textoTendencia(nueva.kgSemana).toLowerCase()}`}`, () => { void db.mediciones.delete(id) })
+    const resto = nueva.kgSemana == null ? t('Sigue apuntándolo para ver la tendencia') : t('Tendencia: {tendencia}', { tendencia: textoTendencia(nueva.kgSemana).toLowerCase() })
+    aviso(t('Guardado: {n} kg. {resto}', { n: num(kg), resto }), () => { void db.mediciones.delete(id) })
   })
 
   return (
-    <Hoja titulo="Apuntar peso" sub="Mejor por la mañana, en ayunas">
-      <div className="stp big ux-peso" role="group" aria-label="Peso">
-        <button type="button" aria-label="Menos" onClick={() => mover(-1)}><Ico n="minus" b /></button>
+    <Hoja titulo={t('Apuntar peso')} sub={t('Mejor por la mañana, en ayunas')}>
+      <div className="stp big ux-peso" role="group" aria-label={t('Peso')}>
+        <button type="button" aria-label={t('Menos')} onClick={() => mover(-1)}><Ico n="minus" b /></button>
         <label className="v">
           <input
-            className="val inp-num" inputMode="decimal" enterKeyHint="done" aria-label="Peso en kg"
+            className="val inp-num" inputMode="decimal" enterKeyHint="done" aria-label={t('Peso en kg')}
             value={texto ?? ''} placeholder="—"
             onChange={e => setTexto(e.target.value.replace(/[^\d.,]/g, ''))}
             onFocus={e => e.target.select()}
@@ -86,46 +91,46 @@ export function HojaPeso() {
           />
           <small>kg</small>
         </label>
-        <button type="button" aria-label="Más" onClick={() => mover(1)}><Ico n="plus" b /></button>
+        <button type="button" aria-label={t('Más')} onClick={() => mover(1)}><Ico n="plus" b /></button>
       </div>
-      <p className="small muted mt8 center">Toca el número para escribirlo, o usa − y +</p>
+      <p className="small muted mt8 center">{t('Toca el número para escribirlo, o usa − y +')}</p>
       <details className="fold mt16">
-        <summary><Ico n="scales" className="blue" />Más datos de la báscula<Ico n="caret-down" /></summary>
+        <summary><Ico n="scales" className="blue" />{t('Más datos de la báscula')}<Ico n="caret-down" /></summary>
         <div className="in">
-          <p className="lbl fl">¿Qué báscula?</p>
+          <p className="lbl fl">{t('¿Qué báscula?')}</p>
           <div className="chips">
-            <Chip on={origen === 'casa'} onClick={() => setOrigen('casa')}><Ico n="house" />De casa</Chip>
-            <Chip on={origen === 'gimnasio'} onClick={() => setOrigen('gimnasio')}><Ico n="barbell" />Del gimnasio</Chip>
-            <Chip on={origen === 'otra'} onClick={() => setOrigen('otra')}>Otra</Chip>
+            <Chip on={origen === 'casa'} onClick={() => setOrigen('casa')}><Ico n="house" />{t('De casa')}</Chip>
+            <Chip on={origen === 'gimnasio'} onClick={() => setOrigen('gimnasio')}><Ico n="barbell" />{t('Del gimnasio')}</Chip>
+            <Chip on={origen === 'otra'} onClick={() => setOrigen('otra')}>{t('Otra')}</Chip>
           </div>
           <div className="grid2 mt12">
             {CAMPOS.map(c => (
               <label key={c.k} className="campo-mini">
-                <span className="lbl">{c.t}{c.u ? ` (${c.u})` : ''}</span>
+                <span className="lbl">{nombreCampo(c)}{c.u ? ` (${c.u})` : ''}</span>
                 <input
-                  className="inp inp-num" inputMode="decimal" placeholder="—" aria-label={c.t}
+                  className="inp inp-num" inputMode="decimal" placeholder="—" aria-label={nombreCampo(c)}
                   value={bascula[c.k] ?? ''}
                   onChange={e => { const v = e.target.value; setBascula(b => ({ ...b, [c.k]: v })) }}
                 />
               </label>
             ))}
           </div>
-          <button className="lnk mt12" onClick={() => nav.ir('pro-reg', undefined, 'pro')}>Todos los campos y medidas <Ico n="caret-right" /></button>
+          <button className="lnk mt12" onClick={() => nav.ir('pro-reg', undefined, 'pro')}>{t('Todos los campos y medidas')} <Ico n="caret-right" /></button>
         </div>
       </details>
       {/* La tendencia solo cuando ya dice algo (con un solo dato confundía). */}
-      {t.kgSemana != null && (
+      {tend.kgSemana != null && (
         <div className="card pd mt12 row">
-          {t.puntos.length >= 2
-            ? <svg className="spark" viewBox="0 0 120 40" aria-hidden="true"><polyline points={lineaSpark(t.puntos.slice(-10))} className="sp-l" /></svg>
+          {tend.puntos.length >= 2
+            ? <svg className="spark" viewBox="0 0 120 40" aria-hidden="true"><polyline points={lineaSpark(tend.puntos.slice(-10))} className="sp-l" /></svg>
             : <Ico n="chart-line" className="blue" />}
           <div className="grow">
-            <span className="lbl">Tendencia</span>
-            <p className="mono"><b>{textoTendencia(t.kgSemana)}</b></p>
+            <span className="lbl">{t('Tendencia')}</span>
+            <p className="mono"><b>{textoTendencia(tend.kgSemana)}</b></p>
           </div>
         </div>
       )}
-      <button className="btn mt16" onClick={() => void guardar()}>Guardar</button>
+      <button className="btn mt16" onClick={() => void guardar()}>{t('Guardar')}</button>
     </Hoja>
   )
 }

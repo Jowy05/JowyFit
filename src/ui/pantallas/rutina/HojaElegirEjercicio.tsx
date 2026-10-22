@@ -13,8 +13,11 @@ import { useAviso } from '../../aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos'
 import { guardarRutina } from './EditarPlan'
 import { musculosComunes, nombreEj } from './comun'
+import { t, tk } from '../../../i18n'
 
 type Modo = 'cambiar' | 'alternativa' | 'anadir' | 'sesion-anadir' | 'sesion-cambiar'
+
+const TITULO: Record<Modo, string> = { cambiar: tk('Cambiar ejercicio'), alternativa: tk('Si está ocupado'), anadir: tk('Añadir ejercicio'), 'sesion-anadir': tk('Añadir al entreno'), 'sesion-cambiar': tk('Cambiar ejercicio') }
 
 export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -60,7 +63,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
         await db.sesiones.put(sustituir(sesion, idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
       }
       nav.hoja(null)
-      aviso(modo === 'sesion-anadir' ? `Añadido: ${nombreEj(e)}` : `Cambiado por ${nombreEj(e)}`)
+      aviso(modo === 'sesion-anadir' ? t('Añadido: {nombre}', { nombre: nombreEj(e) }) : t('Cambiado por {nombre}', { nombre: nombreEj(e) }))
       return
     }
     if (!r) return
@@ -80,17 +83,17 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
     }
     await guardarRutina(nueva)
     nav.hoja(null)
-    aviso(modo === 'anadir' ? `Añadido: ${nombreEj(e)}` : modo === 'cambiar' ? `Cambiado por ${nombreEj(e)}` : `Si está ocupado: ${nombreEj(e)}`)
+    aviso(modo === 'anadir' ? t('Añadido: {nombre}', { nombre: nombreEj(e) }) : modo === 'cambiar' ? t('Cambiado por {nombre}', { nombre: nombreEj(e) }) : t('Si está ocupado: {lista}', { lista: nombreEj(e) }))
   })
 
-  const titulo = { cambiar: 'Cambiar ejercicio', alternativa: 'Si está ocupado', anadir: 'Añadir ejercicio', 'sesion-anadir': 'Añadir al entreno', 'sesion-cambiar': 'Cambiar ejercicio' }[modo]
+  const titulo = t(TITULO[modo])
   return (
-    <Hoja titulo={titulo} sub={actual ? (modo === 'alternativa' ? `Qué hacer si ${nombreEj(actual)} está ocupado` : `En lugar de: ${nombreEj(actual)}`) : g ? 'Solo lo que hay en tu gimnasio' : 'Todo el catálogo (aún no tienes gimnasio)'} className="tall">
-      <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder="Buscar ejercicio o músculo" value={q} onChange={e => setQ(e.target.value)} /></label>
+    <Hoja titulo={titulo} sub={actual ? (modo === 'alternativa' ? t('Qué hacer si {nombre} está ocupado', { nombre: nombreEj(actual) }) : t('En lugar de: {nombre}', { nombre: nombreEj(actual) })) : g ? t('Solo lo que hay en tu gimnasio') : t('Todo el catálogo (aún no tienes gimnasio)')} className="tall">
+      <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder={t('Buscar ejercicio o músculo')} value={q} onChange={e => setQ(e.target.value)} /></label>
       {actual && (
         <div className="chips mt8">
-          <Chip on={mismoPatron} onClick={() => setMismoPatron(true)}>Parecidos</Chip>
-          <Chip on={!mismoPatron} onClick={() => setMismoPatron(false)}>Todos</Chip>
+          <Chip on={mismoPatron} onClick={() => setMismoPatron(true)}>{t('Parecidos')}</Chip>
+          <Chip on={!mismoPatron} onClick={() => setMismoPatron(false)}>{t('Todos')}</Chip>
         </div>
       )}
       <div className="list mt12">
@@ -101,7 +104,7 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta }) {
             {marcas.get(e.id)?.favorito && <Ico n="star" className="goldc" />}
           </button>
         ))}
-        {!lista.length && <p className={cx('pd', 'muted')}>{mismoPatron && actual ? 'No hay parecidos con ese nombre: prueba en «Todos».' : 'Nada con ese nombre en tu gimnasio.'}</p>}
+        {!lista.length && <p className={cx('pd', 'muted')}>{mismoPatron && actual ? t('No hay parecidos con ese nombre: prueba en «Todos».') : t('Nada con ese nombre en tu gimnasio.')}</p>}
       </div>
     </Hoja>
   )

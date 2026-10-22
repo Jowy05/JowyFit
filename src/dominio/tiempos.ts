@@ -1,6 +1,7 @@
 // Tiempos del entreno en curso: cuánto falta, si se llega a la hora límite y qué recortar.
 import type { EjercicioSesion, Sesion } from '../datos/tipos'
 import { minutosDe } from './fechas'
+import { t } from '../i18n'
 
 const SERIE_S = 45
 const TRANSICION_S = 75
@@ -50,11 +51,11 @@ export type Recorte = { tipo: 'serie'; uid: string; texto: string } | { tipo: 'c
 /** Propuesta concreta cuando se va tarde. */
 export function propuestaRecorte(s: Sesion, minutosTarde: number, nombre: (id: string) => string): Recorte | null {
   if (minutosTarde < 2) return null
-  if (minutosTarde >= 8 && s.version === 'normal') return { tipo: 'corta', texto: `Vas ${minutosTarde} min tarde → pasa a la versión corta` }
+  if (minutosTarde >= 8 && s.version === 'normal') return { tipo: 'corta', texto: t('Vas {n} min tarde → pasa a la versión corta', { n: minutosTarde }) }
   const candidatos = [...s.ejercicios].reverse().filter(e => e.estado === 'pendiente' && e.series.filter(x => !x.hecha && !x.calentamiento).length >= 2)
   const e = candidatos[0]
   if (!e) return null
-  return { tipo: 'serie', uid: e.uid, texto: `Vas ${minutosTarde} min tarde → quita 1 serie de ${nombre(e.ejercicio)}` }
+  return { tipo: 'serie', uid: e.uid, texto: t('Vas {n} min tarde → quita 1 serie de {ejercicio}', { n: minutosTarde, ejercicio: nombre(e.ejercicio) }) }
 }
 
 /** Resto del temporizador de descanso a partir de la marca de tiempo de la última serie. */

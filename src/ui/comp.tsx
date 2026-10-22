@@ -4,6 +4,8 @@ import type { Ejercicio } from '../catalogo/tipos'
 import { imagen, miniatura } from '../catalogo/catalogo'
 import { siguiente } from '../dominio/pesos'
 import { useNav } from './nav'
+import { t } from '../i18n'
+import { regionNumeros } from '../i18n'
 
 export const cx = (...c: (string | number | false | null | undefined)[]) => c.filter(x => typeof x === 'string' && x).join(' ')
 export const estilo = (o: Record<string, string | number>) => o as CSSProperties
@@ -39,7 +41,7 @@ export function Cab({ crumb, titulo, sub, atras, derecha, children, className }:
     <header className={cx('hd', className)}>
       <div className="hd-bar">
         {atras && (
-          <button className="ib" aria-label="Volver" onClick={typeof atras === 'function' ? atras : nav.atras}>
+          <button className="ib" aria-label={t('Volver')} onClick={typeof atras === 'function' ? atras : nav.atras}>
             <Ico n="caret-left" />
           </button>
         )}
@@ -86,10 +88,10 @@ export function Stepper({ valor, onCambio, lista, paso = 1, min, max, className,
     if (max != null) n = Math.min(max, n)
     onCambio(n)
   }
-  const texto = valor == null ? '—' : v.toLocaleString('es-ES', { maximumFractionDigits: decimales })
+  const texto = valor == null ? '—' : v.toLocaleString(regionNumeros(), { maximumFractionDigits: decimales })
   return (
     <div className={cx('stp', className)} role="group" aria-label={etiqueta}>
-      <button type="button" aria-label="Menos" onClick={() => mover(-1)}><Ico n="minus" b /></button>
+      <button type="button" aria-label={t('Menos')} onClick={() => mover(-1)}><Ico n="minus" b /></button>
       <span className="v" onClick={() => setEditando(true)}>
         {editando ? (
           <input
@@ -106,7 +108,7 @@ export function Stepper({ valor, onCambio, lista, paso = 1, min, max, className,
         ) : <span className="val" key={texto}>{texto}</span>}
         {sufijo && <small>{sufijo}</small>}
       </span>
-      <button type="button" aria-label="Más" onClick={() => mover(1)}><Ico n="plus" b /></button>
+      <button type="button" aria-label={t('Más')} onClick={() => mover(1)}><Ico n="plus" b /></button>
     </div>
   )
 }
@@ -170,7 +172,7 @@ export function Hoja({ titulo, sub, children, className, cerrar = true }: { titu
       {titulo && (
         <div className="sh-h">
           <div className="grow"><h2>{titulo}</h2>{sub && <p className="sub">{sub}</p>}</div>
-          {cerrar && <button className="ib" aria-label="Cerrar" onClick={() => nav.hoja(null)}><Ico n="x" /></button>}
+          {cerrar && <button className="ib" aria-label={t('Cerrar')} onClick={() => nav.hoja(null)}><Ico n="x" /></button>}
         </div>
       )}
       {children}

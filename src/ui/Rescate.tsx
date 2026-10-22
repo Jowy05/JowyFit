@@ -6,6 +6,7 @@ import { borrarTodosLosDatos, importar } from '../datos/copias'
 import { elegirArchivo } from '../plataforma'
 import { hacerCopiaAhora } from './servicios'
 import { recortar } from './comp'
+import { t } from '../i18n'
 
 type Nivel = 'app' | 'pantalla' | 'hoja'
 type Props = { children: ReactNode; nivel: Nivel; alVolver?: () => void }
@@ -31,9 +32,9 @@ export class RedSeguridad extends Component<Props, Estado> {
       return (
         <div className="sheet" role="dialog" aria-modal="true" data-rescate="">
           <div className="grab" />
-          <div className="sh-h"><div className="grow"><h2>Algo ha ido mal</h2></div></div>
-          <p className="muted">Esto no se ha podido abrir. Tus datos siguen guardados.</p>
-          <button className="btn mt16 w100" onClick={this.volver}>Cerrar</button>
+          <div className="sh-h"><div className="grow"><h2>{t('Algo ha ido mal')}</h2></div></div>
+          <p className="muted">{t('Esto no se ha podido abrir. Tus datos siguen guardados.')}</p>
+          <button className="btn mt16 w100" onClick={this.volver}>{t('Cerrar')}</button>
         </div>
       )
     }
@@ -60,10 +61,10 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
     setOcupado(true)
     try {
       await importar(archivo)
-      setMensaje('Copia recuperada. Abriendo la app…')
+      setMensaje(t('Copia recuperada. Abriendo la app…'))
       window.setTimeout(() => location.reload(), 700)
     } catch (e) {
-      setMensaje(`No se pudo recuperar: ${String((e as Error)?.message ?? e)}`)
+      setMensaje(t('No se pudo recuperar: {error}', { error: String((e as Error)?.message ?? e) }))
       setOcupado(false)
       setPaso('nada')
     }
@@ -72,9 +73,9 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
     setOcupado(true)
     try {
       const nombre = await hacerCopiaAhora()
-      setMensaje(`Copia guardada: ${nombre}`)
+      setMensaje(t('Copia guardada: {nombre}', { nombre }))
     } catch (e) {
-      setMensaje(`No se pudo hacer la copia: ${String((e as Error)?.message ?? e)}`)
+      setMensaje(t('No se pudo hacer la copia: {error}', { error: String((e as Error)?.message ?? e) }))
     } finally { setOcupado(false) }
   }
   const borrar = async () => {
@@ -86,35 +87,35 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
 
   const cuerpo = (
     <div className="pg rescate" data-rescate="" style={{ padding: '32px 16px', maxWidth: 520, margin: '0 auto' }}>
-      <h1 className="h1" style={{ marginBottom: 8 }}>Algo ha ido mal</h1>
-      <p className="muted">Esta pantalla no se ha podido abrir. Tus datos siguen guardados en el móvil.</p>
+      <h1 className="h1" style={{ marginBottom: 8 }}>{t('Algo ha ido mal')}</h1>
+      <p className="muted">{t('Esta pantalla no se ha podido abrir. Tus datos siguen guardados en el móvil.')}</p>
       {mensaje && <p className="note mt12" role="status"><span>{mensaje}</span></p>}
       <div className="mt16" style={{ display: 'grid', gap: 10 }}>
-        <button className="btn" disabled={ocupado} onClick={alVolver}>Volver a Inicio</button>
+        <button className="btn" disabled={ocupado} onClick={alVolver}>{t('Volver a Inicio')}</button>
         {paso === 'copia' ? (
           <div className="card pd">
-            <p><b>¿Recuperar esta copia?</b></p>
-            <p className="muted small">Lo que hay ahora en el móvil se cambia por lo que tiene la copia.</p>
+            <p><b>{t('¿Recuperar esta copia?')}</b></p>
+            <p className="muted small">{t('Lo que hay ahora en el móvil se cambia por lo que tiene la copia.')}</p>
             <div className="btns mt12">
-              <button className="btn gry sm" disabled={ocupado} onClick={() => { setPaso('nada'); setArchivo(null) }}>Cancelar</button>
-              <button className="btn sm" disabled={ocupado} onClick={() => void recuperar()}>Sí, recuperar</button>
+              <button className="btn gry sm" disabled={ocupado} onClick={() => { setPaso('nada'); setArchivo(null) }}>{t('Cancelar')}</button>
+              <button className="btn sm" disabled={ocupado} onClick={() => void recuperar()}>{t('Sí, recuperar')}</button>
             </div>
           </div>
         ) : (
-          <button className="btn ln" disabled={ocupado} onClick={() => void elegir()}>Recuperar una copia</button>
+          <button className="btn ln" disabled={ocupado} onClick={() => void elegir()}>{t('Recuperar una copia')}</button>
         )}
-        <button className="btn ln" disabled={ocupado} onClick={() => void guardarCopia()}>Guardar una copia de lo que hay</button>
+        <button className="btn ln" disabled={ocupado} onClick={() => void guardarCopia()}>{t('Guardar una copia de lo que hay')}</button>
         {(paso === 'borrar' || paso === 'borrar2') && (
-          <p className="note bad"><span>{paso === 'borrar2' ? '¿Seguro del todo? Se borran tus entrenos, comidas, medidas y fotos de este móvil.' : 'Se borra todo lo que hay en este móvil. No se puede deshacer.'}</span></p>
+          <p className="note bad"><span>{paso === 'borrar2' ? t('¿Seguro del todo? Se borran tus entrenos, comidas, medidas y fotos de este móvil.') : t('Se borra todo lo que hay en este móvil. No se puede deshacer.')}</span></p>
         )}
         <div className="btns">
-          {paso === 'borrar' || paso === 'borrar2' ? <button className="btn gry sm" disabled={ocupado} onClick={() => setPaso('nada')}>Cancelar</button> : null}
+          {paso === 'borrar' || paso === 'borrar2' ? <button className="btn gry sm" disabled={ocupado} onClick={() => setPaso('nada')}>{t('Cancelar')}</button> : null}
           <button className="btn badf sm" disabled={ocupado} onClick={() => void borrar()}>
-            {paso === 'borrar2' ? 'Sí, borrarlo todo' : paso === 'borrar' ? 'Borrar todo' : 'Borrar todos los datos'}
+            {paso === 'borrar2' ? t('Sí, borrarlo todo') : paso === 'borrar' ? t('Borrar todo') : t('Borrar todos los datos')}
           </button>
         </div>
       </div>
-      {detalle && <p className="small muted mt16" style={{ wordBreak: 'break-word' }}>Detalle: {recortar(detalle, 200)}</p>}
+      {detalle && <p className="small muted mt16" style={{ wordBreak: 'break-word' }}>{t('Detalle: {detalle}', { detalle: recortar(detalle, 200) })}</p>}
     </div>
   )
   // Fuera de la app (fallo de todo) hace falta el marco con el fondo y la letra de la app.

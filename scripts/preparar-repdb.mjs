@@ -3,6 +3,7 @@
 //   node scripts/preparar-repdb.mjs          → descarga (si hace falta) y genera public/repdb/
 // Salida:
 //   public/repdb/catalogo.json   ejercicios en español + etiquetas + músculos + material
+//   public/repdb/catalogo.en.json   solo los textos en inglés por id (la app lo carga si está en inglés)
 //   public/repdb/img/*.webp      imágenes 512×512 (inicio / final / única)
 //   public/repdb/mini/*.webp     miniaturas 160×160 para listas
 //   public/repdb/maq/*.webp      imágenes de material y máquinas
@@ -62,6 +63,7 @@ async function main() {
   await descargar()
   const archivos = unzipSync(new Uint8Array(fs.readFileSync(ZIP)))
   const es = JSON.parse(new TextDecoder().decode(archivos['free.es.json']))
+  const en = JSON.parse(new TextDecoder().decode(archivos['free.en.json']))
 
   const ejercicios = es.exercises.map(e => ({
     id: e.id,
@@ -115,7 +117,32 @@ async function main() {
     ejercicios,
   }
   fs.writeFileSync(path.join(SALIDA, 'catalogo.json'), JSON.stringify(catalogo))
+  const ingles = textosIngles(en, es)
+  fs.writeFileSync(path.join(SALIDA, 'catalogo.en.json'), JSON.stringify(ingles))
   console.log(`RepDB listo: ${ejercicios.length} ejercicios, ${n} imágenes, ${Object.keys(material).length} tipos de material, ${Object.keys(musculos).length} músculos.`)
+  console.log(`Textos en inglés: ${Object.keys(ingles.ejercicios).length} ejercicios.`)
+}
+
+/**
+ * Textos en inglés de RepDB (free.en.json), por id: nombre, descripción, pasos y consejos de cada ejercicio, y los
+ * nombres de material, músculos y etiquetas. Solo los ids que también están en español (el catálogo es el español).
+ * En catalán RepDB no trae textos: la app los deja en castellano.
+ */
+export function textosIngles(en, es) {
+  const ids = new Set(es.exercises.map(e => e.id))
+  return {
+    version: en.schema_version,
+    generado: en.generated_at,
+    etiquetas: en.enum_labels ?? {},
+    musculos: Object.fromEntries(Object.entries(en.muscles ?? {}).map(([k, m]) => [k, { nombre: m.name, cientifico: m.name_scientific }])),
+    material: Object.fromEntries(Object.entries(en.equipment ?? {}).map(([k, m]) => [k, { nombre: m.name }])),
+    ejercicios: Object.fromEntries((en.exercises ?? []).filter(e => ids.has(e.id) && e.name).map(e => [e.id, {
+      nombre: e.name,
+      descripcion: e.description ?? '',
+      instrucciones: e.instructions ?? [],
+      consejos: e.tips ?? [],
+    }])),
+  }
 }
 
 // Solo al ejecutarlo (node scripts/preparar-repdb.mjs); al importarlo (pruebas) no hace nada.

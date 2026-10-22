@@ -10,6 +10,7 @@ import { anadirCalentamiento, crearSesion } from '../../../dominio/sesion'
 import { hoyISO, lunesDe } from '../../../dominio/fechas'
 import type { Sesion } from '../../../datos/tipos'
 import type { useNav } from '../../nav'
+import { t } from '../../../i18n'
 
 /**
  * Vuelve a la pantalla del entreno en curso. «Restaurar» solo sirve si se minimizó en esta visita;
@@ -39,7 +40,7 @@ export async function iniciarEntreno(o: { letra?: string; version?: 'normal' | '
   const horaLimite = o.horaLimite ?? (perfil ? perfil.horaLimite[perfil.transporte] : undefined)
   let s: Sesion
   if (o.libre || !r) {
-    s = { fecha: hoyISO(), rutinaId: r?.id ?? null, letra: 'L', nombre: 'Entreno libre', gimnasioId: g?.id ?? null, inicio: Date.now(), horaLimite, version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
+    s = { fecha: hoyISO(), rutinaId: r?.id ?? null, letra: 'L', nombre: t('Entreno libre'), gimnasioId: g?.id ?? null, inicio: Date.now(), horaLimite, version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
   } else {
     const base = r.dias.find(d => d.letra === o.letra) ?? r.dias[0]!
     // Semana suave aceptada en Inicio: mismos ejercicios, 1 serie menos y −10 % de peso.

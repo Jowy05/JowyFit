@@ -247,6 +247,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-4-0.cab': '<b>Version 0.4.0</b> · October 22, 2026',
+  'nov.0-4-0.texto': 'The app now comes in three languages: Spanish, Catalan, and English. It still starts in Spanish; switch it in Settings → Appearance → Language. Dates, times, numbers, and exercises (in English) show up in your language.',
   'nov.0-3-0.cab': '<b>Version 0.3.0</b> · October 21, 2026',
   'nov.0-3-0.texto': 'A tour inside the app: the first time, it offers to walk you through the important parts, and it’s always there in Settings. On iPhone, it explains what works differently there. And on this page, a one-minute demo.',
   'nov.0-2-1.cab': '<b>Version 0.2.1</b> · October 21, 2026',

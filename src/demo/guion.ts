@@ -2,9 +2,10 @@
 // lo señalado salen de la app de verdad (.cache/demo/capturas-demo.mjs → public/demo/ y focos.json).
 // Android: un vistazo de un minuto. iPhone: algo más largo, porque explica lo que allí se hace de otra forma
 // (instalarla, pasos a mano, pendientes en vez de recordatorios, copia con Compartir) y no promete lo que no hay.
-// Los textos son claves de i18n/es.ts (y de ca.ts y en.ts): las capturas siguen en castellano.
+// Los textos son claves de i18n/es.ts (y de ca.ts y en.ts). Cada idioma tiene sus capturas (public/demo/<idioma>/).
 import focos from './focos.json'
 import type { Clave } from './i18n'
+import type { Idioma } from '../landing/i18n/idioma'
 
 export type Plataforma = 'android' | 'apple'
 export type Caja = [number, number, number, number]
@@ -55,11 +56,14 @@ export function guion(p: Plataforma): PasoDemo[] {
   ]
 }
 
-/** Caja (px de 390 × 844) de lo que señala un paso, o null si no se capturó. */
-export function cajaDe(p: Plataforma, paso: PasoDemo): Caja | null {
-  const f = (focos as unknown as Record<string, Record<string, Record<string, Caja | null>>>)[p]?.[paso.cap]?.[paso.foco]
+/** Caja (px de 390 × 844) de lo que señala un paso en las capturas de ese idioma, o null si no se capturó. */
+export function cajaDe(l: Idioma, p: Plataforma, paso: PasoDemo): Caja | null {
+  const f = (focos as unknown as Record<string, Record<string, Record<string, Record<string, Caja | null>>>>)[l]?.[p]?.[paso.cap]?.[paso.foco]
   return f ?? null
 }
+
+/** La captura de un paso: demo/<idioma>/<plataforma>/<captura>.webp. */
+export const captura = (l: Idioma, p: Plataforma, cap: string) => `demo/${l}/${p}/${cap}.webp`
 
 /** Cuánto dura un paso: lo justo para leerlo con calma (entre 4 y 6,6 s; la de Android, en torno a un minuto). */
 export const duracion = (titulo: string, texto: string) => Math.min(6600, Math.max(4000, 1300 + (titulo.length + texto.length) * 34))

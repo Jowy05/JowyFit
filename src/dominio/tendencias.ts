@@ -4,6 +4,7 @@ import type { Comida, Medicion, Perfil, Serie, Sesion, TipoRegistro } from '../d
 import { epley, grasaMarina } from './calculos'
 import { diasEntre, lunesDe, sumarDias } from './fechas'
 import { volumen } from './progresion'
+import { t, tk } from '../i18n'
 
 export type PuntoFecha = { fecha: string; valor: number }
 
@@ -122,18 +123,19 @@ export function logros(sesiones: Sesion[]): Logro[] {
 /** Series marcadas como récord en sesiones hechas de esos días. */
 export function recordsEn(sesiones: Sesion[], dias: string[]): number {
   return sesiones.filter(s => s.estado === 'hecha' && dias.includes(s.fecha))
-    .reduce((t, s) => t + s.ejercicios.reduce((a, e) => a + trabajo(e.series).filter(x => x.record).length, 0), 0)
+    .reduce((suma, s) => suma + s.ejercicios.reduce((a, e) => a + trabajo(e.series).filter(x => x.record).length, 0), 0)
 }
 
 // ---------- series por grupo muscular ----------
 
+// n: nombre en castellano (también es la clave del grupo); se traduce al pintarlo con t(g.n).
 export const GRUPOS_MUSCULARES: { n: string; patrones: string[]; zona: [number, number] }[] = [
-  { n: 'Pecho', patrones: ['empuje-h', 'pecho-aisl'], zona: [10, 20] },
-  { n: 'Espalda', patrones: ['tiron-h', 'tiron-v', 'lumbar'], zona: [10, 20] },
-  { n: 'Piernas', patrones: ['rodilla', 'cadera', 'cuadriceps', 'femoral', 'gluteo', 'gemelo'], zona: [10, 20] },
-  { n: 'Hombros', patrones: ['empuje-v', 'hombro-lat', 'hombro-post', 'trapecio'], zona: [8, 16] },
-  { n: 'Brazos', patrones: ['biceps', 'triceps', 'antebrazo'], zona: [8, 16] },
-  { n: 'Abdomen', patrones: ['core'], zona: [4, 10] },
+  { n: tk('Pecho'), patrones: ['empuje-h', 'pecho-aisl'], zona: [10, 20] },
+  { n: tk('Espalda'), patrones: ['tiron-h', 'tiron-v', 'lumbar'], zona: [10, 20] },
+  { n: tk('Piernas'), patrones: ['rodilla', 'cadera', 'cuadriceps', 'femoral', 'gluteo', 'gemelo'], zona: [10, 20] },
+  { n: tk('Hombros'), patrones: ['empuje-v', 'hombro-lat', 'hombro-post', 'trapecio'], zona: [8, 16] },
+  { n: tk('Brazos'), patrones: ['biceps', 'triceps', 'antebrazo'], zona: [8, 16] },
+  { n: tk('Abdomen'), patrones: ['core'], zona: [4, 10] },
 ]
 
 /** Palabra para las series de un grupo frente a su zona recomendada: «poco», «bien» o «mucho». */
@@ -200,9 +202,9 @@ export function pendienteSemanal(ps: PuntoFecha[]): number | null {
   const xs = ps.map(p => diasEntre(x0, p.fecha) / 7)
   const ys = ps.map(p => p.valor)
   const mx = media(xs)!, my = media(ys)!
-  const den = xs.reduce((t, x) => t + (x - mx) ** 2, 0)
+  const den = xs.reduce((a, x) => a + (x - mx) ** 2, 0)
   if (den === 0) return null
-  return xs.reduce((t, x, i) => t + (x - mx) * (ys[i]! - my), 0) / den
+  return xs.reduce((a, x, i) => a + (x - mx) * (ys[i]! - my), 0) / den
 }
 
 /** % de grasa estimado por medidas (Marina) para cada día con cintura, con el último cuello y cadera conocidos. */
@@ -265,7 +267,8 @@ export const esDominadaEstricta = (id: string, registro: TipoRegistro) => DOMINA
 export const esDominadaAsistida = (id: string, registro: TipoRegistro) => (DOMINADA.test(id) || /assisted-pull/.test(id)) && (registro === 'asistido' || /assisted/.test(id))
 export const esDominadaNegativa = (id: string) => DOMINADA.test(id) && /negative/.test(id)
 
-export type Hito = { titulo: string; detalle: string; fecha: string | null; estado: 'hecho' | 'actual' | 'pendiente' }
+/** id: qué hito es, sin depender del idioma (título y detalle salen traducidos). */
+export type Hito = { id: 'asistidas' | 'negativas' | 'e1' | 'e3' | 'e5'; titulo: string; detalle: string; fecha: string | null; estado: 'hecho' | 'actual' | 'pendiente' }
 
 /** Hitos guiados de las dominadas: asistidas → negativas → 1 → 3 → 5 estrictas. */
 export function hitosDominadas(sesiones: Sesion[]): { hitos: Hito[]; estrictas: number; hay: boolean } {
@@ -274,28 +277,28 @@ export function hitosDominadas(sesiones: Sesion[]): { hitos: Hito[]; estrictas: 
   let max = 0, hay = false
   for (const s of hechasAsc(sesiones)) {
     for (const e of s.ejercicios) {
-      const t = trabajo(e.series)
-      if (!t.length) continue
+      const tr = trabajo(e.series)
+      if (!tr.length) continue
       if (esDominadaAsistida(e.ejercicio, e.registro)) {
         hay = true
-        if (!asist && t.some(x => x.peso != null && Math.abs(x.peso) <= 15 && (x.reps ?? 0) >= 5)) asist = s.fecha
+        if (!asist && tr.some(x => x.peso != null && Math.abs(x.peso) <= 15 && (x.reps ?? 0) >= 5)) asist = s.fecha
       } else if (esDominadaNegativa(e.ejercicio)) {
         hay = true
-        if (!neg && t.filter(x => (x.reps ?? 0) >= 5).length >= 3) neg = s.fecha
+        if (!neg && tr.filter(x => (x.reps ?? 0) >= 5).length >= 3) neg = s.fecha
       } else if (esDominadaEstricta(e.ejercicio, e.registro)) {
         hay = true
-        const r = Math.max(...t.map(x => x.reps ?? 0))
+        const r = Math.max(...tr.map(x => x.reps ?? 0))
         max = Math.max(max, r)
         ;[1, 3, 5].forEach((n, i) => { if (!estrictas[i] && r >= n) estrictas[i] = s.fecha })
       }
     }
   }
   const base: Omit<Hito, 'estado'>[] = [
-    { titulo: 'Asistidas: hasta −15 kg', detalle: 'Ve quitando ayuda poco a poco', fecha: asist },
-    { titulo: 'Negativas: 3 × 5', detalle: 'Bajar despacio, 3-5 segundos', fecha: neg },
-    { titulo: '1 dominada estricta', detalle: 'Sin asistencia', fecha: estrictas[0]! },
-    { titulo: '3 estrictas', detalle: 'En una misma serie', fecha: estrictas[1]! },
-    { titulo: '5 estrictas', detalle: 'Meta', fecha: estrictas[2]! },
+    { id: 'asistidas', titulo: t('Asistidas: hasta −15 kg'), detalle: t('Ve quitando ayuda poco a poco'), fecha: asist },
+    { id: 'negativas', titulo: t('Negativas: 3 × 5'), detalle: t('Bajar despacio, 3-5 segundos'), fecha: neg },
+    { id: 'e1', titulo: t('1 dominada estricta'), detalle: t('Sin asistencia'), fecha: estrictas[0]! },
+    { id: 'e3', titulo: t('3 estrictas'), detalle: t('En una misma serie'), fecha: estrictas[1]! },
+    { id: 'e5', titulo: t('5 estrictas'), detalle: t('Meta'), fecha: estrictas[2]! },
   ]
   // Un hito cuenta como hecho si se logró o si ya se superó uno posterior.
   const ultimoHecho = base.map(h => h.fecha != null).lastIndexOf(true)
@@ -332,29 +335,29 @@ export type Tono = 'ok' | 'warn' | 'bad'
 
 /** Palabra que acompaña a cintura/altura: 0,4-0,5 es lo saludable. */
 export function veredictoCinturaAltura(ratio: number): { palabra: string; tono: Tono } {
-  if (ratio < 0.4) return { palabra: 'por debajo de lo habitual', tono: 'warn' }
-  if (ratio < 0.5) return { palabra: 'saludable', tono: 'ok' }
-  if (ratio < 0.55) return { palabra: 'un poco por encima de lo saludable', tono: 'warn' }
-  if (ratio < 0.6) return { palabra: 'por encima de lo saludable', tono: 'bad' }
-  return { palabra: 'bastante por encima de lo saludable', tono: 'bad' }
+  if (ratio < 0.4) return { palabra: t('por debajo de lo habitual'), tono: 'warn' }
+  if (ratio < 0.5) return { palabra: t('saludable'), tono: 'ok' }
+  if (ratio < 0.55) return { palabra: t('un poco por encima de lo saludable'), tono: 'warn' }
+  if (ratio < 0.6) return { palabra: t('por encima de lo saludable'), tono: 'bad' }
+  return { palabra: t('bastante por encima de lo saludable'), tono: 'bad' }
 }
 
 /** Palabra para el % de grasa según el sexo (tramos habituales del ACE). */
 export function veredictoGrasa(pct: number, sexo: Perfil['sexo']): { palabra: string; tono: Tono } {
   const [deportista, forma, normal, alto] = sexo === 'mujer' ? [14, 21, 25, 32] : [6, 14, 18, 25]
-  if (pct < deportista) return { palabra: 'muy bajo', tono: 'warn' }
-  if (pct < forma) return { palabra: 'de deportista', tono: 'ok' }
-  if (pct < normal) return { palabra: 'en forma', tono: 'ok' }
-  if (pct < alto) return { palabra: 'normal', tono: 'ok' }
-  return { palabra: 'alto', tono: 'bad' }
+  if (pct < deportista) return { palabra: t('muy bajo'), tono: 'warn' }
+  if (pct < forma) return { palabra: t('de deportista'), tono: 'ok' }
+  if (pct < normal) return { palabra: t('en forma'), tono: 'ok' }
+  if (pct < alto) return { palabra: t('normal'), tono: 'ok' }
+  return { palabra: t('alto'), tono: 'bad' }
 }
 
 /** Palabra para el IMC (tramos de la OMS). */
 export function veredictoImc(v: number): { palabra: string; tono: Tono } {
-  if (v < 18.5) return { palabra: 'bajo', tono: 'warn' }
-  if (v < 25) return { palabra: 'normal', tono: 'ok' }
-  if (v < 30) return { palabra: 'algo alto', tono: 'warn' }
-  return { palabra: 'alto', tono: 'bad' }
+  if (v < 18.5) return { palabra: t('bajo'), tono: 'warn' }
+  if (v < 25) return { palabra: t('normal'), tono: 'ok' }
+  if (v < 30) return { palabra: t('algo alto'), tono: 'warn' }
+  return { palabra: t('alto'), tono: 'bad' }
 }
 
 /** Escala de una gráfica con números redondos: marcas cada 1, 2, 2,5 o 5 (× 10ⁿ). */
@@ -407,12 +410,14 @@ export function estadoPicoteo(dias: number, anterior: number, hayComidas: boolea
 /**
  * Parte la frase del semáforo en líneas cortas y cambia «1/3 entrenos» por palabras:
  * «Vas al día: 1 de 3 entrenos» (semana en curso), «Entrenos: 3 de 3» o «Te faltan entrenos: 1 de 3».
+ * Con `bien` y `mal` (los de resumenSemana, ya traducidos) no se trocea la frase: así vale en cualquier idioma.
  */
-export function lineasSemaforo(o: { frase: string; semaforo: 'verde' | 'ambar' | 'rojo'; entrenos: number; fijos: number; esperados?: number; enCurso: boolean }): string[] {
+export function lineasSemaforo(o: { frase: string; semaforo: 'verde' | 'ambar' | 'rojo'; entrenos: number; fijos: number; esperados?: number; enCurso: boolean; bien?: string[]; mal?: string[] }): string[] {
   const sinPunto = o.frase.trim().replace(/\.$/, '')
   let bien: string[] = [], mal: string[] = []
   const trocear = (s: string | undefined) => (s ? s.split(', ').map(x => x.trim().replace(/ OK$/, '')).filter(Boolean) : [])
-  if (o.semaforo === 'verde') bien = trocear(sinPunto)
+  if (o.bien && o.mal) { bien = o.bien; mal = o.mal }
+  else if (o.semaforo === 'verde') bien = trocear(sinPunto)
   else {
     const mB = /Bien: (.*?)(?:\. A mejorar: |$)/.exec(sinPunto)
     const mM = /A mejorar: (.*)$/.exec(sinPunto)
@@ -423,12 +428,12 @@ export function lineasSemaforo(o: { frase: string; semaforo: 'verde' | 'ambar' |
   const lineas: string[] = []
   if (o.fijos > 0) {
     const { alDia } = estadoEntrenos(o.entrenos, o.fijos, o.esperados)
-    const de = `${o.entrenos} de ${o.fijos} entrenos`
-    if (o.entrenos >= o.fijos) lineas.push(`Entrenos hechos: ${o.entrenos} de ${o.fijos}`)
-    else if (alDia) lineas.push(o.enCurso ? `Vas al día: ${de}` : `Entrenos: ${de}`)
-    else lineas.push(`${o.enCurso ? 'Vas con retraso' : 'Te faltaron entrenos'}: ${de}`)
+    const v = { n: o.entrenos, total: o.fijos }
+    if (o.entrenos >= o.fijos) lineas.push(t('Entrenos hechos: {n} de {total}', v))
+    else if (alDia) lineas.push(o.enCurso ? t('Vas al día: {n} de {total} entrenos', v) : t('Entrenos: {n} de {total} entrenos', v))
+    else lineas.push(o.enCurso ? t('Vas con retraso: {n} de {total} entrenos', v) : t('Te faltaron entrenos: {n} de {total} entrenos', v))
   }
-  if (bien.length) lineas.push(`Bien: ${bien.join(', ')}`)
-  if (mal.length) lineas.push(`A mejorar: ${mal.join(', ')}`)
+  if (bien.length) lineas.push(t('Bien: {lista}', { lista: bien.join(', ') }))
+  if (mal.length) lineas.push(t('A mejorar: {lista}', { lista: mal.join(', ') }))
   return lineas
 }

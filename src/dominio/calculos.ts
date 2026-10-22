@@ -1,5 +1,6 @@
 // Cálculos corporales y de energía. Fórmulas del plan (sección 7).
 import type { Perfil, TipoObjetivo, Trabajo } from '../datos/tipos'
+import { idioma, regionNumeros } from '../i18n'
 
 export function imc(pesoKg: number, alturaCm: number): number {
   // Perfil a medias (altura 0): NaN en vez de Infinity, que se pintaba como «∞».
@@ -61,14 +62,17 @@ export function objetivos(p: { pesoKg: number; alturaCm: number; edad: number; s
   return { basal: Math.round(basal), gasto: Math.round(gasto + entreno), kcal, proteina }
 }
 
-/** Redondea a 1 decimal en formato español. */
+/** Redondea a 1 decimal con la coma o el punto del idioma (en inglés, punto decimal y coma de miles). */
 export function num(n: number | null | undefined, decimales = 1): string {
   if (n == null || !Number.isFinite(n)) return '—'
   // Redondeo propio y sin «-0» (−0,04 con un decimal se veía como «-0»; la asistencia 0 como «-0 kg»).
   const f = 10 ** decimales
   const r = Math.round(n * f) / f
-  return (r === 0 ? 0 : r).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: decimales })
+  return (r === 0 ? 0 : r).toLocaleString(regionNumeros(), { minimumFractionDigits: 0, maximumFractionDigits: decimales })
 }
+
+/** Valor con su unidad: «26,3 %», «75 kg»; en inglés el % va pegado («26.3%»). */
+export const conUnidad = (valor: string, u: string) => (!u ? valor : u === '%' && idioma() === 'en' ? `${valor}%` : `${valor} ${u}`)
 
 /** Peso con coma y sin decimales sobrantes: 47,5 · 40 */
 export const kg = (n: number | null | undefined) => num(n, 2)

@@ -1,16 +1,18 @@
 // Cómo se agrupa el material en el catálogo del gimnasio y en qué patrón de movimiento
 // cae cada ejercicio (lo usan el generador de rutina y las alternativas A → B → C).
+// Los nombres van marcados con tk(): se traducen al pintarlos con t().
 import type { Ejercicio } from './tipos'
 import type { TipoRegistro } from '../datos/tipos'
+import { tk } from '../i18n'
 
 export const GRUPOS_MATERIAL: { id: string; nombre: string; claves: string[] }[] = [
-  { id: 'libre', nombre: 'Peso libre', claves: ['dumbbell', 'barbell', 'ez_bar', 'trap_bar', 'kettlebell', 'plates', 'flat_bench', 'smith_machine'] },
-  { id: 'poleas', nombre: 'Poleas', claves: ['cable'] },
-  { id: 'pierna', nombre: 'Máquinas de pierna', claves: ['leg_press', 'hack_squat', 'leg_curl', 'leg_extension', 'standing_calf_raise_machine', 'seated_calf_raise_machine', 'donkey_calf_raise_machine', 'hip_abduction_machine', 'hip_adduction_machine', 'hip_thrust_machine', 'glute_ham_developer', 'back_extension_machine'] },
-  { id: 'torso', nombre: 'Máquinas de torso', claves: ['chest_press_machine', 'chest_fly_machine', 'pec_deck', 'reverse_fly_machine', 'shoulder_press_machine', 'plate_loaded_lateral_raise_machine', 'lat_pulldown_machine', 'seated_row_machine', 'bicep_curl_machine', 'preacher_curl_machine', 'tricep_extension_machine', 'plate_loaded_dip_machine', 'shrug_machine', 'ab_crunch_machine'] },
-  { id: 'dominadas', nombre: 'Dominadas y fondos', claves: ['pull_up_bar', 'dip_station', 'assisted_pullup_machine', 'dip_machine', 'rings', 'climbing_rope'] },
-  { id: 'cardio', nombre: 'Cardio', claves: ['treadmill', 'stationary_bike', 'air_bike', 'elliptical', 'rower', 'stair_climber', 'ski_erg', 'jump_rope', 'sled', 'battle_rope'] },
-  { id: 'accesorios', nombre: 'Accesorios', claves: ['resistance_band', 'loop_band', 'suspension_trainer', 'stability_ball', 'ab_wheel', 'plyo_box', 'slam_ball', 'wrist_roller'] },
+  { id: 'libre', nombre: tk('Peso libre'), claves: ['dumbbell', 'barbell', 'ez_bar', 'trap_bar', 'kettlebell', 'plates', 'flat_bench', 'smith_machine'] },
+  { id: 'poleas', nombre: tk('Poleas'), claves: ['cable'] },
+  { id: 'pierna', nombre: tk('Máquinas de pierna'), claves: ['leg_press', 'hack_squat', 'leg_curl', 'leg_extension', 'standing_calf_raise_machine', 'seated_calf_raise_machine', 'donkey_calf_raise_machine', 'hip_abduction_machine', 'hip_adduction_machine', 'hip_thrust_machine', 'glute_ham_developer', 'back_extension_machine'] },
+  { id: 'torso', nombre: tk('Máquinas de torso'), claves: ['chest_press_machine', 'chest_fly_machine', 'pec_deck', 'reverse_fly_machine', 'shoulder_press_machine', 'plate_loaded_lateral_raise_machine', 'lat_pulldown_machine', 'seated_row_machine', 'bicep_curl_machine', 'preacher_curl_machine', 'tricep_extension_machine', 'plate_loaded_dip_machine', 'shrug_machine', 'ab_crunch_machine'] },
+  { id: 'dominadas', nombre: tk('Dominadas y fondos'), claves: ['pull_up_bar', 'dip_station', 'assisted_pullup_machine', 'dip_machine', 'rings', 'climbing_rope'] },
+  { id: 'cardio', nombre: tk('Cardio'), claves: ['treadmill', 'stationary_bike', 'air_bike', 'elliptical', 'rower', 'stair_climber', 'ski_erg', 'jump_rope', 'sled', 'battle_rope'] },
+  { id: 'accesorios', nombre: tk('Accesorios'), claves: ['resistance_band', 'loop_band', 'suspension_trainer', 'stability_ball', 'ab_wheel', 'plyo_box', 'slam_ball', 'wrist_roller'] },
 ]
 
 export const TODAS_LAS_CLAVES = GRUPOS_MATERIAL.flatMap(g => g.claves)
@@ -21,11 +23,11 @@ export type Patron =
   | 'biceps' | 'triceps' | 'antebrazo' | 'core' | 'lumbar' | 'completo' | 'cardio' | 'estiramiento' | 'potencia'
 
 export const NOMBRE_PATRON: Record<Patron, string> = {
-  rodilla: 'Pierna (rodilla)', cadera: 'Pierna (cadera)', 'empuje-h': 'Empuje horizontal', 'empuje-v': 'Empuje vertical',
-  'tiron-h': 'Remo', 'tiron-v': 'Tirón vertical', cuadriceps: 'Cuádriceps', femoral: 'Femoral', gluteo: 'Glúteo', gemelo: 'Gemelo',
-  'pecho-aisl': 'Pecho', 'hombro-lat': 'Hombro lateral', 'hombro-post': 'Hombro posterior', trapecio: 'Trapecio', biceps: 'Bíceps',
-  triceps: 'Tríceps', antebrazo: 'Antebrazo', core: 'Core', lumbar: 'Lumbar', completo: 'Cuerpo completo', cardio: 'Cardio',
-  estiramiento: 'Estiramiento', potencia: 'Potencia',
+  rodilla: tk('Pierna (rodilla)'), cadera: tk('Pierna (cadera)'), 'empuje-h': tk('Empuje horizontal'), 'empuje-v': tk('Empuje vertical'),
+  'tiron-h': tk('Remo'), 'tiron-v': tk('Tirón vertical'), cuadriceps: tk('Cuádriceps'), femoral: tk('Femoral'), gluteo: tk('Glúteo'), gemelo: tk('Gemelo'),
+  'pecho-aisl': tk('Pecho'), 'hombro-lat': tk('Hombro lateral'), 'hombro-post': tk('Hombro posterior'), trapecio: tk('Trapecio'), biceps: tk('Bíceps'),
+  triceps: tk('Tríceps'), antebrazo: tk('Antebrazo'), core: tk('Core'), lumbar: tk('Lumbar'), completo: tk('Cuerpo completo'), cardio: tk('Cardio'),
+  estiramiento: tk('Estiramiento'), potencia: tk('Potencia'),
 }
 
 const tiene = (e: Ejercicio, m: string) => e.principales.includes(m)
@@ -93,11 +95,11 @@ export const ES_LIBRE = (e: Ejercicio) => ['barbell', 'dumbbell', 'ez_bar', 'tra
 
 /** Etiquetas de RepDB en español (las que se muestran). */
 export const ETIQUETAS_ES: Record<string, string> = {
-  knee_safe: 'Cuida la rodilla', no_axial_load: 'Sin carga en la columna', lower_back_safe: 'Cuida la lumbar', shoulder_safe: 'Cuida el hombro',
-  leg_day: 'Día de pierna', calisthenics: 'Calistenia', mobility: 'Movilidad', stretching: 'Estiramiento', requires_bench: 'Necesita banco',
-  push_day: 'Empuje', pull_day: 'Tirón', core: 'Core', arm_day: 'Brazos', full_body: 'Cuerpo completo', glute_focus: 'Glúteo',
-  core_focus: 'Core', conditioning: 'Acondicionamiento', shoulder_focus: 'Hombro', warm_up: 'Calentamiento', grip_focus: 'Agarre',
-  shoulder_stability: 'Estabilidad de hombro', bodyweight: 'Peso corporal', powerlifting: 'Powerlifting', big_three: 'Básico', chest_focus: 'Pecho',
+  knee_safe: tk('Cuida la rodilla'), no_axial_load: tk('Sin carga en la columna'), lower_back_safe: tk('Cuida la lumbar'), shoulder_safe: tk('Cuida el hombro'),
+  leg_day: tk('Día de pierna'), calisthenics: tk('Calistenia'), mobility: tk('Movilidad'), stretching: tk('Estiramiento'), requires_bench: tk('Necesita banco'),
+  push_day: tk('Empuje'), pull_day: tk('Tirón'), core: tk('Core'), arm_day: tk('Brazos'), full_body: tk('Cuerpo completo'), glute_focus: tk('Glúteo'),
+  core_focus: tk('Core'), conditioning: tk('Acondicionamiento'), shoulder_focus: tk('Hombro'), warm_up: tk('Calentamiento'), grip_focus: tk('Agarre'),
+  shoulder_stability: tk('Estabilidad de hombro'), bodyweight: tk('Peso corporal'), powerlifting: tk('Powerlifting'), big_three: tk('Básico'), chest_focus: tk('Pecho'),
 }
 
 /** Zona sensible del perfil → etiqueta de RepDB que debe tener el ejercicio para proponerlo. */

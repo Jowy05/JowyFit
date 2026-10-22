@@ -10,9 +10,11 @@ import { Chip, Ico, Pantalla, Th, LARGO } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useGimnasio, useMarcas, useRutina } from '../../datos'
 import { abrevDia, CabRutina, musculoComun, musculosComunes, nombreVisible, zonaComun } from './comun'
+import { t, tk } from '../../../i18n'
+import { tr } from '../../../i18n/jsx'
 
-/** Grupos sencillos para el filtro principal (los músculos exactos van en «Más filtros»). */
-const GRUPOS_SIMPLES = ['Pecho', 'Espalda', 'Hombro', 'Brazo', 'Abdomen', 'Glúteo', 'Pierna']
+/** Grupos sencillos para el filtro principal (los músculos exactos van en «Más filtros»). En castellano: se traducen al pintarlos. */
+const GRUPOS_SIMPLES = [tk('Pecho'), tk('Espalda'), tk('Hombro'), tk('Brazo'), tk('Abdomen'), tk('Glúteo'), tk('Pierna')]
 
 export function Biblioteca({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -48,7 +50,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
   const lista = useMemo(() => {
     let l = (c?.ejercicios ?? []).filter(e => e.categoria !== 'stretching' || q)
     if (enGym && g) l = l.filter(e => !e.material || sel.has(e.material))
-    if (grupo) l = l.filter(e => e.principales.some(x => musculoComun(x) === grupo))
+    if (grupo) l = l.filter(e => e.principales.some(x => musculoComun(x) === t(grupo)))
     if (musculo) l = l.filter(e => e.principales.includes(musculo) || e.secundarios.includes(musculo))
     if (material) l = l.filter(e => (material === 'corporal' ? !e.material : e.material === material))
     if (favs) l = l.filter(e => marcas.get(e.id)?.favorito)
@@ -63,46 +65,49 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
   // «En mi gimnasio» no cuenta: es lo normal.
   const hayFiltros = !!grupo || !!musculo || !!material || favs || hoy || evitados
   const quitarFiltros = () => { setGrupo(''); setMusculo(''); setMaterial(''); setFavs(false); setHoy(false); setEvitados(false) }
+  const cuenta = <b className="mono">{lista.length}</b>
   const materiales = useMemo(() => [...new Set((c?.ejercicios ?? []).map(e => e.material).filter((m): m is string => !!m))].sort((a, b) => nombreMaterial(a).localeCompare(nombreMaterial(b))), [c])
 
   return (
     <Pantalla>
-      <CabRutina actual="rut-ej" crumb="Biblioteca" />
+      <CabRutina actual="rut-ej" crumb={t('Biblioteca')} />
       <div className="pg">
-        <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder="Buscar ejercicio o máquina" aria-label="Buscar ejercicio" value={q} onChange={e => { setQ(e.target.value); setN(40) }} /></label>
+        <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder={t('Buscar ejercicio o máquina')} aria-label={t('Buscar ejercicio')} value={q} onChange={e => { setQ(e.target.value); setN(40) }} /></label>
         <div className="chips scroll mt12">
-          <select className="chip filt" value={grupo} onChange={e => setGrupo(e.target.value)} aria-label="Músculo" style={{ appearance: 'none', background: grupo ? 'var(--blue-t)' : 'var(--surface)', color: grupo ? 'var(--blue)' : 'var(--ink)' }}>
-            <option value="">Músculo ▾</option>
-            {GRUPOS_SIMPLES.map(x => <option key={x} value={x}>{x}</option>)}
+          <select className="chip filt" value={grupo} onChange={e => setGrupo(e.target.value)} aria-label={t('Músculo')} style={{ appearance: 'none', background: grupo ? 'var(--blue-t)' : 'var(--surface)', color: grupo ? 'var(--blue)' : 'var(--ink)' }}>
+            <option value="">{t('Músculo ▾')}</option>
+            {GRUPOS_SIMPLES.map(x => <option key={x} value={x}>{t(x)}</option>)}
           </select>
-          <Chip on={enGym} ck onClick={() => setEnGym(v => !v)}>En mi gimnasio</Chip>
-          <Chip on={favs} onClick={() => setFavs(v => !v)}><Ico n="star" />Favoritos{nFavs > 0 && <span className="n">{nFavs}</span>}</Chip>
-          {evitados && <Chip on onClick={() => setEvitados(false)}><Ico n="prohibit" />Evitados</Chip>}
-          <Chip on={mas || !!musculo || !!material || hoy} onClick={() => setMas(v => !v)}><Ico n="sliders-horizontal" />Más filtros</Chip>
+          <Chip on={enGym} ck onClick={() => setEnGym(v => !v)}>{t('En mi gimnasio')}</Chip>
+          <Chip on={favs} onClick={() => setFavs(v => !v)}><Ico n="star" />{t('Favoritos')}{nFavs > 0 && <span className="n">{nFavs}</span>}</Chip>
+          {evitados && <Chip on onClick={() => setEvitados(false)}><Ico n="prohibit" />{t('Evitados')}</Chip>}
+          <Chip on={mas || !!musculo || !!material || hoy} onClick={() => setMas(v => !v)}><Ico n="sliders-horizontal" />{t('Más filtros')}</Chip>
         </div>
         {(mas || musculo || material || hoy) && (
           <div className="chips scroll mt8">
-            <select className="chip filt" value={musculo} onChange={e => setMusculo(e.target.value)} aria-label="Músculo exacto" style={{ appearance: 'none', background: musculo ? 'var(--blue-t)' : 'var(--surface)', color: musculo ? 'var(--blue)' : 'var(--ink)' }}>
-              <option value="">Músculo exacto ▾</option>
+            <select className="chip filt" value={musculo} onChange={e => setMusculo(e.target.value)} aria-label={t('Músculo exacto')} style={{ appearance: 'none', background: musculo ? 'var(--blue-t)' : 'var(--surface)', color: musculo ? 'var(--blue)' : 'var(--ink)' }}>
+              <option value="">{t('Músculo exacto ▾')}</option>
               {Object.entries(c?.musculos ?? {}).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([k, m]) => <option key={k} value={k}>{m.nombre}</option>)}
             </select>
-            <select className="chip filt" value={material} onChange={e => setMaterial(e.target.value)} aria-label="Equipamiento" style={{ appearance: 'none', background: material ? 'var(--blue-t)' : 'var(--surface)', color: material ? 'var(--blue)' : 'var(--ink)' }}>
-              <option value="">Máquina o material ▾</option>
-              <option value="corporal">Peso corporal</option>
+            <select className="chip filt" value={material} onChange={e => setMaterial(e.target.value)} aria-label={t('Equipamiento')} style={{ appearance: 'none', background: material ? 'var(--blue-t)' : 'var(--surface)', color: material ? 'var(--blue)' : 'var(--ink)' }}>
+              <option value="">{t('Máquina o material ▾')}</option>
+              <option value="corporal">{t('Peso corporal')}</option>
               {materiales.map(m => <option key={m} value={m}>{nombreMaterial(m)}</option>)}
             </select>
-            <Chip on={hoy} onClick={() => setHoy(v => !v)}>Hechos hoy <span className="n">{datos?.hechosHoy.size ?? 0}</span></Chip>
+            <Chip on={hoy} onClick={() => setHoy(v => !v)}>{t('Hechos hoy')} <span className="n">{datos?.hechosHoy.size ?? 0}</span></Chip>
           </div>
         )}
-        <div className="count"><p><b className="mono">{lista.length}</b> ejercicio{lista.length === 1 ? '' : 's'}{enGym && g ? ' en tu gimnasio' : ''}</p>{hayFiltros && <button className="lnk" onClick={quitarFiltros}>Quitar filtros</button>}</div>
+        <div className="count"><p>{enGym && g
+          ? (lista.length === 1 ? tr('{n} ejercicio en tu gimnasio', { n: cuenta }) : tr('{n} ejercicios en tu gimnasio', { n: cuenta }))
+          : (lista.length === 1 ? tr('{n} ejercicio', { n: cuenta }) : tr('{n} ejercicios', { n: cuenta }))}</p>{hayFiltros && <button className="lnk" onClick={quitarFiltros}>{t('Quitar filtros')}</button>}</div>
         {lista.length === 0 ? (
           <div className="card pd empty">
             <span className="empty-ic"><Ico n="magnifying-glass" /></span>
-            <h3 className="h3">No sale ningún ejercicio</h3>
-            <p className="muted">{q ? `Nada se llama «${q}»${hayFiltros ? ' con estos filtros' : ''}. Prueba con otra palabra, como «press» o «sentadilla».` : hayFiltros ? 'Hay demasiados filtros puestos.' : 'Tu gimnasio no tiene máquinas marcadas.'}</p>
-            {hayFiltros ? <button className="btn mt12" onClick={quitarFiltros}>Quitar filtros</button>
-              : enGym && !q ? <button className="btn mt12" onClick={() => (g?.id != null ? nav.ir('rut-gym-edit', { id: g.id }) : nav.reemplazar('rut-gym'))}>{g ? 'Marcar las máquinas de mi gimnasio' : 'Crear mi gimnasio'}</button>
-              : q ? <button className="btn gry sm mt12" onClick={() => setQ('')}>Borrar la búsqueda</button> : null}
+            <h3 className="h3">{t('No sale ningún ejercicio')}</h3>
+            <p className="muted">{q ? (hayFiltros ? t('Nada se llama «{q}» con estos filtros. Prueba con otra palabra, como «press» o «sentadilla».', { q }) : t('Nada se llama «{q}». Prueba con otra palabra, como «press» o «sentadilla».', { q })) : hayFiltros ? t('Hay demasiados filtros puestos.') : t('Tu gimnasio no tiene máquinas marcadas.')}</p>
+            {hayFiltros ? <button className="btn mt12" onClick={quitarFiltros}>{t('Quitar filtros')}</button>
+              : enGym && !q ? <button className="btn mt12" onClick={() => (g?.id != null ? nav.ir('rut-gym-edit', { id: g.id }) : nav.reemplazar('rut-gym'))}>{g ? t('Marcar las máquinas de mi gimnasio') : t('Crear mi gimnasio')}</button>
+              : q ? <button className="btn gry sm mt12" onClick={() => setQ('')}>{t('Borrar la búsqueda')}</button> : null}
           </div>
         ) : (
           <div className="ads">
@@ -117,15 +122,15 @@ export function Biblioteca({ ruta }: { ruta: Ruta }) {
                     <small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small>
                     <span className="ad-k">
                       <span className="tag">{zonaComun(e.zona)}</span>
-                      {enPlan.has(e.id) && <span className="tag go">En tu plan · {enPlan.get(e.id)}</span>}
+                      {enPlan.has(e.id) && <span className="tag go">{t('En tu plan · {dia}', { dia: enPlan.get(e.id)! })}</span>}
                       <span className="marks">{m?.favorito && <Ico n="star" b className="ph-star" />}{m?.odiado && <Ico n="prohibit" b className="ph-prohibit" />}{m?.duele && <Ico n="warning" b className="ph-warning" />}</span>
                     </span>
                   </span>
-                  {rec != null && <span className="ad-v"><small>Récord</small><b>{kg(rec)} kg</b></span>}
+                  {rec != null && <span className="ad-v"><small>{t('Récord')}</small><b>{kg(rec)} kg</b></span>}
                 </button>
               )
             })}
-            {lista.length > n && <button className="more" onClick={() => setN(x => x + 60)}>Ver más ({lista.length - n})</button>}
+            {lista.length > n && <button className="more" onClick={() => setN(x => x + 60)}>{t('Ver más ({n})', { n: lista.length - n })}</button>}
           </div>
         )}
         <p className="credit">Exercise data by RepDB (repdb.co)</p>

@@ -1,9 +1,11 @@
 // Generador automático de rutina. Lógica pura: recibe perfil, gimnasio, marcas y catálogo.
+// Los nombres de los días y las frases del «por qué» salen en el idioma de la app al crear la rutina (se guardan así).
 import type { Ejercicio } from '../catalogo/tipos'
 import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, ZONA_EVITAR, ZONA_SEGURA, type Patron } from '../catalogo/clasificacion'
 import type { Bloque, Dia, DiaRutina, Gimnasio, MarcaEjercicio, Perfil, Rutina } from '../datos/tipos'
 import { DIAS } from './fechas'
 import { propio } from './claves'
+import { t, tk, tn } from '../i18n'
 
 type Papel = 'principal' | 'secundario' | 'accesorio' | 'core'
 type Hueco = { patron: Patron; papel: Papel; prioridad: number; par?: number }
@@ -16,40 +18,41 @@ const BRAZOS = (pr = 4): Hueco[] => [P('biceps', 'accesorio', pr, 1), P('triceps
 const HOMBROS = (pr = 4): Hueco[] => [P('hombro-lat', 'accesorio', pr, 2), P('hombro-post', 'accesorio', pr, 2)]
 
 export function plantillas(nDias: number): { estructura: string; dias: Plantilla[] } {
-  if (nDias <= 1) return { estructura: 'Cuerpo completo · 1 día', dias: [
-    { letra: 'A', nombre: 'Cuerpo completo', huecos: [P('rodilla', 'principal', 1), P('empuje-h', 'principal', 1), P('tiron-h', 'principal', 1), P('cadera', 'secundario', 2), P('tiron-v', 'secundario', 2), P('empuje-v', 'secundario', 3), ...BRAZOS(5), P('core', 'core', 5)] },
+  if (nDias <= 1) return { estructura: t('Cuerpo completo · 1 día'), dias: [
+    { letra: 'A', nombre: t('Cuerpo completo'), huecos: [P('rodilla', 'principal', 1), P('empuje-h', 'principal', 1), P('tiron-h', 'principal', 1), P('cadera', 'secundario', 2), P('tiron-v', 'secundario', 2), P('empuje-v', 'secundario', 3), ...BRAZOS(5), P('core', 'core', 5)] },
   ] }
-  if (nDias === 2) return { estructura: 'Cuerpo completo · 2 días', dias: [
-    { letra: 'A', nombre: 'Cuerpo completo A', huecos: [P('rodilla', 'principal', 1), P('empuje-h', 'principal', 1), P('tiron-v', 'principal', 2), P('cadera', 'secundario', 3), ...BRAZOS(), P('core', 'core', 5)] },
-    { letra: 'B', nombre: 'Cuerpo completo B', huecos: [P('cadera', 'principal', 1), P('tiron-h', 'principal', 1), P('empuje-v', 'principal', 2), P('empuje-h', 'secundario', 3), ...HOMBROS(), P('core', 'core', 5)] },
+  if (nDias === 2) return { estructura: t('Cuerpo completo · {n} días', { n: 2 }), dias: [
+    { letra: 'A', nombre: t('Cuerpo completo A'), huecos: [P('rodilla', 'principal', 1), P('empuje-h', 'principal', 1), P('tiron-v', 'principal', 2), P('cadera', 'secundario', 3), ...BRAZOS(), P('core', 'core', 5)] },
+    { letra: 'B', nombre: t('Cuerpo completo B'), huecos: [P('cadera', 'principal', 1), P('tiron-h', 'principal', 1), P('empuje-v', 'principal', 2), P('empuje-h', 'secundario', 3), ...HOMBROS(), P('core', 'core', 5)] },
   ] }
-  if (nDias === 3) return { estructura: 'Cuerpo completo · 3 días', dias: [
-    { letra: 'A', nombre: 'Cuerpo completo A', huecos: [P('rodilla', 'principal', 1), P('empuje-h', 'principal', 1), P('tiron-v', 'secundario', 2), ...BRAZOS(), P('core', 'core', 5)] },
-    { letra: 'B', nombre: 'Cuerpo completo B', huecos: [P('cadera', 'principal', 1), P('empuje-h', 'secundario', 2), P('tiron-h', 'principal', 1), P('tiron-v', 'secundario', 3), ...HOMBROS(), P('core', 'core', 5)] },
-    { letra: 'C', nombre: 'Cuerpo completo C', huecos: [P('rodilla', 'secundario', 1), P('empuje-h', 'secundario', 2), P('tiron-h', 'secundario', 2), P('empuje-v', 'secundario', 3), ...BRAZOS(), P('core', 'core', 5)] },
+  if (nDias === 3) return { estructura: t('Cuerpo completo · {n} días', { n: 3 }), dias: [
+    { letra: 'A', nombre: t('Cuerpo completo A'), huecos: [P('rodilla', 'principal', 1), P('empuje-h', 'principal', 1), P('tiron-v', 'secundario', 2), ...BRAZOS(), P('core', 'core', 5)] },
+    { letra: 'B', nombre: t('Cuerpo completo B'), huecos: [P('cadera', 'principal', 1), P('empuje-h', 'secundario', 2), P('tiron-h', 'principal', 1), P('tiron-v', 'secundario', 3), ...HOMBROS(), P('core', 'core', 5)] },
+    { letra: 'C', nombre: t('Cuerpo completo C'), huecos: [P('rodilla', 'secundario', 1), P('empuje-h', 'secundario', 2), P('tiron-h', 'secundario', 2), P('empuje-v', 'secundario', 3), ...BRAZOS(), P('core', 'core', 5)] },
   ] }
   if (nDias <= 5) {
     const dias: Plantilla[] = [
-      { letra: 'A', nombre: 'Torso A', huecos: [P('empuje-h', 'principal', 1), P('tiron-h', 'principal', 1), P('empuje-v', 'secundario', 2), P('tiron-v', 'secundario', 2), ...BRAZOS()] },
-      { letra: 'B', nombre: 'Pierna A', huecos: [P('rodilla', 'principal', 1), P('cadera', 'secundario', 1), P('femoral', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
-      { letra: 'C', nombre: 'Torso B', huecos: [P('tiron-v', 'principal', 1), P('empuje-h', 'secundario', 1), P('tiron-h', 'secundario', 2), P('empuje-v', 'secundario', 3), ...HOMBROS()] },
-      { letra: 'D', nombre: 'Pierna B', huecos: [P('cadera', 'principal', 1), P('rodilla', 'secundario', 1), P('gluteo', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
+      { letra: 'A', nombre: t('Torso A'), huecos: [P('empuje-h', 'principal', 1), P('tiron-h', 'principal', 1), P('empuje-v', 'secundario', 2), P('tiron-v', 'secundario', 2), ...BRAZOS()] },
+      { letra: 'B', nombre: t('Pierna A'), huecos: [P('rodilla', 'principal', 1), P('cadera', 'secundario', 1), P('femoral', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
+      { letra: 'C', nombre: t('Torso B'), huecos: [P('tiron-v', 'principal', 1), P('empuje-h', 'secundario', 1), P('tiron-h', 'secundario', 2), P('empuje-v', 'secundario', 3), ...HOMBROS()] },
+      { letra: 'D', nombre: t('Pierna B'), huecos: [P('cadera', 'principal', 1), P('rodilla', 'secundario', 1), P('gluteo', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
     ]
-    if (nDias === 5) dias.push({ letra: 'E', nombre: 'Brazos y hombros', huecos: [...BRAZOS(1), ...HOMBROS(2), P('biceps', 'accesorio', 3), P('triceps', 'accesorio', 3), P('core', 'core', 4)] })
-    return { estructura: `Torso / Pierna · ${nDias} días`, dias }
+    if (nDias === 5) dias.push({ letra: 'E', nombre: t('Brazos y hombros'), huecos: [...BRAZOS(1), ...HOMBROS(2), P('biceps', 'accesorio', 3), P('triceps', 'accesorio', 3), P('core', 'core', 4)] })
+    return { estructura: t('Torso / Pierna · {n} días', { n: nDias }), dias }
   }
   const ppl: Plantilla[] = [
-    { letra: 'A', nombre: 'Empuje', huecos: [P('empuje-h', 'principal', 1), P('empuje-v', 'secundario', 2), P('pecho-aisl', 'accesorio', 3), P('hombro-lat', 'accesorio', 3), P('triceps', 'accesorio', 4)] },
-    { letra: 'B', nombre: 'Tirón', huecos: [P('tiron-v', 'principal', 1), P('tiron-h', 'secundario', 1), P('hombro-post', 'accesorio', 3), P('biceps', 'accesorio', 3), P('core', 'core', 5)] },
-    { letra: 'C', nombre: 'Pierna', huecos: [P('rodilla', 'principal', 1), P('cadera', 'secundario', 1), P('femoral', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
+    { letra: 'A', nombre: t('Empuje'), huecos: [P('empuje-h', 'principal', 1), P('empuje-v', 'secundario', 2), P('pecho-aisl', 'accesorio', 3), P('hombro-lat', 'accesorio', 3), P('triceps', 'accesorio', 4)] },
+    { letra: 'B', nombre: t('Tirón'), huecos: [P('tiron-v', 'principal', 1), P('tiron-h', 'secundario', 1), P('hombro-post', 'accesorio', 3), P('biceps', 'accesorio', 3), P('core', 'core', 5)] },
+    { letra: 'C', nombre: t('Pierna'), huecos: [P('rodilla', 'principal', 1), P('cadera', 'secundario', 1), P('femoral', 'accesorio', 3), P('gemelo', 'accesorio', 4), P('core', 'core', 5)] },
   ]
-  const segunda = ppl.map(d => ({ ...d, letra: String.fromCharCode(d.letra.charCodeAt(0) + 3), nombre: `${d.nombre} 2` }))
+  const segunda = ppl.map(d => ({ ...d, letra: String.fromCharCode(d.letra.charCodeAt(0) + 3), nombre: t('{nombre} 2', { nombre: d.nombre }) }))
   // 7 días: el séptimo es un día ligero de brazos, hombros y core (antes se quedaba sin sesión).
-  const septimo: Plantilla = { letra: 'G', nombre: 'Brazos, hombros y core', huecos: [...BRAZOS(2), ...HOMBROS(3), P('core', 'core', 4)] }
-  return { estructura: `Empuje / Tirón / Pierna · ${nDias} días`, dias: [...ppl, ...segunda, septimo].slice(0, Math.min(nDias, 7)) }
+  const septimo: Plantilla = { letra: 'G', nombre: t('Brazos, hombros y core'), huecos: [...BRAZOS(2), ...HOMBROS(3), P('core', 'core', 4)] }
+  return { estructura: t('Empuje / Tirón / Pierna · {n} días', { n: nDias }), dias: [...ppl, ...segunda, septimo].slice(0, Math.min(nDias, 7)) }
 }
 
-const EXTRA: Plantilla = { letra: 'S', nombre: 'Sesión extra', huecos: [...BRAZOS(1), P('tiron-v', 'secundario', 2), ...HOMBROS(3), P('core', 'core', 4)] }
+// Función y no constante: el nombre se traduce al generar (en el nivel del módulo aún no hay idioma).
+const EXTRA = (): Plantilla => ({ letra: 'S', nombre: t('Sesión extra'), huecos: [...BRAZOS(1), P('tiron-v', 'secundario', 2), ...HOMBROS(3), P('core', 'core', 4)] })
 
 export type EntradaGenerador = {
   perfil: Perfil
@@ -110,9 +113,9 @@ const cacheClave = new WeakMap<Ejercicio, string>()
 export function claveMovimiento(e: Ejercicio): string {
   let k = cacheClave.get(e)
   if (k === undefined) {
-    const t = ` ${e.nombre.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()} `
+    const limpio = ` ${e.nombre.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()} `
       .replace(/\(.*?\)/g, ' ').replace(MATERIAL_EN_NOMBRE, ' ').replace(LADO, ' ')
-    k = t.split(/[^a-z0-9]+/).filter(w => w && !RELLENO.has(w)).join(' ')
+    k = limpio.split(/[^a-z0-9]+/).filter(w => w && !RELLENO.has(w)).join(' ')
     cacheClave.set(e, k)
   }
   return k
@@ -240,11 +243,11 @@ const uid = () => `b${Date.now().toString(36)}${(contador++).toString(36)}`
 
 /** Segundos que dura un bloque (o el par de superserie). */
 export function duracionBloque(b: Bloque, companero: Bloque | undefined, x?: Pick<EntradaGenerador, 'tiempos'>): number {
-  const t = (bl: Bloque) => x?.tiempos?.get(bl.ejercicio)?.serie ?? (bl.registro === 'tiempo' ? bl.repsMax : bl.repsMin >= 10 ? 40 : 45)
+  const serie = (bl: Bloque) => x?.tiempos?.get(bl.ejercicio)?.serie ?? (bl.registro === 'tiempo' ? bl.repsMax : bl.repsMin >= 10 ? 40 : 45)
   const descanso = x?.tiempos?.get(b.ejercicio)?.descanso ?? b.descanso
   const transicion = 75
-  if (companero) return b.series * (t(b) + t(companero) + 20) + (b.series - 1) * descanso + transicion * 2
-  return b.series * t(b) + (b.series - 1) * descanso + transicion
+  if (companero) return b.series * (serie(b) + serie(companero) + 20) + (b.series - 1) * descanso + transicion * 2
+  return b.series * serie(b) + (b.series - 1) * descanso + transicion
 }
 
 export function duracionDia(bloques: Bloque[], corta = false, x?: Pick<EntradaGenerador, 'tiempos'>): number {
@@ -393,6 +396,14 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejerc
   return { letra: pl.letra, nombre: pl.nombre, dia, opcional, bloques: ajustarATiempo(ordenados, prioridades, minutos, corta, x) }
 }
 
+// Zonas del perfil (claves de la base) como se ven en el «por qué». El castellano es la propia clave.
+const NOMBRE_ZONA: Record<string, string> = {
+  brazos: tk('brazos'), pecho: tk('pecho'), espalda: tk('espalda'), hombros: tk('hombros'), piernas: tk('piernas'), gluteo: tk('gluteo'), abdomen: tk('abdomen'),
+  rodilla: tk('rodilla'), lumbar: tk('lumbar'), hombro: tk('hombro'), muneca: tk('muneca'), codo: tk('codo'),
+}
+/** Zona del perfil en el idioma de la app (lo que no es una zona conocida sale tal cual). */
+export const nombreZona = (z: string) => { const k = propio(NOMBRE_ZONA, z); return k ? t(k) : z }
+
 export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   const material = x.gimnasio ? new Set(x.gimnasio.material) : null
   // Sin repetidos ni valores fuera de 0-6 (un perfil editado a mano o importado puede traerlos).
@@ -402,22 +413,25 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   const aptos = aptosPorPatron(x, material)
   const salida: DiaRutina[] = dias.map((pl, i) => generarDia(pl, x, aptos, usados, fijos[i] ?? null, false))
   const opcionales = [...new Set(x.perfil.diasOpcionales)].filter(d => Number.isInteger(d) && d >= 0 && d <= 6 && !fijos.includes(d))
-  if (opcionales.length) salida.push(generarDia(EXTRA, x, aptos, usados, opcionales[0]!, true))
+  if (opcionales.length) salida.push(generarDia(EXTRA(), x, aptos, usados, opcionales[0]!, true))
 
   const porque: string[] = []
   const n = fijos.length || 3
   // Domingo y lunes también son seguidos (la semana da la vuelta).
   const seguidos = fijos.some((d, i) => i > 0 && d - fijos[i - 1]! === 1) || (fijos.length > 1 && fijos.includes(0) && fijos.includes(6))
-  if (n <= 3) porque.push(`${n} día${n === 1 ? '' : 's'}${seguidos ? ', con dos días seguidos' : ''} → cuerpo completo: cada músculo se trabaja ${n} ve${n === 1 ? 'z' : 'ces'} por semana sin acumular cansancio.`)
-  else if (n <= 5) porque.push(`${n} días → torso y pierna alternos: cada músculo dos veces por semana.`)
-  else porque.push(`${n} días → empuje, tirón y pierna dos veces por semana.`)
-  if (x.perfil.zonasPrioridad.length) porque.push(`Prioridad en ${x.perfil.zonasPrioridad.join(', ')} → una serie más en esos ejercicios.`)
-  if (x.perfil.superseries) porque.push('Brazos y hombros en «dos seguidos» (dos ejercicios sin descanso entre ellos) para que quepa todo en el tiempo.')
-  porque.push(`Sesiones de ${x.perfil.minutosNormal} min como mucho, con versión corta de ~${x.perfil.minutosCorta} min si vas con prisa.`)
-  if (x.perfil.zonasSensibles.length) porque.push(`Solo ejercicios que cuidan: ${x.perfil.zonasSensibles.join(', ')}.`)
+  if (n <= 3) {
+    porque.push(seguidos
+      ? tn(n, '{n} día, con dos días seguidos → cuerpo completo: cada músculo se trabaja {n} vez por semana sin acumular cansancio.', '{n} días, con dos días seguidos → cuerpo completo: cada músculo se trabaja {n} veces por semana sin acumular cansancio.')
+      : tn(n, '{n} día → cuerpo completo: cada músculo se trabaja {n} vez por semana sin acumular cansancio.', '{n} días → cuerpo completo: cada músculo se trabaja {n} veces por semana sin acumular cansancio.'))
+  } else if (n <= 5) porque.push(t('{n} días → torso y pierna alternos: cada músculo dos veces por semana.', { n }))
+  else porque.push(t('{n} días → empuje, tirón y pierna dos veces por semana.', { n }))
+  if (x.perfil.zonasPrioridad.length) porque.push(t('Prioridad en {zonas} → una serie más en esos ejercicios.', { zonas: x.perfil.zonasPrioridad.map(nombreZona).join(', ') }))
+  if (x.perfil.superseries) porque.push(t('Brazos y hombros en «dos seguidos» (dos ejercicios sin descanso entre ellos) para que quepa todo en el tiempo.'))
+  porque.push(t('Sesiones de {normal} min como mucho, con versión corta de ~{corta} min si vas con prisa.', { normal: x.perfil.minutosNormal, corta: x.perfil.minutosCorta }))
+  if (x.perfil.zonasSensibles.length) porque.push(t('Solo ejercicios que cuidan: {zonas}.', { zonas: x.perfil.zonasSensibles.map(nombreZona).join(', ') }))
   const evitados = [...x.marcas.values()].filter(m => m.odiado || m.duele).length
-  if (evitados) porque.push(`${evitados} ejercicio${evitados === 1 ? '' : 's'} que no te gusta${evitados === 1 ? '' : 'n'} o te duele${evitados === 1 ? '' : 'n'}, fuera.`)
-  if (opcionales.length) porque.push(`${DIAS[opcionales[0]!]![0]!.toUpperCase()}${DIAS[opcionales[0]!]!.slice(1)} opcional: brazos, hombros y core.`)
+  if (evitados) porque.push(tn(evitados, '{n} ejercicio que no te gusta o te duele, fuera.', '{n} ejercicios que no te gustan o te duelen, fuera.'))
+  if (opcionales.length) porque.push(t('{dia} opcional: brazos, hombros y core.', { dia: `${DIAS[opcionales[0]!]![0]!.toUpperCase()}${DIAS[opcionales[0]!]!.slice(1)}` }))
 
   return {
     creada: new Date().toISOString(),
@@ -455,9 +469,9 @@ export function rutinaDefinitiva(actual: Omit<Rutina, 'id'>, o: { perfil: Perfil
     calibracion: false,
     dias,
     porque: [
-      'Es tu rutina de la semana de prueba, con los cambios que hiciste.',
-      `Esfuerzo normal (${rpe} de 10): ya conoces los ejercicios y tus pesos.`,
-      ...(o.tiempos?.size ? ['Ajustada a lo que tardas de verdad en cada ejercicio, para que quepa en tu tiempo.'] : []),
+      t('Es tu rutina de la semana de prueba, con los cambios que hiciste.'),
+      t('Esfuerzo normal ({rpe} de 10): ya conoces los ejercicios y tus pesos.', { rpe }),
+      ...(o.tiempos?.size ? [t('Ajustada a lo que tardas de verdad en cada ejercicio, para que quepa en tu tiempo.')] : []),
     ],
   }
 }
@@ -470,10 +484,10 @@ export function cambiosRutina(antes: Pick<Rutina, 'dias'>, despues: Pick<Rutina,
     if (!a) continue
     const partes: string[] = []
     const quitados = a.bloques.filter(b => !d.bloques.some(x => x.uid === b.uid))
-    if (quitados.length) partes.push(`${quitados.map(b => nombre(b.ejercicio)).join(', ')}, fuera`)
+    if (quitados.length) partes.push(t('{ejercicios}, fuera', { ejercicios: quitados.map(b => nombre(b.ejercicio)).join(', ') }))
     const menos = d.bloques.filter(b => { const v = a.bloques.find(x => x.uid === b.uid); return v && b.series < v.series })
-    if (menos.length) partes.push(`una serie menos en ${menos.map(b => nombre(b.ejercicio)).join(', ')}`)
-    if (partes.length) out.push(`${dia(d)}: ${partes.join(' · ')}`)
+    if (menos.length) partes.push(t('una serie menos en {ejercicios}', { ejercicios: menos.map(b => nombre(b.ejercicio)).join(', ') }))
+    if (partes.length) out.push(t('{dia}: {cambios}', { dia: dia(d), cambios: partes.join(' · ') }))
   }
   return out
 }

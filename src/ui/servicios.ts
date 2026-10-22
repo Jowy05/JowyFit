@@ -8,6 +8,7 @@ import { PASOS_POR_KM } from '../dominio/tendencias'
 import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud, programar, cancelar, type Aviso } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { dosisDe } from '../dominio/comida'
+import { regionNumeros, t, tn } from '../i18n'
 
 // Identificadores fijos de los recordatorios (el de fin de descanso es el 9001).
 const ID = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700 }
@@ -36,22 +37,22 @@ export async function reprogramarNotificaciones(): Promise<void> {
       const vispera = sumarDias(d.fecha, -1)
       const cuando = enFecha(vispera, p.horaDormir)
       cuando.setHours(cuando.getHours() - 1)
-      if (cuando.getTime() > ahora) avisos.push({ id: ID.dormir + i, titulo: `Mañana: ${d.dia!.nombre}`, texto: `A las ${p.horaEntreno.replace(/^0/, '')}. En 1 h, a dormir 😴`, cuando })
+      if (cuando.getTime() > ahora) avisos.push({ id: ID.dormir + i, titulo: t('Mañana: {dia}', { dia: d.dia!.nombre }), texto: t('A las {hora}. En 1 h, a dormir 😴', { hora: p.horaEntreno.replace(/^0/, '') }), cuando })
     })
   }
   if (a.noti.pesarse) p.diasPesaje.forEach((dia, i) => {
     const hoyD = diaSemana(deISO(hoy))
     const fecha = sumarDias(hoy, (dia - hoyD + 7) % 7 || (enFecha(hoy, a.noti.pesarseHora).getTime() < ahora ? 7 : 0))
-    avisos.push({ id: ID.pesarse + i, titulo: 'Hoy toca pesarse', texto: 'En ayunas y después del baño', cuando: enFecha(fecha, a.noti.pesarseHora), repetirCada: 'week' })
+    avisos.push({ id: ID.pesarse + i, titulo: t('Hoy toca pesarse'), texto: t('En ayunas y después del baño'), cuando: enFecha(fecha, a.noti.pesarseHora), repetirCada: 'week' })
   })
-  if (a.noti.batido) avisos.push({ id: ID.batido, titulo: '¿Batido de proteína?', texto: 'Te ayuda a llegar a tu proteína del día', cuando: enFecha(hoy, a.noti.batidoHora), repetirCada: 'day' })
-  if (a.noti.creatina) avisos.push({ id: ID.creatina, titulo: 'La creatina de hoy', texto: `${dosisDe(p.dosisSuplementos, 'Creatina') || 'Tu dosis'}, a cualquier hora`, cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
-  if (a.noti.copia) avisos.push({ id: ID.copia, titulo: 'Copia de seguridad', texto: 'Hace una semana de la última copia. Tus datos solo están en este móvil.', cuando: enFecha(sumarDias(hoy, 7), '20:00') })
+  if (a.noti.batido) avisos.push({ id: ID.batido, titulo: t('¿Batido de proteína?'), texto: t('Te ayuda a llegar a tu proteína del día'), cuando: enFecha(hoy, a.noti.batidoHora), repetirCada: 'day' })
+  if (a.noti.creatina) avisos.push({ id: ID.creatina, titulo: t('La creatina de hoy'), texto: t('{dosis}, a cualquier hora', { dosis: dosisDe(p.dosisSuplementos, 'Creatina') || t('Tu dosis') }), cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
+  if (a.noti.copia) avisos.push({ id: ID.copia, titulo: t('Copia de seguridad'), texto: t('Hace una semana de la última copia. Tus datos solo están en este móvil.'), cuando: enFecha(sumarDias(hoy, 7), '20:00') })
   if (a.noti.domingo) {
     const hoyD = diaSemana(deISO(hoy))
-    avisos.push({ id: ID.domingo, titulo: '¿Voy bien?', texto: 'Tu semana, en 10 segundos', cuando: enFecha(sumarDias(hoy, (6 - hoyD + 7) % 7 || 7), '19:00'), repetirCada: 'week' })
+    avisos.push({ id: ID.domingo, titulo: t('¿Voy bien?'), texto: t('Tu semana, en 10 segundos'), cuando: enFecha(sumarDias(hoy, (6 - hoyD + 7) % 7 || 7), '19:00'), repetirCada: 'week' })
   }
-  if (a.noti.fotos && p.fotosCadaSemanas > 0) avisos.push({ id: ID.fotos, titulo: 'Foto de progreso', texto: 'Misma pose y misma luz que la última', cuando: enFecha(sumarDias(hoy, p.fotosCadaSemanas * 7), '19:30') })
+  if (a.noti.fotos && p.fotosCadaSemanas > 0) avisos.push({ id: ID.fotos, titulo: t('Foto de progreso'), texto: t('Misma pose y misma luz que la última'), cuando: enFecha(sumarDias(hoy, p.fotosCadaSemanas * 7), '19:30') })
   await programar(avisos.filter(x => x.cuando.getTime() > ahora || x.repetirCada))
 }
 
@@ -97,43 +98,51 @@ export async function sincronizarBascula(): Promise<number> {
 
 /** Conecta la báscula: pide permiso, lo deja activado y trae lo que haya. Devuelve el aviso para el usuario. */
 export async function activarBascula(): Promise<string> {
-  if (!(await pedirPermisoBascula())) return 'Sin permiso de Health Connect: el peso se apunta a mano'
+  if (!(await pedirPermisoBascula())) return t('Sin permiso de Health Connect: el peso se apunta a mano')
   await guardarAjustes({ fuenteBascula: 'auto' })
   const n = await sincronizarBascula()
-  return n ? `Báscula conectada: ${n === 1 ? '1 pesada traída' : `${n} pesadas traídas`}` : 'Báscula conectada. Aún no hay pesadas en Health Connect: actívalo en la app de tu báscula'
+  return n ? t('Báscula conectada: {pesadas}', { pesadas: pesadasTraidas(n) }) : t('Báscula conectada. Aún no hay pesadas en Health Connect: actívalo en la app de tu báscula')
 }
 
 /** Conecta Health Connect de una vez: pasos del reloj y peso y grasa de la báscula. Devuelve el aviso. */
 export async function conectarSalud(): Promise<string> {
   const ok = await pedirPermisosSalud()
   const pasos = ok.includes('steps'), bascula = ok.includes('weight') || ok.includes('bodyFat')
-  if (!pasos && !bascula) return 'Sin permiso de Health Connect: los pasos y el peso se apuntan a mano'
+  if (!pasos && !bascula) return t('Sin permiso de Health Connect: los pasos y el peso se apuntan a mano')
   await guardarAjustes({ ...(pasos ? { fuentePasos: 'auto' as const } : {}), ...(bascula ? { fuenteBascula: 'auto' as const } : {}) })
   if (pasos) await sincronizarPasos()
   const n = bascula ? await sincronizarBascula() : 0
-  const que = pasos && bascula ? 'pasos y báscula' : pasos ? 'pasos' : 'báscula'
-  return `Health Connect conectado: ${que}${n ? ` · ${n === 1 ? '1 pesada traída' : `${n} pesadas traídas`}` : ''}`
+  const que = pasos && bascula ? t('pasos y báscula') : pasos ? t('pasos') : t('báscula')
+  return `${t('Health Connect conectado: {que}', { que })}${n ? ` · ${pesadasTraidas(n)}` : ''}`
 }
+
+const pesadasTraidas = (n: number) => tn(n, '1 pesada traída', '{n} pesadas traídas')
 
 /** Para probar en el móvil: qué ve la app en Health Connect (permisos, pasos de hoy y la última pesada). */
 export async function comprobarSalud(): Promise<string[]> {
-  if (!(await pasosDisponibles())) return ['Health Connect no está en este móvil (o no está instalado).']
+  if (!(await pasosDisponibles())) return [t('Health Connect no está en este móvil (o no está instalado).')]
   const permisos = await permisosSalud()
-  const si = (k: string) => (permisos.includes(k) ? 'sí' : 'no')
-  const lineas = [`Permisos · pasos: ${si('steps')} · peso: ${si('weight')} · grasa: ${si('bodyFat')}`]
+  const si = (k: string) => (permisos.includes(k) ? t('sí') : t('no'))
+  const lineas = [t('Permisos · pasos: {pasos} · peso: {peso} · grasa: {grasa}', { pasos: si('steps'), peso: si('weight'), grasa: si('bodyFat') })]
   if (permisos.includes('steps')) {
     try {
       const hoy = hoyISO()
       const p = (await leerPasos(hoy, hoy))[hoy]
-      lineas.push(`Pasos de hoy en Health Connect: ${p == null ? 'ninguno todavía' : p.toLocaleString('es-ES')}`)
-    } catch { lineas.push('No se han podido leer los pasos.') }
+      lineas.push(t('Pasos de hoy en Health Connect: {pasos}', { pasos: p == null ? t('ninguno todavía') : p.toLocaleString(regionNumeros()) }))
+    } catch { lineas.push(t('No se han podido leer los pasos.')) }
   }
   if (permisos.includes('weight') || permisos.includes('bodyFat')) {
     const { pesos, grasas } = await leerBascula(new Date(Date.now() - 30 * 86_400_000))
     const l = juntarBascula(pesos, grasas).pop()
+    // Solo para probar en el móvil: el número va con la coma o el punto del idioma.
+    const dec = (v: number) => (regionNumeros() === 'en-US' ? String(v) : String(v).replace('.', ','))
     lineas.push(l
-      ? `Última pesada: ${l.pesoKg != null ? `${String(l.pesoKg).replace('.', ',')} kg` : ''}${l.grasaPct != null ? ` · ${String(l.grasaPct).replace('.', ',')} % grasa` : ''} (${fechaLocal(l.fecha).slice(0, 10).split('-').reverse().join('/')}, ${nombreFuente(l.fuente)})`
-      : 'No hay pesadas en Health Connect de los últimos 30 días.')
+      ? t('Última pesada: {datos} ({fecha}, {fuente})', {
+        datos: `${l.pesoKg != null ? `${dec(l.pesoKg)} kg` : ''}${l.grasaPct != null ? ` · ${t('{n} % grasa', { n: dec(l.grasaPct) })}` : ''}`,
+        fecha: fechaLocal(l.fecha).slice(0, 10).split('-').reverse().join('/'),
+        fuente: nombreFuente(l.fuente),
+      })
+      : t('No hay pesadas en Health Connect de los últimos 30 días.'))
   }
   return lineas
 }

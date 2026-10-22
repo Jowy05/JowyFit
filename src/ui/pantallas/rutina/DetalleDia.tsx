@@ -9,7 +9,8 @@ import type { Sugerencia } from '../../../dominio/progresion'
 import { Cab, cx, Ico, Pantalla, Th } from '../../comp'
 import { useNav, type Ruta } from '../../nav'
 import { useGimnasio, usePerfil, useRutina } from '../../datos'
-import { filas, materialCorto, minutos, musculosComunes, nombreEj, SS, SS_EXPLICA, tituloDia } from './comun'
+import { filas, materialCorto, minutos, musculosComunes, nombreEj, nombreEntreno, SS, SS_EXPLICA, tituloDia } from './comun'
+import { t } from '../../../i18n'
 
 export function DetalleDia({ ruta }: { ruta: Ruta }) {
   const nav = useNav()
@@ -18,25 +19,25 @@ export function DetalleDia({ ruta }: { ruta: Ruta }) {
   const perfil = usePerfil()
   const dia = r?.dias.find(d => d.letra === ruta.d?.letra) ?? r?.dias[0]
   const sug = useLiveQuery(() => (dia ? sugerenciasDia(dia, g) : Promise.resolve(undefined)), [dia, g])
-  if (!dia) return <Pantalla><Cab atras titulo="Día" /></Pantalla>
+  if (!dia) return <Pantalla><Cab atras titulo={t('Día')} /></Pantalla>
   let n = 0
   return (
     <Pantalla>
-      <Cab atras crumb={`Mi plan · ${tituloDia(dia)}`} titulo={`${tituloDia(dia)}${dia.opcional ? ' · opcional' : ''}`} sub={`${dia.dia != null ? `${dia.nombre} · a las ${formatoHora(perfil.horaEntreno)}` : 'Cualquier día'}${g ? ` · ${g.nombre}` : ''}`}
-        derecha={<button className="lnk ux-rut-edit" onClick={() => nav.ir('rut-edit', { letra: dia.letra })}><Ico n="pencil-simple" />Editar</button>} />
+      <Cab atras crumb={t('Mi plan · {dia}', { dia: tituloDia(dia) })} titulo={dia.opcional ? t('{dia} · opcional', { dia: tituloDia(dia) }) : tituloDia(dia)} sub={`${dia.dia != null ? t('{nombre} · a las {hora}', { nombre: nombreEntreno(dia), hora: formatoHora(perfil.horaEntreno) }) : t('Cualquier día')}${g ? ` · ${g.nombre}` : ''}`}
+        derecha={<button className="lnk ux-rut-edit" onClick={() => nav.ir('rut-edit', { letra: dia.letra })}><Ico n="pencil-simple" />{t('Editar')}</button>} />
       <div className="pg">
         <div className="strip">
-          <p><span className="lbl">Dura</span><b>~{minutos(dia)} min</b></p>
-          <p><span className="lbl">Con prisa</span><b>~{minutos(dia, true)} min</b></p>
-          <p><span className="lbl">Ejercicios</span><b>{dia.bloques.length}</b></p>
+          <p><span className="lbl">{t('Dura')}</span><b>~{minutos(dia)} min</b></p>
+          <p><span className="lbl">{t('Con prisa')}</span><b>~{minutos(dia, true)} min</b></p>
+          <p><span className="lbl">{t('Ejercicios')}</span><b>{dia.bloques.length}</b></p>
         </div>
-        {dia.bloques.some(b => b.fueraEnCorta) && <p className="small muted mt8"><Ico n="scissors" className="warnc" /> Con raya discontinua: lo que se quita si vas con prisa.</p>}
+        {dia.bloques.some(b => b.fueraEnCorta) && <p className="small muted mt8"><Ico n="scissors" className="warnc" /> {t('Con raya discontinua: lo que se quita si vas con prisa.')}</p>}
         {filas(dia.bloques).map((f, k, todas) => {
           if (Array.isArray(f)) {
             const i1 = ++n, i2 = ++n
             return (
               <div key={f[0].uid} className="ssg mt8">
-                <p className="ss-head">{SS}{todas.findIndex(Array.isArray) === k ? ` · ${SS_EXPLICA}` : ''} · descansas {duracion(f[0].descanso)} al acabar</p>
+                <p className="ss-head">{SS()}{todas.findIndex(Array.isArray) === k ? ` · ${SS_EXPLICA()}` : ''} · {t('descansas {tiempo} al acabar', { tiempo: duracion(f[0].descanso) })}</p>
                 <Tarjeta b={f[0]} etiqueta={String(i1)} s={sug?.get(f[0].ejercicio)} n={i1} sigue />
                 <div className="mt8"><Tarjeta b={f[1]} etiqueta={String(i2)} s={sug?.get(f[1].ejercicio)} n={i2} /></div>
               </div>
@@ -45,7 +46,7 @@ export function DetalleDia({ ruta }: { ruta: Ruta }) {
           return <div key={f.uid} className="mt8"><Tarjeta b={f} etiqueta={String(++n)} s={sug?.get(f.ejercicio)} n={n} /></div>
         })}
         <div className="dock">
-          <button className="btn xl" onClick={() => nav.hoja('sheet-ses1', { letra: dia.letra })}><Ico n="play" b />Empezar este entreno</button>
+          <button className="btn xl" onClick={() => nav.hoja('sheet-ses1', { letra: dia.letra })}><Ico n="play" b />{t('Empezar este entreno')}</button>
         </div>
       </div>
     </Pantalla>
@@ -64,21 +65,21 @@ function Tarjeta({ b, etiqueta, s, sigue }: { b: Bloque; etiqueta: string; s?: S
           <b>{nombreEj(e)}</b>
         </span>
         <span className={cx('nx', s?.accion === 'subir' && 'hot')}>
-          <small>Peso</small>
-          <b>{s?.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : s?.accion === 'primera' ? 'Nuevo' : s?.reps ? `${s.reps} ${b.registro === 'tiempo' ? 's' : 'reps'}` : '—'}</b>
+          <small>{t('Peso')}</small>
+          <b>{s?.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : s?.accion === 'primera' ? t('Nuevo') : s?.reps ? `${s.reps} ${b.registro === 'tiempo' ? 's' : t('reps')}` : '—'}</b>
         </span>
       </span>
       <span className="strip sm">
-        <span className="p"><span className="lbl">Series</span><b>{b.series}</b></span>
-        <span className="p"><span className="lbl">{b.registro === 'tiempo' ? 'Segundos' : 'Reps'}</span><b>{b.repsMin}-{b.repsMax}</b></span>
-        <span className="p"><span className="lbl">Esfuerzo</span><b>{b.rpe}<small>/10</small></b></span>
+        <span className="p"><span className="lbl">{t('Series')}</span><b>{b.series}</b></span>
+        <span className="p"><span className="lbl">{b.registro === 'tiempo' ? t('Segundos') : t('Reps')}</span><b>{b.repsMin}-{b.repsMax}</b></span>
+        <span className="p"><span className="lbl">{t('Esfuerzo')}</span><b>{b.rpe}<small>/10</small></b></span>
         {/* En «dos seguidos» no se descansa tras el primero: se pasa al siguiente. */}
-        <span className="p"><span className="lbl">Descanso</span><b>{sigue ? 'Sigue' : duracion(b.descanso)}</b></span>
+        <span className="p"><span className="lbl">{t('Descanso')}</span><b>{sigue ? t('Sigue') : duracion(b.descanso)}</b></span>
       </span>
-      {b.fueraEnCorta && <span className="small" style={{ display: 'block', marginTop: 8, color: 'var(--warn)' }}><Ico n="scissors" /> Se quita si vas con prisa</span>}
+      {b.fueraEnCorta && <span className="small" style={{ display: 'block', marginTop: 8, color: 'var(--warn)' }}><Ico n="scissors" /> {t('Se quita si vas con prisa')}</span>}
       {b.alternativas.length > 0 && (
         <span className="alts">
-          <span className="lbl">Si está ocupado</span>
+          <span className="lbl">{t('Si está ocupado')}</span>
           <span className="alt-row">
             {[b.ejercicio, ...b.alternativas].map((id, k) => (
               <span key={id} style={{ display: 'contents' }}>

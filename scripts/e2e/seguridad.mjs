@@ -109,8 +109,13 @@ for (const motor of ['edge', 'webkit']) {
     await esperar(800)
     comprobar(await page.evaluate(() => document.documentElement.classList.contains('anim')), 'La landing no ha arrancado (sin animaciones)')
     comprobar(!v.errores.some(e => /URI/i.test(e)), `URIError: ${v.errores.join(' | ')}`)
-    const huella = await page.evaluate(() => [...document.querySelectorAll('[data-huella]')].every(e => e.hidden))
-    comprobar(huella, 'La huella del APK se ve aunque no hay ninguna publicada')
+    // La huella del APK solo se ve si hay una publicada de esta misma versión (src/landing/apk.ts), y entonces es esa.
+    const apk = fs.readFileSync(path.join(RAIZ, 'src', 'landing', 'apk.ts'), 'utf8')
+    const sha = /sha256:\s*'([0-9a-f]*)'/.exec(apk)?.[1] ?? ''
+    const deEsta = /version:\s*'([^']*)'/.exec(apk)?.[1] === JSON.parse(fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8')).version
+    const vistas = await page.evaluate(() => [...document.querySelectorAll('[data-huella]')].filter(e => !e.hidden).map(e => e.textContent ?? ''))
+    if (sha && deEsta) comprobar(vistas.length > 0 && vistas.every(x => x.includes(sha)), `La huella del APK publicado no se ve bien: ${JSON.stringify(vistas)}`)
+    else comprobar(!vistas.length, 'La huella del APK se ve aunque no hay ninguna publicada')
     await page.goto(URL_BASE + '?landing&plataforma=otro#segura', { waitUntil: 'load' })
     await esperar(500)
     comprobar(await page.evaluate(() => document.getElementById('d-segura')?.open === true), 'El ancla #segura no abre «¿Es seguro instalarla?»')

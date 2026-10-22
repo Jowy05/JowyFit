@@ -1,16 +1,18 @@
 // Informe en PDF: dibuja el Informe (src/dominio/informe.ts) en A4 vertical con pdf-lib y la Helvetica estándar.
 // pdf-lib se carga con import() al crear el PDF, para que no pese al abrir la app. Diseño: docs/INFORME-PDF-DISENO.md.
-import type { Informe, PeriodoInforme, RangoInforme } from '../dominio/informe'
+import { archivoPeriodo, type Informe, type RangoInforme } from '../dominio/informe'
+import { idioma, t } from '../i18n'
 import { textoPdf } from './texto'
 import { aplicarEstilo, ESTILO, ESTILO_POR_DEFECTO, type NombreEstilo } from './lienzo'
 import { ICONO_PNG } from './icono'
 import { Maqueta, ponerIcono } from './piezas'
 import { paginaAnexo, paginaComidaCuerpoPasos, paginaEntrenos, paginaFuerza, paginaMeses, paginaResumen, paginaTuDia } from './paginas'
 
-const ARCHIVO: Record<PeriodoInforme, string> = { hoy: 'hoy', ayer: 'ayer', semana: 'ultima-semana', mes: 'ultimo-mes', todo: 'todo' }
+/** Nombre del archivo: JowyFit-informe-<periodo>-<AAAA-MM-DD>.pdf, con el periodo en el idioma de la app (sin el nombre de la persona). */
+export const nombrePdf = (r: Pick<RangoInforme, 'periodo' | 'hoy'>) => t('JowyFit-informe-{periodo}-{fecha}.pdf', { periodo: archivoPeriodo(r.periodo), fecha: r.hoy })
 
-/** Nombre del archivo: JowyFit-informe-<periodo>-<AAAA-MM-DD>.pdf (sin el nombre de la persona). */
-export const nombrePdf = (r: Pick<RangoInforme, 'periodo' | 'hoy'>) => `JowyFit-informe-${ARCHIVO[r.periodo]}-${r.hoy}.pdf`
+/** Idioma del PDF (para los lectores de pantalla). */
+const LENGUA = { es: 'es-ES', ca: 'ca-ES', en: 'en-US' } as const
 
 export type OpcionesPdf = {
   /** Versión de la app para los metadatos («JowyFit 0.1.6»). */
@@ -60,7 +62,7 @@ async function dibujar(lib: typeof import('pdf-lib'), inf: Informe, o: OpcionesP
   doc.setSubject(textoPdf(`${cab.titulo} · ${cab.periodo}`))
   doc.setCreator('JowyFit')
   doc.setProducer(textoPdf(`JowyFit${o.version ? ` ${o.version}` : ''}`))
-  doc.setLanguage('es-ES')
+  doc.setLanguage(LENGUA[idioma()])
   const fecha = o.creado ?? new Date()
   doc.setCreationDate(fecha)
   doc.setModificationDate(fecha)

@@ -88,6 +88,8 @@ function politicaSeguridad(android: boolean): Plugin {
 
 export default defineConfig(({ mode }) => ({
   base,
+  // .cache guarda compilaciones, capturas y perfiles de navegador de las pruebas: vigilarlo bloqueaba el servidor.
+  server: { watch: { ignored: ['**/.cache/**', '**/android/**', '**/apk/**'] } },
   plugins: [
     react(),
     quitarFuentesViejas(),

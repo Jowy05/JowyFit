@@ -30,8 +30,7 @@ test('guardar con el menú Compartir, borrar todo y recuperarla', async ({ page,
   await jf.pulsar(/^Borrar todo/, '.sheet')
   await jf.ver('Sí, borrarlo todo')
   // Al borrarlo todo la app se recarga sola (empieza de cero, sin nada en memoria).
-  // Borrar la base entera en WebKit puede tardar en la máquina de la integración continua.
-  const recargaBorrar = page.waitForEvent('load', { timeout: 40000 })
+  const recargaBorrar = page.waitForEvent('load', { timeout: 15000 })
   await jf.pulsar('Sí, borrarlo todo', '.sheet').catch(() => {})
   await recargaBorrar
   await jf.ver('Tu fuerza y tu comida', 15000)

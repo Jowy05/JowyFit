@@ -143,11 +143,12 @@ export class Jf {
   async volver() {
     await this.js(`const b = [...document.querySelectorAll('button[aria-label]')].filter(b => /^(Volver|Atrás)$/.test(b.getAttribute('aria-label')) && b.getBoundingClientRect().width > 0).pop(); if (!b) throw new Error('No hay botón de volver'); b.click(); await new Promise(r => setTimeout(r, 300))`)
   }
+  // Cada consulta cierra su conexión: una abierta bloquea «Borrar todo» (la base no se puede borrar y la app no recarga).
   tabla<T = Record<string, unknown>>(nombre: string): Promise<T[]> {
-    return this.js(`return await new Promise((ok, mal) => { const q = indexedDB.open('jowyfit'); q.onerror = mal; q.onsuccess = () => { const g = q.result.transaction('${nombre}').objectStore('${nombre}').getAll(); g.onsuccess = () => ok(g.result); g.onerror = mal } })`)
+    return this.js(`return await new Promise((ok, mal) => { const q = indexedDB.open('jowyfit'); q.onerror = mal; q.onsuccess = () => { const b = q.result; const g = b.transaction('${nombre}').objectStore('${nombre}').getAll(); g.onsuccess = () => { b.close(); ok(g.result) }; g.onerror = e => { b.close(); mal(e) } } })`)
   }
   meter(nombre: string, filas: unknown[]) {
-    return this.js(`const filas = ${JSON.stringify(filas)}; return await new Promise((ok, mal) => { const q = indexedDB.open('jowyfit'); q.onerror = mal; q.onsuccess = () => { const tx = q.result.transaction('${nombre}', 'readwrite'); for (const f of filas) tx.objectStore('${nombre}').put(f); tx.oncomplete = () => ok(filas.length); tx.onerror = mal } })`)
+    return this.js(`const filas = ${JSON.stringify(filas)}; return await new Promise((ok, mal) => { const q = indexedDB.open('jowyfit'); q.onerror = mal; q.onsuccess = () => { const b = q.result; const tx = b.transaction('${nombre}', 'readwrite'); for (const f of filas) tx.objectStore('${nombre}').put(f); tx.oncomplete = () => { b.close(); ok(filas.length) }; tx.onerror = e => { b.close(); mal(e) } } })`)
   }
 
   /** Alta completa: martes, jueves y viernes a las 5:30 con el sábado de extra. */

@@ -24,7 +24,7 @@ escenario('entreno completo', async () => {
   await ver('Entreno terminado')
   await pulsar('Guardar')
   await ver(/Entreno de hoy hecho|hecho/i, 8000)
-  const n = await js(`return (await new Promise(r=>{const q=indexedDB.open('jowyfit');q.onsuccess=()=>{const tx=q.result.transaction('sesiones');const g=tx.objectStore('sesiones').getAll();g.onsuccess=()=>r(g.result)}})).filter(s=>s.estado==='hecha').length`)
+  const n = await js(`return (await new Promise(r=>{const q=indexedDB.open('jowyfit');q.onsuccess=()=>{const b=q.result;const g=b.transaction('sesiones').objectStore('sesiones').getAll();g.onsuccess=()=>{b.close();r(g.result)}}})).filter(s=>s.estado==='hecha').length`)
   if (n !== 1) throw new Error(`Sesiones hechas: ${n}`)
   // Un entreno ya guardado se corrige tocando la serie.
   await pestana('Rutina')

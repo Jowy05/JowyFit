@@ -119,6 +119,8 @@ export default defineConfig(({ mode }) => ({
         globIgnores: ['**/Phosphor*.svg', 'landing/**', 'demo/**', 'Demo.html'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: 'index.html',
+        // La demo y la política de privacidad no van en la precarga: sin esto, el service worker respondía a /Demo con la landing.
+        navigateFallbackDenylist: [/\/Demo(\.html)?(\?|$)/, /\/privacypolicy\.html(\?|$)/],
         // La versión nueva entra sola y controla la página desde la primera visita (sin conexión al momento).
         skipWaiting: true,
         clientsClaim: true,

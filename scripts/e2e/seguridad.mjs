@@ -183,6 +183,13 @@ for (const motor of ['edge', 'webkit']) {
       await s.ctx.setOffline(false)
       await sinAvisos(s, 'sin conexión')
     })
+    await prueba('edge · con el service worker, /Demo enseña la demo y no la landing', async () => {
+      for (const ruta of ['Demo', 'Demo.html', 'Demo?lang=en']) {
+        await page.goto(URL_BASE + ruta, { waitUntil: 'load' })
+        comprobar(await page.locator('[data-tarjeta]').count() === 1, `${ruta}: no sale la demo`)
+        comprobar(await page.locator('.hero-cta').count() === 0, `${ruta}: sale la landing`)
+      }
+    })
   }
 
   await prueba(`${motor} · datos rotos en una pantalla: «Algo ha ido mal» con salida, nunca en blanco`, async () => {

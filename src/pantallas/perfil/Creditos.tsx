@@ -58,7 +58,7 @@ export function Creditos() {
           <p><span>{t('Fuentes Barlow y JetBrains Mono')}</span><b>SIL OFL 1.1</b></p>
         </div></div>
         <p className="legal mt8">
-          {t('El código de JowyFit tiene licencia MIT. Los datos de ejercicios (RepDB) y de alimentos (Open Food Facts) no son parte de esa licencia: tienen las suyas, indicadas arriba.')}
+          {t('El código de JowyFit tiene licencia PolyForm Noncommercial: puedes usarlo, copiarlo y cambiarlo diciendo quién lo hizo, pero no venderlo. Los datos de ejercicios (RepDB) y de alimentos (Open Food Facts) no son parte de esa licencia: tienen las suyas, indicadas arriba.')}
         </p>
 
         <p className="grp-t">{t('Tus datos')}</p>

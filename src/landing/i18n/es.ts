@@ -185,7 +185,7 @@ const es = {
   'autor.titulo': 'Hecha por alguien que entrena temprano.',
   'autor.texto': "La hice para mí. Entreno temprano, tres días a la semana, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.",
   'autor.novedades': 'Novedades de cada versión',
-  'autor.codigo': 'El código está abierto: cualquiera que sepa programar puede revisar lo que hace la app por dentro. <a href="https://github.com/Jowy05/JowyFit">Ver el código</a>',
+  'autor.codigo': 'El código es público: cualquiera que sepa programar puede ver lo que hace la app por dentro, y usarlo o cambiarlo diciendo quién lo hizo. Lo único que no se puede es venderlo. <a href="https://github.com/Jowy05/JowyFit/tree/prod">Ver el código</a>',
 
   // Preguntas frecuentes
   'faq.titulo': 'Lo que te puedes preguntar.',
@@ -256,8 +256,8 @@ const es = {
   'cierre.iphone': 'En iPhone y iPad, ábrela en Safari y déjala en tu pantalla de inicio.',
 
   // Pie
-  'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Gratis y de código abierto · <a href=\"#novedades\" data-abrir=\"d-novedades\">Novedades</a> · <a href=\"privacypolicy.html\">Política de privacidad</a>",
-  'pie.creditos': 'Créditos: los ejercicios y sus dibujos son de RepDB; los alimentos, de Open Food Facts. Iconos Phosphor y letra Barlow. <span data-version-corta=""></span> · Licencia MIT · <a href="https://github.com/Jowy05/JowyFit">Código</a>',
+  'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Gratis y con el código a la vista · <a href=\"#novedades\" data-abrir=\"d-novedades\">Novedades</a> · <a href=\"privacypolicy.html\">Política de privacidad</a>",
+  'pie.creditos': 'Créditos: los ejercicios y sus dibujos son de RepDB; los alimentos, de Open Food Facts. Iconos Phosphor y letra Barlow. <span data-version-corta=""></span> · Licencia PolyForm Noncommercial · <a href="https://github.com/Jowy05/JowyFit/tree/prod">Código</a>',
 
   // Barra fija del móvil
   'barra.descargar': 'Descargar gratis',

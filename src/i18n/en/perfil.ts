@@ -399,7 +399,7 @@ export default {
   'Pasos: @capgo/capacitor-health': 'Steps: @capgo/capacitor-health',
   'Iconos Phosphor': 'Phosphor icons',
   'Fuentes Barlow y JetBrains Mono': 'Barlow and JetBrains Mono fonts',
-  'El código de JowyFit tiene licencia MIT. Los datos de ejercicios (RepDB) y de alimentos (Open Food Facts) no son parte de esa licencia: tienen las suyas, indicadas arriba.': "JowyFit's code is MIT licensed. The exercise data (RepDB) and food data (Open Food Facts) aren't part of that license: they have their own, listed above.",
+  'El código de JowyFit tiene licencia PolyForm Noncommercial: puedes usarlo, copiarlo y cambiarlo diciendo quién lo hizo, pero no venderlo. Los datos de ejercicios (RepDB) y de alimentos (Open Food Facts) no son parte de esa licencia: tienen las suyas, indicadas arriba.': "JowyFit's code is under the PolyForm Noncommercial license: you can use, copy and change it as long as you say who made it, but you can't sell it. The exercise data (RepDB) and food data (Open Food Facts) aren't part of that license: they have their own, listed above.",
   'Todo lo que apuntas se guarda solo en este móvil. La app no tiene cuentas ni servidores propios y no envía tus datos a ningún sitio; solo se conecta a internet para buscar productos al escanear.': "Everything you enter is saved only on this phone. The app has no accounts or servers of its own and doesn't send your data anywhere; it only goes online to look up products when you scan.",
   'Política de privacidad': 'Privacy policy',
 

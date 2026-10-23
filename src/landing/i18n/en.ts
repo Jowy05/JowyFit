@@ -185,7 +185,7 @@ const en: Record<keyof typeof es, string> = {
   'autor.titulo': 'Made by someone who works out early.',
   'autor.texto': "I made it for myself. I work out early, three days a week, and I wanted to open my phone and know what to do without thinking. I also thought of my dad: if he can figure it out without help, I got it right.",
   'autor.novedades': 'What’s new in each version',
-  'autor.codigo': 'The code is open: anyone who knows how to code can check what the app does on the inside. <a href="https://github.com/Jowy05/JowyFit">See the code</a>',
+  'autor.codigo': 'The code is public: anyone who knows how to code can see what the app does on the inside, and use or change it as long as they say who made it. The only thing you can’t do is sell it. <a href="https://github.com/Jowy05/JowyFit/tree/prod">See the code</a>',
 
   // Preguntas frecuentes
   'faq.titulo': 'Things you might be wondering.',
@@ -256,8 +256,8 @@ const en: Record<keyof typeof es, string> = {
   'cierre.iphone': 'On iPhone and iPad, open it in Safari and put it on your Home Screen.',
 
   // Pie
-  'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Free and open source · <a href=\"#novedades\" data-abrir=\"d-novedades\">What’s new</a> · <a href=\"privacypolicy.html\">Privacy policy</a> (in Spanish)",
-  'pie.creditos': 'Credits: the exercises and their drawings are from RepDB; the foods, from Open Food Facts. Phosphor icons and Barlow font. <span data-version-corta=""></span> · MIT License · <a href="https://github.com/Jowy05/JowyFit">Code</a>',
+  'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Free, with public code · <a href=\"#novedades\" data-abrir=\"d-novedades\">What’s new</a> · <a href=\"privacypolicy.html\">Privacy policy</a> (in Spanish)",
+  'pie.creditos': 'Credits: the exercises and their drawings are from RepDB; the foods, from Open Food Facts. Phosphor icons and Barlow font. <span data-version-corta=""></span> · PolyForm Noncommercial License · <a href="https://github.com/Jowy05/JowyFit/tree/prod">Code</a>',
 
   // Barra fija del móvil
   'barra.descargar': 'Download for free',

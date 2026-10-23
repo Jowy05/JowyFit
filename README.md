@@ -1,7 +1,20 @@
 # JowyFit
-Personal Training app, free for everyone to copy if want
 
-## Cómo está hecho
+**JowyFit es una app de fitness gratuita** para entrenar fuerza, apuntar lo que comes y ver cómo cambia tu cuerpo. Sin cuentas, sin anuncios y sin servidores: todo se queda en tu móvil. En castellano, català e English.
+
+- **Web y demo:** https://jowy05.github.io/JowyFit/
+- **Android (APK):** https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk
+- **iPhone y iPad:** abre la web en Safari y elige «Añadir a pantalla de inicio».
+
+## ¿Puedo usarla, copiarla o cambiarla?
+
+Sí. Cualquiera puede usar JowyFit, copiar su código y modificarlo, **siempre que diga quién la hizo**: hay que dejar el aviso de autoría (Joel, Jowy05) y el enlace a este repositorio. Lo que **no se puede es venderla** ni usarla para ganar dinero. Así lo dice la licencia [PolyForm Noncommercial 1.0.0](LICENSE).
+
+El código está en las ramas [`prod`](https://github.com/Jowy05/JowyFit/tree/prod) (lo publicado) y [`Studio`](https://github.com/Jowy05/JowyFit/tree/Studio) (en lo que se trabaja).
+
+---
+
+## Cómo está hecho (para programadores)
 
 App de entrenamiento de fuerza, comida aproximada y seguimiento del cuerpo. Todo se queda en el móvil: sin cuentas ni servidores.
 
@@ -119,7 +132,7 @@ Exercise data by [RepDB](https://repdb.co) (repdb.co) — free tier. The dataset
 
 ## Licencias
 
-- El **código** de esta app tiene licencia MIT (ver `LICENSE`).
+- El **código** de esta app tiene licencia PolyForm Noncommercial 1.0.0 (ver `LICENSE`): úsalo, cópialo y cámbialo dando crédito, pero sin venderlo.
 - Los **datos de ejercicios** son de RepDB (plan gratuito) y tienen su propia licencia: no se incluyen en el repositorio; se descargan al compilar con `npm run repdb`, y quien compile la app acepta la licencia de RepDB.
 - Los **datos de alimentos** se consultan en Open Food Facts (licencia ODbL).
 - Fuentes Barlow y JetBrains Mono (SIL OFL 1.1), iconos Phosphor (MIT) y el resto de librerías con sus licencias (ver Créditos dentro de la app).

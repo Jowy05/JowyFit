@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-4-1.cab': '<b>Version 0.4.1</b> · October 23, 2026',
+  'nov.0-4-1.texto': 'A clearer PDF report in the app’s colors. The page and the demo are easier to read and to use with a keyboard. Fixes: body fat % now matches across Home, Goals, and the report, and supplement reminders show in your language. Under the hood, the app is reorganized to grow without bugs.',
   'nov.0-4-0.cab': '<b>Version 0.4.0</b> · October 22, 2026',
   'nov.0-4-0.texto': 'The app now comes in three languages: Spanish, Catalan, and English. It still starts in Spanish; switch it in Settings → Appearance → Language. Dates, times, numbers, and exercises (in English) show up in your language.',
   'nov.0-3-0.cab': '<b>Version 0.3.0</b> · October 21, 2026',

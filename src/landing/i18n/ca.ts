@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-4-1.cab': '<b>Versió 0.4.1</b> · 23 d’octubre del 2026',
+  'nov.0-4-1.texto': 'L’informe en PDF, més clar i amb els colors de l’app. La pàgina i la demo, més fàcils de llegir i d’utilitzar amb el teclat. Arranjaments: el % de greix surt igual a Inici, Metes i l’informe, i els avisos de suplements surten en el teu idioma. Per dins, l’app està ordenada per créixer sense errors.',
   'nov.0-4-0.cab': '<b>Versió 0.4.0</b> · 22 d’octubre del 2026',
   'nov.0-4-0.texto': "L’app, en tres idiomes: castellà, català i anglès. Per defecte continua en castellà; canvia-ho a Configuració → Aparença → Idioma. Dates, hores, números i els exercicis (en anglès) surten en el teu idioma.",
   'nov.0-3-0.cab': '<b>Versió 0.3.0</b> · 21 d’octubre del 2026',

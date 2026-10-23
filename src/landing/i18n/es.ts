@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-4-1.cab': '<b>Versión 0.4.1</b> · 23 de octubre de 2026',
+  'nov.0-4-1.texto': 'El informe en PDF, más claro y con los colores de la app. La página y la demo, más fáciles de leer y de usar con el teclado. Arreglos: el % de grasa sale igual en Inicio, Metas y el informe, y los avisos de suplementos salen en tu idioma. Por dentro, la app está ordenada para crecer sin fallos.',
   'nov.0-4-0.cab': '<b>Versión 0.4.0</b> · 22 de octubre de 2026',
   'nov.0-4-0.texto': 'La app, en tres idiomas: castellano, catalán e inglés. Por defecto sigue en castellano; cámbialo en Ajustes → Apariencia → Idioma. Fechas, horas, números y los ejercicios (en inglés) salen en tu idioma.',
   'nov.0-3-0.cab': '<b>Versión 0.3.0</b> · 21 de octubre de 2026',

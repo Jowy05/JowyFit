@@ -30,7 +30,7 @@ export function Fuerza() {
   const [cuantos, setCuantos] = useState(12)
   const [todosEj, setTodosEj] = useState(false)
   const hoy = hoyISO()
-  const cab = <CabProgreso actual="pro-fuerza" crumb={t('Lo que más motiva')} />
+  const cab = <CabProgreso actual="fuerza" crumb={t('Lo que más motiva')} />
 
   if (!sesiones) return <Pantalla>{cab}</Pantalla>
   if (!sesiones.length) return (
@@ -97,7 +97,7 @@ export function Fuerza() {
           ) : (
             <div className="achs">
               {recientes.map(l => (
-                <button key={`${l.sesionId}-${l.ejercicio}`} className="ach" style={{ width: '100%', textAlign: 'left' }} onClick={() => l.sesionId != null && nav.ir('pro-entreno', { id: l.sesionId })}>
+                <button key={`${l.sesionId}-${l.ejercicio}`} className="ach" style={{ width: '100%', textAlign: 'left' }} onClick={() => l.sesionId != null && nav.ir('detalle-entreno', { id: l.sesionId })}>
                   <span className="tro"><Ico n={l.tipo === 'reps' ? 'medal' : 'trophy'} b /></span>
                   <span className="tx">
                     <small className="au">{fechaCorta(l.fecha)} · {l.tipo === 'reps' ? t('récord de reps') : t('récord')}</small>
@@ -108,7 +108,7 @@ export function Fuerza() {
                 </button>
               ))}
               {bloqueadas.map(({ m, actual }) => (
-                <button key={m.id} className="ach locked" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.hoja('sheet-meta', { id: m.id })}>
+                <button key={m.id} className="ach locked" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.hoja('hoja-meta', { id: m.id })}>
                   <span className="tro lock"><Ico n="lock-simple" b /></span>
                   <span className="tx">
                     <b>{m.titulo}</b>
@@ -196,7 +196,7 @@ export function Fuerza() {
               const r = resumen(s)
               const recs = s.ejercicios.reduce((suma, e) => suma + e.series.filter(x => x.record && x.hecha).length, 0)
               return (
-                <button key={s.id} className="it" onClick={() => nav.ir('pro-entreno', { id: s.id })}>
+                <button key={s.id} className="it" onClick={() => nav.ir('detalle-entreno', { id: s.id })}>
                   <span className="code">{fechaCorta(s.fecha)}</span>
                   <span className="tx">
                     <b>{nombreEntreno(s)}</b>

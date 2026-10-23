@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { comidasDe, comidasEntre, objetivosEnergia, suplementosDelDia } from '../../datos/consultas'
-import type { Comida } from '../../datos/tipos'
+import type { Comida, Guardado } from '../../datos/tipos'
 import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, nombreFranja, picoteoDeSemana, textoRacion, totalesComida, batidoAMano } from '../../dominio/comida'
 import { DIAS, deISO, diaMes, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../dominio/fechas'
 import { capital, num } from '../../dominio/formato'
@@ -41,7 +41,7 @@ export function DiaComida() {
   const quincena = energia ? datosQuincena({ hoy, mediciones, comidas: recientes, objetivoProteina: energia.proteina, objetivo: perfil.objetivo }) : null
   const tomados = supl?.tomados ?? []
 
-  const borrar = async (c: Comida) => {
+  const borrar = async (c: Guardado<Comida>) => {
     aviso(t('Borrado: {nombre}', { nombre: t(c.nombre) }), await borrarComida(c))
   }
   // El batido, al marcarlo, se apunta con su proteína (suma al día); al desmarcarlo, se quita.
@@ -60,7 +60,7 @@ export function DiaComida() {
 
   return (
     <Pantalla>
-      <CabComida vista="com" crumb={t('Lo aproximado vale')} fecha={fecha} />
+      <CabComida vista="dia-comida" crumb={t('Lo aproximado vale')} fecha={fecha} />
       <div className="pg">
         <div className="daysel">
           <button className="ib" aria-label={t('Día anterior')} onClick={() => verDia(-1)}><Ico n="caret-left" /></button>
@@ -102,7 +102,7 @@ export function DiaComida() {
                 </summary>
                 <div className="in">
                   {lista.map(c => (
-                    <Deslizable key={c.id} onBorrar={() => void borrar(c)} onAbrir={() => nav.hoja('sheet-comida', { id: c.id })}>
+                    <Deslizable key={c.id} onBorrar={() => void borrar(c)} onAbrir={() => nav.hoja('hoja-comida', { id: c.id })}>
                       <Mini nombre={c.nombre} tipo={c.tipo} foto={c.foto} />
                       <span className="tx">
                         <b>{recortar(t(c.nombre))}</b>
@@ -112,7 +112,7 @@ export function DiaComida() {
                     </Deslizable>
                   ))}
                   {!lista.length && (
-                    <button className="lnk" onClick={() => nav.hoja('sheet-add', { fecha, franja: f.v })}><Ico n="plus" b /> {t('Añadir')}</button>
+                    <button className="lnk" onClick={() => nav.hoja('hoja-anadir', { fecha, franja: f.v })}><Ico n="plus" b /> {t('Añadir')}</button>
                   )}
                   {lista.length > 0 && f.v === primera && <p className="small muted mt4"><Ico n="hand-swipe-left" /> {t('Desliza para borrar · toca para editar')}</p>}
                 </div>
@@ -150,7 +150,7 @@ export function DiaComida() {
                       <span className="box"><Ico n="check" b /></span>
                       <span className="tx"><b>{t(s)}</b><small>{detalle || (hecho ? t('Tomado') : t('Toca cuando lo tomes'))}</small></span>
                     </button>
-                    <button className="ib ux-com-lapiz" aria-label={t('Cambiar cantidad de {nombre}', { nombre: t(s) })} onClick={() => nav.hoja('sheet-supl', { nombre: s })}><Ico n="pencil-simple" /></button>
+                    <button className="ib ux-com-lapiz" aria-label={t('Cambiar cantidad de {nombre}', { nombre: t(s) })} onClick={() => nav.hoja('hoja-suplemento', { nombre: s })}><Ico n="pencil-simple" /></button>
                   </div>
                 )
               })}
@@ -160,7 +160,7 @@ export function DiaComida() {
 
         {/* Una sola tarjeta: el consejo de la quincena y el picoteo de la semana. */}
         <div className="sec">
-          <button className="card pd adj" onClick={() => nav.ir('com-energia')}>
+          <button className="card pd adj" onClick={() => nav.ir('energia')}>
             <span className="row jb">
               <span className="lbl">{t('Cómo vas · últimas 2 semanas')}</span>
               {quincena && (
@@ -182,7 +182,7 @@ export function DiaComida() {
         </div>
 
         <div className="dock">
-          <button className="btn xl" data-tour="comida-anadir" onClick={() => nav.hoja('sheet-add', { fecha })}><Ico n="plus" b />{t('Añadir')}</button>
+          <button className="btn xl" data-tour="comida-anadir" onClick={() => nav.hoja('hoja-anadir', { fecha })}><Ico n="plus" b />{t('Añadir')}</button>
         </div>
       </div>
     </Pantalla>

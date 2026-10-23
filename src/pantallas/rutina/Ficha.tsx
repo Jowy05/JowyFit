@@ -25,7 +25,7 @@ import { tr } from '../../i18n/jsx'
 
 const REGISTRO_TXT = { peso: tk('kg y repeticiones'), mancuerna: tk('kg de cada mancuerna'), asistido: tk('kg de ayuda'), corporal: tk('repeticiones'), tiempo: tk('segundos'), cardio: tk('minutos') }
 
-export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
+export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const e = ejercicio(ruta.d.id)
@@ -72,7 +72,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
   const peligro = (e.id === 'bench-press' || e.id === 'squat' || e.id.includes('barbell-bench') || e.id === 'incline-bench-press')
 
   const alEntreno = unaVez(async () => {
-    if (!sesion?.id) { aviso(t('Empieza un entreno y podrás añadirlo')); return }
+    if (!sesion) { aviso(t('Empieza un entreno y podrás añadirlo')); return }
     const b = bloqueNuevo(e.id, { perfil, ejercicios: catalogoCargado()?.ejercicios ?? [], gimnasio: g ?? null, marcas })
     const s = structuredClone(sesion)
     const ej = desdeBloque(b, { peso: sug?.peso ?? null, reps: sug?.reps ?? b.repsMin })
@@ -215,7 +215,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
                 if (!x) return null
                 const deTuPlan = !!enPlan && i < enPlan.b.alternativas.length
                 return (
-                  <button key={a.id} className="mini-ad" onClick={() => nav.ir('rut-ficha', { id: a.id })}>
+                  <button key={a.id} className="mini-ad" onClick={() => nav.ir('ficha', { id: a.id })}>
                     <Th ej={x} size="l" />
                     <span className={cx('tag', deTuPlan && 'blue')}>{deTuPlan ? t('Si está ocupado') : t('Parecido')}</span>
                     <b>{x.nombre}</b>
@@ -243,7 +243,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
           ) : (
             <div className="btns mt12">
               <button className="btn gry sm" onClick={() => (r ? setAlPlan(true) : aviso(t('Primero crea tu rutina')))}><Ico n="plus" b />{t('Añadir a mi plan')}</button>
-              {sesion?.id != null && <button className="btn sm" onClick={() => void alEntreno()}>{t('Al entreno de ahora')}</button>}
+              {sesion && <button className="btn sm" onClick={() => void alEntreno()}>{t('Al entreno de ahora')}</button>}
             </div>
           )}
         </div>

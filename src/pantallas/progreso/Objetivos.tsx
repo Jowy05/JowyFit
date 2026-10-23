@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { borrarMeta, guardarMeta } from '../../datos/acciones/cuerpo'
 import { leerMediciones, leerMeta, leerMetas, sesionesHechas, valorActualMeta } from '../../datos/consultas'
-import type { Medicion, Meta, Perfil, Sesion } from '../../datos/tipos'
+import type { Guardado, Medicion, Meta, Perfil, Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { capital, kg, num } from '../../dominio/formato'
 import { fechaCorta, hoyISO, mesAnio } from '../../dominio/fechas'
@@ -41,7 +41,7 @@ export function Objetivos() {
     const [metas, ms, ses] = await Promise.all([leerMetas(), leerMediciones(), sesionesHechas()])
     return { metas, ms, ses }
   }, [])
-  const cab = <CabProgreso actual="pro-obj" crumb={t('Metas e hitos')} />
+  const cab = <CabProgreso actual="objetivos" crumb={t('Metas e hitos')} />
   if (!datos) return <Pantalla>{cab}</Pantalla>
 
   const { metas, ms, ses } = datos
@@ -56,7 +56,7 @@ export function Objetivos() {
       <div className="pg">
         {!metas.length && (
           <Vacio icono="flag" titulo={t('Aún no tienes metas')} texto={t('Por ejemplo: cintura por debajo de 88 cm para el verano, o 5 dominadas estrictas.')}
-            accion={<><Ico n="plus" b />{t('Crear una meta')}</>} onAccion={() => nav.hoja('sheet-meta')} />
+            accion={<><Ico n="plus" b />{t('Crear una meta')}</>} onAccion={() => nav.hoja('hoja-meta')} />
         )}
 
         {ordenadas.map((m, i) => {
@@ -65,7 +65,7 @@ export function Objetivos() {
           const conseguida = m.hecha || falta === 0
           const prog = m.tipo === 'libre' ? (m.hecha ? 1 : 0) : conseguida ? 1 : progresoMeta(m.inicio, actual, m.objetivo)
           return (
-            <button key={m.id} className={cx('goal card pd', i > 0 && 'mt8')} onClick={() => nav.hoja('sheet-meta', { id: m.id })}>
+            <button key={m.id} className={cx('goal card pd', i > 0 && 'mt8')} onClick={() => nav.hoja('hoja-meta', { id: m.id })}>
               <div className="row jb">
                 <b>{m.titulo}</b>
                 {conseguida ? <span className="tag ok"><Ico n="check" b />{t('Conseguida')}</span> : m.fecha ? <span className="tag">{capital(mesAnio(m.fecha))}</span> : null}
@@ -101,7 +101,7 @@ export function Objetivos() {
           </div>
         )}
 
-        {metas.length > 0 && <button className="btn ln sm mt16" onClick={() => nav.hoja('sheet-meta')}><Ico n="plus" />{t('Crear otra meta')}</button>}
+        {metas.length > 0 && <button className="btn ln sm mt16" onClick={() => nav.hoja('hoja-meta')}><Ico n="plus" />{t('Crear otra meta')}</button>}
       </div>
     </Pantalla>
   )
@@ -109,13 +109,12 @@ export function Objetivos() {
 
 // Hoja para crear o editar una meta.
 
-export function HojaMeta({ ruta }: { ruta: Ruta<'sheet-meta'> }) {
+export function HojaMeta({ ruta }: { ruta: Ruta<'hoja-meta'> }) {
   const id = ruta.d?.id ?? null
   const meta = useLiveQuery(async () => (id != null ? (await leerMeta(id)) ?? null : null), [id])
   const ejercicios = useLiveQuery(async () => ejerciciosHechos(await sesionesHechas()), [])
   if ((id != null && meta === undefined) || !ejercicios) return <Hoja titulo={t('Meta')}><div className="cargando">…</div></Hoja>
-  const tipo = TIPOS_META.some(x => x.v === ruta.d?.tipo) ? ruta.d?.tipo : undefined
-  return <FormMeta key={meta?.id ?? 'nueva'} meta={meta ?? null} tipoInicial={tipo} ejercicios={ejercicios} />
+  return <FormMeta key={meta?.id ?? 'nueva'} meta={meta ?? null} tipoInicial={ruta.d?.tipo} ejercicios={ejercicios} />
 }
 
 function sugerido(tipo: Meta['tipo'], actual: number | null): number {
@@ -141,7 +140,7 @@ function tituloAuto(tipo: Meta['tipo'], objetivo: number, unidad: string, ejerci
   }
 }
 
-function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoInicial?: Meta['tipo']; ejercicios: string[] }) {
+function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | null; tipoInicial?: Meta['tipo']; ejercicios: string[] }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
@@ -186,15 +185,15 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Meta | null; tipoIn
       ejercicio: tipo === 'ejercicio' ? ej : undefined,
       inicio, hecha,
     }
-    if (meta?.id != null) nueva.id = meta.id
+    if (meta) nueva.id = meta.id
     await guardarMeta(nueva)
     nav.hoja(null)
     aviso(meta ? t('Meta guardada') : t('Meta creada'))
   })
 
   const borrar = async () => {
-    if (meta?.id == null) return
-    const deshacer = await borrarMeta({ ...meta, id: meta.id })
+    if (!meta) return
+    const deshacer = await borrarMeta(meta)
     nav.hoja(null)
     aviso(t('Meta borrada'), deshacer)
   }

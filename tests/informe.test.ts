@@ -1,310 +1,14 @@
-// Informe en PDF: cada número que sale en el informe (§5 del diseño del informe), los casos con pocos datos,
-// el esfuerzo de los entrenos y las comparaciones con lo normal («55 kg · lo normal: 50 kg · +10 %»).
+// Informe en PDF de principio a fin: el mes de ejemplo del diseño (cada número de §5 del diseño del informe),
+// los casos con pocos datos, que no haya huecos inventados y la lectura de la base del móvil.
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
-import type { Ajustes, Comida, DiaRutina, EjercicioSesion, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../src/datos/tipos'
-import type { CatalogoInforme, EntradaInforme, Informe, PeriodoInforme } from '../src/informe/calculo/tipos'
-import { diasDe, esfuerzoDe, etiquetaSemana, fechaDia, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, serieFuerza, textoDuracion, textoFuerza, textoPct, unidadFuerza, valorFuerza, zonaEsfuerzo } from '../src/informe/calculo/comun'
-import { conSigno, enLista } from '../src/dominio/formato'
-import { mesAnio } from '../src/dominio/fechas'
-import { etiquetaPeriodo, hayDatosEn, primerDato, rangoInforme } from '../src/informe/calculo/periodo'
-import { edadEn, objetivosInforme } from '../src/informe/calculo/contexto'
-import { palabraPuntuacion, puntuacionDe } from '../src/informe/calculo/semanas'
-import { evaluarCuerpo } from '../src/informe/calculo/cuerpo'
-import { evaluarEntrenos, evaluarProteina, tonoProteinaDia } from '../src/informe/calculo/resumen'
-import { compararKcal, compararPeso } from '../src/informe/calculo/dia'
+import type { Ajustes, Meta, PasosDia, Rutina, Sesion } from '../src/datos/tipos'
+import type { Informe } from '../src/informe/calculo/tipos'
+import { diasDe } from '../src/informe/calculo/comun'
 import { calcularInforme } from '../src/informe/calculo/index'
-import { resumenSemana } from '../src/dominio/resumen'
 import { db } from '../src/datos/db'
 import { datosInforme, periodoInforme, tablasInforme } from '../src/informe/calculo/leer'
-
-// ---------------------------------------------------------------- datos de ejemplo
-
-const NOMBRES: Record<string, string> = {
-  'bench-press': 'Press de banca', 'leg-press': 'Prensa de piernas', 'lat-pulldown': 'Jalón al pecho', 'seated-cable-row': 'Remo sentado en polea',
-  'romanian-deadlift': 'Peso muerto rumano', 'bicep-curl': 'Curl de bíceps', 'cable-crunch': 'Crunch en polea', 'tricep-pushdown': 'Jalón de tríceps en polea',
-  'lateral-raise': 'Elevaciones laterales en polea', 'assisted-pull-up': 'Dominada asistida', plank: 'Plancha', 'push-up': 'Flexiones',
-}
-const PATRONES: Record<string, string> = {
-  'bench-press': 'empuje-h', 'leg-press': 'rodilla', 'lat-pulldown': 'tiron-v', 'seated-cable-row': 'tiron-h', 'romanian-deadlift': 'cadera',
-  'bicep-curl': 'biceps', 'cable-crunch': 'core', 'tricep-pushdown': 'triceps', 'lateral-raise': 'hombro-lat',
-}
-const CAT: CatalogoInforme = { nombre: id => NOMBRES[id] ?? id, patron: id => PATRONES[id], met: id => (id === 'plank' ? null : 5) }
-
-const S = (peso: number | null, reps: number | null, rpe: number | null = null, x: Partial<Serie> = {}): Serie => ({ n: 1, peso, reps, rpe, calentamiento: false, hecha: true, ...x })
-const E = (id: string, series: Serie[], x: Partial<EjercicioSesion> = {}): EjercicioSesion => ({
-  uid: id, ejercicio: id, planificado: id, estado: 'hecho', series: series.map((s, i) => ({ ...s, n: i + 1 })), repsMin: 8, repsMax: 12, rpe: 8, descanso: 90, registro: 'peso', ...x,
-})
-let siguienteId = 1
-const LETRA: Record<number, string> = { 1: 'A', 3: 'B', 4: 'C' }
-function SES(fecha: string, ejs: EjercicioSesion[], x: Partial<Sesion> = {}): Sesion {
-  const inicio = new Date(`${fecha}T05:30:00`).getTime()
-  const letra = LETRA[(new Date(`${fecha}T12:00:00`).getDay() + 6) % 7] ?? 'L'
-  return { id: siguienteId++, fecha, rutinaId: 1, letra, nombre: letra === 'L' ? 'Entreno libre' : `Cuerpo completo ${letra}`, gimnasioId: null, inicio, fin: inicio + 60 * 60_000, version: 'normal', estado: 'hecha', calibracion: false, ejercicios: ejs, ...x }
-}
-const diaR = (letra: string, d: number | null, opcional = false): DiaRutina => ({ letra, nombre: `Cuerpo completo ${letra}`, dia: d as DiaRutina['dia'], opcional, bloques: [] })
-const RUTINA: Rutina = { id: 1, creada: '2026-09-01T10:00:00.000Z', activa: true, estructura: 'Cuerpo completo · 3 días', porque: [], calibracion: false, gimnasioId: null, dias: [diaR('A', 1), diaR('B', 3), diaR('C', 4), diaR('S', 5, true)] }
-const PERFIL = {
-  id: 'yo', creado: '2026-09-01', altaCompleta: true, nombre: 'Joel', nacimiento: '2005-03-23', sexo: 'hombre', alturaCm: 177, objetivo: 'recomposicion',
-  pasosObjetivo: 10_000, diasFijos: [1, 3, 4], trabajo: 'sentado',
-} as Perfil
-const AJUSTES = { id: 'app', cafeinaLimite: 400, kcalManual: 1850, proteinaManual: 140, recolocadas: [] } as unknown as Ajustes
-const MED = (fecha: string, x: Partial<Medicion>): Medicion => ({ fecha: `${fecha}T07:00:00`, origen: 'casa', ...x })
-const COM = (fecha: string, hora: string, franja: Comida['franja'], nombre: string, kcal: number, proteina: number, x: Partial<Comida> = {}): Comida => ({ fecha, hora, franja, nombre, kcal, proteina, racion: 'N', tipo: 'plantilla', ...x })
-const AHORA = new Date('2026-10-20T22:30:00')
-
-function entrada(x: Partial<EntradaInforme> = {}): EntradaInforme {
-  return { perfil: PERFIL, ajustes: AJUSTES, mediciones: [], sesiones: [], rutina: RUTINA, comidas: [], suplementos: [], pasos: [], metas: [], periodo: 'mes', ahora: AHORA, catalogo: CAT, ...x }
-}
-
-/** El mes del ejemplo del diseño: 21 sep – 20 oct de 2026, martes A, jueves B y viernes C, semana de prueba al principio y un viernes perdido. */
-function mesDeEjemplo() {
-  siguienteId = 1
-  const fechas = ['2026-09-22', '2026-09-24', '2026-09-25', '2026-09-29', '2026-10-01', '2026-10-06', '2026-10-08', '2026-10-09', '2026-10-13', '2026-10-15', '2026-10-16', '2026-10-20']
-  const pesos: Record<string, number[]> = {
-    'bench-press': [40, 42.5, 45, 47.5, 50, 50, 52.5, 55], 'leg-press': [80, 90, 90, 100, 110, 110, 115, 120], 'lat-pulldown': [40, 42.5, 45, 47.5, 47.5],
-    'seated-cable-row': [40, 45, 45, 50], 'romanian-deadlift': [40, 45, 50, 55], 'bicep-curl': [10, 12, 12, 14], 'cable-crunch': [20, 25, 25],
-  }
-  const vez: Record<string, number> = {}
-  const maximo: Record<string, number> = {}
-  let marcados = 0
-  const ej = (id: string, prueba: boolean): EjercicioSesion => {
-    const i = vez[id] ?? 0
-    vez[id] = i + 1
-    const p = pesos[id]![i]!
-    const record = maximo[id] != null && p > maximo[id]!
-    if (record) marcados++
-    maximo[id] = Math.max(maximo[id] ?? 0, p)
-    const r = prueba ? 7 : id === 'bicep-curl' ? 9 : 8
-    const series = [S(p, 8, null), S(p, 8, r), S(p, 8, r, { record })]
-    if (id === 'bench-press') series.unshift(S(20, 10, 5, { calentamiento: true }))
-    return E(id, series, { rpe: prueba ? 7 : 8 })
-  }
-  const sesiones = fechas.map((f, k) => {
-    const d = (new Date(`${f}T12:00:00`).getDay() + 6) % 7
-    const prueba = k < 3
-    const ids = d === 1 ? ['bench-press', 'leg-press', 'lat-pulldown'] : d === 3 ? ['seated-cable-row', 'romanian-deadlift', 'bicep-curl'] : ['bench-press', 'leg-press', 'cable-crunch']
-    return SES(f, ids.map(id => ej(id, prueba)), { calibracion: prueba })
-  })
-  // Una sesión sin hora de fin (cuenta lo que dijo al terminar) y una cancelada (no cuenta).
-  sesiones[3] = { ...sesiones[3]!, fin: undefined, respuestas: { minutosReales: 61 } }
-  sesiones.push(SES('2026-10-13', [E('bench-press', [S(100, 10, 10)])], { estado: 'cancelada' }))
-  const mediciones: Medicion[] = [
-    MED('2026-09-13', { pesoKg: 81 }),
-    MED('2026-09-21', { pesoKg: 80.6, bascula: { grasaPct: 25 }, perimetros: { cintura: 99.5, cuello: 39 } }),
-    MED('2026-09-28', { pesoKg: 80.2 }),
-    MED('2026-10-05', { pesoKg: 79.8, bascula: { grasaPct: 24.8 }, perimetros: { cintura: 99 } }),
-    MED('2026-10-12', { pesoKg: 79.4, bascula: { grasaPct: 24.5 } }),
-    MED('2026-10-20', { pesoKg: 79.1, bascula: { grasaPct: 24.3, basalKcal: 1665, musculoKg: 56, aguaPct: 55.6, visceral: 7, edadCorporal: 22 }, perimetros: { cintura: 98 } }),
-  ]
-  const comidas: Comida[] = []
-  const pasos: PasosDia[] = []
-  for (const f of diasDe('2026-09-21', '2026-10-20')) {
-    const n = Number(f.slice(8))
-    pasos.push({ fecha: f, pasos: n % 3 === 0 ? 11_000 : 8000, fuente: 'manual', ...(f === '2026-09-26' ? { troteKm: 3 } : {}) })
-    if (f === '2026-09-23' || f === '2026-10-04') continue
-    comidas.push(COM(f, '07:30', 'desayuno', 'Batido de proteína', 120, 24, { tipo: 'bebida' }))
-    comidas.push(COM(f, '06:50', 'desayuno', 'Café', 5, 0, { cafeina: 80, tipo: 'bebida' }))
-    comidas.push(COM(f, '14:10', 'comida', 'Pollo teriyaki', 1100, n % 2 ? 90 : 70))
-    comidas.push(COM(f, '21:15', 'cena', 'Arroz con atún', 600, 20))
-    if (n % 5 === 0) comidas.push(COM(f, '17:45', 'merienda', 'Quicos', 150, 3, { tipo: 'picoteo', racion: 'P' }))
-  }
-  comidas.push(COM('2026-10-01', '18:20', 'merienda', 'Monster', 230, 0, { cafeina: 400, tipo: 'bebida', hidratos: 56, azucares: 55 }))
-  const metas: Meta[] = [
-    { id: 1, tipo: 'cintura', titulo: 'Cintura por debajo de 88 cm', objetivo: 88, unidad: 'cm', inicio: 99.5, fecha: '2027-06-30' },
-    { id: 2, tipo: 'ejercicio', titulo: 'Press de banca: 65 kg × 5', objetivo: 65, unidad: 'kg', inicio: 40, ejercicio: 'bench-press', fecha: '2027-06-30' },
-    { id: 3, tipo: 'grasa', titulo: 'Grasa al 18 %', objetivo: 18, unidad: '%', inicio: 25, fecha: '2027-06-30' },
-    { id: 4, tipo: 'dominadas', titulo: '5 dominadas estrictas', objetivo: 5, unidad: 'reps', fecha: '2027-06-30' },
-    { id: 5, tipo: 'libre', titulo: 'Ir andando al trabajo', objetivo: 1, unidad: '', hecha: true },
-  ]
-  return { sesiones, mediciones, comidas, pasos, metas, marcados }
-}
-
-// ================================================================ utilidades
-
-describe('utilidades de texto y números', () => {
-  it('el ejemplo de la banca: 55 contra 50 es +10 %', () => {
-    expect(pctCambio(55, 50)).toBe(10)
-    expect(textoPct(pctCambio(55, 50)!)).toBe('+10 %')
-    expect(textoPct(pctCambio(12, 13)!)).toBe('–8 %')
-    expect(textoPct(0)).toBe('0 %')
-    expect(pctCambio(5, 0)).toBeNull()
-  })
-  it('signos con el menos tipográfico y sin «–0»', () => {
-    expect(conSigno(1.5)).toBe('+1,5')
-    expect(conSigno(-0.7)).toBe('–0,7')
-    expect(conSigno(0)).toBe('0')
-    expect(conSigno(-0.04)).toBe('0')
-    expect(conSigno(15, v => String(v))).toBe('+15')
-  })
-  it('mediana, listas, duraciones y fechas', () => {
-    expect(mediana([])).toBeNull()
-    expect(mediana([3, 1, 2])).toBe(2)
-    expect(mediana([47.5, 50, 52.5, 50])).toBe(50)
-    expect(enLista([])).toBe('')
-    expect(enLista(['a'])).toBe('a')
-    expect(enLista(['a', 'b'])).toBe('a y b')
-    expect(enLista(['a', 'b', 'c'])).toBe('a, b y c')
-    expect(textoDuracion(null)).toBe('—')
-    expect(textoDuracion(68)).toBe('1 h 8 min')
-    expect(textoDuracion(60)).toBe('1 h')
-    expect(textoDuracion(59)).toBe('59 min')
-    expect(fechaDia('2026-09-22')).toBe('mar 22 sep')
-    expect(mesAnio('2027-04-03')).toBe('abril 2027')
-    expect(etiquetaSemana('2026-09-21', '2026-09-27')).toBe('21-27 sep')
-    expect(etiquetaSemana('2026-09-28', '2026-10-04')).toBe('28 sep-4 oct')
-    expect(etiquetaSemana('2026-10-20', '2026-10-20')).toBe('20 oct')
-    expect(edadEn('2005-03-23', '2026-10-20')).toBe(21)
-    expect(edadEn('', '2026-10-20')).toBeNull()
-  })
-  it('duración de un entreno: fin − inicio, si no lo que dijo al terminar, si no nada', () => {
-    const s = SES('2026-10-20', [])
-    expect(minutosSesion(s)).toBe(60)
-    expect(minutosSesion({ ...s, fin: undefined, respuestas: { minutosReales: 47 } })).toBe(47)
-    expect(minutosSesion({ ...s, fin: undefined })).toBeNull()
-    expect(minutosSesion({ ...s, fin: s.inicio })).toBeNull()
-  })
-  it('evaluaciones con las mismas palabras y umbrales que la app', () => {
-    expect(evaluarEntrenos(null)).toEqual({ texto: '—', tono: 'gris' })
-    expect(evaluarEntrenos(92)).toEqual({ texto: 'Bien', tono: 'ok' })
-    expect(evaluarEntrenos(75)).toEqual({ texto: 'Casi', tono: 'warn' })
-    expect(evaluarEntrenos(50)).toEqual({ texto: 'Pocos', tono: 'bad' })
-    expect(evaluarProteina(130, 140).texto).toBe('Bien')
-    expect(evaluarProteina(110, 140).texto).toBe('Algo corta')
-    expect(evaluarProteina(90, 140).texto).toBe('Corta')
-    expect([tonoProteinaDia(126, 140), tonoProteinaDia(100, 140), tonoProteinaDia(97, 140)]).toEqual(['ok', 'warn', 'bad'])
-    expect(evaluarCuerpo(-1.5, 'recomposicion', 'peso')).toEqual({ texto: 'Baja: bien', tono: 'ok' })
-    expect(evaluarCuerpo(0.5, 'perder', 'cintura')).toEqual({ texto: 'Sube: ojo', tono: 'warn' })
-    expect(evaluarCuerpo(0.2, 'perder', 'grasa')).toEqual({ texto: 'Estable', tono: 'gris' })
-    expect(evaluarCuerpo(1, 'fuerza', 'peso')).toEqual({ texto: 'Sube', tono: 'gris' })
-    expect(evaluarCuerpo(-1, 'fuerza', 'peso').texto).toBe('Baja')
-    expect(evaluarCuerpo(0, 'fuerza', 'peso').texto).toBe('Estable')
-    expect(evaluarCuerpo(-1, 'fuerza', 'cintura').texto).toBe('Baja: bien')
-  })
-  it('puntuación: los puntos de «¿Voy bien?» sobre 4,5 y sus palabras', () => {
-    expect(puntuacionDe(4.5)).toBe(100)
-    expect(puntuacionDe(3.5)).toBe(78)
-    expect(puntuacionDe(2)).toBe(44)
-    expect(palabraPuntuacion(78, true)).toEqual({ palabra: 'Vas bien', tono: 'ok' })
-    expect(palabraPuntuacion(44, true)).toEqual({ palabra: 'Casi', tono: 'warn' })
-    expect(palabraPuntuacion(43, true)).toEqual({ palabra: 'Periodo flojo', tono: 'bad' })
-    expect(palabraPuntuacion(43, false).palabra).toBe('Semana floja')
-    const r = resumenSemana({ hoy: '2026-10-18', sesiones: [], fijos: 3, mediciones: [], comidas: [], pasos: [], objetivoProteina: 140, objetivoPasos: 10_000, recordsSemana: 0, subidasSemana: 0 })
-    expect(r.puntos).toBe(1.25) // sin entrenos: 0 + proteína a medias 0,5 + cintura a medias 0,5 + pasos 0,25
-  })
-  it('objetivos: los manuales de Ajustes mandan; si no, con el peso de esa fecha', () => {
-    expect(objetivosInforme(PERFIL, AJUSTES, 79, '2026-10-20')).toEqual({ kcal: 1850, proteina: 140 })
-    const auto = objetivosInforme(PERFIL, null, 80, '2026-10-20')
-    expect(auto.proteina).toBe(145)
-    expect(objetivosInforme({ ...PERFIL, nacimiento: '' }, null, null, '2026-10-20').proteina).toBe(135)
-  })
-})
-
-// ================================================================ periodo
-
-describe('periodo', () => {
-  it('días exactos de cada botón y su texto', () => {
-    const r = (p: PeriodoInforme, primer: string | null = null) => rangoInforme(p, AHORA, primer)
-    expect(r('hoy')).toMatchObject({ inicio: '2026-10-20', fin: '2026-10-20', dias: 1, unDia: true, texto: 'martes 20 oct 2026', textoHoja: 'Hoy, martes 20 de octubre', nombreArchivo: 'JowyFit-informe-2026-10-20-hoy.pdf' })
-    expect(r('hoy').notaHoja).toMatch(/compara lo de ese día/)
-    expect(r('ayer')).toMatchObject({ inicio: '2026-10-19', fin: '2026-10-19', dias: 1, unDia: true, textoHoja: 'Ayer, lunes 19 de octubre' })
-    expect(r('semana')).toMatchObject({ inicio: '2026-10-14', fin: '2026-10-20', dias: 7, unDia: false, notaHoja: null, nombreArchivo: 'JowyFit-informe-2026-10-20-ultima-semana.pdf' })
-    expect(r('mes')).toMatchObject({ inicio: '2026-09-21', fin: '2026-10-20', dias: 30, texto: '21 sep – 20 oct 2026', textoHoja: 'Del 21 sep al 20 oct de 2026', etiqueta: 'Último mes', nombreArchivo: 'JowyFit-informe-2026-10-20-ultimo-mes.pdf' })
-    expect(r('todo', '2026-10-12')).toMatchObject({ inicio: '2026-10-12', dias: 9, textoHoja: 'Desde el 12 oct de 2026, tu primer dato' })
-    expect(r('todo')).toMatchObject({ inicio: '2026-10-20', dias: 1, textoHoja: 'Aún no hay nada apuntado' })
-    // Un primer dato con fecha futura no da un periodo al revés.
-    expect(r('todo', '2026-12-01').inicio).toBe('2026-10-20')
-    expect(etiquetaPeriodo('todo')).toBe('Todo')
-  })
-  it('periodo que cruza de año', () => {
-    const r = rangoInforme('mes', new Date('2027-01-10T09:00:00'))
-    expect(r.texto).toBe('12 dic 2026 – 10 ene 2027')
-    expect(r.textoHoja).toBe('Del 12 dic de 2026 al 10 ene de 2027')
-  })
-  it('cambio de hora (25 oct): 30 días seguidos, sin repetir ni saltar ninguno', () => {
-    const r = rangoInforme('mes', new Date('2026-11-10T12:00:00'))
-    expect(r).toMatchObject({ inicio: '2026-10-12', fin: '2026-11-10', dias: 30 })
-    const dias = diasDe(r.inicio, r.fin)
-    expect(dias).toHaveLength(30)
-    expect(new Set(dias).size).toBe(30)
-    expect(dias).toContain('2026-10-25')
-    expect(rangoInforme('ayer', new Date('2026-10-26T00:30:00')).fin).toBe('2026-10-25')
-    // Primavera: el 29 de marzo de 2026 también está una sola vez.
-    expect(diasDe('2026-03-28', '2026-03-30')).toEqual(['2026-03-28', '2026-03-29', '2026-03-30'])
-  })
-  it('primer dato y si hay algo en esos días', () => {
-    const t = { sesiones: [SES('2026-10-15', []), SES('2026-09-01', [], { estado: 'cancelada' })], mediciones: [MED('2026-10-10', { pesoKg: 80 })], comidas: [COM('2026-10-12', '10:00', 'comida', 'x', 1, 1)], pasos: [{ fecha: '2026-10-11', pasos: 5, fuente: 'manual' as const }] }
-    expect(primerDato(t)).toBe('2026-10-10')
-    expect(primerDato({ sesiones: [], mediciones: [], comidas: [], pasos: [] })).toBeNull()
-    expect(hayDatosEn(t, '2026-10-01', '2026-10-09')).toBe(false)
-    expect(hayDatosEn(t, '2026-10-15', '2026-10-15')).toBe(true)
-    expect(hayDatosEn(t, '2026-10-11', '2026-10-11')).toBe(true)
-    expect(hayDatosEn(t, '2026-10-12', '2026-10-12')).toBe(true)
-    expect(hayDatosEn(t, '2026-09-01', '2026-09-01')).toBe(false)
-  })
-})
-
-// ================================================================ esfuerzo
-
-describe('esfuerzo de los entrenos', () => {
-  it('palabras: hasta 6,4 fácil · 6,5-8,4 bien · 8,5-9,4 duro · desde 9,5 al límite', () => {
-    expect([6, 6.4, 6.5, 8.4, 8.45, 8.5, 9.4, 9.5, 10].map(v => palabraEsfuerzo(v).palabra)).toEqual(['fácil', 'fácil', 'bien', 'bien', 'duro', 'duro', 'duro', 'al límite', 'al límite'])
-    expect(palabraEsfuerzo(8.2)).toEqual({ palabra: 'bien', tono: 'ok', rango: '7-8', texto: '8,2 bien' })
-    expect(palabraEsfuerzo(6).tono).toBe('azul')
-    expect(palabraEsfuerzo(9).tono).toBe('warn')
-    expect(palabraEsfuerzo(10).tono).toBe('bad')
-    expect(zonaEsfuerzo(6.44)).toBe(0)
-  })
-  it('«Qué dice» compara la palabra, no los decimales: 8,4 con objetivo 8 es lo previsto y 8,7 más duro', () => {
-    expect(queDiceEsfuerzo(8.4, 8)).toEqual({ texto: 'lo previsto', tono: 'ok' })
-    expect(queDiceEsfuerzo(8.7, 8)).toEqual({ texto: 'más duro', tono: 'warn' })
-    expect(queDiceEsfuerzo(6.4, 8)).toEqual({ texto: 'más fácil', tono: 'azul' })
-  })
-  it('las series en blanco no cuentan (ni como 0 ni como el objetivo); el calentamiento tampoco', () => {
-    const e = E('bench-press', [S(20, 10, 5, { calentamiento: true }), S(50, 8, null), S(50, 8, 8), S(50, 7, 9), S(50, 8, 9, { hecha: false })], { rpe: 8 })
-    expect(mediaEsfuerzo(e.series)).toBe(8.5)
-    const r = esfuerzoDe([e])
-    expect(r).toMatchObject({ media: 8.5, marcadas: 2, total: 3, pct: 67, pocas: false, objetivo: 8, palabra: 'duro', texto: '8,5 duro' })
-  })
-  it('cada serie pesa lo mismo (no la media de medias) y el objetivo es la media de los ejercicios con series marcadas', () => {
-    const r = esfuerzoDe([E('a', [S(10, 8, 6)], { rpe: 7 }), E('b', [S(10, 8, 9), S(10, 8, 9), S(10, 8, 9)], { rpe: 9 }), E('c', [S(10, 8, null)], { rpe: 6 })])
-    expect(r.media).toBe(8.3) // (6 + 9 + 9 + 9) / 4 = 8,25 → 8,3 (la media de medias daría 7,5)
-    expect(r.objetivo).toBe(8)
-  })
-  it('todo en blanco: «sin marcar», sin media ni objetivo; con menos del 30 % marcado, «pocas»', () => {
-    expect(esfuerzoDe([E('a', [S(10, 8), S(10, 8)])])).toMatchObject({ media: null, palabra: null, texto: 'sin marcar', tono: 'gris', marcadas: 0, total: 2, pct: 0, pocas: true, objetivo: null })
-    expect(esfuerzoDe([])).toMatchObject({ media: null, total: 0, pct: null, pocas: false })
-    expect(esfuerzoDe([E('a', [S(10, 8, 8), S(10, 8), S(10, 8), S(10, 8)])]).pocas).toBe(true)
-  })
-})
-
-// ================================================================ fuerza
-
-describe('fuerza por ejercicio', () => {
-  const s1 = SES('2026-10-13', [E('x', [S(40, 8)]), E('as', [S(-20, 6)], { registro: 'asistido' }), E('pl', [S(null, null, null, { segundos: 40 })], { registro: 'tiempo' }), E('fl', [S(null, 12)], { registro: 'corporal' })])
-  const s2 = SES('2026-10-15', [E('x', [S(45, 8), S(42.5, 10)]), E('as', [S(-15, 6), S(-20, 8)], { registro: 'asistido' }), E('pl', [S(null, null, null, { segundos: 50 })], { registro: 'tiempo' }), E('fl', [S(null, 15)], { registro: 'corporal' })])
-  it('la unidad: kg, ayuda (asistidos), repeticiones o segundos', () => {
-    expect(unidadFuerza([s1, s2], 'x')).toBe('kg')
-    expect(unidadFuerza([s1, s2], 'as')).toBe('asistido')
-    expect(unidadFuerza([s1, s2], 'fl')).toBe('reps')
-    expect(unidadFuerza([s1, s2], 'pl')).toBe('s')
-    expect(unidadFuerza([], 'nada')).toBe('s')
-  })
-  it('el valor de cada día y su texto', () => {
-    expect(valorFuerza(s2.ejercicios[0]!.series, 'kg')).toBe(45)
-    expect(valorFuerza(s2.ejercicios[1]!.series, 'asistido')).toBe(15)
-    expect(valorFuerza(s2.ejercicios[2]!.series, 's')).toBe(50)
-    expect(valorFuerza(s2.ejercicios[3]!.series, 'reps')).toBe(15)
-    expect(valorFuerza([S(null, 10)], 'kg')).toBeNull()
-    expect(valorFuerza([S(10, 10)], 'asistido')).toBeNull()
-    expect(valorFuerza([S(null, null)], 's')).toBeNull()
-    expect([textoFuerza(47.5, 'kg'), textoFuerza(15, 'asistido'), textoFuerza(12, 'reps'), textoFuerza(40, 's')]).toEqual(['47,5 kg', 'ayuda 15 kg', '12 reps', '40 s'])
-    expect(serieFuerza([s2, s1], 'x').map(p => p.valor)).toEqual([40, 45])
-    expect(serieFuerza([s1, s2], 'as').map(p => p.valor)).toEqual([20, 15])
-  })
-})
-
-// ================================================================ el mes de ejemplo
+import { S, E, SES, diaR, RUTINA, PERFIL, AJUSTES, MED, COM, AHORA, entrada, mesDeEjemplo, idsDesde } from './informe-ejemplo'
 
 describe('informe del último mes (el ejemplo del diseño)', () => {
   const d = mesDeEjemplo()
@@ -536,222 +240,6 @@ describe('informe del último mes (el ejemplo del diseño)', () => {
   })
 })
 
-// ================================================================ «Tu día»
-
-/** El día de la página 5 del diseño: martes 20 de octubre, con 4 semanas de historial detrás. */
-function diaDeEjemplo(extra: Partial<Sesion> = {}) {
-  siguienteId = 100
-  const ant = ['2026-10-06', '2026-10-09', '2026-10-13', '2026-10-16']
-  const banca = [47.5, 50, 50, 52.5]
-  const curl = [13, 13, 13, 14]
-  const previas = ant.map((f, i) => SES(f, [
-    E('bench-press', [S(banca[i]!, 8, 8), S(banca[i]!, 8, 8)]),
-    E('lat-pulldown', [S(47.5, 8, 8), S(47.5, 8, 8)]),
-    E('bicep-curl', [S(curl[i]!, 10, 8.5)]),
-    E('tricep-pushdown', [S(27.5, 12)]),
-    E('assisted-pull-up', [S(-20, 6)], { registro: 'asistido' }),
-    E('leg-press', [S(110, 10, 7.5)]),
-  ]))
-  const hoy = SES('2026-10-20', [
-    E('bench-press', [S(20, 10, 5, { calentamiento: true }), S(55, 6, 9, { record: true }), S(52.5, 8, 9)]),
-    E('lat-pulldown', [S(47.5, 10, 7), S(47.5, 9, 7)]),
-    E('bicep-curl', [S(12, 10, 9)]),
-    E('tricep-pushdown', [S(27.5, 12)]),
-    E('lateral-raise', [S(7.5, 12, 8)]),
-    E('assisted-pull-up', [S(-15, 6)], { registro: 'asistido' }),
-    E('leg-press', [S(110, 10, 8.5)]),
-  ], { ...extra })
-  const mediciones = [
-    MED('2026-10-14', { pesoKg: 79.4 }), MED('2026-10-17', { pesoKg: 79.2 }),
-    MED('2026-10-13', { perimetros: { cintura: 98 } }),
-    MED('2026-10-20', { pesoKg: 79.1, bascula: { grasaPct: 24.3 } }),
-  ]
-  const comidas: Comida[] = []
-  for (const f of diasDe('2026-09-22', '2026-10-19')) comidas.push(COM(f, '14:00', 'comida', 'Comida', 1800, 131))
-  comidas.push(
-    COM('2026-10-20', '06:50', 'desayuno', 'Café', 5, 0, { cafeina: 80, tipo: 'bebida' }),
-    COM('2026-10-20', '14:10', 'comida', 'Pollo teriyaki', 1465, 112),
-    COM('2026-10-20', '17:45', 'merienda', 'Quicos', 150, 3, { tipo: 'picoteo', racion: 'P' }),
-    COM('2026-10-20', '18:20', 'merienda', 'Monster', 230, 0, { cafeina: 160, tipo: 'bebida' }),
-  )
-  const pasos: PasosDia[] = diasDe('2026-09-22', '2026-10-19').map(f => ({ fecha: f, pasos: 8420, fuente: 'manual' }))
-  pasos.push({ fecha: '2026-10-20', pasos: 6240, fuente: 'manual' })
-  return { sesiones: [...previas, hoy], mediciones, comidas, pasos }
-}
-
-describe('«Tu día» (Hoy): todo contra lo normal de las 4 semanas anteriores', () => {
-  const d = diaDeEjemplo()
-  const inf = calcularInforme(entrada({ ...d, periodo: 'hoy' }))
-  const t = inf.tuDia!
-  const fila = (id: string) => t.ejercicios.find(e => e.id === id)!
-
-  it('cabecera de «Tu día» sin puntuación', () => {
-    expect(inf.cabecera).toMatchObject({ titulo: 'Tu día', periodo: 'Hoy · martes 20 oct 2026', comparado: 'Comparado con tus últimas 4 semanas' })
-    expect(inf.resumen.puntuacion).toBeNull()
-    expect(inf.semanas).toEqual([])
-    expect(t).toMatchObject({ fecha: '2026-10-20', palabra: 'hoy', primerDia: false })
-  })
-
-  it('banca: «55 kg · lo normal: 50 kg · +10 %» y ¡Récord!', () => {
-    expect(fila('bench-press')).toMatchObject({
-      nombre: 'Press de banca', unidad: 'kg', hoy: 55, normal: 50, min: 47.5, max: 52.5, pct: 10, juicio: 'mejor', direccion: 'sube', tono: 'ok', por: 'peso',
-      frase: '55 kg · lo normal: 50 kg · +10 %', hoyTexto: 'hoy 55 kg × 6', record: true, primera: false,
-    })
-    // Más peso y le costó más: es lo esperable y no se marca.
-    expect(fila('bench-press').esfuerzo).toMatchObject({ hoy: 9, normal: 8, texto: '9,0 duro', tono: 'warn', normalTexto: 'lo normal: 8,0', costo: null, deObjetivo: false })
-  })
-
-  it('mismo peso con más repeticiones es mejor; y costó menos con el mismo peso', () => {
-    expect(fila('lat-pulldown')).toMatchObject({ juicio: 'mejor', por: 'reps', frase: 'Mismo peso, 2 reps más que lo normal', tono: 'ok' })
-    expect(fila('lat-pulldown').esfuerzo).toMatchObject({ hoy: 7, normal: 8, costo: 'menos' })
-  })
-
-  it('menos peso es peor (–8 %); igual que lo normal; primera vez; ayuda en asistidos', () => {
-    expect(fila('bicep-curl')).toMatchObject({ hoy: 12, normal: 13, pct: -8, juicio: 'peor', tono: 'bad', frase: '12 kg · lo normal: 13 kg · –8 %' })
-    expect(fila('bicep-curl').esfuerzo.normalTexto).toBe('lo normal: 8,5')
-    expect(fila('tricep-pushdown')).toMatchObject({ juicio: 'igual', tono: 'tinta', frase: '27,5 kg · igual que lo normal', por: null })
-    expect(fila('tricep-pushdown').esfuerzo).toMatchObject({ hoy: null, texto: 'sin marcar', tono: 'gris', normalTexto: 'objetivo: 8', deObjetivo: true })
-    expect(fila('lateral-raise')).toMatchObject({ primera: true, normal: null, juicio: 'neutro', tono: 'azul', frase: 'Primera vez: aún no hay con qué comparar', min: null })
-    expect(fila('lateral-raise').esfuerzo).toMatchObject({ normal: 8, normalTexto: 'objetivo: 8' })
-    expect(fila('assisted-pull-up')).toMatchObject({ unidad: 'asistido', hoy: 15, normal: 20, pct: -25, direccion: 'baja', juicio: 'mejor', frase: 'ayuda 15 kg · lo normal: ayuda 20 kg · –25 %', hoyTexto: 'hoy ayuda 15 kg × 6' })
-    // Mismo peso y 1 punto más de esfuerzo: «costó más».
-    expect(fila('leg-press').esfuerzo).toMatchObject({ hoy: 8.5, normal: 7.5, costo: 'más' })
-  })
-
-  it('proteína, pasos y peso contra lo normal', () => {
-    expect(t.proteina).toMatchObject({ valor: 115, normal: 131, pct: -12, direccion: 'baja', juicio: 'peor', tono: 'bad', texto: '–12 %', normalTexto: 'lo normal: 131 g' })
-    expect(t.pasos).toMatchObject({ valor: 6240, normal: 8420, pct: -26, juicio: 'peor', normalTexto: 'lo normal: 8420' })
-    expect(t.peso).toMatchObject({ valor: 79.1, normal: 79.3, diferencia: -0.2, direccion: 'baja', juicio: 'mejor', tono: 'ok', texto: '–0,2 kg', normalTexto: 'media de los 7 días antes: 79,3 kg' })
-    expect(t.kcal).toMatchObject({ valor: 1850, normal: 1850, direccion: 'igual', tono: 'ok', texto: 'dentro del objetivo' })
-    expect(t.cafeina).toEqual({ valor: 240, limite: 400, tono: 'tinta' })
-  })
-
-  it('recuento y frase del día', () => {
-    // Mejor: banca, jalón, asistida y peso. Peor: curl, proteína y pasos. Igual: tríceps y prensa.
-    expect(t.recuento).toEqual({ mejor: 4, peor: 3, igual: 2 })
-    expect(t.frase).toBe('Buen día de fuerza. Récord en press de banca (55 kg), mejor en dominada asistida, más repeticiones en jalón al pecho y bajas de peso. Peor: curl de bíceps, la proteína y los pasos.')
-  })
-
-  it('ficha del entreno, ejercicio principal con su banda de lo normal, gasto y comida', () => {
-    expect(t.entreno).toMatchObject({ estado: 'hecho', nombre: 'Cuerpo completo A', minutos: 60, normal: 60, diferencia: 0, texto: '0 min', normalTexto: 'lo normal: 60 min · hoy 1 h' })
-    expect(t.principal).toMatchObject({ id: 'bench-press', titulo: 'Press de banca, tus últimas 5 veces', banda: { min: 47.5, max: 52.5, mediana: 50 } })
-    expect(t.principal!.puntos.at(-1)).toEqual({ fecha: '2026-10-20', valor: 55, record: true })
-    const g = t.gasto!
-    expect(g.reposo).toBe(1663)
-    expect(g.pasos).toBe(181)
-    expect(g.total).toBe(g.reposo + g.pasos + g.entreno)
-    expect(g.comido).toBe(1850)
-    expect(g.diferencia).toBe(1850 - g.total)
-    expect(g.texto).toBe(`unas ${Math.round((g.total - 1850) / 10) * 10} menos de lo gastado`)
-    expect(g.tono).toBe('ok')
-    expect(t.comidas.map(c => c.hora)).toEqual(['06:50', '14:10', '17:45', '18:20'])
-    expect(t.comidas[2]).toMatchObject({ franjaTexto: 'Merienda', racion: 'Poco', picoteo: true, cafeina: null })
-    expect(t.total).toEqual({ kcal: 1850, proteina: 115, cafeina: 240 })
-    expect(t.tonoProteina).toBe('warn')
-    expect(t.cuerpo).toBe('Cuerpo hoy: 79,1 kg · 24,3 % · cintura sin medir (última: 98 cm el 13 oct)')
-  })
-
-  it('con «una a una» añade el detalle de cada serie', () => {
-    const conDetalle = calcularInforme(entrada({ ...d, periodo: 'hoy', secciones: { detalle: true } }))
-    const det = conDetalle.detalleEntrenos!
-    expect(det).toHaveLength(1)
-    expect(det[0]!.titulo).toBe('mar 20 oct · Cuerpo completo A · 1 h')
-    expect(det[0]!.ejercicios[0]!.series[0]).toMatchObject({ calentamiento: true, record: false })
-    expect(det[0]!.ejercicios[0]!.series[1]).toMatchObject({ peso: 55, reps: 6, record: true })
-    expect(conDetalle.comida!.detalle![0]!.total).toEqual({ kcal: 1850, proteina: 115, cafeina: 240 })
-  })
-})
-
-describe('«Tu día»: semana suave, ayer, descanso y primer día', () => {
-  it('semana suave: bajar es lo previsto, sale en gris y no cuenta como peor', () => {
-    const d = diaDeEjemplo({ suave: true })
-    const t = calcularInforme(entrada({ ...d, periodo: 'hoy' })).tuDia!
-    const curl = t.ejercicios.find(e => e.id === 'bicep-curl')!
-    expect(curl).toMatchObject({ suave: true, juicio: 'neutro', tono: 'gris', frase: 'semana suave: –10 % previsto' })
-    expect(t.ejercicios.find(e => e.id === 'bench-press')).toMatchObject({ juicio: 'neutro', frase: '55 kg · lo normal: 50 kg · +10 %' })
-    expect(t.recuento!.peor).toBe(2)
-  })
-
-  it('Ayer: compara con las 4 semanas anteriores a ayer y dice «ayer»', () => {
-    const d = diaDeEjemplo()
-    const t = calcularInforme(entrada({ ...d, periodo: 'ayer', ahora: new Date('2026-10-21T08:00:00') })).tuDia!
-    expect(t.palabra).toBe('ayer')
-    expect(t.ejercicios.find(e => e.id === 'bench-press')!.hoyTexto).toBe('ayer 55 kg × 6')
-    expect(t.entreno.normalTexto).toBe('lo normal: 60 min · ayer 1 h')
-  })
-
-  it('sin entreno ese día: «No hecho» si tocaba, «Descanso» si no; principal el más repetido', () => {
-    const d = diaDeEjemplo()
-    const sin = d.sesiones.filter(s => s.fecha !== '2026-10-20')
-    const martes = calcularInforme(entrada({ ...d, sesiones: sin, periodo: 'hoy', ahora: new Date('2026-10-20T23:00:00') })).tuDia!
-    expect(martes.entreno).toMatchObject({ estado: 'no hecho', texto: 'No hecho', nombre: 'Cuerpo completo A' })
-    expect(martes.ejercicios).toEqual([])
-    expect(martes.principal!.id).toBe('bench-press')
-    expect(martes.principal!.banda).toEqual({ min: 47.5, max: 52.5, mediana: 50 })
-    expect(martes.frase).toBe('Día sin entreno. Bajas de peso. Peor: la proteína y los pasos.')
-    const lunes = calcularInforme(entrada({ ...d, sesiones: sin, periodo: 'ayer', ahora: new Date('2026-10-20T08:00:00') })).tuDia!
-    expect(lunes.entreno).toMatchObject({ estado: 'descanso', texto: 'Descanso', nombre: null })
-  })
-
-  it('primer día con datos: sin recuento y con la frase de bienvenida', () => {
-    siguienteId = 500
-    const s = SES('2026-10-20', [E('bench-press', [S(40, 8)])])
-    const inf = calcularInforme(entrada({ sesiones: [s], mediciones: [MED('2026-10-20', { pesoKg: 80 })], periodo: 'hoy' }))
-    const t = inf.tuDia!
-    expect(t.primerDia).toBe(true)
-    expect(t.recuento).toBeNull()
-    expect(t.frase).toBe('Es tu primer día con datos: a partir de ahora el informe te comparará contigo mismo.')
-    expect(t.ejercicios[0]).toMatchObject({ primera: true, frase: 'Primera vez: aún no hay con qué comparar' })
-    expect(t.proteina).toMatchObject({ valor: null, juicio: null, normalTexto: 'lo normal: —' })
-    expect(t.peso).toMatchObject({ valor: 80, normal: null, juicio: null })
-    expect(t.total).toBeNull()
-    expect(t.gasto).toMatchObject({ comido: null, diferencia: null, texto: null, tono: 'gris' })
-    expect(t.cuerpo).toBe('Cuerpo hoy: 80,0 kg · cintura sin medir')
-    expect(t.cafeina).toEqual({ valor: null, limite: 400, tono: 'gris' })
-    expect(t.tonoProteina).toBe('gris')
-  })
-
-  it('comer más de lo gastado sale en ámbar; día flojo; más cafeína del límite en rojo', () => {
-    siguienteId = 600
-    const ant = SES('2026-10-13', [E('bench-press', [S(60, 8)])])
-    const hoy = SES('2026-10-20', [E('bench-press', [S(50, 8)])], { fin: undefined })
-    const inf = calcularInforme(entrada({
-      sesiones: [ant, hoy], mediciones: [MED('2026-10-20', { pesoKg: 80, perimetros: { cintura: 97 } })], periodo: 'hoy',
-      comidas: [COM('2026-10-20', '14:00', 'comida', 'Mucho', 4000, 50, { cafeina: 500 })],
-    }))
-    const t = inf.tuDia!
-    expect(t.gasto!.tono).toBe('warn')
-    expect(t.gasto!.texto).toMatch(/^unas \d+ más de lo gastado$/)
-    expect(t.frase).toBe('Día flojo de fuerza. Peor: press de banca.')
-    expect(t.cafeina.tono).toBe('bad')
-    expect(t.kcal).toMatchObject({ direccion: 'sube', tono: 'warn', juicio: 'neutro' })
-    expect(t.tonoProteina).toBe('bad')
-    expect(t.entreno).toMatchObject({ minutos: null, texto: '—', normalTexto: 'lo normal: 60 min · hoy —' })
-    expect(t.cuerpo).toBe('Cuerpo hoy: 80,0 kg · cintura 97 cm')
-  })
-
-  it('gasto igual a lo comido; objetivo «fuerza»: el peso no se juzga; grasa por medidas el mismo día', () => {
-    siguienteId = 700
-    const ms = [MED('2026-10-19', { pesoKg: 80 }), MED('2026-10-20', { pesoKg: 81, perimetros: { cintura: 90, cuello: 40 } })]
-    const base = calcularInforme(entrada({ mediciones: ms, periodo: 'hoy', perfil: { ...PERFIL, objetivo: 'fuerza' } })).tuDia!
-    expect(base.peso).toMatchObject({ juicio: 'neutro', tono: 'gris', direccion: 'sube' })
-    expect(base.cuerpo).toMatch(/^Cuerpo hoy: 81,0 kg · [\d,]+ % \(por medidas\) · cintura 90 cm$/)
-    const comido = base.gasto!.total
-    const igual = calcularInforme(entrada({ mediciones: ms, periodo: 'hoy', comidas: [COM('2026-10-20', '14:00', 'comida', 'x', comido, 140)] })).tuDia!
-    expect(igual.gasto!.texto).toBe('lo mismo que lo gastado')
-    expect(igual.frase).toBe('Día sin entreno. Peor: el peso (sube).')
-  })
-
-  it('comparadores: kcal fuera por abajo, peso igual y sin datos', () => {
-    expect(compararKcal(1500, 1850)).toMatchObject({ direccion: 'baja', tono: 'warn', texto: '–19 %' })
-    expect(compararKcal(null, 1850)).toMatchObject({ juicio: null, tono: 'gris', normalTexto: 'objetivo: 1850 kcal' })
-    expect(compararPeso(79.2, 79.3, 'perder')).toMatchObject({ direccion: 'igual', juicio: 'igual', tono: 'tinta' })
-    expect(compararPeso(null, 79.3, 'perder').juicio).toBeNull()
-  })
-})
-
-// ================================================================ casos límite
-
 describe('casos con pocos datos', () => {
   it('sin nada apuntado (y sin perfil): nada de ceros inventados', () => {
     const inf = calcularInforme(entrada({ perfil: null, ajustes: null, rutina: null }))
@@ -799,7 +287,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('un solo dato: sin tendencia, «Un solo dato» y la gráfica con un punto', () => {
-    siguienteId = 800
+    idsDesde(800)
     const s = SES('2026-10-15', [E('bench-press', [S(40, 8, 8)]), E('plank', [S(null, null, null, { segundos: 45 })], { registro: 'tiempo' })])
     const inf = calcularInforme(entrada({ sesiones: [s], mediciones: [MED('2026-10-15', { pesoKg: 80 })] }))
     const peso = inf.resumen.tabla.find(f => f.dato === 'Peso (kg)')!
@@ -817,7 +305,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('esfuerzos en blanco: «sin marcar», sin gráfica, sin fila de esfuerzo en el resumen', () => {
-    siguienteId = 900
+    idsDesde(900)
     const ses = ['2026-10-13', '2026-10-15', '2026-10-16'].map(f => SES(f, [E('bench-press', [S(40, 8), S(40, 8)])]))
     const inf = calcularInforme(entrada({ sesiones: ses }))
     const e = inf.entrenos!
@@ -832,51 +320,17 @@ describe('casos con pocos datos', () => {
   })
 
   it('pocas series marcadas: la cifra lo dice', () => {
-    siguienteId = 950
+    idsDesde(950)
     const ses = ['2026-10-13', '2026-10-15'].map(f => SES(f, [E('bench-press', [S(40, 8, 8), S(40, 8), S(40, 8), S(40, 8)])]))
     const inf = calcularInforme(entrada({ sesiones: ses }))
     expect(inf.resumen.tabla.find(f => f.dato === 'Esfuerzo medio')!.nota).toBe('pocas series marcadas')
   })
 
-  it('sin altura: fuera IMC, cintura/altura y gasto; nota en el resumen; grasa por medidas imposible', () => {
-    const ms = [MED('2026-10-10', { pesoKg: 80, perimetros: { cintura: 95, cuello: 40 } }), MED('2026-10-18', { pesoKg: 79.5, perimetros: { cintura: 94 } })]
-    const inf = calcularInforme(entrada({ perfil: { ...PERFIL, alturaCm: 0 }, mediciones: ms, pasos: [{ fecha: '2026-10-18', pasos: 9000, fuente: 'manual' }] }))
-    expect(inf.resumen.zonas).toEqual([])
-    expect(inf.resumen.lineas.at(-1)).toEqual({ texto: 'Falta tu altura en Perfil', tono: 'warn' })
-    expect(inf.cuerpo!.nota).toBe('Falta tu altura en Perfil')
-    expect(inf.cuerpo!.tabla).toEqual([
-      { medicion: 'Peso', valor: '79,5 kg', rango: '—', evaluacion: { texto: '—', tono: 'gris' } },
-      { medicion: 'Cintura', valor: '94 cm', rango: '—', evaluacion: { texto: '—', tono: 'gris' } },
-    ])
-    expect(inf.pasos!.gasto).toBeNull()
-    expect(inf.pasos!.km).toBe(6.8)
-    expect(inf.cabecera.alturaCm).toBeNull()
-  })
 
-  it('solo cinta: % de grasa por medidas, marcado como tal (punto hueco)', () => {
-    const ms = [MED('2026-10-01', { perimetros: { cintura: 99, cuello: 39 } }), MED('2026-10-15', { perimetros: { cintura: 97 } })]
-    const inf = calcularInforme(entrada({ mediciones: ms, perfil: { ...PERFIL, sexo: 'mujer' } }))
-    expect(inf.cuerpo!.grasa.puntos.every(p => p.fuente === 'medidas')).toBe(true)
-    expect(inf.resumen.tabla.some(f => f.dato === 'Grasa corporal (%, por medidas)')).toBe(false) // la mujer necesita cadera
-    const hombre = calcularInforme(entrada({ mediciones: ms }))
-    expect(hombre.cuerpo!.grasa.puntos.map(p => p.fuente)).toEqual(['medidas', 'medidas'])
-    expect(hombre.resumen.tabla.some(f => f.dato === 'Grasa corporal (%, por medidas)')).toBe(true)
-    expect(hombre.resumen.zonas.find(z => z.fuente === 'medidas')!.nombre).toBe('Grasa corporal (%) (por medidas)')
-    expect(hombre.cuerpo!.tabla[0]!.medicion).toBe('Grasa corporal (por medidas)')
-    expect(hombre.resumen.zonasSubtitulo).toBe('cinta del 15 oct')
-    expect(inf.resumen.zonasNota).toMatch(/mujeres \(14-32 %\)/)
-  })
 
-  it('báscula antigua (más de 4 meses): no cuenta para el % de grasa ni para los indicadores', () => {
-    const ms = [MED('2026-05-01', { pesoKg: 85, bascula: { grasaPct: 28, basalKcal: 1700 } }), MED('2026-10-15', { pesoKg: 80 })]
-    const inf = calcularInforme(entrada({ mediciones: ms }))
-    expect(inf.resumen.indicadores).toBeNull()
-    expect(inf.resumen.zonas.map(z => z.nombre)).toEqual(['IMC (kg/m²)'])
-    expect(inf.cuerpo!.grasa.puntos).toEqual([])
-  })
 
   it('subida del peso: «Sube: ojo» y el ejercicio principal que baja en rojo; asistidos al revés', () => {
-    siguienteId = 1000
+    idsDesde(1000)
     const ses = [
       SES('2026-10-06', [E('bench-press', [S(50, 8)]), E('assisted-pull-up', [S(-20, 6)], { registro: 'asistido' })]),
       SES('2026-10-13', [E('bench-press', [S(45, 8)]), E('assisted-pull-up', [S(-25, 6)], { registro: 'asistido' })]),
@@ -897,7 +351,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('el principal baja en semana suave: gris; sube sin récord: «Sube»; reps en corporales', () => {
-    siguienteId = 1100
+    idsDesde(1100)
     const suave = [SES('2026-10-06', [E('bench-press', [S(50, 8)])]), SES('2026-10-13', [E('bench-press', [S(45, 8)])], { suave: true })]
     expect(calcularInforme(entrada({ sesiones: suave })).resumen.tabla.find(f => f.dato === 'Press de banca (kg)')!.evaluacion).toEqual({ texto: 'Semana suave', tono: 'gris' })
     const sube = [SES('2026-10-06', [E('bench-press', [S(50, 8)])]), SES('2026-10-13', [E('bench-press', [S(55, 8)])])]
@@ -909,7 +363,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('sesiones extra, movidas, cortas, libres, saltadas, sin entreno en un día fijo antes de la rutina', () => {
-    siguienteId = 1200
+    idsDesde(1200)
     const ajustes = { ...AJUSTES, recolocadas: [{ fecha: '2026-10-17', letra: 'C', desde: '2026-10-16' }] } as Ajustes
     const ses = [
       SES('2026-10-13', [E('bench-press', [S(40, 8, 8)]), E('leg-press', [S(80, 8)], { estado: 'saltado', series: [S(80, 8, null, { hecha: false })] })], { version: 'corta' }),
@@ -931,7 +385,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('domingo de una semana pasada con entreno fijo: perdido, o descanso si es anterior a la rutina', () => {
-    siguienteId = 1300
+    idsDesde(1300)
     const rutina: Rutina = { ...RUTINA, dias: [diaR('A', 6)] }
     const inf = calcularInforme(entrada({ rutina, sesiones: [SES('2026-10-11', [E('bench-press', [S(40, 8)])], { letra: 'A' })] }))
     expect(inf.entrenos!.perdidos.map(p => p.fecha)).toEqual(['2026-09-27', '2026-10-04', '2026-10-18'])
@@ -943,7 +397,7 @@ describe('casos con pocos datos', () => {
 
   it('una sola semana completa: su palabra del semáforo; sin datos de la semana en curso', () => {
     // Periodo «Última semana» un domingo: la semana del lunes al domingo, pero aún en curso hasta el domingo.
-    siguienteId = 1400
+    idsDesde(1400)
     const ses = ['2026-10-13', '2026-10-15', '2026-10-16'].map(f => SES(f, [E('bench-press', [S(40, 8)])]))
     const domingo = calcularInforme(entrada({ sesiones: ses, periodo: 'semana', ahora: new Date('2026-10-18T20:00:00') }))
     expect(domingo.semanas).toHaveLength(1)
@@ -967,7 +421,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('metas: dominadas por las asistidas o las negativas, ejercicio sin hacer, grasa conseguida', () => {
-    siguienteId = 1500
+    idsDesde(1500)
     const metas: Meta[] = [
       { tipo: 'dominadas', titulo: '5 dominadas', objetivo: 5, unidad: 'reps' },
       { tipo: 'ejercicio', titulo: 'Sentadilla 100', objetivo: 100, unidad: 'kg', ejercicio: 'squat', inicio: 60 },
@@ -1000,7 +454,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('periodo «Todo» largo: mes a mes, una fila por semana y esfuerzo por semanas', () => {
-    siguienteId = 2000
+    idsDesde(2000)
     const ses: Sesion[] = []
     for (let f = '2026-01-06'; f <= '2026-10-20'; f = new Date(new Date(`${f}T12:00:00`).getTime() + 86_400_000).toISOString().slice(0, 10)) {
       const d = (new Date(`${f}T12:00:00`).getDay() + 6) % 7
@@ -1028,7 +482,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('detalle «una a una» de entrenos: alternativa por «Ocupado», saltado y nota', () => {
-    siguienteId = 3000
+    idsDesde(3000)
     const s = SES('2026-10-13', [
       E('leg-press', [S(80, 10, 8, { nota: 'asiento 4' })], { planificado: 'squat', motivo: 'ocupado' }),
       E('bicep-curl', [S(10, 10, null, { hecha: false })], { estado: 'saltado' }),
@@ -1057,7 +511,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('comida con «Todo»: nota del objetivo; picoteo del periodo anterior; sin catálogo, los ids', () => {
-    siguienteId = 3100
+    idsDesde(3100)
     const comidas = [COM('2026-09-20', '17:00', 'merienda', 'Patatas', 300, 3, { tipo: 'picoteo' }), COM('2026-10-20', '14:00', 'comida', 'x', 1000, 150, { sal: 1.25, grasas: 10 })]
     const mes = calcularInforme(entrada({ comidas }))
     expect(mes.comida!.picoteo).toEqual({ dias: 0, anterior: 1, texto: 'el mes anterior: 1 (en 1 día)' })
@@ -1087,7 +541,7 @@ describe('casos con pocos datos', () => {
   })
 
   it('una semana del informe con el cambio de hora (25 oct) cuenta sus 7 días y la duración real', () => {
-    siguienteId = 3200
+    idsDesde(3200)
     const inicio = new Date('2026-10-25T01:30:00').getTime()
     const s = SES('2026-10-25', [E('bench-press', [S(40, 8, 8)])], { inicio, fin: new Date('2026-10-25T03:30:00').getTime(), letra: 'L', nombre: 'Entreno libre' })
     const inf = calcularInforme(entrada({ sesiones: [s], periodo: 'semana', ahora: new Date('2026-10-28T10:00:00') }))
@@ -1096,162 +550,6 @@ describe('casos con pocos datos', () => {
     // De 1:30 (verano) a 3:30 (invierno) pasan 3 horas de verdad.
     expect(inf.entrenos!.filas.find(f => f.estado === 'hecho')!.duracion).toBe('3 h')
     expect(inf.resumen.casillas!.map(c => c.fecha)).toEqual(diasDe('2026-10-22', '2026-10-28'))
-  })
-})
-
-describe('más casos del resumen y de los entrenos', () => {
-  it('sin fecha de nacimiento: sin edad ni gasto en reposo; mujer con poca grasa: zona «Bajo» y meta del 25 %', () => {
-    const perfil = { ...PERFIL, sexo: 'mujer', nacimiento: '' } as Perfil
-    const inf = calcularInforme(entrada({ perfil, mediciones: [MED('2026-10-15', { pesoKg: 60, bascula: { grasaPct: 12 } })] }))
-    expect(inf.cabecera).toMatchObject({ edad: null, sexo: 'Mujer' })
-    expect(inf.cuerpo!.tabla.some(f => f.medicion === 'Gasto en reposo')).toBe(false)
-    const grasa = inf.resumen.zonas.find(z => z.nombre.startsWith('Grasa'))!
-    expect(grasa).toMatchObject({ zona: 'bajo', cortes: [14, 32], escala: [0, 50], palabra: 'muy bajo', tono: 'warn' })
-    expect(inf.resumen.controlPeso).toMatchObject({ meta: 25, metaPropia: false, sobra: 0 })
-    expect(inf.resumen.controlPeso!.filas[1]!.nombre).toBe('Peso con un 25 % de grasa')
-  })
-
-  it('metas sin datos: sin valor actual ni «faltan»', () => {
-    const metas: Meta[] = [
-      { tipo: 'cintura', titulo: 'c', objetivo: 88, unidad: 'cm' }, { tipo: 'peso', titulo: 'p', objetivo: 75, unidad: 'kg' }, { tipo: 'grasa', titulo: 'g', objetivo: 18, unidad: '%' },
-    ]
-    const m = calcularInforme(entrada({ metas })).resumen.metas
-    expect(m.map(x => [x.actual, x.actualTexto, x.faltaTexto])).toEqual([[null, '—', ''], [null, '—', ''], [null, '—', '']])
-  })
-
-  it('ejercicio con peso antes del periodo y sin peso en él: no hay gráfica ni fila de ejercicio principal', () => {
-    siguienteId = 4000
-    const ses = [SES('2026-08-04', [E('push-up', [S(10, 10)])]), SES('2026-10-13', [E('push-up', [S(null, 12)], { registro: 'corporal' })])]
-    const inf = calcularInforme(entrada({ sesiones: ses }))
-    expect(inf.fuerza!.ejercicios).toEqual([])
-    expect(inf.resumen.tabla.map(f => f.dato)).toEqual(['Entrenos'])
-  })
-
-  it('sin rutina ni días fijos: los entrenos se cuentan sin «de N»', () => {
-    siguienteId = 4100
-    const ses = ['2026-10-13', '2026-10-14', '2026-10-17'].map(f => SES(f, [E('bench-press', [S(40, 8)])]))
-    const inf = calcularInforme(entrada({ sesiones: ses, rutina: null, perfil: { ...PERFIL, diasFijos: [] } }))
-    expect(inf.entrenos).toMatchObject({ texto: '3', tocaban: 0, pct: null, evaluacion: { texto: '—', tono: 'gris' }, perdidos: [], perdidosTexto: null })
-    expect(inf.resumen.tabla.find(f => f.dato === 'Entrenos')).toMatchObject({ junto: '3', cambioTexto: null, evaluacion: { texto: '—' } })
-  })
-
-  it('un récord y una subida (en singular); la cintura que sube; sesiones sin id', () => {
-    const a = { ...SES('2026-10-06', [E('bench-press', [S(40, 8)])]), id: undefined }
-    const b = { ...SES('2026-10-13', [E('bench-press', [S(42.5, 8, 8, { record: true })])]), id: undefined }
-    const ms = [MED('2026-10-01', { perimetros: { cintura: 95 } }), MED('2026-10-15', { perimetros: { cintura: 96 } })]
-    const inf = calcularInforme(entrada({ sesiones: [a, b], mediciones: ms }))
-    expect(inf.resumen.destacado[0]!.texto).toBe('1 récord · 1 subida de peso')
-    expect(inf.resumen.destacado.find(x => x.texto.startsWith('Cintura'))).toEqual({ icono: 'sube', tono: 'warn', texto: 'Cintura: +1 cm' })
-    const fila = inf.entrenos!.filas.find(f => f.fecha === '2026-10-13')!
-    expect(fila).toMatchObject({ sesionId: null, records: [{ ejercicio: 'bench-press', texto: 'Press de banca 42,5 × 8' }] })
-    expect(inf.entrenos!.evolucionEsfuerzo.puntos[0]!.sesionId).toBeNull()
-    const igual = calcularInforme(entrada({ mediciones: [MED('2026-10-01', { perimetros: { cintura: 95 } }), MED('2026-10-15', { perimetros: { cintura: 95 } })] }))
-    expect(igual.resumen.destacado).toEqual([{ icono: 'igual', tono: 'gris', texto: 'Cintura: igual (95 cm)' }])
-    const soloSubida = calcularInforme(entrada({ sesiones: [a, { ...b, ejercicios: [E('bench-press', [S(42.5, 8)])] }] }))
-    expect(soloSubida.resumen.destacado[0]!.texto).toBe('1 subida de peso')
-  })
-
-  it('un entreno con todo saltado: sale, sin series ni porcentaje de marcadas', () => {
-    siguienteId = 4200
-    const s = SES('2026-10-13', [E('bench-press', [S(40, 8, null, { hecha: false })], { estado: 'saltado' })])
-    const e = calcularInforme(entrada({ sesiones: [s] })).entrenos!
-    expect(e).toMatchObject({ sesiones: 1, series: 0, kg: 0, saltados: 1 })
-    expect(e.evolucionEsfuerzo.nota).toBe('Media de las series con esfuerzo marcado (las que se dejan en blanco no cuentan): 0 de 0 series.')
-  })
-
-  it('«Contra el periodo anterior»: el 1RM estimado frente a los 30 días de antes', () => {
-    siguienteId = 4300
-    const antes = SES('2026-09-10', [E('bench-press', [S(50, 8)])])
-    const ahora = SES('2026-10-13', [E('bench-press', [S(55, 8)])])
-    const m = calcularInforme(entrada({ sesiones: [antes, ahora] })).fuerza!.mejores[0]!
-    expect(m).toMatchObject({ contraAnterior: 10, contraTexto: '+10 %' })
-  })
-
-  it('sin ajustes: límite de cafeína de 400 mg y objetivos automáticos', () => {
-    const inf = calcularInforme(entrada({ ajustes: null, comidas: [COM('2026-10-15', '10:00', 'desayuno', 'Café', 5, 0, { cafeina: 450 })], mediciones: [MED('2026-10-15', { pesoKg: 80 })] }))
-    expect(inf.comida!.cafeina).toMatchObject({ limite: 400, diasPorEncima: 1, media: 450 })
-    expect(inf.comida!.proteina.objetivo).toBe(145)
-    const hoy = calcularInforme(entrada({ ajustes: null, periodo: 'hoy', comidas: [COM('2026-10-20', '10:00', 'desayuno', 'Café', 5, 0, { cafeina: 100 })] }))
-    expect(hoy.tuDia!.cafeina.limite).toBe(400)
-  })
-
-  it('un domingo fijo movido a otro día cuenta como movido', () => {
-    siguienteId = 4400
-    const rutina: Rutina = { ...RUTINA, dias: [diaR('A', 6)] }
-    const ajustes = { ...AJUSTES, recolocadas: [{ fecha: '2026-10-05', letra: 'A', desde: '2026-10-04' }] } as Ajustes
-    const inf = calcularInforme(entrada({ rutina, ajustes, sesiones: [SES('2026-10-05', [E('bench-press', [S(40, 8)])])] }))
-    expect(inf.entrenos!.filas.find(f => f.fecha === '2026-10-04')).toMatchObject({ estado: 'movido' })
-    expect(inf.entrenos!.movidos).toBe(1)
-  })
-
-  it('la mejor serie: a igual peso, la de más repeticiones', () => {
-    siguienteId = 4500
-    const inf = calcularInforme(entrada({ sesiones: [SES('2026-10-13', [E('bench-press', [S(40, 8), S(40, 10), S(35, 12)])])] }))
-    expect(inf.fuerza!.ejercicios[0]!.unSolo).toBe('40 kg × 10')
-  })
-
-  it('semanas sin nada apuntado (antes de empezar a usar la app) no cuentan para la puntuación', () => {
-    siguienteId = 4600
-    const ses = ['2026-10-13', '2026-10-15', '2026-10-16'].map(f => SES(f, [E('bench-press', [S(40, 8)])]))
-    const inf = calcularInforme(entrada({ sesiones: ses }))
-    expect(inf.semanas.map(s => s.puntuacion === null)).toEqual([true, true, true, false, true])
-    expect(inf.resumen.puntuacion!.semanas).toBe(1)
-    expect(inf.resumen.puntuacion!.valor).toBe(inf.semanas[3]!.puntuacion)
-  })
-
-  it('sin ningún entreno no hay fila «Entrenos» en la tabla (lo dice la línea del resumen)', () => {
-    const inf = calcularInforme(entrada({ mediciones: [MED('2026-10-15', { pesoKg: 80 })] }))
-    expect(inf.resumen.tabla.some(f => f.dato === 'Entrenos')).toBe(false)
-    expect(inf.resumen.lineas[0]!.texto).toMatch(/^Entrenos: 0 de \d+$/)
-  })
-})
-
-describe('«Tu día»: más comparaciones', () => {
-  function dia(hoyEjs: EjercicioSesion[], antesEjs: (i: number) => EjercicioSesion[], x: Partial<EntradaInforme> = {}) {
-    siguienteId = 5000
-    const ant = ['2026-10-06', '2026-10-09', '2026-10-13', '2026-10-16'].map((f, i) => SES(f, antesEjs(i)))
-    return calcularInforme(entrada({ sesiones: [...ant, SES('2026-10-20', hoyEjs)], periodo: 'hoy', ...x })).tuDia!
-  }
-
-  it('más peso en lo normal, más proteína, pasos iguales y la meta de ejercicio como principal', () => {
-    const comidas = [...diasDe('2026-10-01', '2026-10-19').map(f => COM(f, '14:00', 'comida', 'x', 1800, 100)), COM('2026-10-20', '14:00', 'comida', 'x', 1800, 120)]
-    const pasos: PasosDia[] = [...diasDe('2026-10-01', '2026-10-19').map(f => ({ fecha: f, pasos: 8000, fuente: 'manual' as const })), { fecha: '2026-10-20', pasos: 8200, fuente: 'manual' }]
-    const metas: Meta[] = [{ tipo: 'ejercicio', titulo: 'Remo', objetivo: 60, unidad: 'kg', ejercicio: 'seated-cable-row' }]
-    const t = dia([E('leg-press', [S(120, 10)]), E('seated-cable-row', [S(50, 10)])], () => [E('leg-press', [S(110, 10)]), E('seated-cable-row', [S(50, 10)])], { comidas, pasos, metas })
-    expect(t.proteina).toMatchObject({ juicio: 'mejor', pct: 20, tono: 'ok' })
-    expect(t.pasos).toMatchObject({ juicio: 'igual', direccion: 'igual', tono: 'tinta', texto: '+3 %' })
-    expect(t.frase).toBe('Buen día de fuerza. Más peso en prensa de piernas y más proteína.')
-    expect(t.principal!.id).toBe('seated-cable-row')
-    expect(t.ejercicios.find(e => e.id === 'seated-cable-row')).toMatchObject({ juicio: 'igual', frase: '50 kg · igual que lo normal' })
-  })
-
-  it('más pasos; todo igual que lo normal; 1 rep menos con el mismo peso; un 1 % más es «igual»', () => {
-    const pasos: PasosDia[] = [...diasDe('2026-10-01', '2026-10-19').map(f => ({ fecha: f, pasos: 8000, fuente: 'manual' as const })), { fecha: '2026-10-20', pasos: 10_000, fuente: 'manual' }]
-    const t = dia([E('bench-press', [S(50, 7)]), E('leg-press', [S(101, 10)])], () => [E('bench-press', [S(50, 8)]), E('leg-press', [S(100, 10)])], { pasos })
-    expect(t.ejercicios[0]).toMatchObject({ juicio: 'peor', por: 'reps', frase: 'Mismo peso, 1 rep menos que lo normal' })
-    expect(t.ejercicios[1]).toMatchObject({ juicio: 'igual', direccion: 'igual', frase: '101 kg · igual que lo normal', pct: 1 })
-    expect(t.frase).toBe('Día flojo de fuerza. Más pasos. Peor: press de banca.')
-    const igual = dia([E('leg-press', [S(100, 10)])], () => [E('leg-press', [S(100, 10)])])
-    expect(igual.frase).toBe('Buen día de fuerza. Hoy, como lo normal.')
-  })
-
-  it('lo normal (mediana) sin ninguna vez a ese peso: igual, sin mirar reps', () => {
-    const t = dia([E('bench-press', [S(50, 8)])], i => [E('bench-press', [S(i % 2 ? 52.5 : 47.5, 8)])])
-    expect(t.ejercicios[0]).toMatchObject({ normal: 50, juicio: 'igual', por: null })
-  })
-
-  it('una serie hecha sin nada apuntado no se compara; medición del día solo con cinta', () => {
-    const t = dia([E('plank', [S(null, null)], { registro: 'tiempo' }), E('bench-press', [S(50, 8)])], () => [E('bench-press', [S(50, 8)])], {
-      mediciones: [MED('2026-10-20', { perimetros: { cintura: 97 } })],
-    })
-    expect(t.ejercicios.map(e => e.id)).toEqual(['bench-press'])
-    expect(t.cuerpo).toBe('Cuerpo hoy: peso sin apuntar · cintura 97 cm')
-  })
-
-  it('pasos de antes en 0: no hay porcentaje con qué comparar', () => {
-    const pasos: PasosDia[] = [{ fecha: '2026-10-10', pasos: 0, fuente: 'manual' }, { fecha: '2026-10-20', pasos: 5000, fuente: 'manual' }]
-    const t = dia([], () => [], { pasos })
-    expect(t.pasos).toMatchObject({ valor: 5000, normal: 0, pct: null, texto: '', direccion: 'igual' })
   })
 })
 

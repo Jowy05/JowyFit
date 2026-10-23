@@ -1,5 +1,6 @@
 /* Componentes compartidos por varias pantallas (del mockup «4 · Ficha» y los que añadió la app). Los colores, en tokens.css. */
 /* ================= BASE ================= */
+/* .app, .tabbar y .minibar: aquí solo su aspecto; dónde van y cuándo se ven, en base.css. */
 .app{font-size:15px;line-height:1.4}
 .app h1,.app h2,.app h3{margin:0;font-family:var(--font-display);font-weight:700;line-height:1.1}
 .app p{margin:0}

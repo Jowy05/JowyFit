@@ -24,7 +24,7 @@ const textoSnack = (p: Plantilla) => p.cafeina != null
   ? `${p.kcal < 20 ? '~' : ''}${t('{kcal} kcal · {mg} mg cafeína', { kcal: p.kcal, mg: p.cafeina })}`
   : `~${p.kcal} kcal`
 
-export function HojaAnadir({ ruta }: { ruta: Ruta<'sheet-add'> }) {
+export function HojaAnadir({ ruta }: { ruta: Ruta<'hoja-anadir'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const fecha = ruta.d?.fecha ?? hoyISO()
@@ -134,7 +134,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta<'sheet-add'> }) {
 
       {/* Lo que sirve para cualquier plato, arriba del todo: escribirlo (en el centro, más ancho), escanearlo o hacerle una foto. */}
       <div className="grid3 ux-com-qa3 mt12">
-        <button className="qa" onClick={() => nav.ir('com-scan', { fecha, franja }, 'com')}><Ico n="barcode" /><span>{t('Escanear')}</span></button>
+        <button className="qa" onClick={() => nav.ir('escaner', { fecha, franja }, 'com')}><Ico n="barcode" /><span>{t('Escanear')}</span></button>
         <button className={cx('qa ux-com-escribir', nota && 'on')} aria-expanded={nota} onClick={() => (nota ? setNota(false) : abrirNota())}><Ico n="note-pencil" /><span>{t('Escribir lo que he comido')}</span></button>
         <button className="qa" onClick={() => void sacarFoto()}><Ico n="camera" /><span>{t('Foto')}</span></button>
       </div>
@@ -259,8 +259,8 @@ export function HojaAnadir({ ruta }: { ruta: Ruta<'sheet-add'> }) {
       )}
 
       <div className="row jb mt16">
-        <button className="lnk" onClick={() => nav.hoja('sheet-plant', { fecha, franja })}><Ico n="bowl-food" /> {t('Crear comida nueva')}</button>
-        <button className="lnk" onClick={() => nav.ir('com-plant', undefined, 'com')}>{t('Mis comidas')} <Ico n="caret-right" /></button>
+        <button className="lnk" onClick={() => nav.hoja('hoja-plantilla', { fecha, franja })}><Ico n="bowl-food" /> {t('Crear comida nueva')}</button>
+        <button className="lnk" onClick={() => nav.ir('plantillas', undefined, 'com')}>{t('Mis comidas')} <Ico n="caret-right" /></button>
       </div>
       <ElegirCuanto x={elegir} onCerrar={() => setElegir(null)} />
     </Hoja>

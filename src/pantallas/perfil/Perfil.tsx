@@ -59,7 +59,7 @@ export function Perfil() {
 
   return (
     <Pantalla>
-      <Cab crumb={t('Tus datos')} derecha={<button className="ib" aria-label={t('Ajustes')} onClick={() => nav.ir('aju')}><Ico n="gear" /></button>}>
+      <Cab crumb={t('Tus datos')} derecha={<button className="ib" aria-label={t('Ajustes')} onClick={() => nav.ir('ajustes')}><Ico n="gear" /></button>}>
         <div className="prof">
           <span className="avatar">{ini || <Ico n="user" b />}</span>
           <div className="grow">
@@ -73,7 +73,7 @@ export function Perfil() {
         <div className="sec">
           <div className="sec-h"><h2>{t('Tus números')}</h2></div>
           <div className="grid2 nums">
-            <button className="card kpi span2 per-obj" onClick={() => nav.ir('com-energia', undefined, 'com')}>
+            <button className="card kpi span2 per-obj" onClick={() => nav.ir('energia', undefined, 'com')}>
               <span className="row jb"><span className="lbl">{t('Tu objetivo al día')}</span><Ico n="caret-right" className="car" /></span>
               <p className="k">{n ? num(n.kcal, 0) : '—'}<small>kcal</small>{n && <><span className="per-y">{t('y')}</span>{n.proteina}<small>{t('g de proteína')}</small></>}</p>
               <p className="d">{t('Lo que te conviene comer cada día. Toca para ver por qué.')}</p>
@@ -123,7 +123,7 @@ export function Perfil() {
         </div>
 
         <div className="list mt16">
-          <button className="it" onClick={() => nav.ir('aju')}>
+          <button className="it" onClick={() => nav.ir('ajustes')}>
             <span className="ico"><Ico n="gear" /></span>
             <span className="tx"><b>{t('Ajustes')}</b><small>{t('Tamaño de letra, recordatorios, copia de seguridad')}</small></span>
             <Ico n="caret-right" className="car" />
@@ -150,7 +150,7 @@ function Kpi({ titulo, ayuda, onAyuda, palabra, children }: { titulo: string; ay
 function FilaSeccion({ s, p, n }: { s: (typeof SECCIONES)[number]; p: TPerfil; n: Numeros | undefined }) {
   const nav = useNav()
   return (
-    <button className="it" onClick={() => nav.ir('per-sec', { s: s.s })}>
+    <button className="it" onClick={() => nav.ir('seccion-perfil', { s: s.s })}>
       <span className="ico"><Ico n={s.ico} /></span>
       <span className="tx"><b>{tituloSeccion(s)}</b><small>{resumen(s.s, p, n)}</small></span>
       <Ico n="caret-right" className="car" />

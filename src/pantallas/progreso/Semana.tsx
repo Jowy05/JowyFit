@@ -55,7 +55,7 @@ export function Semana() {
   }, [lunes, domingo, perfil])
 
   const cab = (
-    <CabProgreso actual="pro-sem" crumb={atras === 0 ? t('Revisión del domingo') : t('Semanas anteriores')} />
+    <CabProgreso actual="semana" crumb={atras === 0 ? t('Revisión del domingo') : t('Semanas anteriores')} />
   )
   const selector = (
     <div className="daysel">
@@ -91,7 +91,7 @@ export function Semana() {
         {selector}
         <Vacio icono="chart-line-up" titulo={atras === 0 ? t('Tu semana aún está vacía') : t('Sin datos esa semana')}
           texto={t('Cuando entrenes, te peses o apuntes comidas, aquí verás en 10 segundos si vas bien.')}
-          accion={<><Ico n="ruler" b />{t('Registrar medidas')}</>} onAccion={() => nav.ir('pro-reg')} />
+          accion={<><Ico n="ruler" b />{t('Registrar medidas')}</>} onAccion={() => nav.ir('registrar')} />
       </div>
     </Pantalla>
   )
@@ -149,12 +149,12 @@ export function Semana() {
         {enCurso && <p className="small muted mt8"><Ico n="clock" /> {t('Semana en curso: el resumen definitivo, el domingo.')}</p>}
 
         <div className="grid2 mt12">
-          <button className="card kpi st" onClick={() => nav.reemplazar('pro-cuerpo')}>
+          <button className="card kpi st" onClick={() => nav.reemplazar('cuerpo')}>
             <span className="row jb"><span className="lbl">{t('Cintura')}</span><Icono e={eCintura} texto={eCintura === 'ok' ? t('bien') : eCintura === 'warn' ? t('sube') : undefined} /></span>
             <p className="k">{r.cintura.actual != null ? num(r.cintura.actual) : '—'}<small>cm</small></p>
             <p className="d">{!midio ? (r.cintura.actual != null ? t('sin medir esta semana') : t('mídete la cintura')) : r.cintura.delta != null ? tr('{cambio} esta semana', { cambio: <b className={cx(r.cintura.delta <= 0 && 'up')}>{signo(r.cintura.delta)}</b> }) : r.cintura.actual != null ? t('sin cambios medidos') : t('mídete la cintura')}</p>
           </button>
-          <button className="card kpi st" onClick={() => nav.reemplazar('pro-fuerza')}>
+          <button className="card kpi st" onClick={() => nav.reemplazar('fuerza')}>
             <span className="row jb"><span className="lbl">{t('Fuerza')}</span>{!fuerzaPronto && <Icono e={eFuerza} trofeo={r.records > 0} />}</span>
             {fuerzaPronto ? (
               <>
@@ -181,7 +181,7 @@ export function Semana() {
             <p className="k">{r.proteina.media != null ? Math.round(r.proteina.media) : '—'}<small>{t('g/día')}</small></p>
             <p className="d">{r.proteina.media != null ? t('objetivo {n} g', { n: r.proteina.objetivo }) : t('apunta tus comidas')}</p>
           </button>
-          <button className="card kpi st" onClick={() => nav.ir('pro-pasos')}>
+          <button className="card kpi st" onClick={() => nav.ir('pasos')}>
             <span className="row jb"><span className="lbl">{t('Pasos')}</span><Icono e={ePasos} /></span>
             <p className="k">{r.pasos.media != null ? num(r.pasos.media, 0) : '—'}<small>{t('media')}</small></p>
             <p className="d">{r.pasos.media != null ? t('{n} de 7 días', { n: r.pasos.diasCumplidos }) : t('apunta tus pasos')}</p>
@@ -191,7 +191,7 @@ export function Semana() {
             <p className="k">{r.proteina.media == null ? '—' : <>{r.picoteo.dias}<small>{tn(r.picoteo.dias, 'día', 'días')}</small></>}</p>
             <p className="d">{r.proteina.media == null ? t('apunta tus comidas') : t('semana pasada: {n}', { n: r.picoteo.anterior })}</p>
           </button>
-          <button className="card kpi st span2 row" onClick={() => nav.reemplazar('pro-cuerpo')}>
+          <button className="card kpi st span2 row" onClick={() => nav.reemplazar('cuerpo')}>
             <span className="grow">
               <span className="lbl">{t('Peso · tendencia')}</span>
               <p className="d">

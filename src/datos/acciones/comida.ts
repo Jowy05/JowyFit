@@ -1,6 +1,6 @@
 // Escrituras de la comida: lo apuntado, Mis comidas, los productos escaneados y los suplementos.
 import { db } from '../db'
-import type { Comida, Perfil, Plantilla, Producto } from '../tipos'
+import type { Comida, Guardado, Perfil, Plantilla, Producto } from '../tipos'
 import { guardarPerfil } from '../repos'
 import { batidoDe, buscarOFF, conRacion, esBatido, franjaPorHora, type Racion } from '../../dominio/comida'
 import { horaActual, hoyISO } from '../../dominio/fechas'
@@ -40,8 +40,8 @@ export async function guardarComida(c: Comida, original: Comida): Promise<Deshac
 }
 
 /** Borra algo apuntado; deshacer lo vuelve a poner (con el mismo id). */
-export async function borrarComida(c: Comida): Promise<Deshacer> {
-  await db.comidas.delete(c.id!)
+export async function borrarComida(c: Guardado<Comida>): Promise<Deshacer> {
+  await db.comidas.delete(c.id)
   return () => { void db.comidas.put(c) }
 }
 
@@ -49,7 +49,7 @@ export async function guardarPlantilla(p: Plantilla): Promise<number> {
   return (await db.plantillas.put(p)) as number
 }
 
-export async function borrarPlantilla(p: Plantilla & { id: number }): Promise<Deshacer> {
+export async function borrarPlantilla(p: Guardado<Plantilla>): Promise<Deshacer> {
   await db.plantillas.delete(p.id)
   return () => { void db.plantillas.put(p) }
 }

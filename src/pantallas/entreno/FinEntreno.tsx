@@ -19,14 +19,14 @@ import { tr } from '../../i18n/jsx'
 import { nombreEntreno } from '../../dominio/nombres'
 
 
-export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
+export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const g = useGimnasio()
   const perfil = usePerfil()
   const ajustes = useAjustes()
   const r = useRutina()
-  const s = useLiveQuery(() => leerSesion(Number(ruta.d.id)), [ruta.d.id])
+  const s = useLiveQuery(() => leerSesion(ruta.d.id), [ruta.d.id])
   // Hora de fin: ahora, salvo que la última serie quede muy lejos (la app se cerró en el resumen o se guarda
   // al día siguiente): entonces, poco después de la última serie, para que la duración no salga en horas.
   const [abierto] = useState(Date.now())
@@ -48,7 +48,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
     return out
   }, [s?.id]) ?? []
   const calibCompleta = useLiveQuery(async () => {
-    if (!r?.calibracion || !s || r.id == null) return false
+    if (!r?.calibracion || !s) return false
     const hechas = (await contarEntrenosDeRutina(r.id)) + (s.letra !== 'L' ? 1 : 0)
     return hechas >= r.dias.filter(d => !d.opcional).length
   }, [r?.id, s?.id])
@@ -68,7 +68,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
     // El tiempo, los descansos y lo que estaba ocupado ya los mide la app: solo se pregunta lo que no sabe.
     await terminarEntreno(s, fin, { minutosReales: mins, molestia: hayMolestia ? molestia || 'sí' : undefined, nota: nota || undefined })
     nav.completa(null)
-    if (calibCompleta) { nav.ir('rut-gen', { definitiva: true }, 'rut'); aviso(t('Semana de prueba terminada')) }
+    if (calibCompleta) { nav.ir('generar-rutina', { definitiva: true }, 'rut'); aviso(t('Semana de prueba terminada')) }
     else { nav.raiz('ini'); aviso(t('Guardado. {dia} ✓', { dia: capital(DIAS[(new Date().getDay() + 6) % 7]!) })) }
   })
 

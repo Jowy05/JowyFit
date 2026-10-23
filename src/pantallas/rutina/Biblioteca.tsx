@@ -17,7 +17,7 @@ import { tr } from '../../i18n/jsx'
 /** Grupos sencillos para el filtro principal (los músculos exactos van en «Más filtros»). En castellano: se traducen al pintarlos. */
 const GRUPOS_SIMPLES = [tk('Pecho'), tk('Espalda'), tk('Hombro'), tk('Brazo'), tk('Abdomen'), tk('Glúteo'), tk('Pierna')]
 
-export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
+export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   const nav = useNav()
   const g = useGimnasio()
   const marcas = useMarcas()
@@ -70,7 +70,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
 
   return (
     <Pantalla>
-      <CabRutina actual="rut-ej" crumb={t('Biblioteca')} />
+      <CabRutina actual="biblioteca" crumb={t('Biblioteca')} />
       <div className="pg">
         <label className="search"><Ico n="magnifying-glass" /><input className="inp" type="search" maxLength={LARGO.buscar} placeholder={t('Buscar ejercicio o máquina')} aria-label={t('Buscar ejercicio')} value={q} onChange={e => { setQ(e.target.value); setN(40) }} /></label>
         <div className="chips scroll mt12">
@@ -106,7 +106,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
             <h3 className="h3">{t('No sale ningún ejercicio')}</h3>
             <p className="muted">{q ? (hayFiltros ? t('Nada se llama «{q}» con estos filtros. Prueba con otra palabra, como «press» o «sentadilla».', { q }) : t('Nada se llama «{q}». Prueba con otra palabra, como «press» o «sentadilla».', { q })) : hayFiltros ? t('Hay demasiados filtros puestos.') : t('Tu gimnasio no tiene máquinas marcadas.')}</p>
             {hayFiltros ? <button className="btn mt12" onClick={quitarFiltros}>{t('Quitar filtros')}</button>
-              : enGym && !q ? <button className="btn mt12" onClick={() => (g?.id != null ? nav.ir('rut-gym-edit', { id: g.id }) : nav.reemplazar('rut-gym'))}>{g ? t('Marcar las máquinas de mi gimnasio') : t('Crear mi gimnasio')}</button>
+              : enGym && !q ? <button className="btn mt12" onClick={() => (g ? nav.ir('editor-gimnasio', { id: g.id }) : nav.reemplazar('gimnasios'))}>{g ? t('Marcar las máquinas de mi gimnasio') : t('Crear mi gimnasio')}</button>
               : q ? <button className="btn gry sm mt12" onClick={() => setQ('')}>{t('Borrar la búsqueda')}</button> : null}
           </div>
         ) : (
@@ -115,7 +115,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
               const m = marcas.get(e.id)
               const rec = datos?.records.get(e.id)
               return (
-                <button key={e.id} className="ad" onClick={() => nav.ir('rut-ficha', { id: e.id })}>
+                <button key={e.id} className="ad" onClick={() => nav.ir('ficha', { id: e.id })}>
                   <Th ej={e} size="m" />
                   <span className="tx">
                     <b>{e.nombre}</b>

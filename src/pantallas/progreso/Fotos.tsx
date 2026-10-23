@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { fotosPorFecha } from '../../datos/consultas'
 import { guardarFoto } from '../../datos/acciones/cuerpo'
-import type { Foto, Medicion } from '../../datos/tipos'
+import type { Foto, Guardado, Medicion } from '../../datos/tipos'
 import { num } from '../../dominio/formato'
 import { fechaCorta, horaActual, hoyISO, numeroSemana } from '../../dominio/fechas'
 import { ultimoValor } from '../../dominio/tendencias'
@@ -39,7 +39,7 @@ export function Fotos() {
   const [abierta, setAbierta] = useState<number | null>(null)
   const hoy = hoyISO()
   const inicio = ajustes.inicio ?? perfil.creado.slice(0, 10)
-  const cab = <CabProgreso actual="pro-fotos" crumb={t('Lo que no dice la báscula')} />
+  const cab = <CabProgreso actual="fotos" crumb={t('Lo que no dice la báscula')} />
 
   const nueva = async () => {
     const imagen = await hacerFoto()
@@ -81,7 +81,7 @@ export function Fotos() {
   const puedeComparar = !!a && !!b && a.id !== b.id
 
   // Galería agrupada por día, del más reciente al más antiguo.
-  const dias = new Map<string, Foto[]>()
+  const dias = new Map<string, Guardado<Foto>[]>()
   for (const f of [...fotos].reverse()) {
     const d = f.fecha.slice(0, 10)
     dias.set(d, [...(dias.get(d) ?? []), f])
@@ -113,15 +113,15 @@ export function Fotos() {
                   <div className="grid2" style={{ padding: 8 }}>
                     {[a, b].map(f => (
                       <div key={f.id} className="pthumb">
-                        <img src={urls.get(f.id!)} alt={`${nombrePose(f.pose)} · ${fechaCorta(f.fecha)}`} style={IMG} />
+                        <img src={urls.get(f.id)} alt={`${nombrePose(f.pose)} · ${fechaCorta(f.fecha)}`} style={IMG} />
                         <span>{fechaCorta(f.fecha)}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="cmp-v">
-                    <div className="cmp-a"><img src={urls.get(a.id!)} alt={t('Antes · {fecha}', { fecha: fechaCorta(a.fecha) })} style={IMG} /></div>
-                    <div className="cmp-b" style={{ clipPath: `inset(0 0 0 ${corte}%)` }}><img src={urls.get(b.id!)} alt={t('Después · {fecha}', { fecha: fechaCorta(b.fecha) })} style={IMG} /></div>
+                    <div className="cmp-a"><img src={urls.get(a.id)} alt={t('Antes · {fecha}', { fecha: fechaCorta(a.fecha) })} style={IMG} /></div>
+                    <div className="cmp-b" style={{ clipPath: `inset(0 0 0 ${corte}%)` }}><img src={urls.get(b.id)} alt={t('Después · {fecha}', { fecha: fechaCorta(b.fecha) })} style={IMG} /></div>
                     <span className="cmp-h" aria-hidden="true" style={{ left: `${corte}%` }}><Ico n="arrows-left-right" b /></span>
                     <span className="cmp-l">{a.fecha.slice(0, 10) === primerDia ? t('Día 1') : fechaCorta(a.fecha)}</span>
                     <span className="cmp-r">{b.fecha.startsWith(hoy) ? t('Hoy') : fechaCorta(b.fecha)}</span>
@@ -158,11 +158,11 @@ export function Fotos() {
           <div className="sec-h"><h2>{t('Galería')}</h2><span className="lbl">{perfil.fotosCadaSemanas > 0 && perfil.fotosCadaSemanas !== 2 ? tn(perfil.fotosCadaSemanas, 'cada {n} semana', 'cada {n} semanas') : t('cada 2-4 semanas')}</span></div>
           {vista && (
             <div className="card pd" style={{ marginBottom: 12 }}>
-              <img src={urls.get(vista.id!)} alt={`${nombrePose(vista.pose)} · ${fechaCorta(vista.fecha)}`} className="foto-prev" style={{ maxHeight: 420, objectFit: 'contain' }} />
+              <img src={urls.get(vista.id)} alt={`${nombrePose(vista.pose)} · ${fechaCorta(vista.fecha)}`} className="foto-prev" style={{ maxHeight: 420, objectFit: 'contain' }} />
               <div className="row jb mt8">
                 <b>{nombrePose(vista.pose)} · {fechaCorta(vista.fecha)}</b>
                 <div className="row" style={{ gap: 8 }}>
-                  <button className="ib" aria-label={t('Borrar foto')} onClick={() => { setAbierta(null); nav.hoja('sheet-confirmar', { titulo: t('¿Borrar esta foto?'), texto: t('{pose} del {fecha}.', { pose: nombrePose(vista.pose), fecha: fechaCorta(vista.fecha) }), si: t('Borrar'), peligro: true, accion: 'borrar-foto', id: vista.id }) }}><Ico n="trash" /></button>
+                  <button className="ib" aria-label={t('Borrar foto')} onClick={() => { setAbierta(null); nav.hoja('hoja-confirmar', { titulo: t('¿Borrar esta foto?'), texto: t('{pose} del {fecha}.', { pose: nombrePose(vista.pose), fecha: fechaCorta(vista.fecha) }), si: t('Borrar'), peligro: true, accion: 'borrar-foto', id: vista.id }) }}><Ico n="trash" /></button>
                   <button className="ib" aria-label={t('Cerrar')} onClick={() => setAbierta(null)}><Ico n="x" /></button>
                 </div>
               </div>
@@ -173,8 +173,8 @@ export function Fotos() {
               <p className="gal-d"><b>{fechaCorta(d)}</b> · {d === primerDia ? t('día 1') : t('semana {n}', { n: Math.max(1, numeroSemana(inicio, d)) })}</p>
               <div className="grid3">
                 {lista.map(f => (
-                  <button key={f.id} className={cx('pthumb', i % 3 === 1 && 'b', i % 3 === 2 && 'c')} onClick={() => setAbierta(f.id ?? null)}>
-                    <img src={urls.get(f.id!)} alt="" style={IMG} loading="lazy" />
+                  <button key={f.id} className={cx('pthumb', i % 3 === 1 && 'b', i % 3 === 2 && 'c')} onClick={() => setAbierta(f.id)}>
+                    <img src={urls.get(f.id)} alt="" style={IMG} loading="lazy" />
                     <span>{nombrePose(f.pose)}</span>
                   </button>
                 ))}

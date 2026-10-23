@@ -16,7 +16,7 @@ import { t } from '../../i18n'
 
 const g = (v: number | null | undefined, u = 'g') => (v == null ? '—' : `${num(v)} ${u}`)
 
-export function Producto({ ruta }: { ruta: Ruta<'com-prod'> }) {
+export function Producto({ ruta }: { ruta: Ruta<'producto'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const codigo = ruta.d.codigo

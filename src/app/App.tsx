@@ -89,7 +89,7 @@ function Marco() {
     const manejar = () => {
       if (enTutorial.current) { setTutorial(false); return true }
       const que = queHaceAtras(estado.current)
-      if (que === 'preguntar-entreno') nav.hoja('sheet-salir-entreno')
+      if (que === 'preguntar-entreno') nav.hoja('hoja-salir-entreno')
       else if (que === 'atras') nav.atras()
       return que !== 'minimizar-app'
     }
@@ -117,7 +117,7 @@ function Marco() {
       if (document.getElementById('instalar')) return
       window.clearInterval(t)
       marcarTutorialOfrecido()
-      nav.hoja('sheet-tutorial')
+      nav.hoja('hoja-oferta-tutorial')
     }, 1500)
     return () => window.clearInterval(t)
   }, [libre, nav])
@@ -130,7 +130,7 @@ function Marco() {
   const hoja = nav.estado.hoja
   const Hoja = hoja ? (HOJAS[hoja.p] as ComponentType<{ ruta: Ruta }>) : undefined
   // El escáner ocupa toda la pantalla: sin barra de pestañas tapando sus botones.
-  const full = !!nav.estado.completa || ruta.p === 'com-scan'
+  const full = !!nav.estado.completa || ruta.p === 'escaner'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
   useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
   useEffect(() => { document.body.classList.toggle('con-hoja', !!hoja) }, [hoja])

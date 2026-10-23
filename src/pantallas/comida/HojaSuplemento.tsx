@@ -11,7 +11,7 @@ import type { Perfil } from '../../datos/tipos'
 import { propio } from '../../dominio/claves'
 import { t } from '../../i18n'
 
-export function HojaSuplemento({ ruta }: { ruta: Ruta<'sheet-supl'> }) {
+export function HojaSuplemento({ ruta }: { ruta: Ruta<'hoja-suplemento'> }) {
   // El formulario se monta con el perfil ya cargado: con el de por defecto, «Guardar» pisaría el batido con 24 g.
   const perfil = usePerfilCargado()
   const s = ruta.d.nombre

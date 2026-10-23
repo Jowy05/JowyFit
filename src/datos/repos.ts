@@ -1,7 +1,7 @@
 // Acceso a los datos: valores por defecto y operaciones habituales.
 import { dispositivoApple } from '../plataforma'
 import { db } from './db'
-import type { Ajustes, Gimnasio, MarcaEjercicio, Perfil, Plantilla, Rutina } from './tipos'
+import type { Ajustes, Gimnasio, Guardado, MarcaEjercicio, Perfil, Plantilla, Rutina } from './tipos'
 import { t, tk } from '../i18n'
 
 export function perfilPorDefecto(): Perfil {
@@ -174,13 +174,13 @@ export async function prepararBase() {
 
 // Solo leen (sin crear los ajustes que falten): sirven también dentro de useLiveQuery.
 /** El gimnasio elegido en Ajustes o, si no hay o se borró, el primero. */
-export async function gimnasioActivo(): Promise<Gimnasio | undefined> {
+export async function gimnasioActivo(): Promise<Guardado<Gimnasio> | undefined> {
   const id = (await db.ajustes.get('app'))?.gimnasioActivo
   const g = id != null ? await db.gimnasios.get(id) : undefined
   return g ?? db.gimnasios.toCollection().first()
 }
 
 /** La rutina activa (la última, si por lo que sea hay más de una). */
-export async function rutinaActiva(): Promise<Rutina | undefined> {
+export async function rutinaActiva(): Promise<Guardado<Rutina> | undefined> {
   return db.rutinas.filter(x => x.activa).last()
 }

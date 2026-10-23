@@ -1,19 +1,19 @@
 // Piezas compartidas de la pestaña Progreso.
 import { useEffect, useState, type ReactNode } from 'react'
-import type { Foto, Meta, OrigenMedicion } from '../../datos/tipos'
+import type { Foto, Guardado, Meta, OrigenMedicion } from '../../datos/tipos'
 import { deISO } from '../../dominio/fechas'
 import { Cab, Seg } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { t, tk } from '../../i18n'
 
-type PestanaProgreso = 'pro-sem' | 'pro-fuerza' | 'pro-cuerpo' | 'pro-fotos' | 'pro-obj'
+type PestanaProgreso = 'semana' | 'fuerza' | 'cuerpo' | 'fotos' | 'objetivos'
 
 const PESTANAS: { v: PestanaProgreso; t: string }[] = [
-  { v: 'pro-sem', t: tk('Semana') },
-  { v: 'pro-fuerza', t: tk('Fuerza') },
-  { v: 'pro-cuerpo', t: tk('Cuerpo') },
-  { v: 'pro-fotos', t: tk('Fotos') },
-  { v: 'pro-obj', t: tk('Metas') },
+  { v: 'semana', t: tk('Semana') },
+  { v: 'fuerza', t: tk('Fuerza') },
+  { v: 'cuerpo', t: tk('Cuerpo') },
+  { v: 'fotos', t: tk('Fotos') },
+  { v: 'objetivos', t: tk('Metas') },
 ]
 
 /** Cabecera común de las cinco pantallas raíz de Progreso, con sus pestañas superiores. */
@@ -49,12 +49,12 @@ export const NOMBRE_ORIGEN: Record<OrigenMedicion, string> = {
 export const ICONO_ORIGEN: Record<OrigenMedicion, string> = { casa: 'scales', gimnasio: 'barbell', cinta: 'ruler', manual: 'pencil-simple', otra: 'dots-three' }
 
 /** URLs temporales para las fotos (Blob); se liberan al cambiar la lista o al salir. */
-export function useUrlsFotos(fotos: Foto[]): Map<number, string> {
+export function useUrlsFotos(fotos: Guardado<Foto>[]): Map<number, string> {
   const [urls, setUrls] = useState<Map<number, string>>(new Map())
   const clave = fotos.map(f => f.id).join(',')
   useEffect(() => {
     const m = new Map<number, string>()
-    for (const f of fotos) if (f.id != null) m.set(f.id, URL.createObjectURL(f.imagen))
+    for (const f of fotos) m.set(f.id, URL.createObjectURL(f.imagen))
     setUrls(m)
     return () => { for (const u of m.values()) URL.revokeObjectURL(u) }
     // Solo cambia si cambian las fotos (por id).

@@ -22,7 +22,7 @@ describe('guion del tutorial', () => {
   it('empieza con la bienvenida y acaba en «Ver el tutorial» de Ajustes', () => {
     for (const p of [android, iphone, web]) {
       expect(p[0]!.id).toBe('hola')
-      expect(p[p.length - 1]).toMatchObject({ id: 'fin', pestana: 'per', ruta: 'aju', sel: '[data-tour="tutorial"]' })
+      expect(p[p.length - 1]).toMatchObject({ id: 'fin', pestana: 'per', ruta: 'ajustes', sel: '[data-tour="tutorial"]' })
     }
   })
 

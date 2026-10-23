@@ -1,14 +1,18 @@
 // Entreno en curso: todas las operaciones puras sobre la sesión (crear, marcar series, superseries,
 // añadir y quitar series, cambiar de ejercicio, reordenar, saltar y el resumen final).
+process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import {
   anadirCalentamiento, anadirSerie, cambiarSerie, crearSesion, desdeBloque, hecha, indiceActual, irA, mover, quitarSerie, quitarUnaSerie,
   resumen, saltar, serieActual, seriesNuevas, sustituir, terminada,
 } from '../src/dominio/sesion'
-import type { Bloque, DiaRutina, Sesion } from '../src/datos/tipos'
+import type { Bloque, DiaRutina, Sesion, EjercicioSesion } from '../src/datos/tipos'
+import { restanteSesion } from '../src/dominio/tiempos'
 
 const bloque = (uid: string, x: Partial<Bloque> = {}): Bloque => ({ uid, ejercicio: uid, alternativas: [], series: 3, repsMin: 8, repsMax: 12, rpe: 8, descanso: 120, registro: 'peso', ...x })
+
 const dia = (bloques: Bloque[]): DiaRutina => ({ letra: 'A', nombre: 'Cuerpo completo A', dia: 1, opcional: false, bloques })
+
 const nueva = (bloques: Bloque[], x: Partial<Parameters<typeof crearSesion>[1]> = {}) =>
   crearSesion(dia(bloques), { rutinaId: 1, gimnasioId: 2, version: 'normal', calibracion: false, ahora: new Date(2026, 9, 13, 5, 30).getTime(), ...x })
 
@@ -40,6 +44,13 @@ describe('crear la sesión', () => {
     expect(s.ejercicios[1]!.series[0]).toMatchObject({ peso: null, reps: 8 })
   })
 })
+
+const ej = (uid: string, extra: Partial<EjercicioSesion> = {}): EjercicioSesion => ({
+  uid, ejercicio: uid, planificado: uid, estado: 'pendiente', repsMin: 8, repsMax: 12, rpe: 8, descanso: 90, registro: 'peso',
+  series: [1, 2, 3].map(n => ({ n, peso: 40, reps: 8, rpe: null, calentamiento: false, hecha: false })), ...extra,
+})
+
+const sesion = (ejercicios: EjercicioSesion[]): Sesion => ({ fecha: '2026-10-14', rutinaId: 1, letra: 'A', nombre: 'A', gimnasioId: null, inicio: 0, version: 'normal', estado: 'curso', calibracion: false, ejercicios })
 
 describe('series nuevas según cómo se apunta', () => {
   it('peso: peso y reps', () => {
@@ -265,5 +276,62 @@ describe('resumen del entreno', () => {
     expect(r.series).toBe(0)
     expect(r.volumen).toBe(0)
     expect(r.segundos).toBeGreaterThanOrEqual(9)
+  })
+})
+
+describe('sesión en curso', () => {
+  it('fallaba: marcar una serie de calentamiento cambiaba el peso de todas las de trabajo', () => {
+    let s = sesion([ej('a', { estado: 'curso' })])
+    s = anadirCalentamiento(s, 0, [{ peso: 20, reps: 10 }, { peso: 30, reps: 5 }])
+    s = hecha(s, 0, { peso: 20, reps: 10, rpe: null }).sesion
+    const trabajo = s.ejercicios[0]!.series.filter(x => !x.calentamiento)
+    expect(trabajo.map(x => x.peso)).toEqual([40, 40, 40])
+    // Una serie de trabajo sí arrastra su peso a las siguientes.
+    s = hecha(s, 0, { peso: 30, reps: 5, rpe: null }).sesion
+    s = hecha(s, 0, { peso: 42.5, reps: 8, rpe: 8 }).sesion
+    expect(s.ejercicios[0]!.series.filter(x => !x.calentamiento).map(x => x.peso)).toEqual([42.5, 42.5, 42.5])
+  })
+  it('fallaba: quitar serie con todo el trabajo hecho borraba una de calentamiento pendiente', () => {
+    let s = sesion([ej('a', { estado: 'curso', series: [{ n: 1, peso: 40, reps: 8, rpe: 8, calentamiento: false, hecha: true }, { n: 2, peso: 40, reps: 8, rpe: 8, calentamiento: false, hecha: true }] })])
+    s = anadirCalentamiento(s, 0, [{ peso: 20, reps: 10 }])
+    const r = quitarSerie(s, 0)
+    expect(r.ejercicios[0]!.series.filter(x => x.calentamiento)).toHaveLength(1)
+    expect(r.ejercicios[0]!.series).toHaveLength(3)
+  })
+  it('fallaba: mover con índices fuera de rango metía un hueco vacío en la sesión', () => {
+    const s = sesion([ej('a'), ej('b')])
+    expect(mover(s, 5, 0).ejercicios.map(e => e.uid)).toEqual(['a', 'b'])
+    expect(mover(s, 0, 9).ejercicios.map(e => e.uid)).toEqual(['b', 'a'])
+    expect(mover(s, -1, 0).ejercicios.every(Boolean)).toBe(true)
+  })
+  it('fallaba: cambiar a un ejercicio por tiempo dejaba «reps» y ningún segundo', () => {
+    const s = sustituir(sesion([ej('a', { estado: 'curso' })]), 0, 'plank', 'cambio', { peso: null, reps: 40 }, 'tiempo')
+    for (const x of s.ejercicios[0]!.series) { expect(x.segundos).toBe(40); expect(x.reps).toBeNull(); expect(x.peso).toBeNull() }
+    const c = sustituir(sesion([ej('a')]), 0, 'push-up', 'cambio', { peso: 40, reps: null }, 'corporal')
+    for (const x of c.ejercicios[0]!.series) { expect(x.peso).toBeNull(); expect(x.reps).toBe(8) }
+  })
+  it('índices que no existen no revientan (hecha, saltar, quitar serie)', () => {
+    const s = sesion([ej('a')])
+    expect(hecha(s, 7, { peso: 1, reps: 1, rpe: null }).descanso).toBe(0)
+    expect(saltar(s, 7).ejercicios).toHaveLength(1)
+    expect(quitarSerie(s, 7).ejercicios).toHaveLength(1)
+  })
+  it('una sesión a medias de una rutina sin días/bloques no rompe', () => {
+    const dia: DiaRutina = { letra: 'A', nombre: 'A', dia: 0, opcional: false, bloques: [] }
+    const s = crearSesion(dia, { rutinaId: 1, gimnasioId: null, version: 'corta', calibracion: false, ahora: 0 })
+    expect(s.ejercicios).toEqual([])
+    expect(restanteSesion(s)).toBe(0)
+  })
+  it('propiedad: hacer todas las series de una sesión con superseries termina la sesión y deja un solo «curso» cada vez', () => {
+    const bloques: Bloque[] = ['a', 'b', 'c', 'd'].map(uid => ({ uid, ejercicio: uid, alternativas: [], series: 3, repsMin: 8, repsMax: 12, rpe: 8, descanso: 60, registro: 'peso' }))
+    bloques[1]!.superserie = 'c'; bloques[2]!.superserie = 'b'
+    let s = crearSesion({ letra: 'A', nombre: 'A', dia: 0, opcional: false, bloques }, { rutinaId: 1, gimnasioId: null, version: 'normal', calibracion: false, ahora: 0 })
+    for (let paso = 0; paso < 20; paso++) {
+      const i = s.ejercicios.findIndex(e => e.estado === 'curso')
+      if (i < 0) break
+      s = hecha(s, i, { peso: 40, reps: 10, rpe: 8 }, paso).sesion
+      expect(s.ejercicios.filter(e => e.estado === 'curso').length).toBeLessThanOrEqual(1)
+    }
+    expect(s.ejercicios.every(e => e.estado === 'hecho')).toBe(true)
   })
 })

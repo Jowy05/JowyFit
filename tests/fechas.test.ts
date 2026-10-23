@@ -6,6 +6,8 @@ import {
   DIAS, DIAS_CORTOS, MESES, MESES_CORTOS, aISO, deISO, diaSemana, diasEntre, duracion, edad, fechaCorta, fechaLarga, formatoHora,
   horaActual, horaDe, hoyISO, lunesDe, minutosDe, numeroSemana, saludo, semanaDe, sumarDias,
 } from '../src/dominio/fechas'
+import { estadoHora } from '../src/dominio/tiempos'
+import type { Sesion } from '../src/datos/tipos'
 
 describe('nombres de días y meses', () => {
   it('7 días empezando en lunes y 12 meses, en minúscula', () => {
@@ -135,5 +137,66 @@ describe('saludo', () => {
     expect(saludo(new Date(2026, 9, 13, 14, 0))).toBe('Buenas tardes')
     expect(saludo(new Date(2026, 9, 13, 20, 59))).toBe('Buenas tardes')
     expect(saludo(new Date(2026, 9, 13, 21, 0))).toBe('Buenas noches')
+  })
+})
+
+describe('fechas', () => {
+  it('semana de lunes a domingo', () => {
+    expect(diaSemana(deISO('2026-10-13'))).toBe(1) // martes
+    expect(lunesDe('2026-10-18')).toBe('2026-10-12')
+    expect(semanaDe('2026-10-13')).toHaveLength(7)
+    expect(sumarDias('2026-10-31', 1)).toBe('2026-11-01')
+    expect(edad('2005-03-23', new Date(2026, 9, 13))).toBe(21)
+  })
+})
+
+describe('fechas en Europa/Madrid', () => {
+  it('la zona horaria del test es la de Madrid (si no, los tests de cambio de hora no prueban nada)', () => {
+    expect(new Date(2026, 6, 1).getTimezoneOffset()).toBe(-120)
+    expect(new Date(2026, 0, 1).getTimezoneOffset()).toBe(-60)
+  })
+  it('cambio de hora de marzo y de octubre: sumar días y días entre fechas', () => {
+    expect(sumarDias('2026-03-28', 1)).toBe('2026-03-29')
+    expect(sumarDias('2026-03-29', 1)).toBe('2026-03-30')
+    expect(sumarDias('2026-10-25', 1)).toBe('2026-10-26')
+    expect(sumarDias('2026-10-26', -1)).toBe('2026-10-25')
+    expect(diasEntre('2026-03-29', '2026-03-30')).toBe(1)
+    expect(diasEntre('2026-10-25', '2026-10-26')).toBe(1)
+    expect(diasEntre('2026-01-01', '2027-01-01')).toBe(365)
+    expect(diasEntre('2028-01-01', '2029-01-01')).toBe(366)
+  })
+  it('semanas que cruzan el año y número de semana', () => {
+    expect(semanaDe('2026-12-31')).toEqual(['2026-12-28', '2026-12-29', '2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03'])
+    expect(lunesDe('2027-01-03')).toBe('2026-12-28')
+    expect(numeroSemana('2026-12-28', '2027-01-04')).toBe(2)
+    expect(numeroSemana('2026-10-19', '2026-10-26')).toBe(2) // semana del cambio de hora
+  })
+  it('propiedad: todos los días de 2026-2028 encadenan bien (sin saltos ni repeticiones)', () => {
+    let d = '2026-01-01'
+    for (let i = 0; i < 365 * 3; i++) {
+      const s = sumarDias(d, 1)
+      expect(diasEntre(d, s)).toBe(1)
+      expect(diaSemana(deISO(s))).toBe((diaSemana(deISO(d)) + 1) % 7)
+      const sem = semanaDe(d)
+      expect(diaSemana(deISO(sem[0]!))).toBe(0)
+      expect(sem).toContain(d)
+      expect(aISO(deISO(d))).toBe(d)
+      d = s
+    }
+    expect(d).toBe('2028-12-31')
+  })
+  it('fallaba: horas vacías o mal escritas daban NaN o «5:undefined»', () => {
+    expect(minutosDe('')).toBe(0)
+    expect(minutosDe('abc')).toBe(0)
+    expect(minutosDe('06:45')).toBe(405)
+    expect(formatoHora('05:30')).toBe('5:30')
+    expect(formatoHora('7')).toBe('7:00')
+    expect(formatoHora('')).toBe('0:00')
+  })
+  it('hora límite el día del cambio de hora (29 de marzo)', () => {
+    const inicio = new Date(2026, 2, 29, 5, 0).getTime()
+    const s: Sesion = { fecha: '2026-03-29', rutinaId: null, letra: 'A', nombre: 'A', gimnasioId: null, inicio, horaLimite: '06:45', version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
+    const e = estadoHora(s, inicio)!
+    expect(e.minutosTarde).toBe(-105)
   })
 })

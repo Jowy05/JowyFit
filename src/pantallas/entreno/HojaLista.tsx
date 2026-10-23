@@ -88,13 +88,13 @@ export function HojaLista() {
           )
         })}
       </div>
-      <button className="lnk ux-lista-anadir" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-anadir' })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
+      <button className="lnk ux-lista-anadir" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-anadir' })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
       <div className="ux-lista-pie">
-        <button className="btn xl" onClick={() => { nav.hoja(null); nav.completa('ses-fin', { id: s.id }) }}><Ico n="flag-checkered" b />{t('Terminar entreno')}</button>
+        <button className="btn xl" onClick={() => { nav.hoja(null); nav.completa('fin-entreno', { id: s.id }) }}><Ico n="flag-checkered" b />{t('Terminar entreno')}</button>
         <p className="ux-lista-otras">
           <button className="lnk" onClick={() => { nav.hoja(null); nav.minimizar(); aviso(t('Sigue abierto: vuelves desde la barra de abajo')) }}>{t('Salir sin terminar')}</button>
           <span aria-hidden="true">·</span>
-          <button className="lnk ux-peligro" onClick={() => nav.hoja('sheet-confirmar', { titulo: t('¿Descartar este entreno?'), texto: t('Se borra lo apuntado hoy.'), si: t('Descartar'), peligro: true, accion: 'cancelar-entreno', id: s.id })}>{t('Descartar entreno')}</button>
+          <button className="lnk ux-peligro" onClick={() => nav.hoja('hoja-confirmar', { titulo: t('¿Descartar este entreno?'), texto: t('Se borra lo apuntado hoy.'), si: t('Descartar'), peligro: true, accion: 'cancelar-entreno', id: s.id })}>{t('Descartar entreno')}</button>
         </p>
       </div>
     </Hoja>

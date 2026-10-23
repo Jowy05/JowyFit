@@ -28,18 +28,18 @@ export function MiPlan() {
   const ds = diaSemana(deISO(hoy))
   const crumb = a.inicio ? t('Semana {n}', { n: numeroSemana(a.inicio, hoy) }) : undefined
   // Entrenos de calibración que cuentan: los de esta rutina y no libres (igual que en el fin del entreno).
-  const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : contarEntrenosDeRutina(r.id)), [r?.id]) ?? 0
+  const sesiones = useLiveQuery(async () => (r ? contarEntrenosDeRutina(r.id) : 0), [r?.id]) ?? 0
   const unaVez = useUnaVez()
 
   // Si hoy ya se entrenó, la tarjeta de hoy lo dice: con «Empezar rutina» parecería que no se guardó.
   // Va antes de los return: los hooks siempre en el mismo orden.
   const hechoHoy = useLiveQuery(sesionDeHoy, [])
-  if (r === undefined) return <Pantalla><CabRutina actual="rut" crumb={crumb} /></Pantalla>
+  if (r === undefined) return <Pantalla><CabRutina actual="mi-plan" crumb={crumb} /></Pantalla>
   if (r === null) return (
     <Pantalla>
-      <CabRutina actual="rut" crumb={crumb} />
+      <CabRutina actual="mi-plan" crumb={crumb} />
       <div className="pg"><div className="sec">
-        <Vacio icono="clipboard-text" titulo={t('Aún no tienes rutina')} texto={t('La creamos con tus días, tu tiempo y tu gimnasio. Tarda 10 segundos.')} accion={<><Ico n="magic-wand" b />{t('Crear mi rutina')}</>} onAccion={() => nav.ir('rut-gen')} />
+        <Vacio icono="clipboard-text" titulo={t('Aún no tienes rutina')} texto={t('La creamos con tus días, tu tiempo y tu gimnasio. Tarda 10 segundos.')} accion={<><Ico n="magic-wand" b />{t('Crear mi rutina')}</>} onAccion={() => nav.ir('generar-rutina')} />
       </div></div>
     </Pantalla>
   )
@@ -60,7 +60,7 @@ export function MiPlan() {
 
   return (
     <Pantalla>
-      <CabRutina actual="rut" crumb={crumb} />
+      <CabRutina actual="mi-plan" crumb={crumb} />
       <div className="pg">
         <div className="sec">
           <div className="spec-box" data-tour="rutina">
@@ -84,7 +84,7 @@ export function MiPlan() {
             const esHoy = d.dia === ds
             if (esHoy && !d.opcional) return (
               <div key={d.letra} className={cx('dayc card hot', i && 'mt8')}>
-                <button className="dayc-h" onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
+                <button className="dayc-h" onClick={() => nav.ir('detalle-dia', { letra: d.letra })}>
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
                   <span className="tx"><b>{tituloDia(d)}</b><small>{t('{nombre} · ~{min} min · con prisa ~{corta}', { nombre: nombreEntreno(d), min: minutosDia(d), corta: minutosDia(d, true) })}</small></span>
                   {hechoHoy ? <span className="tag ok"><Ico n="check" b />{t('Hecho')}</span> : <span className="tag go">{t('Hoy')}</span>}
@@ -100,15 +100,15 @@ export function MiPlan() {
                 </div>
                 <div className="pd">
                   {hechoHoy
-                    ? <button className="btn gry" onClick={() => nav.ir('pro-entreno', { id: hechoHoy.id }, 'pro')}><Ico n="check" b />{t('Entreno de hoy hecho · verlo')}</button>
-                    : <button className="btn" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}><Ico n="play" b />{t('Empezar rutina')}</button>}
+                    ? <button className="btn gry" onClick={() => nav.ir('detalle-entreno', { id: hechoHoy.id }, 'pro')}><Ico n="check" b />{t('Entreno de hoy hecho · verlo')}</button>
+                    : <button className="btn" onClick={() => nav.hoja('hoja-empezar', { letra: d.letra })}><Ico n="play" b />{t('Empezar rutina')}</button>}
                 </div>
               </div>
             )
             // Los días que no son hoy, plegados: solo cuántos ejercicios; la lista, al tocarlo.
             const nEj = d.bloques.length
             return (
-              <button key={d.letra} className={cx('dayc card', i && 'mt8', d.opcional && 'optd')} onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
+              <button key={d.letra} className={cx('dayc card', i && 'mt8', d.opcional && 'optd')} onClick={() => nav.ir('detalle-dia', { letra: d.letra })}>
                 <span className="dayc-h">
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
                   <span className="tx"><b>{d.opcional ? t('{dia} · opcional', { dia: tituloDia(d) }) : tituloDia(d)}</b><small>{d.dia != null ? nombreEntreno(d) : t('Día {letra}', { letra: d.letra })} · {tn(nEj, '{n} ejercicio', '{n} ejercicios')} · ~{minutosDia(d)} min</small></span>
@@ -121,7 +121,7 @@ export function MiPlan() {
 
         <div className="sec">
           <div className="list">
-            <button className="it" onClick={() => nav.ir('rut-edit')}><span className="ico"><Ico n="pencil-simple" /></span><span className="tx"><b>{t('Editar plan')}</b><small>{t('Cambiar ejercicios o series, o rehacer la rutina')}</small></span><Ico n="caret-right" className="car" /></button>
+            <button className="it" onClick={() => nav.ir('editar-plan')}><span className="ico"><Ico n="pencil-simple" /></span><span className="tx"><b>{t('Editar plan')}</b><small>{t('Cambiar ejercicios o series, o rehacer la rutina')}</small></span><Ico n="caret-right" className="car" /></button>
           </div>
           {/* Lo que casi nunca hace falta, plegado: otro día de la rutina o un entreno sin plan. */}
           <details className="fold mt12">
@@ -133,7 +133,7 @@ export function MiPlan() {
                   <span className="tx">
                     <b>{t('Empezar otro día')}</b>
                     <small>{t('Si hoy prefieres hacer otro entreno')}</small>
-                    <span className="chips ux-rut-otro">{r.dias.map(d => <button key={d.letra} className="chip" onClick={() => nav.hoja('sheet-ses1', { letra: d.letra })}>{tituloDia(d)}</button>)}</span>
+                    <span className="chips ux-rut-otro">{r.dias.map(d => <button key={d.letra} className="chip" onClick={() => nav.hoja('hoja-empezar', { letra: d.letra })}>{tituloDia(d)}</button>)}</span>
                   </span>
                 </div>
                 <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>{t('Entreno libre')}</b><small>{t('Sin plan: añades ejercicios sobre la marcha')}</small></span><Ico n="caret-right" className="car" /></button>

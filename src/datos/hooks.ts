@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
 import { ajustesPorDefecto, gimnasioActivo, perfilPorDefecto, rutinaActiva } from './repos'
 import { leerMediciones } from './consultas'
-import type { Ajustes, Gimnasio, MarcaEjercicio, Medicion, Perfil, Rutina, Sesion } from './tipos'
+import type { Ajustes, Gimnasio, Guardado, MarcaEjercicio, Medicion, Perfil, Rutina, Sesion } from './tipos'
 
 /**
  * Perfil (o el de por defecto mientras carga). El de por defecto se crea una sola vez por pantalla:
@@ -28,25 +28,25 @@ export function useAjustes(): Ajustes {
   return useMemo(() => (a ? { ...ajustesPorDefecto(), ...a, noti: { ...ajustesPorDefecto().noti, ...a.noti } } : ajustesPorDefecto()), [a])
 }
 
-export function useGimnasios(): Gimnasio[] {
+export function useGimnasios(): Guardado<Gimnasio>[] {
   return useLiveQuery(() => db.gimnasios.toArray(), []) ?? []
 }
 
-export function useGimnasio(): Gimnasio | undefined {
+export function useGimnasio(): Guardado<Gimnasio> | undefined {
   return useLiveQuery(gimnasioActivo, [])
 }
 
 /** undefined = cargando · null = no hay */
-export function useRutina(): Rutina | undefined | null {
+export function useRutina(): Guardado<Rutina> | undefined | null {
   return useLiveQuery(async () => (await rutinaActiva()) ?? null, [])
 }
 
-export function useSesionEnCurso(): Sesion | undefined | null {
+export function useSesionEnCurso(): Guardado<Sesion> | undefined | null {
   return useLiveQuery(async () => (await db.sesiones.where('estado').equals('curso').last()) ?? null, [])
 }
 
 /** Todas las mediciones, sin ordenar; undefined mientras carga. */
-export function useMediciones(): Medicion[] | undefined {
+export function useMediciones(): Guardado<Medicion>[] | undefined {
   return useLiveQuery(leerMediciones, [])
 }
 

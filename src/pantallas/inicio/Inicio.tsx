@@ -68,7 +68,7 @@ export function Inicio() {
       <Cab
         crumb={t('{dia} {fecha} · semana {n}', { dia: capital(DIAS_ABREV[diaSemana(d)]!), fecha: diaMes(d.getDate(), d.getMonth()), n: nSemana })}
         titulo={`${saludo()}${perfil.nombre ? `, ${perfil.nombre}` : ''}`}
-        derecha={<button className="ib" aria-label={t('Ajustes')} onClick={() => nav.ir('aju')}><Ico n="gear" /></button>}
+        derecha={<button className="ib" aria-label={t('Ajustes')} onClick={() => nav.ir('ajustes')}><Ico n="gear" /></button>}
       >
         <div className="week mt12" role="list" data-tour="semana">
           {semana.map((e, i) => (
@@ -91,7 +91,7 @@ export function Inicio() {
       <div className="pg">
         <SemanaSuave rutina={rutina ?? null} />
 
-        <Seccion tour="hoy" titulo={t('Hoy te toca')} accion={tarjeta.tipo === 'hoy' ? t('Ver día') : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('rut-dia', { letra: tarjeta.dia.letra }, 'rut')}>
+        <Seccion tour="hoy" titulo={t('Hoy te toca')} accion={tarjeta.tipo === 'hoy' ? t('Ver día') : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('detalle-dia', { letra: tarjeta.dia.letra }, 'rut')}>
           <TarjetaHoy tar={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre == null ? undefined : recortar(gym.nombre, LARGO.nombre)} />
         </Seccion>
 
@@ -101,9 +101,9 @@ export function Inicio() {
         {/* Los accesos rápidos, a mano. Comida y picoteo van en un solo botón: no hay que decidir si un café es comida o picoteo. */}
         <div className="sec">
           <div className="qa-row ux-qa3" data-tour="atajos">
-            <button className="qa" onClick={() => nav.hoja('sheet-add', { fecha: hoy })}><Ico n="fork-knife" /><span>{t('+ Comer o beber')}</span></button>
-            <button className="qa" onClick={() => nav.ir('com-scan', undefined, 'com')}><Ico n="barcode" /><span>{t('Escanear')}</span></button>
-            <button className="qa" onClick={() => nav.hoja('sheet-peso')}><Ico n="scales" /><span>{t('+ Peso')}</span></button>
+            <button className="qa" onClick={() => nav.hoja('hoja-anadir', { fecha: hoy })}><Ico n="fork-knife" /><span>{t('+ Comer o beber')}</span></button>
+            <button className="qa" onClick={() => nav.ir('escaner', undefined, 'com')}><Ico n="barcode" /><span>{t('Escanear')}</span></button>
+            <button className="qa" onClick={() => nav.hoja('hoja-peso')}><Ico n="scales" /><span>{t('+ Peso')}</span></button>
           </div>
         </div>
 
@@ -128,7 +128,7 @@ export function Inicio() {
               </div>
             )}
             {(
-              <button className={cx('card kpi steps', !ajustes.mostrarKcal && 'span2')} onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>
+              <button className={cx('card kpi steps', !ajustes.mostrarKcal && 'span2')} onClick={() => nav.ir('pasos', undefined, 'pro')}>
                 <Anillo v={pasos?.pasos ?? 0} total={perfil.pasosObjetivo} />
                 <div className="grow">
                   <span className="lbl">{t('Pasos')}</span>
@@ -173,7 +173,7 @@ export function Inicio() {
         {/* El aviso de copia no sale a quien acaba de llegar: espera a que haya algo que guardar (un entreno). */}
         {yaEntreno && (ajustes.ultimaCopia == null || Date.now() - new Date(ajustes.ultimaCopia).getTime() > 8 * 86400000) ? (
           <div className="sec">
-            <button className="note warn w100" style={{ textAlign: 'left' }} onClick={() => nav.ir('aju', { seccion: 'datos' })}>
+            <button className="note warn w100" style={{ textAlign: 'left' }} onClick={() => nav.ir('ajustes', { seccion: 'datos' })}>
               <Ico n="download-simple" />
               <span>{tr('<b>Haz una copia de seguridad.</b> Tus datos solo están en este móvil.', { b: s => <b>{s}</b> })}</span>
             </button>

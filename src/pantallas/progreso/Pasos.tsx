@@ -100,7 +100,7 @@ export function Pasos() {
         {!auto && <div className="sec">{manual}</div>}
 
         <div className="btns mt12">
-          <button className="btn gry sm" onClick={() => nav.hoja('sheet-trote')}><Ico n="person-simple-run" b />{t('+ Trote / carrera')}</button>
+          <button className="btn gry sm" onClick={() => nav.hoja('hoja-trote')}><Ico n="person-simple-run" b />{t('+ Trote / carrera')}</button>
         </div>
 
         <div className="sec">

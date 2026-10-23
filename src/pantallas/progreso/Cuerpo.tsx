@@ -56,7 +56,7 @@ export function Cuerpo() {
       </div>
     </div>
   )
-  const cab = <CabProgreso actual="pro-cuerpo" crumb={t('Tendencias')} />
+  const cab = <CabProgreso actual="cuerpo" crumb={t('Tendencias')} />
 
   if (!ms) return <Pantalla>{cab}</Pantalla>
   if (!ms.length) return (
@@ -64,7 +64,7 @@ export function Cuerpo() {
       {cab}
       <div className="pg"><div className="sec">
         <Vacio icono="ruler" titulo={t('Aún no hay medidas')} texto={t('Pésate y mide la cintura una o dos veces por semana. La cintura dice más que la báscula.')}
-          accion={<><Ico n="plus" b />{t('Registrar medidas')}</>} onAccion={() => nav.ir('pro-reg')} />
+          accion={<><Ico n="plus" b />{t('Registrar medidas')}</>} onAccion={() => nav.ir('registrar')} />
         {tarjetaBascula}
       </div></div>
     </Pantalla>
@@ -140,7 +140,7 @@ export function Cuerpo() {
               ? <Linea puntos={aPuntos(cintura)} objetivo={metaCintura?.objetivo} etiquetaObjetivo={metaCintura ? t('objetivo {n}', { n: num(metaCintura.objetivo) }) : undefined} vacia={t('Con 2 mediciones verás aquí la línea.')} />
               : <p className="small muted">{t('Mide la cintura a la altura del ombligo para ver su tendencia.')}</p>}
           </div>
-          {!metaCintura && cintura.length > 0 && <button className="lnk mt8" onClick={() => nav.hoja('sheet-meta', { tipo: 'cintura' })}><Ico n="flag" /> {t('Ponerte un objetivo de cintura')}</button>}
+          {!metaCintura && cintura.length > 0 && <button className="lnk mt8" onClick={() => nav.hoja('hoja-meta', { tipo: 'cintura' })}><Ico n="flag" /> {t('Ponerte un objetivo de cintura')}</button>}
         </div>
 
         {/* 3 · % de grasa, explicado en palabras. */}
@@ -186,13 +186,13 @@ export function Cuerpo() {
 
         <div className="sec">
           {tarjetaBascula}
-          <div className="sec-h mt12"><h2>{t('Historial')}</h2><button className="lnk" onClick={() => nav.ir('pro-reg')}><Ico n="plus" b /> {t('Registrar')}</button></div>
+          <div className="sec-h mt12"><h2>{t('Historial')}</h2><button className="lnk" onClick={() => nav.ir('registrar')}><Ico n="plus" b /> {t('Registrar')}</button></div>
           <div className="list">
             {historial.slice(0, cuantas).map(m => (
               <div key={m.id} className="it">
                 <span className="code">{fechaCorta(m.fecha)}</span>
                 <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {m.hc?.length ? `${nombreFuente(m.fuente)} · ${capacidades().salud ? 'Health Connect' : t('báscula')}` : t(NOMBRE_ORIGEN[m.origen])}</small></span>
-                <button className="ib" aria-label={t('Borrar medición')} onClick={() => nav.hoja('sheet-confirmar', {
+                <button className="ib" aria-label={t('Borrar medición')} onClick={() => nav.hoja('hoja-confirmar', {
                   titulo: t('¿Borrar esta medición?'), texto: `${textoMedicion(m, 9)} · ${fechaCorta(m.fecha)}`, si: t('Borrar'), peligro: true, accion: 'borrar-medicion', id: m.id,
                 })}><Ico n="trash" /></button>
               </div>
@@ -201,7 +201,7 @@ export function Cuerpo() {
           {historial.length > cuantas && <button className="btn ln sm mt8" onClick={() => setCuantas(c => c + 30)}>{t('Ver más')}</button>}
         </div>
 
-        <div className="dock"><button className="btn" onClick={() => nav.ir('pro-reg')}><Ico n="plus" b />{t('Registrar')}</button></div>
+        <div className="dock"><button className="btn" onClick={() => nav.ir('registrar')}><Ico n="plus" b />{t('Registrar')}</button></div>
       </div>
     </Pantalla>
   )

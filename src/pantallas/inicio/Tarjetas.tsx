@@ -132,10 +132,10 @@ export function Pendientes() {
       <div className="list">
         {visibles.map(p => (
           <button key={p.id} className={cx('it todo', p.hecho && 'done')} onClick={() => {
-            if (p.accion === 'peso') nav.hoja('sheet-peso')
-            else if (p.accion === 'medir') nav.ir('pro-reg', undefined, 'pro')
-            else if (p.accion === 'foto') nav.ir('pro-fotos', undefined, 'pro')
-            else if (p.accion === 'pasos') nav.ir('pro-pasos', undefined, 'pro')
+            if (p.accion === 'peso') nav.hoja('hoja-peso')
+            else if (p.accion === 'medir') nav.ir('registrar', undefined, 'pro')
+            else if (p.accion === 'foto') nav.ir('fotos', undefined, 'pro')
+            else if (p.accion === 'pasos') nav.ir('pasos', undefined, 'pro')
             else void marcar(p.id)
           }}>
             <span className="box"><Ico n="check" b /></span>
@@ -163,13 +163,13 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
     return { meta: metas[0], logro, racha: racha(rutina, sesiones, hoy) }
   }, [rutina, hoy])
   const items = [
-    datos?.meta && { k: 'meta', ir: () => nav.ir('pro-obj', undefined, 'pro'), el: (
+    datos?.meta && { k: 'meta', ir: () => nav.ir('objetivos', undefined, 'pro'), el: (
       <div className="pd">
         <span className="lbl">{t('Próximo objetivo')}</span>
         <p className="rot-big">{datos.meta.titulo}</p>
         {datos.meta.fecha && <p className="small muted mt4">{t('Para el {fecha}', { fecha: fechaCorta(datos.meta.fecha) })}</p>}
       </div>) },
-    datos?.logro && { k: 'logro', ir: () => nav.ir('pro-fuerza', undefined, 'pro'), el: (
+    datos?.logro && { k: 'logro', ir: () => nav.ir('fuerza', undefined, 'pro'), el: (
       <div className="ach" style={{ border: 0, borderRadius: 10 }}>
         <span className="tro"><Ico n="trophy" b /></span>
         <span className="tx"><small className="au">{t('Último logro · {fecha}', { fecha: fechaCorta(datos.logro.fecha) })}</small><b>{t('Récord en {nombre}', { nombre: datos.logro.nombre.toLowerCase() })}</b><small className="mono">{kg(datos.logro.peso)} kg × {datos.logro.reps}</small></span>
@@ -192,7 +192,7 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
   if (!items.length) return null
   const it = items[i % items.length]!
   return (
-    <Seccion titulo={t('Tu progreso')} accion={t('Ver todo')} onAccion={() => nav.ir('pro-fuerza', undefined, 'pro')}>
+    <Seccion titulo={t('Tu progreso')} accion={t('Ver todo')} onAccion={() => nav.ir('fuerza', undefined, 'pro')}>
       <div className="rot">
         <button className="card rot-it on" key={it.k} onClick={it.ir} style={{ textAlign: 'left' }}>{it.el}</button>
       </div>

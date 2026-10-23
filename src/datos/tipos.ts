@@ -10,6 +10,9 @@ export type Trabajo = 'sentado' | 'depie' | 'fisico'
 export type Zona = 'rodilla' | 'lumbar' | 'hombro' | 'muneca' | 'codo'
 export type Dia = 0 | 1 | 2 | 3 | 4 | 5 | 6 // 0 = lunes … 6 = domingo
 
+/** Fila leída de la base: el id es opcional al crearla, pero lo guardado siempre lo tiene. */
+export type Guardado<T extends { id?: number }> = T & { id: number }
+
 export type Perfil = {
   id: 'yo'
   creado: string

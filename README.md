@@ -54,6 +54,8 @@ La firma sale de `android/keystore.properties`, que no está en el repositorio. 
 | `i18n/` | Idiomas de la app: `t()` y los diccionarios de catalán e inglés. |
 | `landing/`, `demo/` | La landing y la demo, sin React, con sus propios textos e idiomas. |
 
+Lo leído de la base sale como `Guardado<T>` (`src/datos/tipos.ts`): el `id` que Dexie tipa opcional ya está, así que las rutas llevan `id: number` sin comprobarlo otra vez.
+
 Dos reglas que comprueba `tests/capas.test.ts`: las pantallas, `ui/` y `app/` nunca importan `datos/db` (leen con `datos/consultas` o `datos/hooks` y escriben con `datos/acciones`), y no preguntan en qué plataforma están: preguntan qué se puede hacer con `capacidades()`.
 
 Los códigos de los comentarios (`// INI-01`, `// SES-04`, «§5 del diseño»…) son los de los documentos de diseño originales, que no están en el repositorio.
@@ -61,8 +63,8 @@ Los códigos de los comentarios (`// INI-01`, `// SES-04`, «§5 del diseño»�
 ### Recetas
 
 **Una pantalla nueva**
-1. Su código y sus datos en `Rutas` (`src/app/nav.tsx`). Las hojas inferiores empiezan por `sheet-`.
-2. Su componente en `PANTALLAS` u `HOJAS` de `src/app/rutas.tsx`, cargado con `perezosa(...)`.
+1. Su código y sus datos en `Rutas` (`src/app/nav.tsx`). El código se llama como el componente (`'fin-entreno'` → `FinEntreno`) y el de las hojas inferiores empieza por `hoja-` (`'hoja-empezar'` → `HojaEmpezar`). Las pestañas (`ini`, `rut`, `com`, `pro`, `per`) son otra cosa: `RAIZ` dice qué pantalla abre cada una.
+2. Su componente en `PANTALLAS` u `HOJAS` de `src/app/rutas.tsx`, cargado con `perezosa(() => import(...))`.
 3. Su CSS en `src/ui/estilos/pantallas/<pestaña>.css` (o uno nuevo, importado en `src/main.tsx` en su sitio: el orden de la cascada importa).
 4. Sus textos con `t()` y sus traducciones en la zona de la pestaña (`src/i18n/{ca,en}/<zona>.ts`).
 
@@ -85,7 +87,9 @@ Los códigos de los comentarios (`// INI-01`, `// SES-04`, «§5 del diseño»�
 | `npm run e2e:landing` | La landing y la demo: el botón correcto según el navegador, idiomas, sin errores ni desbordes. |
 | `node scripts/e2e/seguridad.mjs` | La política de seguridad (CSP), la pantalla de rescate y copias de ataque. Necesita una copia de datos propia en `.cache/`. |
 
-Un escenario suelto: `node scripts/e2e/correr.mjs --build entreno` (los que contengan «entreno»).
+Un escenario suelto: `node scripts/e2e/correr.mjs --build entreno` (los que contengan «entreno»). `correr.mjs` arranca el servidor y el navegador y pasa los escenarios; cada zona tiene los suyos en `scripts/e2e/escenarios/` y lo que comparten (pulsar, ver, alta, leer la base…) está en `scripts/e2e/ayudantes.mjs`.
+
+Las unitarias de `dominio/` e `informe/` se llaman como el módulo que prueban (`tests/tendencias.test.ts` → `src/dominio/tendencias.ts`, `tests/informe-dia.test.ts` → `src/informe/calculo/dia.ts`); los datos de ejemplo del informe están en `tests/informe-ejemplo.ts`.
 
 ### Idiomas
 

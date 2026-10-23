@@ -3,12 +3,12 @@ import type { ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { recolocarSesion, SIN_DIA } from '../../datos/acciones/rutina'
 import { sugerenciasDia } from '../../datos/consultas'
-import type { DiaRutina, Rutina, Sesion } from '../../datos/tipos'
+import type { DiaRutina, Guardado, Rutina, Sesion } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { indiceActual } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, fechaCorta, formatoHora } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
-import type { tarjetaHoy } from '../../dominio/semana'
+import type { Tarjeta } from '../../dominio/semana'
 import { capital, kg } from '../../dominio/formato'
 import type { Sugerencia } from '../../dominio/progresion'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -21,14 +21,14 @@ import { idioma, t } from '../../i18n'
 /** La palabra que da el movimiento: «Curl» de «Curl de Bíceps…»; en inglés va al final («Dumbbell Bicep Curl»). */
 const palabraClave = (nombre?: string) => String(idioma() === 'en' ? nombre?.split(' ').at(-1) : nombre?.split(' ')[0])
 
-export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: ReturnType<typeof tarjetaHoy>; rutina: Rutina | null; enCurso: Sesion | null; gym?: string }) {
+export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: Tarjeta<Guardado<Sesion>>; rutina: Rutina | null; enCurso: Sesion | null; gym?: string }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
   const g = useGimnasio()
   const dia = tar.tipo === 'hoy' || tar.tipo === 'opcional' ? tar.dia : null
   const sug = useLiveQuery(() => (dia ? sugerenciasDia(dia, g) : Promise.resolve(undefined)), [dia, g])
-  const empezar = (version: 'normal' | 'corta') => dia && nav.hoja('sheet-ses1', { letra: dia.letra, version })
+  const empezar = (version: 'normal' | 'corta') => dia && nav.hoja('hoja-empezar', { letra: dia.letra, version })
 
   if (tar.tipo === 'curso' && enCurso) {
     const idx = indiceActual(enCurso)
@@ -50,7 +50,7 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: ReturnType<type
         <span className="empty-ic"><Ico n="clipboard-text" /></span>
         <h3 className="h3">{t('Aún no tienes rutina')}</h3>
         <p className="muted">{t('La creamos con tus días, tu tiempo y tu gimnasio. Tarda 10 segundos.')}</p>
-        <button className="btn mt12" onClick={() => nav.ir('rut-gen', undefined, 'rut')}><Ico n="magic-wand" b />{t('Crear mi rutina')}</button>
+        <button className="btn mt12" onClick={() => nav.ir('generar-rutina', undefined, 'rut')}><Ico n="magic-wand" b />{t('Crear mi rutina')}</button>
       </div></div>
     )
   }
@@ -120,7 +120,7 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: ReturnType<type
           <div className="grow"><h3 className="h3">{t('Entreno de hoy hecho.')}</h3><p className="muted">{t('{nombre} · {n} ejercicios', { nombre: tar.sesion.nombre, n: tar.sesion.ejercicios.filter(e => e.estado === 'hecho').length })}</p></div>
         </div>
         {tar.proximo?.dia && <div className="spec mt12"><p><span>{t('Próximo')}</span><b>{capital(DIAS[diaSemana(deISO(tar.proximo.fecha))]!)} · {nombreEntreno(tar.proximo.dia)}</b></p></div>}
-        <button className="btn gry sm mt12" onClick={() => nav.ir('pro-entreno', { id: tar.sesion.id }, 'pro')}>{t('Ver el entreno')}</button>
+        <button className="btn gry sm mt12" onClick={() => nav.ir('detalle-entreno', { id: tar.sesion.id }, 'pro')}>{t('Ver el entreno')}</button>
       </div></div>
     )
   }

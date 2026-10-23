@@ -14,7 +14,7 @@ import { filas, minutosDia } from '../../dominio/rutina'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t } from '../../i18n'
 
-export function DetalleDia({ ruta }: { ruta: Ruta<'rut-dia'> }) {
+export function DetalleDia({ ruta }: { ruta: Ruta<'detalle-dia'> }) {
   const nav = useNav()
   const r = useRutina()
   const g = useGimnasio()
@@ -26,7 +26,7 @@ export function DetalleDia({ ruta }: { ruta: Ruta<'rut-dia'> }) {
   return (
     <Pantalla>
       <Cab atras crumb={t('Mi plan · {dia}', { dia: tituloDia(dia) })} titulo={dia.opcional ? t('{dia} · opcional', { dia: tituloDia(dia) }) : tituloDia(dia)} sub={`${dia.dia != null ? t('{nombre} · a las {hora}', { nombre: nombreEntreno(dia), hora: formatoHora(perfil.horaEntreno) }) : t('Cualquier día')}${g ? ` · ${g.nombre}` : ''}`}
-        derecha={<button className="lnk ux-rut-edit" onClick={() => nav.ir('rut-edit', { letra: dia.letra })}><Ico n="pencil-simple" />{t('Editar')}</button>} />
+        derecha={<button className="lnk ux-rut-edit" onClick={() => nav.ir('editar-plan', { letra: dia.letra })}><Ico n="pencil-simple" />{t('Editar')}</button>} />
       <div className="pg">
         <div className="strip">
           <p><span className="lbl">{t('Dura')}</span><b>~{minutosDia(dia)} min</b></p>
@@ -48,7 +48,7 @@ export function DetalleDia({ ruta }: { ruta: Ruta<'rut-dia'> }) {
           return <div key={f.uid} className="mt8"><Tarjeta b={f} etiqueta={String(++n)} s={sug?.get(f.ejercicio)} n={n} /></div>
         })}
         <div className="dock">
-          <button className="btn xl" onClick={() => nav.hoja('sheet-ses1', { letra: dia.letra })}><Ico n="play" b />{t('Empezar este entreno')}</button>
+          <button className="btn xl" onClick={() => nav.hoja('hoja-empezar', { letra: dia.letra })}><Ico n="play" b />{t('Empezar este entreno')}</button>
         </div>
       </div>
     </Pantalla>
@@ -59,7 +59,7 @@ function Tarjeta({ b, etiqueta, s, sigue }: { b: Bloque; etiqueta: string; s?: S
   const nav = useNav()
   const e = ejercicio(b.ejercicio)
   return (
-    <button className={cx('exc card', b.fueraEnCorta && 'cutc')} onClick={() => nav.ir('rut-ficha', { id: b.ejercicio })}>
+    <button className={cx('exc card', b.fueraEnCorta && 'cutc')} onClick={() => nav.ir('ficha', { id: b.ejercicio })}>
       <span className="exc-h">
         <Th ej={e} size="m" />
         <span className="tx">

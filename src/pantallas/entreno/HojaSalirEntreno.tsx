@@ -18,9 +18,9 @@ export function HojaSalirEntreno() {
   const libre = s.letra === 'L'
   const hayAlgo = s.ejercicios.some(e => e.series.some(x => x.hecha))
   const acabar = unaVez(async () => {
-    if (hayAlgo) { nav.hoja(null); nav.completa('ses-fin', { id: s.id }); return }
+    if (hayAlgo) { nav.hoja(null); nav.completa('fin-entreno', { id: s.id }); return }
     // Nada hecho: no hay nada que guardar. Se cierra y se sale.
-    await descartarEntreno(s.id!)
+    await descartarEntreno(s.id)
     nav.hoja(null)
     nav.completa(null)
     aviso(libre ? t('Entreno libre cerrado') : t('Entreno cerrado sin guardar: no habías hecho ninguna serie'))

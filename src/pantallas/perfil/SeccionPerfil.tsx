@@ -24,7 +24,7 @@ const AFECTAN_RUTINA: ClaveSeccion[] = ['horario', 'objetivos', 'preferencias', 
 
 const alternar = <T,>(lista: T[], v: T): T[] => (lista.includes(v) ? lista.filter(x => x !== v) : [...lista, v])
 
-export function SeccionPerfil({ ruta }: { ruta: Ruta<'per-sec'> }) {
+export function SeccionPerfil({ ruta }: { ruta: Ruta<'seccion-perfil'> }) {
   const nav = useNav()
   const cargado = usePerfilCargado()
   const s = ruta.d.s
@@ -45,8 +45,8 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta<'per-sec'> }) {
   const regenerar = () => {
     // Si venimos de «Generar rutina», volvemos a ella en lugar de abrir otra.
     const pila = nav.estado.pilas[nav.estado.pestana]
-    if (pila[pila.length - 2]?.p === 'rut-gen') nav.atras()
-    else nav.ir('rut-gen', undefined, 'rut')
+    if (pila[pila.length - 2]?.p === 'generar-rutina') nav.atras()
+    else nav.ir('generar-rutina', undefined, 'rut')
   }
 
   const cuerpo: Record<ClaveSeccion, ReactNode> = {
@@ -133,8 +133,8 @@ function Cuerpo() {
     const bascula = todas.find(m => m.bascula && Object.keys(m.bascula).length > 0)
     return { hay: todas.length > 0, peso, per, bascula }
   }, [])
-  const registrar = () => nav.ir('pro-reg', undefined, 'pro')
-  const evolucion = () => nav.ir('pro-cuerpo', undefined, 'pro')
+  const registrar = () => nav.ir('registrar', undefined, 'pro')
+  const evolucion = () => nav.ir('cuerpo', undefined, 'pro')
 
   if (!datos) return null
   if (!datos.hay) return (
@@ -231,7 +231,7 @@ function Objetivos({ p, guardar }: Props) {
 
       <div className="sec">
         <div className="list">
-          <button className="it" onClick={() => nav.ir('pro-obj', undefined, 'pro')}>
+          <button className="it" onClick={() => nav.ir('objetivos', undefined, 'pro')}>
             <span className="ico"><Ico n="flag-checkered" /></span>
             <span className="tx"><b>{t('Metas con fecha')}</b><small>{activas ? t('{n} en marcha', { n: activas }) : t('Cintura, un peso en banca, dominadas…')}</small></span>
             <Ico n="caret-right" className="car" />
@@ -256,7 +256,7 @@ function Salud({ p, guardar }: Props) {
         <label><span className="lbl fl">{t('Condiciones médicas o indicaciones del médico')}</span><Texto area valor={p.condiciones} onGuardar={v => guardar({ condiciones: v })} placeholder={t('Opcional')} /></label>
       </div>
       <div className="list mt16">
-        <button className="it" onClick={() => nav.ir('rut-ej', { filtro: 'evitados' }, 'rut')}>
+        <button className="it" onClick={() => nav.ir('biblioteca', { filtro: 'evitados' }, 'rut')}>
           <span className="ico"><Ico n="prohibit" /></span>
           <span className="tx"><b>{t('Ejercicios que evitas')}</b><small>{evitados ? tn(evitados, '{n} marcado como que duele o no gusta', '{n} marcados como que duele o no gusta') : t('Los que te duelen o no te gustan')}</small></span>
           <Ico n="caret-right" className="car" />

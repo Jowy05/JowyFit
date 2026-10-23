@@ -76,7 +76,7 @@ export function Energia() {
 
         {manual
           ? <button className="btn ln sm mt16" onClick={async () => { await guardarAjustes({ kcalManual: null, proteinaManual: null }); aviso(t('Vuelve a ser automático')) }}>{t('Volver a automático')}</button>
-          : <button className="btn ln sm mt16" onClick={() => nav.ir('aju', { seccion: 'comida' })}>{t('Poner mi objetivo a mano')}</button>}
+          : <button className="btn ln sm mt16" onClick={() => nav.ir('ajustes', { seccion: 'comida' })}>{t('Poner mi objetivo a mano')}</button>}
       </div>
     </Pantalla>
   )

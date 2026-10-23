@@ -31,7 +31,7 @@ export function Plantillas() {
   useEffect(() => {
     if (hayPendientes && navigator.onLine) void buscarPendientes().then(n => { if (n) aviso(tn(n, 'Encontrado 1 producto pendiente', 'Encontrados {n} productos pendientes')) })
   }, [hayPendientes, aviso])
-  const nueva = () => nav.hoja('sheet-plant', {})
+  const nueva = () => nav.hoja('hoja-plantilla', {})
   // Evita apuntarlo dos veces con un doble toque.
   const unaVez = useUnaVez()
   const apuntarHoy = unaVez(async (p: Plantilla, r: Racion) => {
@@ -54,13 +54,13 @@ export function Plantillas() {
         </span>
         <Ico n="plus" b className="car" />
       </button>
-      <button className="ib ux-com-lapiz" aria-label={t('Editar {nombre}', { nombre: t(p.nombre) })} onClick={() => nav.hoja('sheet-plant', { id: p.id })}><Ico n="pencil-simple" /></button>
+      <button className="ib ux-com-lapiz" aria-label={t('Editar {nombre}', { nombre: t(p.nombre) })} onClick={() => nav.hoja('hoja-plantilla', { id: p.id })}><Ico n="pencil-simple" /></button>
     </div>
   )
 
   return (
     <Pantalla>
-      <CabComida vista="com-plant" crumb={t('Toca para apuntar hoy')} />
+      <CabComida vista="plantillas" crumb={t('Toca para apuntar hoy')} />
       <div className="pg">
         {!comidas.length && <Vacio icono="bowl-food" titulo={t('Aún no tienes comidas guardadas')} texto={t('Crea lo que comes a menudo y lo apuntarás con un toque.')} accion={t('Crear comida nueva')} onAccion={nueva} />}
         {comidas.length > 0 && (
@@ -81,7 +81,7 @@ export function Plantillas() {
         {!escaneados.length && (
           <p className="small muted">
             {tr('Aún no has escaneado nada. Con {boton} el código de barras, el producto se guarda aquí.', {
-              boton: <button className="lnk ux-com-inl" onClick={() => nav.ir('com-scan')}><Ico n="barcode" /> {t('Escanear')}</button>,
+              boton: <button className="lnk ux-com-inl" onClick={() => nav.ir('escaner')}><Ico n="barcode" /> {t('Escanear')}</button>,
             })}
           </p>
         )}
@@ -90,7 +90,7 @@ export function Plantillas() {
             {escaneados.slice(0, MAX_ESCANEADOS).map(p => {
               const v = porRacion(p)
               return (
-                <button key={p.codigo} className="it" onClick={() => nav.ir('com-prod', { codigo: p.codigo })}>
+                <button key={p.codigo} className="it" onClick={() => nav.ir('producto', { codigo: p.codigo })}>
                   <Mini nombre={p.nombre} imagen={p.imagen} />
                   <span className="tx">
                     <b>{recortar(p.nombre)}</b>
@@ -103,7 +103,7 @@ export function Plantillas() {
           </div>
         )}
         {escaneados.length > MAX_ESCANEADOS && (
-          <button className="lnk mt12" onClick={() => nav.ir('com-guard')}>{t('Ver los {n} escaneados y buscar', { n: escaneados.length })} <Ico n="caret-right" /></button>
+          <button className="lnk mt12" onClick={() => nav.ir('guardados')}>{t('Ver los {n} escaneados y buscar', { n: escaneados.length })} <Ico n="caret-right" /></button>
         )}
 
         <button className="btn mt20" onClick={nueva}><Ico n="bowl-food" b />{t('Crear comida nueva')}</button>

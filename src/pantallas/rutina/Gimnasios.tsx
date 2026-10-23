@@ -22,16 +22,16 @@ export function Gimnasios() {
   const unaVez = useUnaVez()
   const nuevo = unaVez(async () => {
     const id = await crearGimnasio(t('Gimnasio {n}', { n: lista.length + 1 }))
-    nav.ir('rut-gym-edit', { id })
+    nav.ir('editor-gimnasio', { id })
   })
   const activar = async (id: number, nombre: string) => {
     await guardarAjustes({ gimnasioActivo: id })
     aviso(t('Ahora usas «{nombre}»', { nombre }))
-    if (r) nav.hoja('sheet-confirmar', { titulo: t('¿Rehacer la rutina para este gimnasio?'), texto: t('Así solo tendrás ejercicios que se pueden hacer aquí. Primero verás la rutina nueva; tu historial se conserva.'), si: t('Ver la rutina nueva'), accion: 'regenerar' })
+    if (r) nav.hoja('hoja-confirmar', { titulo: t('¿Rehacer la rutina para este gimnasio?'), texto: t('Así solo tendrás ejercicios que se pueden hacer aquí. Primero verás la rutina nueva; tu historial se conserva.'), si: t('Ver la rutina nueva'), accion: 'regenerar' })
   }
   return (
     <Pantalla>
-      <CabRutina actual="rut-gym" crumb={t('Dónde entrenas')} />
+      <CabRutina actual="gimnasios" crumb={t('Dónde entrenas')} />
       <div className="pg">
         <p className="small muted ux-rut-intro">{t('Aquí apuntas qué máquinas hay donde entrenas. La rutina solo usa lo que tienes.')}</p>
         {lista.length === 0 && <Vacio icono="map-pin" titulo={t('Aún no tienes gimnasio')} texto={t('Márcalo una vez y la rutina usará solo sus máquinas.')} accion={<><Ico n="plus" b />{t('Crear mi gimnasio')}</>} onAccion={() => void nuevo()} />}
@@ -51,11 +51,11 @@ export function Gimnasios() {
                 </div>
                 {g.notas && <p className="mynote"><Ico n="note-pencil" />«{g.notas}»</p>}
                 {act ? (
-                  <button className="btn gry sm mt12" onClick={() => nav.ir('rut-gym-edit', { id: g.id })}><Ico n="pencil-simple" />{t('Editar gimnasio')}</button>
+                  <button className="btn gry sm mt12" onClick={() => nav.ir('editor-gimnasio', { id: g.id })}><Ico n="pencil-simple" />{t('Editar gimnasio')}</button>
                 ) : (
                   <>
                     <div className="btns mt12">
-                      <button className="btn ln sm" onClick={() => nav.ir('rut-gym-edit', { id: g.id })}><Ico n="pencil-simple" />{t('Editar')}</button>
+                      <button className="btn ln sm" onClick={() => nav.ir('editor-gimnasio', { id: g.id })}><Ico n="pencil-simple" />{t('Editar')}</button>
                       <button className="btn gry sm" onClick={() => void activar(g.id!, g.nombre)}><Ico n="map-pin" />{t('Usar este gimnasio')}</button>
                     </div>
                     <p className="small muted mt8">{t('Si hoy entrenas aquí, tócalo: la rutina y los pesos se ajustan a sus máquinas.')}</p>

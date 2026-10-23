@@ -1,4 +1,5 @@
 /* Mecánica común: pantallas, barra inferior, hojas, avisos. Adaptado del mockup a pantalla completa. */
+/* .app, .tabbar y .minibar salen aquí y en componentes.css: aquí dónde van y cuándo se ven; allí su aspecto. */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%}
 :root{--sb-h:env(safe-area-inset-top,0px);--sa-b:env(safe-area-inset-bottom,0px)}

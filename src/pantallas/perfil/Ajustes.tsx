@@ -26,7 +26,7 @@ import { tr } from '../../i18n/jsx'
 
 type Noti = TAjustes['noti']
 
-export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
+export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const a = useAjustes()
@@ -93,7 +93,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
     else aviso(t('Actívalas en los ajustes del móvil'))
   }
 
-  const borrarTodo = () => nav.hoja('sheet-confirmar', { titulo: t('¿Borrar todos los datos?'), texto: t('Se borra todo lo que hay en este móvil. Haz antes una copia.'), si: t('Borrar todo'), peligro: true, accion: 'borrar-todo' })
+  const borrarTodo = () => nav.hoja('hoja-confirmar', { titulo: t('¿Borrar todos los datos?'), texto: t('Se borra todo lo que hay en este móvil. Haz antes una copia.'), si: t('Borrar todo'), peligro: true, accion: 'borrar-todo' })
 
   const pesarseTxt = p.diasPesaje.length ? t('{dias} a las', { dias: diasTxt(p.diasPesaje) }) : t('A las')
 
@@ -162,7 +162,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
         {/* Informe en PDF arriba, junto a la copia: aquí se busca para enseñar o guardar los datos. */}
         <p className="grp-t">{t('Informe en PDF')}</p>
         <div className="list" data-tour="informe">
-          <button className="it" onClick={() => nav.hoja('sheet-informe')}>
+          <button className="it" onClick={() => nav.hoja('hoja-informe')}>
             <span className="ico"><Ico n="file-pdf" /></span>
             <span className="tx"><b>{t('Informe en PDF')}</b><small>{t('Tus entrenos, tu comida y tu cuerpo en un PDF para guardar o enseñar')}</small></span>
             <Ico n="caret-right" className="car" />
@@ -232,7 +232,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
 
             <p className="grp-t">{t('Gimnasios y permisos')}</p>
             <div className="list">
-              <button className="it" onClick={() => nav.ir('rut-gym', undefined, 'rut')}>
+              <button className="it" onClick={() => nav.ir('gimnasios', undefined, 'rut')}>
                 <span className="ico"><Ico n="map-pin" /></span>
                 <span className="tx"><b>{t('Gimnasios')}</b><small>{gym ? t('{nombre} · activo', { nombre: gym.nombre }) : t('Ninguno todavía')}</small></span>
                 <Ico n="caret-right" className="car" />

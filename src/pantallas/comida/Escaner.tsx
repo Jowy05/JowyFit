@@ -21,7 +21,7 @@ type Estado =
   | { e: 'offline'; codigo: string }
   | { e: 'sincamara'; motivo: string }
 
-export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
+export function Escaner({ ruta }: { ruta: Ruta<'escaner'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const fecha = ruta.d?.fecha ?? hoyISO()
@@ -93,7 +93,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
   const salirPendiente = unaVez(async (codigo: string, comoNota: boolean) => {
     await guardarPendiente(codigo)
     nav.atras()
-    if (comoNota) nav.hoja('sheet-add', { fecha, franja, nota: true })
+    if (comoNota) nav.hoja('hoja-anadir', { fecha, franja, nota: true })
     else aviso(t('Guardado para buscarlo luego'))
   })
   const guardarPendiente = async (codigo: string) => {
@@ -161,7 +161,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
               <LineaMacros m={v} className="mt8" />
               <button className="btn mt12" onClick={() => void anadir(estado.p)}><Ico n="plus" b />{t('Añadir')}</button>
               <div className="btns mt8">
-                <button className="btn gry sm" onClick={() => nav.reemplazar('com-prod', { codigo: estado.p.codigo, fecha, franja })}>{t('Ver producto')}</button>
+                <button className="btn gry sm" onClick={() => nav.reemplazar('producto', { codigo: estado.p.codigo, fecha, franja })}>{t('Ver producto')}</button>
                 <button className="btn ln sm" onClick={otraVez}><Ico n="barcode" /> {t('Escanear otro')}</button>
               </div>
               <p className="small muted mt8">{t('En «Ver producto» puedes elegir otra cantidad.')}</p>

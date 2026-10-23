@@ -7,7 +7,7 @@ type PasoTutorial = {
   id: string
   /** Pestaña que se pone (su pantalla de entrada). Sin pestaña ni ancla, la tarjeta sale en el centro. */
   pestana?: Pestana
-  /** Pantalla dentro de la pestaña (por ejemplo «aju», Ajustes). */
+  /** Pantalla dentro de la pestaña (por ejemplo «ajustes»). */
   ruta?: SinDatos<CodigoPantalla>
   /** Lo que se señala; con varios, el primero que se vea. Si no hay ninguno (nada que enseñar), el paso se salta. */
   sel?: string | string[]
@@ -51,19 +51,19 @@ export function pasosTutorial({ apple, android, instalada }: PlataformaTutorial)
     { id: 'proteina', pestana: 'com', sel: ancla('proteina'), titulo: t('La proteína del día'), texto: t('Lo que más cuenta para ganar músculo. La barra te dice cuánto te falta.') },
     { id: 'progreso', pestana: 'pro', sel: ancla('progreso'), titulo: t('Cómo vas'), texto: t('Tu semana, tus récords de fuerza, tu cuerpo y tus fotos. El domingo te dice si vas bien.') },
   )
-  if (android) p.push({ id: 'reloj', pestana: 'per', ruta: 'aju', sel: ancla('reloj'), titulo: t('Reloj y báscula'), texto: t('Conecta Health Connect y los pasos, el peso y la grasa de tu báscula llegan solos.') })
-  if (apple && !instalada) p.push({ id: 'instalar', pestana: 'per', ruta: 'aju', sel: ancla('instalar'), titulo: t('Ponla en tu pantalla de inicio'), texto: t('Así se abre como una app, a pantalla completa y sin internet. Aquí tienes los pasos.') })
+  if (android) p.push({ id: 'reloj', pestana: 'per', ruta: 'ajustes', sel: ancla('reloj'), titulo: t('Reloj y báscula'), texto: t('Conecta Health Connect y los pasos, el peso y la grasa de tu báscula llegan solos.') })
+  if (apple && !instalada) p.push({ id: 'instalar', pestana: 'per', ruta: 'ajustes', sel: ancla('instalar'), titulo: t('Ponla en tu pantalla de inicio'), texto: t('Así se abre como una app, a pantalla completa y sin internet. Aquí tienes los pasos.') })
   p.push(
     {
-      id: 'copia', pestana: 'per', ruta: 'aju', sel: ancla('copia'), titulo: t('Copias de seguridad'),
+      id: 'copia', pestana: 'per', ruta: 'ajustes', sel: ancla('copia'), titulo: t('Copias de seguridad'),
       texto: apple
         ? t('Tus datos solo están en el móvil. Haz copias: se guardan con el menú Compartir, en Archivos o donde quieras.')
         : android
           ? t('Tus datos solo están en el móvil. La app hace una copia sola cada semana en Documentos/JowyFit.')
           : t('Tus datos solo están en este navegador. Haz una copia de vez en cuando.'),
     },
-    { id: 'informe', pestana: 'per', ruta: 'aju', sel: ancla('informe'), titulo: t('Tu informe en PDF'), texto: t('Tus entrenos, tu comida y tu cuerpo en un PDF, para guardarlo o enseñarlo.') },
-    { id: 'fin', pestana: 'per', ruta: 'aju', sel: ancla('tutorial'), titulo: t('¡Listo! A entrenar'), texto: t('Si algún día lo necesitas, este paseo está aquí, en Ajustes.') },
+    { id: 'informe', pestana: 'per', ruta: 'ajustes', sel: ancla('informe'), titulo: t('Tu informe en PDF'), texto: t('Tus entrenos, tu comida y tu cuerpo en un PDF, para guardarlo o enseñarlo.') },
+    { id: 'fin', pestana: 'per', ruta: 'ajustes', sel: ancla('tutorial'), titulo: t('¡Listo! A entrenar'), texto: t('Si algún día lo necesitas, este paseo está aquí, en Ajustes.') },
   )
   return p
 }

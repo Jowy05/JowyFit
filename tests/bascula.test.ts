@@ -62,3 +62,33 @@ describe('báscula por Health Connect', () => {
     expect(l[0]!.ids).toEqual(['a', 'b'])
   })
 })
+
+describe('báscula: casos raros', () => {
+  const iso = (s: string) => new Date(s).toISOString()
+  it('fallaba: dos grasas cerca de un peso se emparejaban por orden de llegada, no con la más cercana', () => {
+    const l = juntarBascula([{ fecha: iso('2026-10-13T08:00:00'), valor: 79 }], [
+      { fecha: iso('2026-10-13T08:05:00'), valor: 25, id: 'lejos' },
+      { fecha: iso('2026-10-13T08:00:30'), valor: 24, id: 'cerca' },
+    ])
+    expect(l[0]).toMatchObject({ pesoKg: 79, grasaPct: 24, ids: ['cerca'] })
+    expect(l.find(x => x.ids.includes('lejos'))!.pesoKg).toBeUndefined()
+  })
+  it('dos apps con la misma pesada: una sola, con la grasa de la que la tenga', () => {
+    const l = juntarBascula([{ fecha: iso('2026-10-13T08:00:00'), valor: 79, id: 'a' }, { fecha: iso('2026-10-13T08:02:00'), valor: 79.05, id: 'b' }], [{ fecha: iso('2026-10-13T08:02:10'), valor: 24, id: 'g' }])
+    expect(l).toHaveLength(1)
+    expect(l[0]!.ids.sort()).toEqual(['a', 'b', 'g'])
+    expect(l[0]!.grasaPct).toBe(24)
+  })
+  it('solo grasa ya apuntada ese día: no se trae otra vez; los ids ignorados tampoco', () => {
+    const l = [{ fecha: iso('2026-10-13T08:00:00'), grasaPct: 24.2, ids: ['g1'] }, { fecha: iso('2026-10-13T09:00:00'), grasaPct: 30, ids: ['g2'] }]
+    const ms = [{ fecha: '2026-10-13T07:00', origen: 'casa' as const, bascula: { grasaPct: 24.25 } }]
+    expect(lecturasNuevas(l, ms).map(x => x.ids[0])).toEqual(['g2'])
+    expect(lecturasNuevas(l, ms, ['g2'])).toEqual([])
+  })
+  it('nombre de la app: conocidas, paquetes y vacío', () => {
+    expect(nombreFuente()).toBe('tu báscula')
+    expect(nombreFuente('com.garmin.android.apps.connectmobile')).toBe('Garmin Connect')
+    expect(nombreFuente('com.ejemplo.basculita')).toBe('Basculita')
+    expect(nombreFuente('MiBascula')).toBe('MiBascula')
+  })
+})

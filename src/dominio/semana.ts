@@ -4,12 +4,13 @@ import { aISO, deISO, diaSemana, semanaDe } from './fechas'
 
 export type Recolocada = { fecha: string; letra: string; desde: string }
 
-export type EstadoDia = {
+/** `S`: la sesión tal como llega (leída de la base, con su id; o suelta, en las pruebas). */
+export type EstadoDia<S extends Sesion = Sesion> = {
   fecha: string
   estado: 'hecho' | 'plan' | 'perdido' | 'opcional' | 'descanso' | 'movido'
   hoy: boolean
   dia?: DiaRutina
-  sesion?: Sesion
+  sesion?: S
 }
 
 function planDe(r: Rutina | null | undefined, fecha: string, recolocadas: Recolocada[]): { dia?: DiaRutina; opcional: boolean } {
@@ -23,7 +24,7 @@ function planDe(r: Rutina | null | undefined, fecha: string, recolocadas: Recolo
   return opc ? { dia: opc, opcional: true } : { opcional: false }
 }
 
-export function estadoSemana(r: Rutina | null | undefined, sesiones: Sesion[], hoy: string, recolocadas: Recolocada[] = []): EstadoDia[] {
+export function estadoSemana<S extends Sesion>(r: Rutina | null | undefined, sesiones: S[], hoy: string, recolocadas: Recolocada[] = []): EstadoDia<S>[] {
   return semanaDe(hoy).map(fecha => {
     const hecha = sesiones.find(s => s.fecha === fecha && s.estado === 'hecha')
     const { dia, opcional } = planDe(r, fecha, recolocadas)
@@ -41,17 +42,17 @@ export function estadoSemana(r: Rutina | null | undefined, sesiones: Sesion[], h
   })
 }
 
-type Tarjeta =
+export type Tarjeta<S extends Sesion = Sesion> =
   | { tipo: 'curso' }
   | { tipo: 'hoy'; dia: DiaRutina }
-  | { tipo: 'hecho'; sesion: Sesion; proximo?: EstadoDia }
+  | { tipo: 'hecho'; sesion: S; proximo?: EstadoDia<S> }
   | { tipo: 'opcional'; dia: DiaRutina }
-  | { tipo: 'perdida'; perdido: EstadoDia; destino: string }
-  | { tipo: 'descanso'; proximo?: EstadoDia }
+  | { tipo: 'perdida'; perdido: EstadoDia<S>; destino: string }
+  | { tipo: 'descanso'; proximo?: EstadoDia<S> }
   | { tipo: 'sin' }
 
 /** Qué tarjeta «Hoy te toca» mostrar. */
-export function tarjetaHoy(r: Rutina | null | undefined, semana: EstadoDia[], hoy: string, enCurso: boolean, perdidaAlSabado: boolean, proximaSemana?: EstadoDia): Tarjeta {
+export function tarjetaHoy<S extends Sesion>(r: Rutina | null | undefined, semana: EstadoDia<S>[], hoy: string, enCurso: boolean, perdidaAlSabado: boolean, proximaSemana?: EstadoDia<S>): Tarjeta<S> {
   if (enCurso) return { tipo: 'curso' }
   if (!r) return { tipo: 'sin' }
   const h = semana.find(d => d.fecha === hoy)

@@ -1,6 +1,6 @@
 // Escrituras del cuerpo: mediciones (también las de Health Connect), pasos, fotos y metas.
 import { db } from '../db'
-import type { Foto, Medicion, Meta } from '../tipos'
+import type { Foto, Guardado, Medicion, Meta } from '../tipos'
 import { guardarAjustes } from '../repos'
 import type { grasaTardia } from '../../dominio/bascula'
 import { PASOS_POR_KM } from '../../dominio/tendencias'
@@ -84,7 +84,7 @@ export async function guardarMeta(m: Meta) {
 }
 
 /** Borra la meta y devuelve cómo deshacerlo. */
-export async function borrarMeta(m: Meta & { id: number }): Promise<() => void> {
+export async function borrarMeta(m: Guardado<Meta>): Promise<() => void> {
   const copia = { ...m }
   await db.metas.delete(m.id)
   return () => { void db.metas.put(copia) }

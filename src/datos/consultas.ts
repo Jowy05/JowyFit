@@ -1,7 +1,7 @@
 // Lecturas de la base para las pantallas (que nunca leen db directamente): las de una tabla, arriba, y las que
 // combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
-import type { Comida, DiaRutina, DiaSuplementos, Foto, Gimnasio, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
+import type { Comida, DiaRutina, DiaSuplementos, Foto, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
 import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
@@ -17,13 +17,13 @@ import { t } from '../i18n'
 // ── De una tabla ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** Todas las mediciones, sin ordenar. */
-export const leerMediciones = (): Promise<Medicion[]> => db.mediciones.toArray()
+export const leerMediciones = (): Promise<Guardado<Medicion>[]> => db.mediciones.toArray()
 /** Todas las mediciones, de la más antigua a la más reciente. */
-export const medicionesPorFecha = (): Promise<Medicion[]> => db.mediciones.orderBy('fecha').toArray()
+export const medicionesPorFecha = (): Promise<Guardado<Medicion>[]> => db.mediciones.orderBy('fecha').toArray()
 
 /** Comidas apuntadas entre dos días (los dos incluidos). */
-export const comidasEntre = (desde: string, hasta: string): Promise<Comida[]> => db.comidas.where('fecha').between(desde, hasta, true, true).toArray()
-export const leerComida = (id: number): Promise<Comida | undefined> => db.comidas.get(id)
+export const comidasEntre = (desde: string, hasta: string): Promise<Guardado<Comida>[]> => db.comidas.where('fecha').between(desde, hasta, true, true).toArray()
+export const leerComida = (id: number): Promise<Guardado<Comida> | undefined> => db.comidas.get(id)
 export const contarComidas = (): Promise<number> => db.comidas.count()
 
 export const pasosDelDia = (fecha: string): Promise<PasosDia | undefined> => db.pasos.get(fecha)
@@ -31,45 +31,45 @@ export const pasosEntre = (desde: string, hasta: string): Promise<PasosDia[]> =>
 
 export const suplementosDelDia = (fecha: string): Promise<DiaSuplementos | undefined> => db.suplementos.get(fecha)
 
-export const leerSesion = (id: number): Promise<Sesion | undefined> => db.sesiones.get(id)
+export const leerSesion = (id: number): Promise<Guardado<Sesion> | undefined> => db.sesiones.get(id)
 /** Todas las sesiones (también las en curso y las canceladas). */
-export const leerSesiones = (): Promise<Sesion[]> => db.sesiones.toArray()
+export const leerSesiones = (): Promise<Guardado<Sesion>[]> => db.sesiones.toArray()
 /** Sesiones de unos días (los dos incluidos), en cualquier estado. */
-export const sesionesEntre = (desde: string, hasta: string): Promise<Sesion[]> => db.sesiones.where('fecha').between(desde, hasta, true, true).toArray()
+export const sesionesEntre = (desde: string, hasta: string): Promise<Guardado<Sesion>[]> => db.sesiones.where('fecha').between(desde, hasta, true, true).toArray()
 export const hayEntrenoHecho = async (): Promise<boolean> => !!(await db.sesiones.where('estado').equals('hecha').first())
 export const contarEntrenosHechos = (): Promise<number> => db.sesiones.where('estado').equals('hecha').count()
 
-export const leerMetas = (): Promise<Meta[]> => db.metas.toArray()
-export const leerMeta = (id: number): Promise<Meta | undefined> => db.metas.get(id)
-export const metasDeTipo = (tipo: Meta['tipo']): Promise<Meta[]> => db.metas.where('tipo').equals(tipo).toArray()
+export const leerMetas = (): Promise<Guardado<Meta>[]> => db.metas.toArray()
+export const leerMeta = (id: number): Promise<Guardado<Meta> | undefined> => db.metas.get(id)
+export const metasDeTipo = (tipo: Meta['tipo']): Promise<Guardado<Meta>[]> => db.metas.where('tipo').equals(tipo).toArray()
 
 /** Fotos de progreso, de la más antigua a la más reciente. */
-export const fotosPorFecha = (): Promise<Foto[]> => db.fotos.orderBy('fecha').toArray()
+export const fotosPorFecha = (): Promise<Guardado<Foto>[]> => db.fotos.orderBy('fecha').toArray()
 
 export const leerProductos = (): Promise<Producto[]> => db.productos.toArray()
 /** Productos escaneados, del último guardado al primero. */
 export const productosRecientes = (): Promise<Producto[]> => db.productos.orderBy('guardado').reverse().toArray()
 export const leerProducto = (codigo: string): Promise<Producto | undefined> => db.productos.get(codigo)
 
-export const leerPlantillas = (): Promise<Plantilla[]> => db.plantillas.toArray()
-export const leerPlantilla = (id: number): Promise<Plantilla | undefined> => db.plantillas.get(id)
+export const leerPlantillas = (): Promise<Guardado<Plantilla>[]> => db.plantillas.toArray()
+export const leerPlantilla = (id: number): Promise<Guardado<Plantilla> | undefined> => db.plantillas.get(id)
 /** ¿El producto ya está en Mis comidas? */
 export const productoEnMisComidas = async (codigo: string): Promise<boolean> => (await db.plantillas.filter(x => x.codigo === codigo).count()) > 0
 
-export const leerGimnasio = (id: number): Promise<Gimnasio | undefined> => db.gimnasios.get(id)
-export const leerRutina = (id: number): Promise<Rutina | undefined> => db.rutinas.get(id)
+export const leerGimnasio = (id: number): Promise<Guardado<Gimnasio> | undefined> => db.gimnasios.get(id)
+export const leerRutina = (id: number): Promise<Guardado<Rutina> | undefined> => db.rutinas.get(id)
 /** Ejercicios marcados como odiados o que duelen. */
 export const contarEvitados = (): Promise<number> => db.marcas.filter(m => !!m.odiado || !!m.duele).count()
 
 // ── Combinadas ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** Sesiones terminadas, de la más reciente a la más antigua. */
-export async function sesionesHechas(): Promise<Sesion[]> {
+export async function sesionesHechas(): Promise<Guardado<Sesion>[]> {
   return (await db.sesiones.where('estado').equals('hecha').toArray()).sort((a, b) => b.inicio - a.inicio)
 }
 
 /** Sesiones terminadas de una rutina (también los entrenos libres hechos con ella), de la más reciente a la más antigua. */
-export async function sesionesHechasDeRutina(rutinaId: number): Promise<Sesion[]> {
+export async function sesionesHechasDeRutina(rutinaId: number): Promise<Guardado<Sesion>[]> {
   return (await sesionesHechas()).filter(s => s.rutinaId === rutinaId)
 }
 
@@ -126,11 +126,11 @@ export async function sugerenciasDia(dia: DiaRutina, g?: Gimnasio | null): Promi
   return m
 }
 
-export async function comidasDe(fecha: string): Promise<Comida[]> {
+export async function comidasDe(fecha: string): Promise<Guardado<Comida>[]> {
   return (await db.comidas.where('fecha').equals(fecha).toArray()).sort((a, b) => String(a.hora).localeCompare(String(b.hora)))
 }
 
-export async function ultimaMedicion(campo: 'peso' | 'cintura' | 'cuello' | 'cadera' | 'bascula'): Promise<Medicion | undefined> {
+export async function ultimaMedicion(campo: 'peso' | 'cintura' | 'cuello' | 'cadera' | 'bascula'): Promise<Guardado<Medicion> | undefined> {
   const todas = (await db.mediciones.orderBy('fecha').reverse().toArray())
   return todas.find(m => campo === 'peso' ? m.pesoKg != null : campo === 'bascula' ? !!m.bascula && Object.keys(m.bascula).length > 0 : m.perimetros?.[campo] != null)
 }
@@ -203,7 +203,7 @@ export async function datosSemana(lunes: string, p: Perfil) {
 }
 
 /** El entreno ya hecho hoy, si lo hay. */
-export async function sesionDeHoy(): Promise<Sesion | undefined> {
+export async function sesionDeHoy(): Promise<Guardado<Sesion> | undefined> {
   const hoy = hoyISO()
   return (await db.sesiones.where('fecha').equals(hoy).toArray()).find(s => s.estado === 'hecha')
 }

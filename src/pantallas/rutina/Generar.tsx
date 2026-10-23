@@ -20,7 +20,7 @@ import { tr } from '../../i18n/jsx'
 const OBJETIVO = { recomposicion: tk('Perder grasa y ganar músculo'), perder: tk('Perder peso'), fuerza: tk('Ganar fuerza') }
 const GUSTOS = { maquinas: tk('Máquinas y poleas'), libre: tk('Peso libre'), mezcla: tk('Mezcla') }
 
-export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
+export function Generar({ ruta }: { ruta: Ruta<'generar-rutina'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
@@ -63,7 +63,7 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
     return true
   }
   const usar = unaVez(guardarPropuesta)
-  const ajustar = unaVez(async () => { if (await guardarPropuesta()) nav.ir('rut-edit', undefined, 'rut') })
+  const ajustar = unaVez(async () => { if (await guardarPropuesta()) nav.ir('editar-plan', undefined, 'rut') })
   const otra = () => {
     if (!propuesta) return
     setEvitar(new Set(propuesta.dias.flatMap(d => d.bloques.map(b => b.ejercicio))))
@@ -80,14 +80,14 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
         <div className="sec">
           <div className="sec-h"><h2><span className="stepn">1</span>{t('Tus datos')}</h2><span className="lbl">{t('Toca para cambiar')}</span></div>
           <div className="spec-box"><div className="spec ed">
-            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>{t('Días')}</span><b className="ux-rut-wrap">{capital(listaDias(perfil.diasFijos)) || '—'}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>{t('Día extra')}</span><b>{capital(listaDias(perfil.diasOpcionales)) || t('Ninguno')}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'horario' })}><span>{t('Tiempo')}</span><b>{t('{min} min · con prisa {corta}', { min: perfil.minutosNormal, corta: perfil.minutosCorta })}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('rut-gym')}><span>{t('Gimnasio')}</span><b>{g ? `${g.nombre} · ${g.material.length}` : t('Sin gimnasio')}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>{t('Objetivo')}</span><b>{t(OBJETIVO[perfil.objetivo])}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'objetivos' })}><span>{t('Reforzar')}</span><b>{perfil.zonasPrioridad.map(nombreZona).join(' · ') || t('Equilibrado')}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('per-sec', { s: 'preferencias' })}><span>{t('Gustos')}</span><b>{t(GUSTOS[perfil.preferencia])}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('rut-ej', { filtro: 'evitados' })}><span>{t('Evitar')}</span><b>{evitados.length ? tn(evitados.length, '{n} ejercicio', '{n} ejercicios') : t('Nada')}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'horario' })}><span>{t('Días')}</span><b className="ux-rut-wrap">{capital(listaDias(perfil.diasFijos)) || '—'}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'horario' })}><span>{t('Día extra')}</span><b>{capital(listaDias(perfil.diasOpcionales)) || t('Ninguno')}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'horario' })}><span>{t('Tiempo')}</span><b>{t('{min} min · con prisa {corta}', { min: perfil.minutosNormal, corta: perfil.minutosCorta })}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('gimnasios')}><span>{t('Gimnasio')}</span><b>{g ? `${g.nombre} · ${g.material.length}` : t('Sin gimnasio')}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'objetivos' })}><span>{t('Objetivo')}</span><b>{t(OBJETIVO[perfil.objetivo])}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'objetivos' })}><span>{t('Reforzar')}</span><b>{perfil.zonasPrioridad.map(nombreZona).join(' · ') || t('Equilibrado')}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'preferencias' })}><span>{t('Gustos')}</span><b>{t(GUSTOS[perfil.preferencia])}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('biblioteca', { filtro: 'evitados' })}><span>{t('Evitar')}</span><b>{evitados.length ? tn(evitados.length, '{n} ejercicio', '{n} ejercicios') : t('Nada')}<Ico n="pencil-simple" className="pen" /></b></p>
           </div></div>
         </div>
 

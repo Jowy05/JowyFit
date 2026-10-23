@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { estancado, pesoReinicio, propuestaDescarga, seriesSuave } from '../src/dominio/descarga'
+import { estancado, pesoReinicio, propuestaDescarga, seriesSuave, SEMANAS_SIN_DESCARGA, SESIONES_ESTANCADO, mejor1RM, pesoTop } from '../src/dominio/descarga'
 import { pesosBarra } from '../src/dominio/pesos'
-import type { Serie, Sesion } from '../src/datos/tipos'
+import type { Serie, Sesion, EjercicioSesion, TipoRegistro } from '../src/datos/tipos'
 
 const s = (peso: number, reps: number): Serie => ({ n: 1, peso, reps, rpe: null, calentamiento: false, hecha: true })
+
 const sesion = (peso: number, reps: number) => ({ series: [s(peso, reps), s(peso, reps), s(peso, reps - 1)] })
 
 describe('estancamiento por ejercicio', () => {
@@ -97,5 +98,49 @@ describe('−10 % al peso más cercano', () => {
     expect(pesoReinicio(100, barra)).toBe(90)
     // Sin un peso por debajo, se queda igual.
     expect(pesoReinicio(20, barra)).toBe(20)
+  })
+})
+
+describe('estancamiento: casos límite', () => {
+  const serie = (peso: number | null, reps: number | null, x: Partial<Serie> = {}): Serie => ({ n: 1, peso, reps, rpe: 8, calentamiento: false, hecha: true, ...x })
+  const ej = (ejercicio: string, series: Serie[], registro: TipoRegistro = 'peso'): EjercicioSesion => ({ uid: ejercicio, ejercicio, planificado: ejercicio, estado: 'hecho', series, repsMin: 6, repsMax: 10, rpe: 8, descanso: 120, registro })
+  let n = 1
+  const sesion = (fecha: string, ejercicios: EjercicioSesion[], x: Partial<Sesion> = {}): Sesion => ({ id: n++, fecha, rutinaId: 1, letra: 'A', nombre: 'A', gimnasioId: null, inicio: new Date(`${fecha}T06:00`).getTime(), version: 'normal', estado: 'hecha', ejercicios, calibracion: false, ...x })
+  const s = (peso: number | null, reps: number | null, x: Partial<Serie> = {}) => serie(peso, reps, { rpe: null, ...x })
+  it('peso más alto y mejor 1RM de una sesión (sin calentamiento ni asistidas)', () => {
+    expect(pesoTop([s(20, 10, { calentamiento: true }), s(50, 5), s(45, 8)])).toBe(50)
+    expect(pesoTop([s(-20, 8)])).toBe(0)
+    expect(pesoTop([])).toBe(0)
+    expect(mejor1RM([s(100, 1)])).toBe(100)
+    expect(mejor1RM([s(100, null)])).toBe(0)
+  })
+  it('una sesión de las 3 últimas sin series con peso: no está estancado', () => {
+    const h = (p: number) => ({ series: [s(p, 8), s(p, 8)] })
+    expect(estancado([h(50), h(50), h(50), h(50)])).toBe(true)
+    expect(estancado([h(50), { series: [] }, h(50), h(50)])).toBe(false)
+    expect(estancado([h(50), h(50), h(50), { series: [s(null, 10)] }])).toBe(false)
+    expect(SESIONES_ESTANCADO).toBe(3)
+  })
+  it('mejora de menos del 1 % sigue siendo estancamiento; más del 1 %, no', () => {
+    const h = (p: number, r: number) => ({ series: [s(p, r)] })
+    expect(estancado([h(50.25, 8), h(50, 8), h(50, 8), h(50, 8)])).toBe(true)
+    expect(estancado([h(50, 9), h(50, 8), h(50, 8), h(50, 8)])).toBe(false)
+  })
+  it('peso de reinicio sin lista: −10 % redondeado a 2,5; con 0 o negativo, el mismo', () => {
+    expect(pesoReinicio(50, [])).toBe(45)
+    expect(pesoReinicio(2, [])).toBe(2)
+    expect(pesoReinicio(0, [])).toBe(0)
+    expect(pesoReinicio(50, [50, 60])).toBe(50) // no hay nada por debajo
+  })
+  it('propuesta: ya en semana suave o aplazada este lunes, nada; el motivo nombra los estancados', () => {
+    const base = { hoy: '2026-10-14', sesiones: [] as Sesion[], ejerciciosRutina: [], nombre: (id: string) => id.toUpperCase() }
+    expect(propuestaDescarga({ ...base, semanaSuave: '2026-10-12', pospuesta: null })).toBeNull()
+    expect(propuestaDescarga({ ...base, semanaSuave: null, pospuesta: '2026-10-12' })).toBeNull()
+    const h = (fecha: string) => sesion(fecha, ['a', 'b', 'c', 'd'].map(id => ej(id, [s(50, 8)])))
+    const ss = ['2026-09-22', '2026-09-29', '2026-10-06', '2026-10-13'].map(h)
+    const p = propuestaDescarga({ ...base, sesiones: ss, ejerciciosRutina: ['a', 'b', 'c', 'd', 'a'], semanaSuave: null, pospuesta: null })!
+    expect(p.estancados).toEqual(['a', 'b', 'c', 'd'])
+    expect(p.motivo).toBe('4 ejercicios llevan 3 sesiones sin mejorar (A, B, C…)')
+    expect(SEMANAS_SIN_DESCARGA).toBe(6)
   })
 })

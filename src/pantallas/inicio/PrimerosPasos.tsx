@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { contarComidas, contarEntrenosHechos, leerMediciones } from '../../datos/consultas'
 import { DIAS, deISO, diaSemana, diasEntre, hoyISO } from '../../dominio/fechas'
-import type { tarjetaHoy } from '../../dominio/semana'
+import type { Tarjeta } from '../../dominio/semana'
 import { cx, Ico, Seccion } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAjustes } from '../../datos/hooks'
@@ -26,7 +26,7 @@ export type Guia = { pasos: Paso[]; n: number; cerrar: () => void }
 
 /** 4 pasos que se marcan solos; desaparece al completarlos o con «Ya lo sé», y solo sale las primeras semanas.
  * null si no se ve; undefined mientras carga (cuenta como «se ve» para no enseñar y quitar los pendientes). */
-export function usePrimerosPasos(tar: ReturnType<typeof tarjetaHoy>): Guia | null | undefined {
+export function usePrimerosPasos(tar: Tarjeta): Guia | null | undefined {
   const nav = useNav()
   const ajustes = useAjustes()
   const hoy = hoyISO()
@@ -47,9 +47,9 @@ export function usePrimerosPasos(tar: ReturnType<typeof tarjetaHoy>): Guia | nul
   const prox = tar.tipo === 'descanso' && tar.proximo?.dia ? tar.proximo : null
   const cuando = dia ? null : prox ? DIAS[diaSemana(deISO(prox.fecha))]! : tar.tipo === 'perdida' ? DIAS[diaSemana(deISO(tar.destino))]! : null
   const pasos: Paso[] = [
-    { id: 'entreno', titulo: cuando ? t('Haz tu primer entreno ({dia})', { dia: cuando }) : t('Haz tu primer entreno'), hecho: hechos.entreno, ir: () => (dia ? nav.hoja('sheet-ses1', { letra: dia.letra, version: 'normal' }) : prox?.dia ? nav.ir('rut-dia', { letra: prox.dia.letra }, 'rut') : nav.pestana('rut')) },
-    { id: 'peso', titulo: t('Apunta tu peso'), hecho: hechos.peso, ir: () => nav.hoja('sheet-peso') },
-    { id: 'comida', titulo: t('Apunta una comida'), hecho: hechos.comida, ir: () => nav.hoja('sheet-add', { fecha: hoy }) },
+    { id: 'entreno', titulo: cuando ? t('Haz tu primer entreno ({dia})', { dia: cuando }) : t('Haz tu primer entreno'), hecho: hechos.entreno, ir: () => (dia ? nav.hoja('hoja-empezar', { letra: dia.letra, version: 'normal' }) : prox?.dia ? nav.ir('detalle-dia', { letra: prox.dia.letra }, 'rut') : nav.pestana('rut')) },
+    { id: 'peso', titulo: t('Apunta tu peso'), hecho: hechos.peso, ir: () => nav.hoja('hoja-peso') },
+    { id: 'comida', titulo: t('Apunta una comida'), hecho: hechos.comida, ir: () => nav.hoja('hoja-anadir', { fecha: hoy }) },
     { id: 'progreso', titulo: t('Mira tu semana en Progreso'), hecho: !!estado.progreso, ir: () => { cambiar({ ...estado, progreso: true }); nav.pestana('pro') } },
   ]
   const n = pasos.filter(p => p.hecho).length

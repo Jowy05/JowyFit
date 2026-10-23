@@ -19,7 +19,7 @@ const nueva = (): Plantilla => ({ nombre: '', ...POR_DEFECTO.comida, tipo: 'comi
 /** Qué se escribe arriba de los números, según el tipo. */
 const QUE_TRAE = { comida: tk('Lo que trae el plato'), picoteo: tk('Lo que trae entero (la bolsa, el paquete…)'), bebida: tk('Lo que trae (la lata, el vaso…)') } as const
 
-export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
+export function HojaPlantilla({ ruta }: { ruta: Ruta<'hoja-plantilla'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const id = ruta.d.id

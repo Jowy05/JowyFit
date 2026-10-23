@@ -15,11 +15,11 @@ import { guardarRutina } from '../../datos/acciones/rutina'
 import { musculosComunes } from './comun'
 import { t, tk } from '../../i18n'
 
-type Modo = Rutas['sheet-elegir']['modo']
+type Modo = Rutas['hoja-elegir-ejercicio']['modo']
 
 const TITULO: Record<Modo, string> = { cambiar: tk('Cambiar ejercicio'), alternativa: tk('Si está ocupado'), anadir: tk('Añadir ejercicio'), 'sesion-anadir': tk('Añadir al entreno'), 'sesion-cambiar': tk('Cambiar ejercicio') }
 
-export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'sheet-elegir'> }) {
+export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'hoja-elegir-ejercicio'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()

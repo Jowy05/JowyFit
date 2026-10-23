@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { marcaDe } from '../../datos/repos'
 import { historialDe } from '../../datos/consultas'
-import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
+import type { EjercicioSesion, Guardado, Serie, Sesion } from '../../datos/tipos'
 import { ejercicio, etiqueta, nombreEjercicio } from '../../catalogo/catalogo'
 import { ES_MAQUINA, patron } from '../../catalogo/clasificacion'
 import { calentamiento as aproximacion, pesosPara } from '../../dominio/pesos'
@@ -43,7 +43,7 @@ export function Entreno() {
   return <EntrenoEnCurso s={sesion} />
 }
 
-function EntrenoEnCurso({ s }: { s: Sesion }) {
+function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
   const nav = useNav()
   const aviso = useAviso()
   const ajustes = useAjustes()
@@ -92,7 +92,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
   const yaTerminada = useRef(s.ejercicios.length > 0 && terminada(s))
   useEffect(() => {
     const ahora = s.ejercicios.length > 0 && terminada(s)
-    if (ahora && !yaTerminada.current) nav.completa('ses-fin', { id: s.id })
+    if (ahora && !yaTerminada.current) nav.completa('fin-entreno', { id: s.id })
     yaTerminada.current = ahora
   }, [s, nav])
 
@@ -140,7 +140,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
     }
   }
   // La ficha está en la pestaña Rutina: hay que minimizar el entreno (sigue en la mini barra) para verla.
-  const verFicha = () => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }
+  const verFicha = () => { nav.minimizar(); nav.ir('ficha', { id: ej.id }, 'rut') }
   const saltarDescanso = () => quitarDescanso(s)
   const masTiempo = () => alargarDescanso(s)
   const aplicarRecorte = async () => {
@@ -165,7 +165,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
         )}
       </div>
       <div className="ses-top" style={{ paddingTop: 6 }}>
-        <button className="ux-tbtn" onClick={() => nav.hoja('sheet-lista')} aria-label={t('Lista de la sesión')}><Ico n="list-numbers" /><span>{t('Lista')}</span></button>
+        <button className="ux-tbtn" onClick={() => nav.hoja('hoja-lista')} aria-label={t('Lista de la sesión')}><Ico n="list-numbers" /><span>{t('Lista')}</span></button>
         <div className="grow">
           <p className="lbl ux-ses-lbl">{t('Ejercicio {n} de {total}', { n: idx + 1, total: s.ejercicios.length })}</p>
           <div className="ux-ses-p">
@@ -201,13 +201,13 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
       <div className="exb">
         <div className="exb-h">
           {/* Tocar el dibujo enseña cómo se hace sin salir del entreno. */}
-          <button onClick={() => nav.hoja('sheet-instr', { id: ej.id })} aria-label={t('Ver cómo se hace')} style={{ display: 'contents' }}><Th ej={ej} size="l" grande /></button>
+          <button onClick={() => nav.hoja('hoja-instrucciones', { id: ej.id })} aria-label={t('Ver cómo se hace')} style={{ display: 'contents' }}><Th ej={ej} size="l" grande /></button>
           <div className="grow">
             <p className="lbl">{etiqueta('body_part', ej.zona)}{companero ? ` · ${t('dos seguidos')}` : ''}</p>
             <h1 className="exname">{ej.nombre}</h1>
             {marca?.ajustes ? <p className="setting"><Ico n="sliders-horizontal" />{marca.ajustes}</p> : ES_MAQUINA(ej) && <button className="setting" onClick={verFicha}><Ico n="sliders-horizontal" />{t('Añadir ajustes de máquina')}</button>}
           </div>
-          <button className="ux-tbtn" onClick={() => nav.hoja('sheet-tools', { idx })} aria-label={t('Herramientas')}><Ico n="dots-three" b /><span>{t('Más')}</span></button>
+          <button className="ux-tbtn" onClick={() => nav.hoja('hoja-herramientas', { idx })} aria-label={t('Herramientas')}><Ico n="dots-three" b /><span>{t('Más')}</span></button>
         </div>
         {/* Sin la tira «Series · Reps · Esfuerzo · Descanso»: las series ya se ven en la lista y el descanso sale solo. */}
         <div className="todayw">
@@ -282,12 +282,12 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
 }
 
 /** Sin ejercicio que hacer: el actual ya no está en el catálogo, todo está hecho o es un entreno libre vacío. */
-function SinEjercicio({ s, e, idx, ahora }: { s: Sesion; e?: EjercicioSesion; idx: number; ahora: number }) {
+function SinEjercicio({ s, e, idx, ahora }: { s: Guardado<Sesion>; e?: EjercicioSesion; idx: number; ahora: number }) {
   const nav = useNav()
   return (
     <Pantalla full>
       <div className="ses-top" style={{ paddingTop: 8 }}>
-        <button className="ux-tbtn" onClick={() => nav.hoja('sheet-lista')} aria-label={t('Lista de la sesión')}><Ico n="list-numbers" /><span>{t('Lista')}</span></button>
+        <button className="ux-tbtn" onClick={() => nav.hoja('hoja-lista')} aria-label={t('Lista de la sesión')}><Ico n="list-numbers" /><span>{t('Lista')}</span></button>
         <div className="grow"><p className="lbl">{nombreEntreno(s)}</p></div>
         <span className="clock">{t('llevas {n} min', { n: Math.floor((ahora - s.inicio) / 60000) })}</span>
       </div>
@@ -298,7 +298,7 @@ function SinEjercicio({ s, e, idx, ahora }: { s: Sesion; e?: EjercicioSesion; id
             <span className="empty-ic bad"><Ico n="warning" /></span>
             <h3 className="h3">{t('Este ejercicio ya no está en el catálogo')}</h3>
             <p className="muted">{t('Cámbialo por otro o sáltalo para seguir.')}</p>
-            <button className="btn mt12" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx })}><Ico n="swap" b />{t('Cambiar ejercicio')}</button>
+            <button className="btn mt12" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-cambiar', idx })}><Ico n="swap" b />{t('Cambiar ejercicio')}</button>
             <button className="btn gry sm mt8" onClick={() => void guardarSesion(saltar(s, idx))}>{t('Saltarlo')}</button>
           </div>
         ) : s.ejercicios.length > 0 && terminada(s) ? (
@@ -307,16 +307,16 @@ function SinEjercicio({ s, e, idx, ahora }: { s: Sesion; e?: EjercicioSesion; id
             <span className="empty-ic"><Ico n="check" /></span>
             <h3 className="h3">{t('Has hecho todos los ejercicios')}</h3>
             <p className="muted">{t('Para corregir una serie, toca «Lista». Si quieres, añade otro ejercicio.')}</p>
-            <button className="btn mt12" onClick={() => nav.completa('ses-fin', { id: s.id })}><Ico n="flag-checkered" b />{t('Terminar entreno')}</button>
-            <button className="btn gry sm mt8" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-anadir' })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
+            <button className="btn mt12" onClick={() => nav.completa('fin-entreno', { id: s.id })}><Ico n="flag-checkered" b />{t('Terminar entreno')}</button>
+            <button className="btn gry sm mt8" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-anadir' })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
           </div>
         ) : (
           <div className="card pd empty">
             <span className="empty-ic"><Ico n="lightning" /></span>
             <h3 className="h3">{t('Entreno libre')}</h3>
             <p className="muted">{t('Añade el primer ejercicio y empieza.')}</p>
-            <button className="btn mt12" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-anadir' })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
-            {s.ejercicios.length > 0 && <button className="btn gry sm mt8" onClick={() => nav.completa('ses-fin', { id: s.id })}>{t('Terminar entreno')}</button>}
+            <button className="btn mt12" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-anadir' })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
+            {s.ejercicios.length > 0 && <button className="btn gry sm mt8" onClick={() => nav.completa('fin-entreno', { id: s.id })}>{t('Terminar entreno')}</button>}
           </div>
         )}
       </div>

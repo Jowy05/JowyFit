@@ -106,7 +106,7 @@ export function PasosYBascula({ salud }: { salud: Salud }) {
             <Elegir eq className="w100" opciones={[{ v: 'auto' as const, t: 'Health Connect' }, { v: 'manual' as const, t: t('A mano') }]} valor={a.fuenteBascula ?? 'manual'} onCambio={cambiarBascula} />
           </div>
         )}
-        <button className="it" onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>
+        <button className="it" onClick={() => nav.ir('pasos', undefined, 'pro')}>
           <span className="tx"><b>{t('Objetivo de pasos')}</b><small>{t('Se cambia en la pantalla Pasos')}</small></span>
           <span className="end small">{miles(p.pasosObjetivo)}</span>
           <Ico n="caret-right" className="car" />

@@ -15,7 +15,7 @@ import { t } from '../../i18n'
 
 const RANGOS: [number, number][] = [[5, 8], [6, 10], [8, 12], [10, 15], [12, 20]]
 
-export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
+export function EditarPlan({ ruta }: { ruta: Ruta<'editar-plan'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const r = useRutina()
@@ -25,7 +25,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
   const alternar = (uid: string) => setAbiertos(s => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n })
   // undefined = aún cargando: no enseñar «Aún no tienes rutina» durante un instante.
   if (r === undefined) return <Pantalla><Cab atras crumb={t('Mi plan')} titulo={t('Editar plan')} /><div className="cargando">{t('Cargando…')}</div></Pantalla>
-  if (!r) return <Pantalla><Cab atras crumb={t('Mi plan')} titulo={t('Editar plan')} /><div className="pg"><Vacio icono="clipboard-text" titulo={t('Aún no tienes rutina')} accion={t('Crear mi rutina')} onAccion={() => nav.ir('rut-gen')} /></div></Pantalla>
+  if (!r) return <Pantalla><Cab atras crumb={t('Mi plan')} titulo={t('Editar plan')} /><div className="pg"><Vacio icono="clipboard-text" titulo={t('Aún no tienes rutina')} accion={t('Crear mi rutina')} onAccion={() => nav.ir('generar-rutina')} /></div></Pantalla>
   const dia = r.dias.find(d => d.letra === letra) ?? r.dias[0]!
   const grupos = seriesPorGrupo(r)
 
@@ -89,14 +89,14 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
           <Stepper className="sm mini ux-rut-ser" valor={b.series} paso={1} min={1} max={8} onCambio={v => editar(b.uid, { series: v })} etiqueta={t('Series')} sufijo={t('series')} />
         </div>
         <div className="edr-act">
-          <button className="lnk" onClick={() => nav.hoja('sheet-elegir', { modo: 'cambiar', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="swap" />{t('Cambiar ejercicio')}</button>
+          <button className="lnk" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'cambiar', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="swap" />{t('Cambiar ejercicio')}</button>
           <button className="lnk ux-rut-masbtn" aria-expanded={abierta} onClick={() => alternar(b.uid)}>{t('Más opciones')}<Ico n={abierta ? 'caret-up' : 'caret-down'} /></button>
         </div>
         {abierta && (
           <div className="ux-rut-mas">
             <p className="small muted">{t('Esfuerzo {rpe}/10 · descanso {tiempo}', { rpe: b.rpe, tiempo: duracion(b.descanso) })}</p>
             <div className="ux-rut-mas-acc">
-              <button className="chip" onClick={() => nav.hoja('sheet-elegir', { modo: 'alternativa', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="arrows-left-right" />{t('Si está ocupado')}</button>
+              <button className="chip" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'alternativa', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="arrows-left-right" />{t('Si está ocupado')}</button>
               <Chip on={!!b.fueraEnCorta} ck onClick={() => void editar(b.uid, { fueraEnCorta: !b.fueraEnCorta })}><Ico n="scissors" />{t('Fuera si hay prisa')}</Chip>
               {puedeUnir && <button className="chip" onClick={() => void unirSiguiente(b)}><Ico n="link" />{t('Dos seguidos (superserie)')}</button>}
               {i > 0 && <button className="chip" onClick={() => void mover(b.uid, -1)}><Ico n="caret-up" />{t('Subir')}</button>}
@@ -128,7 +128,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
             </div>
           ) : fila(f))}
         </div>
-        <button className="more" onClick={() => nav.hoja('sheet-elegir', { modo: 'anadir', letra: dia.letra })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
+        <button className="more" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'anadir', letra: dia.letra })}><Ico n="plus" b />{t('Añadir ejercicio')}</button>
         <p className="note mt16"><Ico n="info" /><span>{t('Los cambios se guardan solos. Tu historial no se toca.')}</span></p>
 
         {/* Lo raro, plegado. El reparto por músculo no se enseña en la semana de prueba: asusta sin motivo. */}
@@ -153,7 +153,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
         <div className="sec">
           <div className="sec-h"><h2>{t('Rehacer la rutina')}</h2></div>
           <p className="small muted">{t('Te propongo una rutina nueva con tus días, tu tiempo y tu gimnasio. Antes de cambiar nada, te la enseño.')}</p>
-          <button className="btn ln sm mt8" onClick={() => nav.hoja('sheet-confirmar', { titulo: t('¿Rehacer la rutina desde cero?'), texto: t('Verás una rutina nueva. Si la aceptas con «Usar esta rutina», sustituye a la que tienes ahora, también los cambios que hayas hecho a mano. Tu historial y tus récords se conservan.'), si: t('Ver la rutina nueva'), accion: 'regenerar' })}><Ico n="magic-wand" />{t('Rehacer la rutina desde cero')}</button>
+          <button className="btn ln sm mt8" onClick={() => nav.hoja('hoja-confirmar', { titulo: t('¿Rehacer la rutina desde cero?'), texto: t('Verás una rutina nueva. Si la aceptas con «Usar esta rutina», sustituye a la que tienes ahora, también los cambios que hayas hecho a mano. Tu historial y tus récords se conservan.'), si: t('Ver la rutina nueva'), accion: 'regenerar' })}><Ico n="magic-wand" />{t('Rehacer la rutina desde cero')}</button>
         </div>
       </div>
     </Pantalla>

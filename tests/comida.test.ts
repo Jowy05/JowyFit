@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { FRANJAS, NOMBRE_RACION, nombreFranja, batidoDe, dosisDe, esBatido, kcalBatido, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion } from '../src/dominio/comida'
-import { lineaSpark } from '../src/ui/graficas'
-import { tendenciaPeso } from '../src/dominio/tendencias'
-import type { Comida, Medicion, Plantilla } from '../src/datos/tipos'
+import { FRANJAS, NOMBRE_RACION, nombreFranja, batidoDe, dosisDe, esBatido, kcalBatido, avisoCafeina, buscarOFF, codigoValido, conRacion, datosQuincena, escaneadosSueltos, franjaPorHora, leerOFF, notaPorTamano, escalarMacros, factorRacion, ordenarPlantillas, picoteoDeSemana, porRacion, tamanoDe, TAMANOS_NOTA, textoRacion, aspecto, CLAVES_MACROS, NOMBRE_MACRO, PISTA_RACION, soloMacros, tipoRacion, URL_OFF, macros100, deAyer, recientes, dosisPorDefecto } from '../src/dominio/comida'
+import type { Comida, Medicion, Plantilla, Producto } from '../src/datos/tipos'
 
 const comida = (fecha: string, x: Partial<Comida> = {}): Comida => ({ fecha, hora: '14:00', franja: 'comida', nombre: 'x', kcal: 500, proteina: 30, racion: 'N', tipo: 'plantilla', ...x })
 
@@ -112,16 +110,6 @@ describe('picoteo, cafeína y quincena', () => {
   })
 })
 
-describe('tendencia del peso', () => {
-  it('calcula kg por semana', () => {
-    const ms: Medicion[] = [0, 7, 14, 21].map((d, i) => ({ fecha: `2026-09-${String(20 + d > 30 ? 0 : 20 + d).padStart(2, '0')}`, origen: 'casa' as const, pesoKg: 80 - i * 0.3 }))
-      .map((m, i) => ({ ...m, fecha: ['2026-09-20', '2026-09-27', '2026-10-04', '2026-10-11'][i]! }))
-    expect(tendenciaPeso(ms, '2026-10-14').kgSemana).toBe(-0.3)
-    expect(tendenciaPeso(ms.slice(0, 1), '2026-10-14').kgSemana).toBeNull()
-    expect(lineaSpark([80, 79.5, 79.7]).split(' ')).toHaveLength(3)
-  })
-})
-
 describe('lo de ayer y recientes', () => {
   const c = (fecha: string, hora: string, nombre: string, x: Partial<Comida> = {}): Comida => ({ fecha, hora, franja: franjaPorHora(hora), nombre, kcal: 300, proteina: 20, racion: 'N', tipo: 'nota', ...x })
   it('repite la misma franja de ayer, en orden', async () => {
@@ -186,5 +174,189 @@ describe('suplementos', () => {
     expect(batidoDe(undefined)).toEqual({ proteina: 24, kcal: 120 })
     expect(batidoDe({ proteina: 30, kcal: 150 }).proteina).toBe(30)
     expect(kcalBatido(30)).toBe(150)
+  })
+  it('dosis habitual: creatina 3-5 g, batido un cacito, los demás nada', () => {
+    expect(dosisPorDefecto('Creatina monohidrato')).toBe('3-5 g')
+    expect(dosisPorDefecto('Batido de proteína')).toBe('1 cacito')
+    expect(dosisPorDefecto('Proteína whey')).toBe('1 cacito')
+    expect(dosisPorDefecto('Vitamina D')).toBe('')
+    expect(esBatido('Vitamina D')).toBe(false)
+  })
+  it('una dosis en blanco cuenta como no puesta', () => {
+    expect(dosisDe({ Creatina: '   ' }, 'Creatina')).toBe('3-5 g')
+    expect(dosisDe({ Creatina: ' 10 g ' }, 'Creatina')).toBe('10 g')
+  })
+})
+
+describe('miniatura de cada comida (aspecto)', () => {
+  const icono = (n: string, t?: string) => aspecto(n, t).icono
+  it('bebidas, café, batidos, pan, guisos, sopas y picoteo', () => {
+    expect(aspecto('Monster Energy')).toEqual({ fp: 'f-dr', icono: 'lightning' })
+    expect(aspecto('Café con leche')).toEqual({ fp: 'f-dr', icono: 'coffee' })
+    expect(icono('Coca-Cola Zero')).toBe('lightning')
+    expect(icono('Zumo de naranja')).toBe('lightning')
+    expect(icono('Batido de proteína')).toBe('drop')
+    expect(icono('Yogur griego')).toBe('drop')
+    expect(icono('Pizza barbacoa')).toBe('pizza')
+    expect(icono('Bocadillo de jamón')).toBe('bread')
+    expect(icono('Pan con tomate')).toBe('bread')
+    expect(icono('Lentejas de mi madre')).toBe('cooking-pot')
+    expect(icono('Ramen de pollo')).toBe('bowl-steam')
+    expect(icono('Bolsa de patatas')).toBe('cookie')
+    expect(icono('Macarrones')).toBe('bowl-food')
+  })
+  it('el tipo manda: una bebida o un picoteo con cualquier nombre', () => {
+    expect(aspecto('Lo que sea', 'bebida').fp).toBe('f-dr')
+    expect(aspecto('Lo que sea', 'picoteo').fp).toBe('f-sn')
+  })
+  it('fallaba: «chocolate» salía como bebida (por «cola») y «aguacate» también (por «agua»)', () => {
+    expect(icono('Chocolate con almendras')).toBe('cookie')
+    expect(icono('Tostada con aguacate')).toBe('bread')
+    expect(icono('Ensalada de aguacate')).toBe('bowl-food')
+  })
+  it('fallaba: «té» no se reconocía nunca como bebida; y «panceta» o «empanada» no son pan', () => {
+    expect(icono('Té verde')).toBe('lightning')
+    expect(icono('Un té')).toBe('lightning')
+    expect(icono('Panceta a la plancha')).toBe('bowl-food')
+    expect(icono('Empanada gallega')).toBe('bowl-food')
+    expect(icono('Paté de campaña')).toBe('bowl-food')
+  })
+  it('nombre vacío: miniatura normal', () => expect(aspecto('')).toEqual({ fp: 'f-cu', icono: 'bowl-food' }))
+})
+
+describe('franjas, raciones y macros: constantes y casos límite', () => {
+  it('franjas en orden y con nombre', () => {
+    expect(FRANJAS.map(f => f.v)).toEqual(['desayuno', 'comida', 'merienda', 'cena'])
+    expect(FRANJAS.map(f => nombreFranja(f.v))).toEqual(['Desayuno', 'Comida', 'Merienda', 'Cena'])
+  })
+  it('franja en los bordes exactos (5:00, 11:00, 16:30, 19:30) y con una hora mal escrita', () => {
+    expect(franjaPorHora('04:59')).toBe('cena')
+    expect(franjaPorHora('05:00')).toBe('desayuno')
+    expect(franjaPorHora('10:59')).toBe('desayuno')
+    expect(franjaPorHora('11:00')).toBe('comida')
+    expect(franjaPorHora('16:29')).toBe('comida')
+    expect(franjaPorHora('16:30')).toBe('merienda')
+    expect(franjaPorHora('19:30')).toBe('cena')
+    expect(franjaPorHora('')).toBe('cena') // 0:00
+  })
+  it('tipo de ración: solo el picoteo guarda la bolsa entera', () => {
+    expect(tipoRacion('picoteo')).toBe('picoteo')
+    expect(tipoRacion('bebida')).toBe('plato')
+    expect(tipoRacion()).toBe('plato')
+    expect(PISTA_RACION.picoteo.G).toBe('todo')
+    expect(PISTA_RACION.plato.N).toBe('el plato')
+  })
+  it('macros: claves, nombres, copiar y escalar sin inventarse los que faltan', () => {
+    expect(CLAVES_MACROS).toEqual(['hidratos', 'azucares', 'grasas', 'sal'])
+    for (const k of CLAVES_MACROS) expect(NOMBRE_MACRO[k]).toBeTruthy()
+    expect(soloMacros({ hidratos: 10, sal: 0.25, ...{ kcal: 5 } } as never)).toEqual({ hidratos: 10, sal: 0.3 })
+    expect(escalarMacros({}, 3)).toEqual({})
+    expect(escalarMacros({ grasas: 0 }, 3)).toEqual({ grasas: 0 })
+  })
+  it('ración de 0 kcal y con cafeína 0', () => {
+    expect(conRacion({ kcal: 0, proteina: 0, cafeina: 0 }, 'G')).toEqual({ kcal: 0, proteina: 0, cafeina: undefined })
+  })
+})
+
+describe('Open Food Facts: datos raros', () => {
+  it('URL solo con el código (codificado) y los campos que hacen falta', () => {
+    const u = URL_OFF('84 80/1')
+    expect(u).toContain('/product/84%2080%2F1.json')
+    expect(u).toContain('lc=es')
+    expect(u).toContain('app_name=JowyFit')
+  })
+  it('sin nombre usa «Producto <código>»; números con coma y texto; energía en kJ', () => {
+    const p = leerOFF('123', { status: 1, product: { brands: ' Marca , Otra', nutriments: { energy_100g: '418,4', proteins_100g: '7,5', salt_100g: 'nada' } } })!
+    expect(p.nombre).toBe('Producto 123')
+    expect(p.marca).toBe('Marca')
+    expect(p.kcal100).toBe(100)
+    expect(p.proteina100).toBe(7.5)
+    expect(p.sal100).toBeNull()
+    expect(p.racionG).toBeNull()
+    expect(p.kcalRacion).toBeNull()
+    expect(p.cafeina100).toBeNull()
+  })
+  it('respuesta vacía o sin producto: null', () => {
+    expect(leerOFF('1', null)).toBeNull()
+    expect(leerOFF('1', {})).toBeNull()
+    expect(leerOFF('1', { status: 1 })).toBeNull()
+  })
+  it('nombre en español primero y la fecha de guardado la que se pase', () => {
+    const p = leerOFF('9', { status: 1, product: { product_name: 'Rice', product_name_es: 'Arroz', nutriments: {} } }, new Date('2026-10-13T10:00:00Z'))!
+    expect(p.nombre).toBe('Arroz')
+    expect(p.guardado).toBe('2026-10-13T10:00:00.000Z')
+  })
+  it('por ración sin el peso de la ración: los macros no se pueden pasar (se quedan fuera)', () => {
+    const base: Producto = { codigo: '1', nombre: 'x', marca: '', kcal100: 400, proteina100: 10, hidratos100: 60, racionG: null, kcalRacion: 120, proteinaRacion: 3.4, guardado: '' }
+    const r = porRacion(base)
+    expect(r).toMatchObject({ kcal: 120, proteina: 3, base: 'racion' })
+    expect(r).not.toHaveProperty('hidratos')
+    expect(macros100(base)).toEqual({ hidratos: 60 })
+    // Sin datos de nada: 0 kcal por 100 g, no NaN.
+    expect(porRacion({ ...base, kcal100: null, proteina100: null, hidratos100: null, kcalRacion: null })).toMatchObject({ kcal: 0, proteina: 0, base: '100g' })
+  })
+  it('buscarOFF: error de red, 500 y JSON sin producto', async () => {
+    const f = (r: Partial<Response> | Error) => (async () => { if (r instanceof Error) throw r; return r as Response }) as typeof fetch
+    expect(await buscarOFF('1', f(new Error('red')))).toEqual({ estado: 'offline' })
+    expect(await buscarOFF('1', f({ status: 500, ok: false }))).toEqual({ estado: 'offline' })
+    expect(await buscarOFF('1', f({ status: 200, ok: true, json: async () => ({ status: 0 }) }))).toEqual({ estado: 'no' })
+  })
+  it('códigos: con espacios alrededor valen; con letras o cortos no', () => {
+    expect(codigoValido(' 84800001 ')).toBe(true)
+    expect(codigoValido('8480000123458')).toBe(true)
+    expect(codigoValido('1234567')).toBe(false)
+    expect(codigoValido('123456789012345')).toBe(false)
+    expect(codigoValido('84800001234AB')).toBe(false)
+    expect(codigoValido('')).toBe(false)
+  })
+})
+
+describe('cafeína en el límite', () => {
+  it('justo en el límite no es pasarse; un mg más sí', () => {
+    expect(avisoCafeina(400, 400, '16:00', '10:00').tono).toBe('warn') // > 75 %
+    expect(avisoCafeina(401, 400, '16:00', '10:00').tono).toBe('bad')
+    expect(avisoCafeina(300, 400, '16:00', '10:00').tono).toBe('ok')
+  })
+  it('a la hora tope justa ya avisa, y quita el cero de la hora', () => {
+    const a = avisoCafeina(0, 400, '06:00', '06:00')
+    expect(a.tono).toBe('warn')
+    expect(a.texto).toContain('6:00')
+    expect(avisoCafeina(0, 400, '16:00', '15:59').texto).toContain('16:00')
+  })
+})
+
+describe('picoteo de la semana, lo de ayer y recientes', () => {
+  it('sin comidas: ceros y listas vacías', () => {
+    expect(picoteoDeSemana([], ['2026-10-13'])).toEqual({ dias: 0, energeticas: 0 })
+    expect(deAyer([], '2026-10-12', 'comida')).toEqual([])
+    expect(recientes([], '2026-10-13', [])).toEqual([])
+  })
+  it('una energética sin azúcar (pocas kcal) no cuenta como energética', () => {
+    const cs = [comida('2026-10-13', { tipo: 'bebida', cafeina: 160, kcal: 10 }), comida('2026-10-13', { tipo: 'bebida', cafeina: 160, kcal: 230 })]
+    expect(picoteoDeSemana(cs, ['2026-10-13']).energeticas).toBe(1)
+  })
+  it('recientes: sin nombre o con nombre de plantilla no salen; el límite se respeta; lo de mañana no cuenta', () => {
+    const cs = [
+      comida('2026-10-13', { nombre: '  ', tipo: 'nota' }),
+      comida('2026-10-13', { nombre: 'Batido', tipo: 'nota' }),
+      comida('2026-10-14', { nombre: 'Futuro', tipo: 'nota' }),
+      ...Array.from({ length: 8 }, (_, i) => comida('2026-10-12', { nombre: `Nota ${i}`, hora: `1${i}:00`, tipo: 'nota' })),
+    ]
+    const r = recientes(cs, '2026-10-13', [{ nombre: 'batido ' }], 3)
+    expect(r.map(c => c.nombre)).toEqual(['Nota 7', 'Nota 6', 'Nota 5'])
+  })
+})
+
+describe('«Escribir lo que he comido»: tamaños', () => {
+  it('desayuno y merienda más pequeños que comida y cena; ida y vuelta con tamanoDe', () => {
+    expect(notaPorTamano('normal', 'desayuno')).toEqual({ kcal: 350, proteina: 15 })
+    expect(notaPorTamano('normal', 'cena')).toEqual({ kcal: 600, proteina: 25 })
+    expect(notaPorTamano('ligera', 'merienda')).toEqual({ kcal: 120, proteina: 5 })
+    expect(notaPorTamano('abundante', 'comida')).toEqual({ kcal: 900, proteina: 38 })
+    for (const f of ['desayuno', 'comida', 'merienda', 'cena'] as const) for (const t of ['ligera', 'normal', 'abundante'] as const) {
+      const v = notaPorTamano(t, f)
+      expect(tamanoDe(v.kcal, v.proteina, f)).toBe(t)
+    }
+    expect(tamanoDe(601, 25, 'cena')).toBeNull()
   })
 })

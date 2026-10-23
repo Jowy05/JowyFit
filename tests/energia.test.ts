@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { basalDia, basalHastaAhora, kcalPasos, kcalSesion } from '../src/dominio/energia'
+import { basalDia, basalHastaAhora, kcalPasos, kcalSesion, zancada } from '../src/dominio/energia'
 import type { EjercicioSesion, Serie, Sesion } from '../src/datos/tipos'
 
 const serie = (hecha: boolean, x: Partial<Serie> = {}): Serie => ({ n: 1, peso: 60, reps: 8, rpe: null, calentamiento: false, hecha, ...x })
+
 const ej = (id: string, series: Serie[], x: Partial<EjercicioSesion> = {}): EjercicioSesion => ({ uid: id, ejercicio: id, planificado: id, estado: 'hecho', series, repsMin: 6, repsMax: 10, rpe: 8, descanso: 135, registro: 'peso', ...x })
+
 const sesion = (ejercicios: EjercicioSesion[]): Sesion => ({ fecha: '2026-10-13', rutinaId: 1, letra: 'A', nombre: 'A', gimnasioId: null, inicio: 0, version: 'normal', estado: 'hecha', calibracion: false, ejercicios })
 
 describe('calorías en reposo', () => {
@@ -54,4 +56,33 @@ describe('calorías del entreno', () => {
     expect(k.saltado).toBe(0)
     expect(k.hecho).toBe(Math.round(4 * 80 * (180 / 3600) * 1.5))
   })
+})
+
+describe('energía del entreno', () => {
+  const serie = (x: Partial<Serie> = {}): Serie => ({ n: 1, peso: 40, reps: 8, rpe: null, calentamiento: false, hecha: false, ...x })
+  const ej = (uid: string, x: Partial<EjercicioSesion> = {}): EjercicioSesion => ({ uid, ejercicio: uid, planificado: uid, estado: 'pendiente', series: [serie(), serie(), serie()], repsMin: 8, repsMax: 12, rpe: 8, descanso: 90, registro: 'peso', ...x })
+  const sesion = (ejercicios: EjercicioSesion[], x: Partial<Sesion> = {}): Sesion => ({ fecha: '2026-10-13', rutinaId: 1, letra: 'A', nombre: 'A', gimnasioId: null, inicio: new Date(2026, 9, 13, 5, 30).getTime(), version: 'normal', estado: 'curso', calibracion: false, ejercicios, ...x })
+  const s = (ejercicios: EjercicioSesion[]) => sesion(ejercicios, { estado: 'hecha' })
+  it('cardio por sus minutos (las reps son minutos) y por tiempo por sus segundos', () => {
+    const cardio = kcalSesion(s([ej('cinta', { registro: 'cardio', series: [serie({ reps: 30, hecha: true, peso: null })] })]), 80, () => 8)
+    // (8 − 1) × 80 kg × 0,5 h = 280.
+    expect(cardio.hecho).toBe(280)
+    const plancha = kcalSesion(s([ej('plancha', { registro: 'tiempo', descanso: 60, series: [serie({ segundos: 60, reps: null, hecha: true })] })]), 80, () => 4)
+    // (4 − 1) × 80 × (60 + 60) s.
+    expect(plancha.hecho).toBe(Math.round(3 * 80 * (120 / 3600)))
+  })
+  it('sin MET conocido usa 5; un MET muy bajo cuenta como 1,5; el calentamiento a la mitad', () => {
+    const una = (x: Partial<Serie>) => s([ej('a', { series: [serie({ hecha: true, ...x })] })])
+    const sinMet = kcalSesion(una({}), 80, () => null).hecho
+    expect(sinMet).toBe(Math.round(4 * 80 * (135 / 3600)))
+    expect(kcalSesion(una({}), 80, () => 1).hecho).toBe(Math.round(0.5 * 80 * (135 / 3600)))
+    expect(kcalSesion(una({ calentamiento: true }), 80, () => null).hecho).toBe(Math.round(sinMet / 2))
+  })
+  it('lo que falta de un ejercicio en curso no es «saltado»; lo de uno saltado sí', () => {
+    const r = kcalSesion(s([ej('a', { estado: 'curso' }), ej('b', { estado: 'saltado' })]), 80, () => 5)
+    expect(r.hecho).toBe(0)
+    expect(r.saltado).toBe(Math.round(r.plan / 2))
+    expect(kcalSesion(s([]), 80, () => 5)).toEqual({ hecho: 0, plan: 0, saltado: 0 })
+  })
+  it('zancada: el 41,5 % de la altura', () => expect(zancada(200)).toBeCloseTo(0.83))
 })

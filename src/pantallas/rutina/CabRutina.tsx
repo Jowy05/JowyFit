@@ -5,14 +5,14 @@ import { useNav } from '../../app/nav'
 import { useGimnasio } from '../../datos/hooks'
 import { t } from '../../i18n'
 
-export function CabRutina({ actual, crumb, titulo = t('Rutina'), children }: { actual: 'rut' | 'rut-ej' | 'rut-gym'; crumb?: ReactNode; titulo?: string; children?: ReactNode }) {
+export function CabRutina({ actual, crumb, titulo = t('Rutina'), children }: { actual: 'mi-plan' | 'biblioteca' | 'gimnasios'; crumb?: ReactNode; titulo?: string; children?: ReactNode }) {
   const nav = useNav()
   const g = useGimnasio()
   return (
     <Cab crumb={crumb} titulo={titulo} derecha={
-      <button className="gchip" onClick={() => nav.reemplazar('rut-gym')}><Ico n="map-pin" b /><span className="ellip">{g?.nombre ?? t('Sin gimnasio')}</span><Ico n="caret-down" /></button>
+      <button className="gchip" onClick={() => nav.reemplazar('gimnasios')}><Ico n="map-pin" b /><span className="ellip">{g?.nombre ?? t('Sin gimnasio')}</span><Ico n="caret-down" /></button>
     }>
-      <Seg fill valor={actual} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'rut', t: t('Mi plan') }, { v: 'rut-ej', t: t('Ejercicios') }, { v: 'rut-gym', t: t('Gimnasios') }]} />
+      <Seg fill valor={actual} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'mi-plan', t: t('Mi plan') }, { v: 'biblioteca', t: t('Ejercicios') }, { v: 'gimnasios', t: t('Gimnasios') }]} />
       {children}
     </Cab>
   )

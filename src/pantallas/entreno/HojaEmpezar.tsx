@@ -14,7 +14,7 @@ import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 import { nombreEntreno } from '../../dominio/nombres'
 
-export function HojaEmpezar({ ruta }: { ruta: Ruta<'sheet-ses1'> }) {
+export function HojaEmpezar({ ruta }: { ruta: Ruta<'hoja-empezar'> }) {
   const nav = useNav()
   const r = useRutina()
   const perfil = usePerfilCargado()
@@ -32,7 +32,7 @@ export function HojaEmpezar({ ruta }: { ruta: Ruta<'sheet-ses1'> }) {
   if (!dia) return (
     <Hoja titulo={t('Sin rutina')}>
       <p className="muted">{t('Aún no tienes rutina. La creamos con tus días, tu tiempo y tu gimnasio.')}</p>
-      <button className="btn mt16" onClick={() => { nav.hoja(null); nav.ir('rut-gen', undefined, 'rut') }}>{t('Crear mi rutina')}</button>
+      <button className="btn mt16" onClick={() => { nav.hoja(null); nav.ir('generar-rutina', undefined, 'rut') }}>{t('Crear mi rutina')}</button>
     </Hoja>
   )
   return <FormEmpezar dia={dia} perfil={perfil} corta={ruta.d.version === 'corta'} />

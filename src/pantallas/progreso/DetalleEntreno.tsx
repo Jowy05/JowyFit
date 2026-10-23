@@ -15,9 +15,9 @@ import { nombreEntreno } from '../../dominio/nombres'
 
 const DESCANSOS = { cortos: tk('Cortos'), bien: tk('Bien'), largos: tk('Largos') } as const
 
-export function DetalleEntreno({ ruta }: { ruta: Ruta<'pro-entreno'> }) {
+export function DetalleEntreno({ ruta }: { ruta: Ruta<'detalle-entreno'> }) {
   const nav = useNav()
-  const id = Number(ruta.d.id)
+  const { id } = ruta.d
   const s = useLiveQuery(async () => (await leerSesion(id)) ?? null, [id])
   const gym = useLiveQuery(async () => (s?.gimnasioId != null ? (await leerGimnasio(s.gimnasioId)) ?? null : null), [s?.gimnasioId])
   // Serie que se está corrigiendo: ejercicio (posición) y serie (posición en sus series).
@@ -35,7 +35,7 @@ export function DetalleEntreno({ ruta }: { ruta: Ruta<'pro-entreno'> }) {
   const recs = s.ejercicios.reduce((suma, e) => suma + e.series.filter(x => x.record && x.hecha).length, 0)
   const resp = s.respuestas
   const notasSeries = s.ejercicios.flatMap(e => e.series.filter(x => x.nota).map(x => ({ e, x })))
-  const borrar = () => nav.hoja('sheet-confirmar', {
+  const borrar = () => nav.hoja('hoja-confirmar', {
     titulo: t('¿Borrar este entreno?'), texto: t('{nombre} del {fecha}. Se perderán sus series y récords.', { nombre: nombreEntreno(s), fecha: fechaLarga(s.fecha) }),
     si: t('Borrar'), peligro: true, accion: 'borrar-sesion', id: s.id,
   })

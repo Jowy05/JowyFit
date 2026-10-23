@@ -8,15 +8,15 @@ import { num } from '../../dominio/formato'
 import { Cab, cx, Ico, recortar, Seg } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 
-type Vista = 'com' | 'com-plant'
+type Vista = 'dia-comida' | 'plantillas'
 
 /** Solo dos pestañas: el día y «Mis comidas» (que ya incluye los productos escaneados). */
 export function CabComida({ vista, crumb, fecha }: { vista: Vista; crumb: string; fecha?: string }) {
   const nav = useNav()
   // Si se está viendo otro día, lo escaneado se apunta en ese día, no hoy.
   return (
-    <Cab crumb={crumb} titulo={t('Comida')} derecha={<button className="ib" aria-label={t('Escanear')} onClick={() => nav.ir('com-scan', fecha ? { fecha } : undefined)}><Ico n="barcode" /></button>}>
-      <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'com', t: t('Día') }, { v: 'com-plant', t: t('Mis comidas') }]} />
+    <Cab crumb={crumb} titulo={t('Comida')} derecha={<button className="ib" aria-label={t('Escanear')} onClick={() => nav.ir('escaner', fecha ? { fecha } : undefined)}><Ico n="barcode" /></button>}>
+      <Seg fill valor={vista} onCambio={v => nav.reemplazar(v)} opciones={[{ v: 'dia-comida', t: t('Día') }, { v: 'plantillas', t: t('Mis comidas') }]} />
     </Cab>
   )
 }

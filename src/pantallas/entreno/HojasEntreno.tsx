@@ -13,7 +13,7 @@ import { useGimnasio, useSesionEnCurso } from '../../datos/hooks'
 import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
-export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
+export function HojaHerramientas({ ruta }: { ruta: Ruta<'hoja-herramientas'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
@@ -32,9 +32,9 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
   return (
     <Hoja titulo={t('Más')} sub={ej.nombre} className="tall">
       <div className="list">
-        <button className="it" onClick={() => nav.hoja('sheet-instr', { id: ej.id })}><span className="ico"><Ico n="book-open" /></span><span className="tx"><b>{t('Cómo se hace')}</b><small>{t('Dibujos y pasos')}</small></span><Ico n="caret-right" className="car" /></button>
-        {serie && <button className="it" onClick={() => nav.hoja('sheet-nota-serie', { idx, n })}><span className="ico"><Ico n="note-pencil" /></span><span className="tx"><b>{t('Apuntar una nota')}</b><small>{serie.nota ? serie.nota : serie.calentamiento ? t('En el calentamiento: una molestia, un mal agarre…') : t('En la serie {n}: una molestia, un mal agarre…', { n: numSerie })}</small></span><Ico n="caret-right" className="car" /></button>}
-        <button className="it" onClick={() => nav.hoja('sheet-elegir', { modo: 'sesion-cambiar', idx, id: e.ejercicio })}><span className="ico"><Ico n="swap" /></span><span className="tx"><b>{t('Cambiar ejercicio')}</b><small>{t('Por otro parecido')}</small></span><Ico n="caret-right" className="car" /></button>
+        <button className="it" onClick={() => nav.hoja('hoja-instrucciones', { id: ej.id })}><span className="ico"><Ico n="book-open" /></span><span className="tx"><b>{t('Cómo se hace')}</b><small>{t('Dibujos y pasos')}</small></span><Ico n="caret-right" className="car" /></button>
+        {serie && <button className="it" onClick={() => nav.hoja('hoja-nota-serie', { idx, n })}><span className="ico"><Ico n="note-pencil" /></span><span className="tx"><b>{t('Apuntar una nota')}</b><small>{serie.nota ? serie.nota : serie.calentamiento ? t('En el calentamiento: una molestia, un mal agarre…') : t('En la serie {n}: una molestia, un mal agarre…', { n: numSerie })}</small></span><Ico n="caret-right" className="car" /></button>}
+        <button className="it" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-cambiar', idx, id: e.ejercicio })}><span className="ico"><Ico n="swap" /></span><span className="tx"><b>{t('Cambiar ejercicio')}</b><small>{t('Por otro parecido')}</small></span><Ico n="caret-right" className="car" /></button>
         {serie && <button className="it" onClick={async () => { await guardar(anadirSerie(s, idx)); nav.hoja(null); aviso(t('Serie añadida')) }}><span className="ico"><Ico n="plus-square" /></span><span className="tx"><b>{t('Añadir una serie')}</b></span></button>}
         {serie && <button className="it" onClick={async () => {
           const antes = s
@@ -49,7 +49,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
         <summary><Ico n="dots-three-circle" className="blue" />{t('Otras opciones')}<Ico n="caret-down" /></summary>
         <div className="in">
           <div className="list">
-            {conCalent && <button className="it" onClick={() => nav.hoja('sheet-cal', { idx })}><span className="ico"><Ico n="fire" /></span><span className="tx"><b>{t('Calentamiento sugerido')}</b><small>{t('Series ligeras antes de empezar')}</small></span><Ico n="caret-right" className="car" /></button>}
+            {conCalent && <button className="it" onClick={() => nav.hoja('hoja-calentamiento', { idx })}><span className="ico"><Ico n="fire" /></span><span className="tx"><b>{t('Calentamiento sugerido')}</b><small>{t('Series ligeras antes de empezar')}</small></span><Ico n="caret-right" className="car" /></button>}
             {serie && (
               <div className="it">
                 <span className="ico"><Ico n="thermometer-simple" /></span>
@@ -57,8 +57,8 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'sheet-tools'> }) {
                 <Interruptor on={serie.calentamiento} etiqueta={t('Es de calentamiento')} onCambio={async v => { await guardar(cambiarSerie(s, idx, n, { calentamiento: v })); aviso(v ? t('Marcada como calentamiento') : t('Ya no es calentamiento')) }} />
               </div>
             )}
-            {conBarra && <button className="it" onClick={() => nav.hoja('sheet-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>{t('Calculadora de discos')}</b><small>{t('Qué discos poner en la barra')}</small></span><Ico n="caret-right" className="car" /></button>}
-            <button className="it" onClick={() => { nav.minimizar(); nav.ir('rut-ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>{t('Historial del ejercicio')}</b><small>{t('Abre la ficha (el entreno sigue)')}</small></span><Ico n="caret-right" className="car" /></button>
+            {conBarra && <button className="it" onClick={() => nav.hoja('hoja-discos', { idx })}><span className="ico"><Ico n="calculator" /></span><span className="tx"><b>{t('Calculadora de discos')}</b><small>{t('Qué discos poner en la barra')}</small></span><Ico n="caret-right" className="car" /></button>}
+            <button className="it" onClick={() => { nav.minimizar(); nav.ir('ficha', { id: ej.id }, 'rut') }}><span className="ico"><Ico n="clock-counter-clockwise" /></span><span className="tx"><b>{t('Historial del ejercicio')}</b><small>{t('Abre la ficha (el entreno sigue)')}</small></span><Ico n="caret-right" className="car" /></button>
           </div>
         </div>
       </details>
@@ -70,7 +70,7 @@ const ALTO: Record<string, number> = { '25': 96, '20': 90, '15': 82, '10': 72, '
 const clase = (d: number) => (d >= 15 ? 'p25' : d >= 5 ? 'p10' : 'p125')
 const ancho = (d: number) => (d >= 10 ? 15 : d >= 5 ? 12 : 9)
 
-export function HojaDiscos({ ruta }: { ruta: Ruta<'sheet-discos'> }) {
+export function HojaDiscos({ ruta }: { ruta: Ruta<'hoja-discos'> }) {
   const s = useSesionEnCurso()
   const g = useGimnasio()
   const e = s?.ejercicios[ruta.d.idx]
@@ -121,7 +121,7 @@ export function HojaDiscos({ ruta }: { ruta: Ruta<'sheet-discos'> }) {
   )
 }
 
-export function HojaCalentamiento({ ruta }: { ruta: Ruta<'sheet-cal'> }) {
+export function HojaCalentamiento({ ruta }: { ruta: Ruta<'hoja-calentamiento'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
@@ -161,7 +161,7 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta<'sheet-cal'> }) {
   )
 }
 
-export function HojaInstrucciones({ ruta }: { ruta: Ruta<'sheet-instr'> }) {
+export function HojaInstrucciones({ ruta }: { ruta: Ruta<'hoja-instrucciones'> }) {
   const ej = ejercicio(ruta.d.id)
   if (!ej) return <Hoja titulo={t('Instrucciones')}><p className="muted">{t('No encontrado.')}</p></Hoja>
   return (
@@ -176,7 +176,7 @@ export function HojaInstrucciones({ ruta }: { ruta: Ruta<'sheet-instr'> }) {
   )
 }
 
-export function HojaNotaSerie({ ruta }: { ruta: Ruta<'sheet-nota-serie'> }) {
+export function HojaNotaSerie({ ruta }: { ruta: Ruta<'hoja-nota-serie'> }) {
   const s = useSesionEnCurso()
   const { idx, n } = ruta.d
   const serie = s?.ejercicios[idx]?.series[n]

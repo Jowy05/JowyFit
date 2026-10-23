@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { leerGimnasio } from '../../datos/consultas'
 import { guardarGimnasio } from '../../datos/acciones/rutina'
-import type { Gimnasio } from '../../datos/tipos'
+import type { Gimnasio, Guardado } from '../../datos/tipos'
 import { Cab, Ico, Pantalla, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -11,16 +11,14 @@ import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from './Catalo
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
-export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
+export function EditorGimnasio({ ruta }: { ruta: Ruta<'editor-gimnasio'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const lista = useGimnasios()
-  const id = Number(ruta.d.id ?? lista[0]?.id)
+  const id = ruta.d.id
   // undefined = cargando · null = no existe (o no hay ningún gimnasio todavía).
-  const [g, setG] = useState<Gimnasio | null | undefined>(undefined)
+  const [g, setG] = useState<Guardado<Gimnasio> | null | undefined>(undefined)
   useEffect(() => {
-    // Sin id válido (p. ej. sin gimnasios) Dexie rechaza la consulta y la pantalla se quedaría en blanco.
-    if (!Number.isFinite(id)) return
     void leerGimnasio(id).then(x => setG(x ?? null), () => setG(null))
   }, [id])
   // Las máquinas propias se guardan desde su hoja, que también marca el material al que se parecen:
@@ -32,11 +30,11 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
     setG(x => (x ? { ...x, propias, material: [...new Set([...x.material, ...parecidas])] } : x))
   }, [propias])
   const unaVez = useUnaVez()
-  if (g === undefined && (Number.isFinite(id) || lista.length)) return <Pantalla><Cab atras crumb={t('Gimnasios')} titulo={t('Editor de gimnasio')} /></Pantalla>
+  if (g === undefined) return <Pantalla><Cab atras crumb={t('Gimnasios')} titulo={t('Editor de gimnasio')} /></Pantalla>
   if (!g) return (
     <Pantalla>
       <Cab atras crumb={t('Gimnasios')} titulo={t('Editor de gimnasio')} />
-      <div className="pg"><Vacio icono="map-pin" titulo={t('Este gimnasio no existe')} texto={t('Crea uno en Gimnasios.')} accion={t('Ir a Gimnasios')} onAccion={() => nav.reemplazar('rut-gym')} /></div>
+      <div className="pg"><Vacio icono="map-pin" titulo={t('Este gimnasio no existe')} texto={t('Crea uno en Gimnasios.')} accion={t('Ir a Gimnasios')} onAccion={() => nav.reemplazar('gimnasios')} /></div>
     </Pantalla>
   )
   const cambia = (c: Partial<Gimnasio>) => setG(x => (x ? { ...x, ...c } : x))
@@ -46,7 +44,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
     aviso(t('Gimnasio guardado'))
     nav.atras()
   })
-  const borrar = () => nav.hoja('sheet-confirmar', { titulo: t('¿Borrar «{nombre}»?', { nombre: g.nombre }), texto: t('Se borra el gimnasio y su material. Tus entrenos no se tocan.'), si: t('Borrar'), peligro: true, accion: 'borrar-gimnasio', id: g.id })
+  const borrar = () => nav.hoja('hoja-confirmar', { titulo: t('¿Borrar «{nombre}»?', { nombre: g.nombre }), texto: t('Se borra el gimnasio y su material. Tus entrenos no se tocan.'), si: t('Borrar'), peligro: true, accion: 'borrar-gimnasio', id: g.id })
   return (
     <Pantalla>
       <Cab atras crumb={t('Gimnasios')} titulo={t('Editor de gimnasio')} />
@@ -64,7 +62,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
             <div className="sec-h"><h2>{t('Máquinas propias')}</h2></div>
             <div className="list">
               {g.propias.map(p => (
-                <button key={p.id} className="it" onClick={() => nav.hoja('sheet-maq', { gym: g.id, id: p.id })}>
+                <button key={p.id} className="it" onClick={() => nav.hoja('hoja-maquina', { gym: g.id, id: p.id })}>
                   <span className="ico"><Ico n="armchair" /></span>
                   <span className="tx"><b>{p.nombre}</b>{p.notas && <small>{p.notas}</small>}</span>
                   <Ico n="caret-right" className="car" />
@@ -74,7 +72,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
           </div>
         )}
         <PesosGimnasio g={g} onCambio={cambia} />
-        <button className="btn ln sm mt20" onClick={async () => { await guardarGimnasio(g); nav.hoja('sheet-maq', { gym: g.id }) }}><Ico n="plus" b />{t('Añadir una máquina que no sale')}</button>
+        <button className="btn ln sm mt20" onClick={async () => { await guardarGimnasio(g); nav.hoja('hoja-maquina', { gym: g.id }) }}><Ico n="plus" b />{t('Añadir una máquina que no sale')}</button>
         {lista.length > 1 && <button className="btn bad sm mt8" onClick={borrar}><Ico n="trash" />{t('Borrar gimnasio')}</button>}
         <div className="dock">
           <div className="result card">

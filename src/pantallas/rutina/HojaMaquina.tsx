@@ -14,10 +14,10 @@ import { materialSinMaquina } from './comun'
 
 const PARECIDAS = ['seated_row_machine', 'lat_pulldown_machine', 'chest_press_machine', 'leg_press', 'shoulder_press_machine', 'leg_curl', 'cable', 'smith_machine', 'hack_squat', 'hip_thrust_machine']
 
-export function HojaMaquina({ ruta }: { ruta: Ruta<'sheet-maq'> }) {
+export function HojaMaquina({ ruta }: { ruta: Ruta<'hoja-maquina'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const gymId = Number(ruta.d.gym)
+  const gymId = ruta.d.gym
   const [m, setM] = useState<MaquinaPropia>({ id: ruta.d.id ?? `m${Date.now().toString(36)}`, nombre: '', parecida: null, notas: '' })
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {

@@ -17,7 +17,7 @@ import { materialCorto } from '../rutina/comun'
 import { t } from '../../i18n'
 
 
-export function HojaOcupado({ ruta }: { ruta: Ruta<'sheet-ocup'> }) {
+export function HojaOcupado({ ruta }: { ruta: Ruta<'hoja-ocupado'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()

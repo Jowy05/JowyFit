@@ -111,7 +111,7 @@ export function HojaPeso() {
               </label>
             ))}
           </div>
-          <button className="lnk mt12" onClick={() => nav.ir('pro-reg', undefined, 'pro')}>{t('Todos los campos y medidas')} <Ico n="caret-right" /></button>
+          <button className="lnk mt12" onClick={() => nav.ir('registrar', undefined, 'pro')}>{t('Todos los campos y medidas')} <Ico n="caret-right" /></button>
         </div>
       </details>
       {/* La tendencia solo cuando ya dice algo (con un solo dato confunde). */}

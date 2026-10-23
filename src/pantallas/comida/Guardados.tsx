@@ -35,13 +35,13 @@ export function Guardados() {
           <input className="inp" type="search" maxLength={LARGO.buscar} value={busca} onChange={e => setBusca(e.target.value)} placeholder={t('Buscar en lo escaneado')} aria-label={t('Buscar en lo escaneado')} />
         </label>
         <div className="count"><p>{tr('{n} productos guardados en el móvil', { n: <b className="mono">{productos.length}</b> })}</p></div>
-        {!productos.length && <Vacio icono="barcode" titulo={t('Aún no has escaneado nada')} texto={t('Escanea el código de barras y se guarda aquí: la próxima vez sale al instante, también sin conexión.')} accion={t('Escanear')} onAccion={() => nav.ir('com-scan')} />}
+        {!productos.length && <Vacio icono="barcode" titulo={t('Aún no has escaneado nada')} texto={t('Escanea el código de barras y se guarda aquí: la próxima vez sale al instante, también sin conexión.')} accion={t('Escanear')} onAccion={() => nav.ir('escaner')} />}
         {q && productos.length > 0 && !lista.length && <p className="small muted">{t('Nada con ese nombre.')}</p>}
         <div className="list">
           {lista.map(p => {
             const v = porRacion(p)
             return (
-              <button key={p.codigo} className="it" onClick={() => nav.ir('com-prod', { codigo: p.codigo })}>
+              <button key={p.codigo} className="it" onClick={() => nav.ir('producto', { codigo: p.codigo })}>
                 <Mini nombre={p.nombre} imagen={p.imagen} />
                 <span className="tx">
                   <b>{recortar(p.nombre)}</b>

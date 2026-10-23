@@ -1,24 +1,24 @@
 // Base de datos local (IndexedDB con Dexie). Nada sale del móvil.
 import Dexie, { type EntityTable } from 'dexie'
 import type {
-  Ajustes, Comida, DiaSuplementos, Foto, Gimnasio, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Sesion,
+  Ajustes, Comida, DiaSuplementos, Foto, Gimnasio, Guardado, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Sesion,
 } from './tipos'
 
 export class BaseJowyFit extends Dexie {
   perfil!: EntityTable<Perfil, 'id'>
   ajustes!: EntityTable<Ajustes, 'id'>
-  mediciones!: EntityTable<Medicion, 'id'>
-  fotos!: EntityTable<Foto, 'id'>
-  gimnasios!: EntityTable<Gimnasio, 'id'>
+  mediciones!: EntityTable<Guardado<Medicion>, 'id'>
+  fotos!: EntityTable<Guardado<Foto>, 'id'>
+  gimnasios!: EntityTable<Guardado<Gimnasio>, 'id'>
   marcas!: EntityTable<MarcaEjercicio, 'id'>
-  rutinas!: EntityTable<Rutina, 'id'>
-  sesiones!: EntityTable<Sesion, 'id'>
-  comidas!: EntityTable<Comida, 'id'>
-  plantillas!: EntityTable<Plantilla, 'id'>
+  rutinas!: EntityTable<Guardado<Rutina>, 'id'>
+  sesiones!: EntityTable<Guardado<Sesion>, 'id'>
+  comidas!: EntityTable<Guardado<Comida>, 'id'>
+  plantillas!: EntityTable<Guardado<Plantilla>, 'id'>
   productos!: EntityTable<Producto, 'codigo'>
   pasos!: EntityTable<PasosDia, 'fecha'>
   suplementos!: EntityTable<DiaSuplementos, 'fecha'>
-  metas!: EntityTable<Meta, 'id'>
+  metas!: EntityTable<Guardado<Meta>, 'id'>
 
   constructor(nombre = 'jowyfit') {
     super(nombre)

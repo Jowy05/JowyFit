@@ -8,75 +8,72 @@ export type Pestana = 'ini' | 'rut' | 'com' | 'pro' | 'per'
 /** Secciones de Perfil que se abren como pantalla (los textos de cada una están en pantallas/perfil/textos). */
 export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento'
 
-/** Id de algo guardado: Dexie lo tipa opcional, pero lo leído de la base siempre lo tiene. */
-type Id = number | undefined
-
-/** Datos que lleva cada pantalla y cada hoja (`undefined`: ninguno). Las hojas empiezan por «sheet-». */
+/** Datos que lleva cada pantalla y cada hoja (`undefined`: ninguno). Las hojas empiezan por «hoja-». */
 export type Rutas = {
-  ini: undefined
-  rut: undefined
-  'rut-dia': { letra: string }
-  'rut-gen': { definitiva: boolean } | undefined
-  'rut-edit': { letra: string } | undefined
-  'rut-ej': { filtro: 'evitados' } | undefined
-  'rut-ficha': { id: string }
-  'rut-gym': undefined
-  'rut-gym-edit': { id: Id }
+  inicio: undefined
+  'mi-plan': undefined
+  'detalle-dia': { letra: string }
+  'generar-rutina': { definitiva: boolean } | undefined
+  'editar-plan': { letra: string } | undefined
+  biblioteca: { filtro: 'evitados' } | undefined
+  ficha: { id: string }
+  gimnasios: undefined
+  'editor-gimnasio': { id: number }
   entreno: undefined
-  'ses-fin': { id: Id }
-  com: undefined
-  'com-scan': { fecha?: string; franja?: Franja } | undefined
-  'com-prod': { codigo: string; fecha?: string; franja?: Franja }
-  'com-plant': undefined
-  'com-guard': undefined
-  'com-energia': undefined
-  'pro-sem': undefined
-  'pro-fuerza': undefined
-  'pro-entreno': { id: Id }
-  'pro-cuerpo': undefined
-  'pro-reg': undefined
-  'pro-fotos': undefined
-  'pro-obj': undefined
-  'pro-pasos': undefined
-  per: undefined
-  'per-sec': { s: ClaveSeccion }
-  aju: { seccion: 'datos' | 'comida' } | undefined
+  'fin-entreno': { id: number }
+  'dia-comida': undefined
+  escaner: { fecha?: string; franja?: Franja } | undefined
+  producto: { codigo: string; fecha?: string; franja?: Franja }
+  plantillas: undefined
+  guardados: undefined
+  energia: undefined
+  semana: undefined
+  fuerza: undefined
+  'detalle-entreno': { id: number }
+  cuerpo: undefined
+  registrar: undefined
+  fotos: undefined
+  objetivos: undefined
+  pasos: undefined
+  perfil: undefined
+  'seccion-perfil': { s: ClaveSeccion }
+  ajustes: { seccion: 'datos' | 'comida' } | undefined
   creditos: undefined
-  'sheet-peso': undefined
-  'sheet-ses1': { letra: string; version?: 'normal' | 'corta' }
-  'sheet-ocup': { idx: number }
-  'sheet-lista': undefined
-  'sheet-salir-entreno': undefined
-  'sheet-tools': { idx: number }
-  'sheet-discos': { idx: number }
-  'sheet-cal': { idx: number }
-  'sheet-instr': { id: string }
-  'sheet-nota-serie': { idx: number; n: number }
-  'sheet-add': { fecha?: string; franja?: Franja; nota?: boolean } | undefined
-  'sheet-plant': { id?: number; fecha?: string; franja?: Franja }
-  'sheet-comida': { id: Id }
-  'sheet-supl': { nombre: string }
-  'sheet-maq': { gym: Id; id?: string }
-  'sheet-elegir':
+  'hoja-peso': undefined
+  'hoja-empezar': { letra: string; version?: 'normal' | 'corta' }
+  'hoja-ocupado': { idx: number }
+  'hoja-lista': undefined
+  'hoja-salir-entreno': undefined
+  'hoja-herramientas': { idx: number }
+  'hoja-discos': { idx: number }
+  'hoja-calentamiento': { idx: number }
+  'hoja-instrucciones': { id: string }
+  'hoja-nota-serie': { idx: number; n: number }
+  'hoja-anadir': { fecha?: string; franja?: Franja; nota?: boolean } | undefined
+  'hoja-plantilla': { id?: number; fecha?: string; franja?: Franja }
+  'hoja-comida': { id: number }
+  'hoja-suplemento': { nombre: string }
+  'hoja-maquina': { gym: number; id?: string }
+  'hoja-elegir-ejercicio':
     | { modo: 'anadir'; letra: string }
     | { modo: 'cambiar' | 'alternativa'; letra: string; uid: string; id: string }
     | { modo: 'sesion-anadir' }
     | { modo: 'sesion-cambiar'; idx: number; id?: string }
-  'sheet-meta': { id?: number; tipo?: Meta['tipo'] } | undefined
-  'sheet-trote': undefined
-  'sheet-confirmar': DatosConfirmar
-  'sheet-informe': undefined
-  'sheet-tutorial': undefined
+  'hoja-meta': { id?: number; tipo?: Meta['tipo'] } | undefined
+  'hoja-trote': undefined
+  'hoja-confirmar': DatosConfirmar
+  'hoja-informe': undefined
+  'hoja-oferta-tutorial': undefined
 }
 
 /** Hoja de confirmación: los textos y qué se hace al aceptar (con el id de lo que se borra). */
 type DatosConfirmar = { titulo: string; texto?: string; si?: string; no?: string; peligro?: boolean } & (
   | { accion: 'regenerar' | 'borrar-todo' }
-  | { accion: 'borrar-gimnasio' | 'borrar-sesion' | 'cancelar-entreno' | 'borrar-medicion' | 'borrar-foto'; id: Id }
+  | { accion: 'borrar-gimnasio' | 'borrar-sesion' | 'cancelar-entreno' | 'borrar-medicion' | 'borrar-foto'; id: number }
 )
 
 export type CodigoRuta = keyof Rutas
-export type CodigoHoja = Extract<CodigoRuta, `sheet-${string}`>
+export type CodigoHoja = Extract<CodigoRuta, `hoja-${string}`>
 export type CodigoPantalla = Exclude<CodigoRuta, CodigoHoja>
 /** Pantallas y hojas que se abren sin datos. */
 export type SinDatos<C extends CodigoRuta = CodigoRuta> = { [K in C]: undefined extends Rutas[K] ? K : never }[C]
@@ -95,11 +92,11 @@ type EstadoNav = {
 }
 
 export const RAIZ: Record<Pestana, Ruta<SinDatos<CodigoPantalla>>> = {
-  ini: { p: 'ini' },
-  rut: { p: 'rut' },
-  com: { p: 'com' },
-  pro: { p: 'pro-sem' },
-  per: { p: 'per' },
+  ini: { p: 'inicio' },
+  rut: { p: 'mi-plan' },
+  com: { p: 'dia-comida' },
+  pro: { p: 'semana' },
+  per: { p: 'perfil' },
 }
 
 export const estadoInicial = (): EstadoNav => ({

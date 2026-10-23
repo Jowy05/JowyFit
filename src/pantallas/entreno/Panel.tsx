@@ -108,7 +108,7 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
         </div>
       )}
       <div className="pn-main">
-        <button className="btn gry busy" onClick={() => nav.hoja('sheet-ocup', { idx })}><Ico n="hand-palm" b />{t('Ocupado')}</button>
+        <button className="btn gry busy" onClick={() => nav.hoja('hoja-ocupado', { idx })}><Ico n="hand-palm" b />{t('Ocupado')}</button>
         <button className="btn xl" onClick={() => {
           const d = crono != null ? { ...datos(), segundos: segundosCrono } : datos()
           if (crono != null) { setSeg(segundosCrono); setCrono(null) }
@@ -147,7 +147,7 @@ function Descanso({ s, e, serie, resto, total, onSaltar, onMas }: {
           </div>
         </div>
         <div className="rest-btns mt12">
-          <button className="btn gry busy big56" onClick={() => nav.hoja('sheet-ocup', { idx: indiceActual(s) })}><Ico n="hand-palm" b />{t('Ocupado')}</button>
+          <button className="btn gry busy big56" onClick={() => nav.hoja('hoja-ocupado', { idx: indiceActual(s) })}><Ico n="hand-palm" b />{t('Ocupado')}</button>
           <button className="btn gry big56" onClick={onMas}>+15 s</button>
           <button className="btn big56" onClick={onSaltar}><Ico n="skip-forward" b />{t('Saltar')}</button>
         </div>

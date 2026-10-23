@@ -9,12 +9,12 @@ import { useNav, type Ruta } from '../app/nav'
 import { useAviso } from './aviso'
 import { t } from '../i18n'
 
-type Datos = Ruta<'sheet-confirmar'>['d']
+type Datos = Ruta<'hoja-confirmar'>['d']
 type ConId = Extract<Datos, { id: unknown }>['accion']
 type Ctx = { nav: ReturnType<typeof useNav>; aviso: ReturnType<typeof useAviso> }
 
 const SIN_ID: Record<Exclude<Datos['accion'], ConId>, (c: Ctx) => Promise<void>> = {
-  regenerar: async ({ nav }) => { nav.hoja(null); nav.ir('rut-gen', undefined, 'rut') },
+  regenerar: async ({ nav }) => { nav.hoja(null); nav.ir('generar-rutina', undefined, 'rut') },
   // Borra la base entera: también reinicia los contadores que una copia rara puede dejar agotados.
   'borrar-todo': async () => { await borrarTodosLosDatos(); location.reload() },
 }
@@ -27,7 +27,7 @@ const CON_ID: Record<ConId, (id: number, c: Ctx) => Promise<void>> = {
   'borrar-foto': async (id, { nav, aviso }) => { await borrarFoto(id); nav.hoja(null); aviso(t('Foto borrada')) },
 }
 
-export function HojaConfirmar({ ruta }: { ruta: Ruta<'sheet-confirmar'> }) {
+export function HojaConfirmar({ ruta }: { ruta: Ruta<'hoja-confirmar'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const d = ruta.d
@@ -35,10 +35,7 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta<'sheet-confirmar'> }) {
   const [segunda, setSegunda] = useState(false)
   // Un doble toque haría dos veces «atrás» (borrar gimnasio o entreno) y sacaría de la pantalla anterior.
   const hacer = unaVez(async () => {
-    if (!('id' in d)) return SIN_ID[d.accion]({ nav, aviso })
-    if (d.id != null) return CON_ID[d.accion](d.id, { nav, aviso })
-    // Sin id no hay nada que borrar: se cierra la hoja en vez de dejar el botón sin hacer nada.
-    nav.hoja(null)
+    return 'id' in d ? CON_ID[d.accion](d.id, { nav, aviso }) : SIN_ID[d.accion]({ nav, aviso })
   })
   return (
     <Hoja titulo={d.titulo}>

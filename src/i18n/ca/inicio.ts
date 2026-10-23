@@ -266,6 +266,7 @@ export default {
   'Elige la hora': "Tria l'hora",
   'parte del día|Mañana': 'Matí',
   'parte del día|Mediodía': 'Migdia',
+  'parte del día|Madrugada': 'Matinada',
   'parte del día|Tarde': 'Tarda',
   'parte del día|Noche': 'Nit',
   '¿Cuánto tiempo tienes cada día?': 'Quant temps tens cada dia?',

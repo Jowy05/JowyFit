@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-5-0.cab': '<b>Versión 0.5.0</b> · 23 de octubre de 2026',
+  'nov.0-5-0.texto': 'Calistenia y cardio, fáciles de encontrar: en Rutina → Ejercicios hay dos filtros nuevos, y buscar «calistenia» o «cardio» también los encuentra. Las dominadas, los fondos, las anillas y el TRX se apuntan por repeticiones, sin pedirte kilos. La hora de entreno se puede poner a cualquier hora, también de noche y de madrugada. Y la licencia cambia: puedes usar, copiar y cambiar JowyFit diciendo quién lo hizo, pero no venderla.',
   'nov.0-4-1.cab': '<b>Versión 0.4.1</b> · 23 de octubre de 2026',
   'nov.0-4-1.texto': 'El informe en PDF, más claro y con los colores de la app. La página y la demo, más fáciles de leer y de usar con el teclado. Arreglos: el % de grasa sale igual en Inicio, Metas y el informe, y los avisos de suplementos salen en tu idioma. Por dentro, la app está ordenada para crecer sin fallos.',
   'nov.0-4-0.cab': '<b>Versión 0.4.0</b> · 22 de octubre de 2026',

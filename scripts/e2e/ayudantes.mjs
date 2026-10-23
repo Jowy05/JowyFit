@@ -110,6 +110,9 @@ export async function alta(o = {}) {
     if (await js(`return !!document.querySelector('select[aria-label="Hora de entreno"]')`)) {
       for (const d of ['martes', 'jueves', 'viernes']) await t('pulsarSel', `[aria-label="${d}"]`)
       await t('elegir', 'select[aria-label="Hora de entreno"]', '05:30')
+      // Las 24 horas: también de noche y de madrugada (quien trabaja de noche).
+      const horas = await js(`return [...document.querySelectorAll('select[aria-label="Hora de entreno"] option')].map(o => o.value).filter(Boolean)`)
+      comprobar(horas.length === 48 && ['23:00', '23:30', '00:00', '04:30'].every(h => horas.includes(h)), 'Faltan horas para entrenar: ' + horas.join(' '))
       await t('pulsarSel', '[aria-label="Extra el sábado"]')
     }
     await pulsar('Siguiente')

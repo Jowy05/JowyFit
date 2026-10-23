@@ -128,12 +128,19 @@ export function normalizar(t: string): string {
   return t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
+/** Calistenia: lo que RepDB marca como tal o como peso corporal (dominadas, fondos, flexiones, anillas…). */
+export const esCalistenia = (e: Ejercicio) => e.etiquetas.includes('calisthenics') || e.etiquetas.includes('bodyweight')
+/** Cardio: la categoría de RepDB y lo que marca como cardio (correr, comba, burpees, cinta…). */
+export const esCardio = (e: Ejercicio) => e.categoria === 'cardio' || e.etiquetas.includes('cardio')
+// Para que buscar «calistenia» o «cardio» encuentre todos los suyos, en los tres idiomas (no vienen en el nombre).
+const palabrasDeTipo = (e: Ejercicio) => `${esCalistenia(e) ? 'calistenia calisthenics cal·listenia' : ''} ${esCardio(e) ? 'cardio' : ''}`
+
 export function buscar(texto: string, lista: Ejercicio[]): Ejercicio[] {
   const q = normalizar(texto.trim())
   if (!q) return lista
   const partes = q.split(/\s+/)
   return lista.filter(e => {
-    const h = normalizar(`${e.nombre} ${e.id.replace(/-/g, ' ')} ${e.principales.map(nombreMusculo).join(' ')} ${nombreMaterial(e.material)}`)
+    const h = normalizar(`${e.nombre} ${e.id.replace(/-/g, ' ')} ${e.principales.map(nombreMusculo).join(' ')} ${nombreMaterial(e.material)} ${palabrasDeTipo(e)}`)
     return partes.every(p => h.includes(p))
   })
 }

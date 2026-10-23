@@ -19,7 +19,8 @@ const mini = (): Catalogo => ({
     ejer('cable-fly', { nombre: 'Aperturas con Cable', material: 'cable', mecanica: 'isolation', poses: ['main'] }),
     ejer('smith-bench', { nombre: 'Press en Máquina Smith', material: 'smith_machine' }),
     ejer('ez-curl', { nombre: 'Curl con Barra EZ', zona: 'upper_arms', principales: ['biceps_brachii'], mecanica: 'isolation', poses: [] }),
-    ejer('dips', { nombre: 'Fondos', material: null, pesoCorporal: true, principales: ['pectoralis_major', 'triceps_brachii'] }),
+    ejer('dips', { nombre: 'Fondos', material: null, pesoCorporal: true, principales: ['pectoralis_major', 'triceps_brachii'], etiquetas: ['calisthenics'] }),
+    ejer('burpees', { nombre: 'Burpees', material: null, categoria: 'cardio', zona: 'full_body', principales: [] }),
   ],
 })
 
@@ -97,7 +98,12 @@ describe('con catálogo', () => {
     expect(cat.buscar('PRESS banca', lista).map(e => e.id)).toEqual(['bench-press'])
     expect(cat.buscar('polea', lista).map(e => e.id)).toEqual(['cable-fly'])
     expect(cat.buscar('triceps', lista).map(e => e.id)).toEqual(['dips'])
-    expect(cat.buscar('peso corporal', lista).map(e => e.id)).toEqual(['dips'])
+    expect(cat.buscar('peso corporal', lista).map(e => e.id)).toEqual(['dips', 'burpees'])
+    expect(cat.buscar('Calistenia', lista).map(e => e.id)).toEqual(['dips'])
+    expect(cat.buscar('calisthenics', lista).map(e => e.id)).toEqual(['dips'])
+    expect(cat.buscar('cardio', lista).map(e => e.id)).toEqual(['burpees'])
+    expect(lista.filter(cat.esCalistenia).map(e => e.id)).toEqual(['dips'])
+    expect(lista.filter(cat.esCardio).map(e => e.id)).toEqual(['burpees'])
     expect(cat.buscar('ez curl', lista).map(e => e.id)).toEqual(['ez-curl'])
     expect(cat.buscar('nada de nada', lista)).toEqual([])
   })
@@ -132,7 +138,7 @@ describe('cargar el catálogo', () => {
     vi.stubGlobal('fetch', async () => { throw new Error('sin conexión') })
     await expect(cat.cargarCatalogo()).rejects.toThrow()
     vi.stubGlobal('fetch', async () => ({ ok: true, status: 200, json: async () => mini() }))
-    expect((await cat.cargarCatalogo()).ejercicios).toHaveLength(5)
+    expect((await cat.cargarCatalogo()).ejercicios).toHaveLength(6)
   })
 })
 
@@ -149,6 +155,12 @@ describe('clasificación', () => {
     expect(cl.tipoRegistro(ejer('kb-swing', { material: 'kettlebell' }))).toBe('mancuerna')
     expect(cl.tipoRegistro(ejer('push-up', { material: null }))).toBe('corporal')
     expect(cl.tipoRegistro(ejer('pull-up', { material: 'pull_up_bar', pesoCorporal: true }))).toBe('corporal')
+    // Barra, paralelas, anillas y TRX sin la marca de peso corporal: por repeticiones; los lastrados, con kilos.
+    expect(cl.tipoRegistro(ejer('pull-up', { material: 'pull_up_bar', fuerza: 'pull' }))).toBe('corporal')
+    expect(cl.tipoRegistro(ejer('ring-dips', { material: 'rings' }))).toBe('corporal')
+    expect(cl.tipoRegistro(ejer('trx-row', { material: 'suspension_trainer', fuerza: 'pull' }))).toBe('corporal')
+    expect(cl.tipoRegistro(ejer('weighted-pull-up', { material: 'pull_up_bar', fuerza: 'pull' }))).toBe('peso')
+    expect(cl.tipoRegistro(ejer('weighted-dips', { material: 'dip_station' }))).toBe('peso')
     expect(cl.tipoRegistro(ejer('bench-press'))).toBe('peso')
   })
   it('patrón de movimiento por zona', () => {
@@ -222,5 +234,18 @@ describe.skipIf(!hayCatalogo)('el catálogo real de RepDB', () => {
     const ids = new Set(ej.map(e => e.id))
     const faltan = HABITUALES.filter(id => !ids.has(id))
     expect(faltan).toEqual([])
+  })
+  it('hay calistenia y cardio de verdad, y buscarlos por su nombre los encuentra (no son solo máquinas y pesas)', async () => {
+    vi.resetModules()
+    const { usarCatalogo, catalogoCargado, buscar, esCalistenia, esCardio } = await import('../src/catalogo/catalogo')
+    usarCatalogo(catalogoReal())
+    const ej = catalogoCargado()!.ejercicios
+    const cal = ej.filter(esCalistenia), car = ej.filter(esCardio)
+    expect(cal.length).toBeGreaterThan(60)
+    expect(car.length).toBeGreaterThan(15)
+    for (const id of ['pull-up', 'push-up', 'dips']) expect(cal.map(e => e.id), id).toContain(id)
+    for (const id of ['running', 'jump-rope', 'burpees']) expect(car.map(e => e.id), id).toContain(id)
+    expect(buscar('calistenia', ej)).toHaveLength(cal.length)
+    expect(buscar('cardio', ej)).toHaveLength(car.length)
   })
 })

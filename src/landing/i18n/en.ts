@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-5-0.cab': '<b>Version 0.5.0</b> · October 23, 2026',
+  'nov.0-5-0.texto': 'Calisthenics and cardio are easy to find: Routine → Exercises has two new filters, and searching “calisthenics” or “cardio” finds them too. Pull-ups, dips, rings, and TRX are logged by reps, with no weight to enter. You can set your workout for any time, including late at night and the early hours. And there’s a new license: you can use, copy and change JowyFit as long as you say who made it, but you can’t sell it.',
   'nov.0-4-1.cab': '<b>Version 0.4.1</b> · October 23, 2026',
   'nov.0-4-1.texto': 'A clearer PDF report in the app’s colors. The page and the demo are easier to read and to use with a keyboard. Fixes: body fat % now matches across Home, Goals, and the report, and supplement reminders show in your language. Under the hood, the app is reorganized to grow without bugs.',
   'nov.0-4-0.cab': '<b>Version 0.4.0</b> · October 22, 2026',

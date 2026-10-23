@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-5-0.cab': '<b>Versió 0.5.0</b> · 23 d’octubre del 2026',
+  'nov.0-5-0.texto': 'Calistènia i cardio, fàcils de trobar: a Rutina → Exercicis hi ha dos filtres nous, i si cerques «calistènia» o «cardio» també els trobes. Les dominades, els fons, les anelles i el TRX s’apunten per repeticions, sense demanar-te quilos. L’hora d’entrenament es pot posar a qualsevol hora, també de nit i de matinada. I la llicència canvia: pots fer servir, copiar i canviar JowyFit dient qui l’ha fet, però no vendre-la.',
   'nov.0-4-1.cab': '<b>Versió 0.4.1</b> · 23 d’octubre del 2026',
   'nov.0-4-1.texto': 'L’informe en PDF, més clar i amb els colors de l’app. La pàgina i la demo, més fàcils de llegir i d’utilitzar amb el teclat. Arranjaments: el % de greix surt igual a Inici, Metes i l’informe, i els avisos de suplements surten en el teu idioma. Per dins, l’app està ordenada per créixer sense errors.',
   'nov.0-4-0.cab': '<b>Versió 0.4.0</b> · 22 d’octubre del 2026',

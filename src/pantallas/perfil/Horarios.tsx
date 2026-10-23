@@ -18,7 +18,9 @@ const PARTES_DEL_DIA: { nombre: () => string; desde: number; hasta: number }[] =
   { nombre: () => tc('parte del día', 'Mañana'), desde: 5, hasta: 12 },
   { nombre: () => tc('parte del día', 'Mediodía'), desde: 12, hasta: 16 },
   { nombre: () => tc('parte del día', 'Tarde'), desde: 16, hasta: 20 },
-  { nombre: () => tc('parte del día', 'Noche'), desde: 20, hasta: 23 },
+  { nombre: () => tc('parte del día', 'Noche'), desde: 20, hasta: 24 },
+  // Al final: casi nadie entrena de madrugada, pero quien trabaja de noche también tiene que poder elegirla.
+  { nombre: () => tc('parte del día', 'Madrugada'), desde: 0, hasta: 5 },
 ]
 const horasDe = (desde: number, hasta: number) => Array.from({ length: (hasta - desde) * 2 }, (_, i) => `${String(desde + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`)
 

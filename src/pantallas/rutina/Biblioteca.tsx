@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { leerSesiones } from '../../datos/consultas'
-import { buscar, catalogoCargado, nombreMaterial } from '../../catalogo/catalogo'
+import { buscar, catalogoCargado, esCalistenia, esCardio, nombreMaterial } from '../../catalogo/catalogo'
 import { mejorMarca } from '../../dominio/progresion'
 import { hoyISO } from '../../dominio/fechas'
 import { kg } from '../../dominio/formato'
@@ -24,6 +24,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   const r = useRutina()
   const [q, setQ] = useState('')
   const [grupo, setGrupo] = useState('')
+  const [tipo, setTipo] = useState<'' | 'calistenia' | 'cardio'>('')
   const [musculo, setMusculo] = useState('')
   const [mas, setMas] = useState(false)
   const [material, setMaterial] = useState('')
@@ -51,6 +52,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   const lista = useMemo(() => {
     let l = (c?.ejercicios ?? []).filter(e => e.categoria !== 'stretching' || q)
     if (enGym && g) l = l.filter(e => !e.material || sel.has(e.material))
+    if (tipo) l = l.filter(tipo === 'calistenia' ? esCalistenia : esCardio)
     if (grupo) l = l.filter(e => e.principales.some(x => musculoComun(x) === t(grupo)))
     if (musculo) l = l.filter(e => e.principales.includes(musculo) || e.secundarios.includes(musculo))
     if (material) l = l.filter(e => (material === 'corporal' ? !e.material : e.material === material))
@@ -59,12 +61,12 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
     if (hoy) l = l.filter(e => datos?.hechosHoy.has(e.id))
     l = buscar(q, l)
     return l.sort((a, b) => Number(enPlan.has(b.id)) - Number(enPlan.has(a.id)) || Number(!!marcas.get(b.id)?.favorito) - Number(!!marcas.get(a.id)?.favorito) || a.nombre.localeCompare(b.nombre))
-  }, [c, q, grupo, musculo, material, enGym, favs, hoy, evitados, g?.material.length, marcas, datos, enPlan])
+  }, [c, q, tipo, grupo, musculo, material, enGym, favs, hoy, evitados, g?.material.length, marcas, datos, enPlan])
   const [n, setN] = useState(40)
   const nFavs = [...marcas.values()].filter(m => m.favorito).length
   // «En mi gimnasio» no cuenta: es lo normal.
-  const hayFiltros = !!grupo || !!musculo || !!material || favs || hoy || evitados
-  const quitarFiltros = () => { setGrupo(''); setMusculo(''); setMaterial(''); setFavs(false); setHoy(false); setEvitados(false) }
+  const hayFiltros = !!tipo || !!grupo || !!musculo || !!material || favs || hoy || evitados
+  const quitarFiltros = () => { setTipo(''); setGrupo(''); setMusculo(''); setMaterial(''); setFavs(false); setHoy(false); setEvitados(false) }
   const cuenta = <b className="mono">{lista.length}</b>
   const materiales = useMemo(() => [...new Set((c?.ejercicios ?? []).map(e => e.material).filter((m): m is string => !!m))].sort((a, b) => nombreMaterial(a).localeCompare(nombreMaterial(b))), [c])
 
@@ -78,6 +80,8 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
             <option value="">{t('Músculo ▾')}</option>
             {GRUPOS_SIMPLES.map(x => <option key={x} value={x}>{t(x)}</option>)}
           </select>
+          <Chip on={tipo === 'calistenia'} onClick={() => setTipo(v => (v === 'calistenia' ? '' : 'calistenia'))}>{t('Calistenia')}</Chip>
+          <Chip on={tipo === 'cardio'} onClick={() => setTipo(v => (v === 'cardio' ? '' : 'cardio'))}>{t('Cardio')}</Chip>
           <Chip on={enGym} ck onClick={() => setEnGym(v => !v)}>{t('En mi gimnasio')}</Chip>
           <Chip on={favs} onClick={() => setFavs(v => !v)}><Ico n="star" />{t('Favoritos')}{nFavs > 0 && <span className="n">{nFavs}</span>}</Chip>
           {evitados && <Chip on onClick={() => setEvitados(false)}><Ico n="prohibit" />{t('Evitados')}</Chip>}

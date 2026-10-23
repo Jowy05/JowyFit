@@ -64,11 +64,16 @@ export function patron(e: Ejercicio): Patron {
   }
 }
 
+// Barra, paralelas, anillas, TRX y cuerda: se cuelga o se empuja el propio cuerpo. RepDB no los marca como peso corporal,
+// pero apuntarles kilos no tiene sentido (los lastrados, «weighted-…», sí llevan peso).
+const APARATOS_DE_CALISTENIA = new Set(['pull_up_bar', 'dip_station', 'rings', 'suspension_trainer', 'climbing_rope'])
+
 /** Cómo se apunta cada serie de este ejercicio. */
 export function tipoRegistro(e: Ejercicio): TipoRegistro {
   if (e.categoria === 'cardio') return 'cardio'
   if (e.material === 'assisted_pullup_machine' || e.material === 'dip_machine' || /assisted/.test(e.id)) return 'asistido'
   if (e.fuerza === 'static' || /(plank|-hold$|dead-hang|wall-sit|l-sit)/.test(e.id)) return 'tiempo'
+  if (APARATOS_DE_CALISTENIA.has(e.material ?? '') && !/^weighted-/.test(e.id)) return 'corporal'
   if (e.material === 'dumbbell' || e.material === 'kettlebell') return 'mancuerna'
   if (!e.material || e.pesoCorporal) return 'corporal'
   return 'peso'

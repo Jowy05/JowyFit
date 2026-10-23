@@ -265,6 +265,7 @@ export default {
   'Elige la hora': 'Pick a time',
   'parte del día|Mañana': 'Morning',
   'parte del día|Mediodía': 'Midday',
+  'parte del día|Madrugada': 'Late night',
   'parte del día|Tarde': 'Afternoon',
   'parte del día|Noche': 'Evening',
   '¿Cuánto tiempo tienes cada día?': 'How much time do you have each day?',

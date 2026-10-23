@@ -1,5 +1,5 @@
 // Inglés (EE. UU., sencillo) · zona «progreso».
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -365,6 +365,7 @@ export default {
   'faltan {n}': '{n} to go',
   'Incluye trote de {n} km': 'Includes a {n} km jog',
   'En iPhone los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.': 'On iPhone, you log steps by hand: check them in the Health app and type them here.',
+  'En iPad los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.': 'On iPad, you log steps by hand: check them in the Health app and type them here.',
   'Actualizar desde Health Connect': 'Update from Health Connect',
   '+ Trote / carrera': '+ Jog / run',
   'Últimos 7 días': 'Last 7 days',

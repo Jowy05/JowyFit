@@ -12,7 +12,7 @@ import { estadoHora, propuestaRecorte } from '../../dominio/tiempos'
 import { TEXTO_PARTIDA } from '../../dominio/progresion'
 import { formatoHora } from '../../dominio/fechas'
 import { kg, textoSerieEnCurso } from '../../dominio/formato'
-import { pantallaEncendida, pitido, puedeVibrar, vibrar } from '../../plataforma'
+import { capacidades, pantallaEncendida, pitido, vibrar } from '../../plataforma'
 import { cx, Ico, Pantalla, Th } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -78,7 +78,7 @@ function EntrenoEnCurso({ s }: { s: Sesion }) {
       const recien = Date.now() - s.descansoHasta < 5000
       if (ajustes.vibrar && recien) void vibrar('fin')
       if (ajustes.sonido && recien) pitido()
-      if (recien && !puedeVibrar()) {
+      if (recien && !capacidades().vibracion) {
         setDestello(s.descansoHasta)
         window.clearTimeout(tDestello.current)
         tDestello.current = window.setTimeout(() => setDestello(0), 1900)

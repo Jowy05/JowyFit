@@ -1,5 +1,5 @@
 // Textos de la landing en inglés (EE. UU., sencillo). Mismas claves que es.ts: TypeScript avisa si falta alguna.
-// Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
+// Glosario y avisos: README, «Idiomas».
 import type es from './es'
 
 const en: Record<keyof typeof es, string> = {

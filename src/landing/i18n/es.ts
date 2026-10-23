@@ -1,7 +1,7 @@
 // Textos de la landing (index.html) en castellano: el original, tal cual está en la página.
 // Cada clave es la de un data-i18n / data-i18n-html / data-i18n-attr del HTML, o la de un texto que pone el JS.
 // Los que llevan {algo} se rellenan al pintarse. Los que llevan etiquetas (<b>, <a>…) se ponen como HTML: se dejan
-// las etiquetas y sus atributos tal cual y se traduce solo el texto. Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
+// las etiquetas y sus atributos tal cual y se traduce solo el texto. Glosario y avisos: README, «Idiomas».
 const es = {
   // Página: título y descripción (buscadores y al compartir el enlace)
   'meta.titulo': 'JowyFit · Menos pensar, más entrenar',

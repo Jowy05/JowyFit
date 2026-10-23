@@ -2,13 +2,14 @@
 import { useState } from 'react'
 import { guardarRutina } from '../../datos/acciones/rutina'
 import type { Bloque } from '../../datos/tipos'
-import { ejercicio } from '../../catalogo/catalogo'
+import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { duracion } from '../../dominio/fechas'
 import { Cab, Chip, estilo, Ico, Pantalla, Stepper, Th, Vacio } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useRutina } from '../../datos/hooks'
-import { abrevDia, filas, materialCorto, minutos, nombreEj, seriesPorGrupo, SS, SS_EXPLICA, tituloDia } from './comun'
+import { abrevDia, materialCorto, tituloDia } from './comun'
+import { filas, minutosDia, seriesPorGrupo } from '../../dominio/rutina'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t } from '../../i18n'
 
@@ -78,7 +79,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
         <div className="row">
           <Th ej={e} size="s" />
           <span className="tx">
-            <b>{nombreEj(e)}</b>
+            <b>{nombreEjercicio(b.ejercicio)}</b>
             {/* Las repeticiones, como chip con borde: se ve que se pueden tocar (cada toque pasa al siguiente rango). */}
             {tiempo
               ? <small className="mono">{b.repsMin}-{b.repsMax} s</small>
@@ -102,7 +103,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
               {i < dia.bloques.length - 1 && <button className="chip" onClick={() => void mover(b.uid, 1)}><Ico n="caret-down" />{t('Bajar')}</button>}
               <button className="chip" onClick={() => void quitar(b)}><Ico n="trash" />{t('Quitar')}</button>
             </div>
-            {b.alternativas.length > 0 && <p className="small muted mt8">{t('Si está ocupado: {lista}', { lista: b.alternativas.map(a => `${nombreEj(a)} (${materialCorto(a).toLowerCase()})`).join(' → ') })}</p>}
+            {b.alternativas.length > 0 && <p className="small muted mt8">{t('Si está ocupado: {lista}', { lista: b.alternativas.map(a => `${nombreEjercicio(a)} (${materialCorto(a).toLowerCase()})`).join(' → ') })}</p>}
           </div>
         )}
       </div>
@@ -118,11 +119,11 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'rut-edit'> }) {
       </Cab>
       <div className="pg">
         <h2 className="h3">{dia.opcional ? t('{dia} · opcional', { dia: tituloDia(dia) }) : tituloDia(dia)}{dia.dia != null && <span className="muted ux-rut-sub">{nombreEntreno(dia)}</span>}</h2>
-        <p className="small muted mt4">{t('~{min} min · con prisa ~{corta} min', { min: minutos(dia), corta: minutos(dia, true) })}</p>
+        <p className="small muted mt4">{t('~{min} min · con prisa ~{corta} min', { min: minutosDia(dia), corta: minutosDia(dia, true) })}</p>
         <div className="edl mt8">
           {filas(dia.bloques).map(f => Array.isArray(f) ? (
             <div key={f[0].uid} className="ssg">
-              <p className="ss-head"><Ico n="link" b />{t('{nombre} (superserie) · {explica}', { nombre: SS(), explica: SS_EXPLICA() })}<button className="lnk" onClick={() => deshacerSS(f[0])}>{t('Separar')}</button></p>
+              <p className="ss-head"><Ico n="link" b />{t('{nombre} (superserie) · {explica}', { nombre: t('Dos seguidos'), explica: t('sin descanso entre los dos') })}<button className="lnk" onClick={() => deshacerSS(f[0])}>{t('Separar')}</button></p>
               <div className="edl">{fila(f[0])}{fila(f[1])}</div>
             </div>
           ) : fila(f))}

@@ -1,7 +1,7 @@
 // PRO-05 · Registrar medidas
 import { useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { leerMediciones } from '../../datos/consultas'
 import { apuntarMedicion } from '../../datos/acciones/cuerpo'
 import type { Bascula, Medicion, OrigenMedicion } from '../../datos/tipos'
 import { leerNumero, num } from '../../dominio/formato'
@@ -10,7 +10,8 @@ import { ultimoValor, type PuntoFecha } from '../../dominio/tendencias'
 import { Cab, Chip, cx, Ico, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { ORIGENES, PERIMETROS, type Perimetro } from './comun'
+import { ORIGENES } from './comun'
+import { PERIMETROS, type Perimetro } from '../../dominio/medidas'
 import { t, tk, tn } from '../../i18n'
 
 type Campo = 'peso' | Perimetro
@@ -62,7 +63,7 @@ export function Registrar() {
   const aviso = useAviso()
   const hoy = hoyISO()
   const ultimos = useLiveQuery(async () => {
-    const ms = await db.mediciones.toArray()
+    const ms = await leerMediciones()
     const v: Partial<Record<Campo, PuntoFecha>> = {}
     const peso = ultimoValor(ms, m => m.pesoKg)
     if (peso) v.peso = peso

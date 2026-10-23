@@ -1,5 +1,5 @@
 // Catalán (IEC, variante central) · zona «informe»: el informe en PDF (src/informe/) y la hoja «Informe en PDF».
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -127,8 +127,6 @@ export default {
   'Un solo entreno en estos días': 'Un sol entrenament aquests dies',
   'último: {valor} ({fecha})': 'últim: {valor} ({fecha})',
   'al empezar, tu medida del {fecha} (de antes de estos días; dentro solo hay una)': "en començar, la teva mesura del {fecha} (d'abans d'aquests dies; dins només n'hi ha una)",
-  '{a} y {b}': '{a} i {b}',
-  '3+|{a} y {b}': '{a} i {b}',
   'Cómo está tu cuerpo': 'Com està el teu cos',
   'IMC (kg/m²)': 'IMC (kg/m²)',
   'Grasa corporal (%) (por medidas)': 'Greix corporal (%) (per mesures)',

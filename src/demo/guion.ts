@@ -1,5 +1,5 @@
 // Guion de la demo (/Demo): qué captura se enseña, qué se señala y qué se dice. Las capturas y la posición de
-// lo señalado salen de la app de verdad (.cache/demo/capturas-demo.mjs → public/demo/ y focos.json).
+// lo señalado salen de la app de verdad (las hace un script local: public/demo/ y focos.json).
 // Android: un vistazo de un minuto. iPhone: algo más largo, porque explica lo que allí se hace de otra forma
 // (instalarla, pasos a mano, pendientes en vez de recordatorios, copia con Compartir) y no promete lo que no hay.
 // Los textos son claves de i18n/es.ts (y de ca.ts y en.ts). Cada idioma tiene sus capturas (public/demo/<idioma>/).

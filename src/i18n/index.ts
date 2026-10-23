@@ -1,7 +1,7 @@
 // Idiomas de la app (castellano, catalán, inglés), al estilo gettext: la clave es el propio texto en castellano.
 // El castellano va en el código y no se carga nada; el catalán y el inglés son diccionarios aparte (ca/, en/)
 // que se descargan con import() antes de pintar la app. Cambiar de idioma guarda la elección y recarga la app.
-// Cómo usarlo en las pantallas: docs/I18N-APP.md.
+// Cómo usarlo en las pantallas: README, «Idiomas».
 import type { Diccionario } from './tipos'
 
 export type Idioma = 'es' | 'ca' | 'en'

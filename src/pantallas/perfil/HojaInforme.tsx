@@ -1,4 +1,4 @@
-// AJU-02 · Informe en PDF (Ajustes): de qué días y qué lleva; se crea en el móvil. Diseño: docs/INFORME-PDF-DISENO.md §1.
+// AJU-02 · Informe en PDF (Ajustes): de qué días y qué lleva; se crea en el móvil (§1 del diseño del informe).
 // Android lo guarda en Documentos/JowyFit y deja compartirlo; iPhone abre Compartir (si no puede, se descarga); el ordenador lo descarga.
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -7,7 +7,7 @@ import { datosInforme, periodoInforme } from '../../informe/calculo/leer'
 import { guardarAjustes } from '../../datos/repos'
 import type { PeriodoInforme, SeccionesInforme } from '../../informe/calculo/tipos'
 import { ORDEN_PERIODOS, PERIODO_POR_DEFECTO, SECCIONES_POR_DEFECTO, etiquetaPeriodo } from '../../informe/calculo/periodo'
-import { compartirArchivo, compartirNativo, dispositivoApple, esNativo, guardarArchivo } from '../../plataforma'
+import { capacidades, compartirArchivo, compartirNativo, guardarArchivo } from '../../plataforma'
 import { cx, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes } from '../../datos/hooks'
@@ -37,8 +37,8 @@ function textoError(e: unknown): string {
 export function HojaInforme() {
   const aviso = useAviso()
   const a = useAjustes()
-  const nativo = esNativo()
-  const apple = dispositivoApple()
+  // APK: el PDF se guarda en Documentos/JowyFit y se comparte con el menú del sistema; Apple: con Compartir de Safari.
+  const { compartirNativo: nativo, apple } = capacidades()
   // Uno para crear y otro para compartir: con uno solo, compartir justo después de crear se ignoraría.
   const unaVez = useUnaVez()
   const unaVezCompartir = useUnaVez()

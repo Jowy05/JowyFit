@@ -1,19 +1,18 @@
 // PRO-07 · Objetivos e hitos (y la hoja para crear o editar una meta)
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
 import { borrarMeta, guardarMeta } from '../../datos/acciones/cuerpo'
-import { sesionesHechas, valorActualMeta } from '../../datos/consultas'
+import { leerMediciones, leerMeta, leerMetas, sesionesHechas, valorActualMeta } from '../../datos/consultas'
 import type { Medicion, Meta, Perfil, Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
-import { kg, num } from '../../dominio/formato'
-import { fechaCorta, hoyISO } from '../../dominio/fechas'
+import { capital, kg, num } from '../../dominio/formato'
+import { fechaCorta, hoyISO, mesAnio } from '../../dominio/fechas'
 import { ejerciciosHechos, faltaMeta, grasaActual, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../dominio/tendencias'
 import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfil } from '../../datos/hooks'
-import { CabProgreso, mesAno, TIPOS_META } from './comun'
+import { CabProgreso, TIPOS_META } from './comun'
 import { t } from '../../i18n'
 
 function actualDe(m: Meta, ms: Medicion[], ses: Sesion[], perfil: Perfil): number | null {
@@ -39,7 +38,7 @@ export function Objetivos() {
   const nav = useNav()
   const perfil = usePerfil()
   const datos = useLiveQuery(async () => {
-    const [metas, ms, ses] = await Promise.all([db.metas.toArray(), db.mediciones.toArray(), sesionesHechas()])
+    const [metas, ms, ses] = await Promise.all([leerMetas(), leerMediciones(), sesionesHechas()])
     return { metas, ms, ses }
   }, [])
   const cab = <CabProgreso actual="pro-obj" crumb={t('Metas e hitos')} />
@@ -69,7 +68,7 @@ export function Objetivos() {
             <button key={m.id} className={cx('goal card pd', i > 0 && 'mt8')} onClick={() => nav.hoja('sheet-meta', { id: m.id })}>
               <div className="row jb">
                 <b>{m.titulo}</b>
-                {conseguida ? <span className="tag ok"><Ico n="check" b />{t('Conseguida')}</span> : m.fecha ? <span className="tag">{mesAno(m.fecha)}</span> : null}
+                {conseguida ? <span className="tag ok"><Ico n="check" b />{t('Conseguida')}</span> : m.fecha ? <span className="tag">{capital(mesAnio(m.fecha))}</span> : null}
               </div>
               <div className="mt8"><Barra v={prog} total={1} tono={conseguida ? 'ok' : TONO[m.tipo]} gruesa /></div>
               {m.tipo === 'libre' ? (
@@ -112,7 +111,7 @@ export function Objetivos() {
 
 export function HojaMeta({ ruta }: { ruta: Ruta<'sheet-meta'> }) {
   const id = ruta.d?.id ?? null
-  const meta = useLiveQuery(async () => (id != null ? (await db.metas.get(id)) ?? null : null), [id])
+  const meta = useLiveQuery(async () => (id != null ? (await leerMeta(id)) ?? null : null), [id])
   const ejercicios = useLiveQuery(async () => ejerciciosHechos(await sesionesHechas()), [])
   if ((id != null && meta === undefined) || !ejercicios) return <Hoja titulo={t('Meta')}><div className="cargando">…</div></Hoja>
   const tipo = TIPOS_META.some(x => x.v === ruta.d?.tipo) ? ruta.d?.tipo : undefined

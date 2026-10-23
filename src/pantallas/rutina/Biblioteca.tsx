@@ -1,7 +1,7 @@
 // RUT-05 · Ejercicios (biblioteca RepDB)
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { leerSesiones } from '../../datos/consultas'
 import { buscar, catalogoCargado, nombreMaterial } from '../../catalogo/catalogo'
 import { mejorMarca } from '../../dominio/progresion'
 import { hoyISO } from '../../dominio/fechas'
@@ -9,7 +9,8 @@ import { kg } from '../../dominio/formato'
 import { Chip, Ico, Pantalla, Th, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useGimnasio, useMarcas, useRutina } from '../../datos/hooks'
-import { abrevDia, CabRutina, musculoComun, musculosComunes, nombreVisible, zonaComun } from './comun'
+import { abrevDia, musculoComun, musculosComunes, zonaComun } from './comun'
+import { CabRutina } from './CabRutina'
 import { t, tk } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -32,7 +33,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
   const [evitados, setEvitados] = useState(ruta.d?.filtro === 'evitados')
   const c = catalogoCargado()
   const datos = useLiveQuery(async () => {
-    const sesiones = await db.sesiones.toArray()
+    const sesiones = await leerSesiones()
     const series = new Map<string, import('../../datos/tipos').Serie[]>()
     const hechosHoy = new Set<string>()
     for (const s of sesiones) for (const e of s.ejercicios) {
@@ -117,7 +118,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'rut-ej'> }) {
                 <button key={e.id} className="ad" onClick={() => nav.ir('rut-ficha', { id: e.id })}>
                   <Th ej={e} size="m" />
                   <span className="tx">
-                    <b>{nombreVisible(e.nombre)}</b>
+                    <b>{e.nombre}</b>
                     <small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small>
                     <span className="ad-k">
                       <span className="tag">{zonaComun(e.zona)}</span>

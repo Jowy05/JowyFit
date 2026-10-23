@@ -7,7 +7,7 @@ import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useGimnasios, useRutina } from '../../datos/hooks'
-import { CabRutina } from './comun'
+import { CabRutina } from './CabRutina'
 import { ejerciciosDisponibles } from './CatalogoMaterial'
 import { t } from '../../i18n'
 

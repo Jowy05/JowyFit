@@ -1,5 +1,5 @@
 // Textos de la landing en catalán (normativa del IEC, variante central; de tú). Mismas claves que es.ts:
-// TypeScript avisa si falta alguna. Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
+// TypeScript avisa si falta alguna. Glosario y avisos: README, «Idiomas».
 import type es from './es'
 
 const ca: Record<keyof typeof es, string> = {

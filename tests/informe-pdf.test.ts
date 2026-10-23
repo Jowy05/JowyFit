@@ -1,5 +1,5 @@
 // Informe en PDF (el dibujo): que salga un PDF de verdad, con las páginas que tocan según las casillas y el periodo,
-// con el texto que se espera, y que no falle ni con datos vacíos ni con años de datos. Diseño: docs/INFORME-PDF-DISENO.md.
+// con el texto que se espera, y que no falle ni con datos vacíos ni con años de datos.
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import type { Ajustes, Comida, EjercicioSesion, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../src/datos/tipos'

@@ -19,7 +19,7 @@ import { useAviso } from '../../ui/aviso'
 import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { guardarRutina } from '../../datos/acciones/rutina'
 import { propio } from '../../dominio/claves'
-import { musculoComun, musculosComunes, nombreVisible, tituloDia, zonaComun } from './comun'
+import { musculoComun, musculosComunes, tituloDia, zonaComun } from './comun'
 import { t, tc, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -97,7 +97,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
         <span className="gal-cnt tag">RepDB · {pose + 1} / {e.poses.length}</span>
         {e.poses.map((p, i) => (
           <figure key={p} className={cx('gal-it', i === pose && 'on')} onClick={() => setPose((pose + 1) % e.poses.length)}>
-            <img src={imagen(e, p)} alt={p === 'start' ? t('Posición inicial') : p === 'peak' ? t('Posición final') : nombreVisible(e.nombre)} />
+            <img src={imagen(e, p)} alt={p === 'start' ? t('Posición inicial') : p === 'peak' ? t('Posición final') : e.nombre} />
             <figcaption style={{ textShadow: '0 1px 3px rgba(0,0,0,.4)', color: '#16202B' }}>
               {e.poses.length > 1 && <span className="dots">{e.poses.map((_, k) => <i key={k} className={cx(k === i && 'on')} />)}</span>}
               {p === 'start' ? t('Posición inicial') : p === 'peak' ? t('Posición final') : ''}
@@ -107,7 +107,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
       </div>
       <div className="pg">
         <p className="lbl">{zonaComun(e.zona)} · {nombreMaterial(e.material).toLowerCase()}</p>
-        <h1 className="ficha-t">{nombreVisible(e.nombre)}</h1>
+        <h1 className="ficha-t">{e.nombre}</h1>
         {e.descripcion && <p className="muted mt4">{e.descripcion}</p>}
 
         {e.instrucciones.length > 0 && (
@@ -218,7 +218,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'rut-ficha'> }) {
                   <button key={a.id} className="mini-ad" onClick={() => nav.ir('rut-ficha', { id: a.id })}>
                     <Th ej={x} size="l" />
                     <span className={cx('tag', deTuPlan && 'blue')}>{deTuPlan ? t('Si está ocupado') : t('Parecido')}</span>
-                    <b>{nombreVisible(x.nombre)}</b>
+                    <b>{x.nombre}</b>
                     <small>{nombreMaterial(x.material)}</small>
                   </button>
                 )

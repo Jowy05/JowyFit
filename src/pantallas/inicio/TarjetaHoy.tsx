@@ -1,8 +1,7 @@
 // INI-01 · «Hoy te toca»: la tarjeta del día (en curso, sin rutina, entreno, opcional, perdido, hecho o descanso).
 import type { ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
-import { guardarAjustes } from '../../datos/repos'
+import { recolocarSesion, SIN_DIA } from '../../datos/acciones/rutina'
 import { sugerenciasDia } from '../../datos/consultas'
 import type { DiaRutina, Rutina, Sesion } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
@@ -17,7 +16,6 @@ import { cx, Ico, Th } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio, usePerfil } from '../../datos/hooks'
-import { abrirEntreno } from '../entreno/iniciar'
 import { idioma, t } from '../../i18n'
 
 /** La palabra que da el movimiento: «Curl» de «Curl de Bíceps…»; en inglés va al final («Dumbbell Bicep Curl»). */
@@ -42,7 +40,7 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: ReturnType<type
           <p className="today-meta"><span>{idx >= 0 ? t('Ejercicio {n} de {total} · {nombre}', { n: idx + 1, total: enCurso.ejercicios.length, nombre: nombreEjercicio(enCurso.ejercicios[idx]?.ejercicio) }) : enCurso.ejercicios.length ? t('Todo hecho: falta terminarlo') : t('Aún sin ejercicios')}</span></p>
         </div>
         {/* «Restaurar» no hace nada si la app se cerró a mitad del entreno: abrirEntreno lo abre igualmente. */}
-        <div className="pd"><button className="btn xl" onClick={() => abrirEntreno(nav)}><Ico n="play" b />{t('Continuar')}</button></div>
+        <div className="pd"><button className="btn xl" onClick={() => nav.abrirEntreno()}><Ico n="play" b />{t('Continuar')}</button></div>
       </div>
     )
   }
@@ -108,8 +106,8 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: ReturnType<type
           <p><span>{t('Nuevo día')}</span><b>{capital(DIAS[diaSemana(destino)]!)} {destino.getDate()}</b></p>
         </div>
         <div className="btns mt12">
-          <button className="btn gry sm" onClick={async () => { await guardarAjustes({ recolocadas: [...(await db.ajustes.get('app'))!.recolocadas ?? [], { fecha: '0000-00-00', letra: tar.perdido.dia!.letra, desde: tar.perdido.fecha }] }); aviso(t('Sin problema: la saltamos esta semana')) }}>{t('No')}</button>
-          <button className="btn sm" onClick={async () => { const a = (await db.ajustes.get('app'))!; await guardarAjustes({ recolocadas: [...(a.recolocadas ?? []), { fecha: tar.destino, letra: tar.perdido.dia!.letra, desde: tar.perdido.fecha }] }); aviso(t('Hecho: el {dia} entrenas {nombre}', { dia: DIAS[diaSemana(destino)]!, nombre: tar.perdido.dia ? nombreEntreno(tar.perdido.dia) : '' })) }}>{t('Sí, al {dia}', { dia: DIAS[diaSemana(destino)]! })}</button>
+          <button className="btn gry sm" onClick={async () => { await recolocarSesion({ fecha: SIN_DIA, letra: tar.perdido.dia!.letra, desde: tar.perdido.fecha }); aviso(t('Sin problema: la saltamos esta semana')) }}>{t('No')}</button>
+          <button className="btn sm" onClick={async () => { await recolocarSesion({ fecha: tar.destino, letra: tar.perdido.dia!.letra, desde: tar.perdido.fecha }); aviso(t('Hecho: el {dia} entrenas {nombre}', { dia: DIAS[diaSemana(destino)]!, nombre: tar.perdido.dia ? nombreEntreno(tar.perdido.dia) : '' })) }}>{t('Sí, al {dia}', { dia: DIAS[diaSemana(destino)]! })}</button>
         </div>
       </div></div>
     )

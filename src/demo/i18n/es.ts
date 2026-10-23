@@ -1,6 +1,6 @@
 // Textos de la demo (Demo.html) en castellano: el original. Cada clave es la de un data-i18n* del HTML o la de un
 // texto que pone el JS (guion.ts y main.ts). Los que llevan {algo} se rellenan al pintarse.
-// Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
+// Glosario y avisos: README, «Idiomas».
 const es = {
   // Página: título y descripción
   'demo.meta.descripcion': 'Demo de JowyFit: tu rutina, el entreno, la comida y cómo vas, con capturas de la app de verdad.',
@@ -10,7 +10,7 @@ const es = {
   'demo.cab.volver': 'Volver a la página',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
-  'idioma.boton': 'Idioma: {nombre}',
+  'idioma.boton': '{codigo} · Idioma: {nombre}',
 
   // Presentación (encima del móvil, en el ordenador)
   'demo.intro.titulillo': 'Demo · capturas de la app de verdad',

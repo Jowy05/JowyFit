@@ -1,13 +1,13 @@
 // PRO-08 · Pasos (y la hoja «Trote o carrera»). Lo principal: apuntar los pasos de hoy.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { pasosDelDia, pasosEntre } from '../../datos/consultas'
 import { guardarPasos, sumarTrote } from '../../datos/acciones/cuerpo'
 import { guardarAjustes, guardarPerfil } from '../../datos/repos'
 import { num } from '../../dominio/formato'
 import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../dominio/fechas'
 import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../dominio/tendencias'
-import { esAndroid, esIPhone, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
+import { capacidades, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
 import { sincronizarPasos } from '../../app/servicios'
 import { Anillo, Cab, Chip, cx, estilo, Hoja, Ico, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -25,11 +25,11 @@ export function Pasos() {
   const ajustes = useAjustes()
   const hoy = hoyISO()
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(hoy, i - 6))
-  const registros = useLiveQuery(() => db.pasos.where('fecha').between(dias[0]!, hoy, true, true).toArray(), [hoy]) ?? []
+  const registros = useLiveQuery(() => pasosEntre(dias[0]!, hoy), [hoy]) ?? []
   const [hc, setHc] = useState(false)
   const [conectando, setConectando] = useState(false)
   const [editaObjetivo, setEditaObjetivo] = useState(false)
-  const iphone = esIPhone()
+  const cap = capacidades()
   useEffect(() => { let vivo = true; void pasosDisponibles().then(v => { if (vivo) setHc(v) }); return () => { vivo = false } }, [])
 
   const objetivo = perfil.pasosObjetivo || 8000
@@ -42,7 +42,7 @@ export function Pasos() {
   const cumplidos = valores.filter(v => v >= objetivo).length
   const tope = Math.max(objetivo * 1.25, ...valores) || 1
   // Solo en Android llegan solos: una copia traída de Android a un iPhone no deja los pasos sin poder apuntarlos.
-  const auto = ajustes.fuentePasos === 'auto' && esAndroid()
+  const auto = ajustes.fuentePasos === 'auto' && cap.salud
 
   const conectar = async () => {
     setConectando(true)
@@ -92,7 +92,7 @@ export function Pasos() {
           </div>
         </div>
 
-        {iphone && <p className="note plain mt12"><Ico n="device-mobile" /><span>{t('En iPhone los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.')}</span></p>}
+        {cap.pasosAMano && <p className="note plain mt12"><Ico n="device-mobile" /><span>{cap.aparatoApple === 'ipad' ? t('En iPad los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.') : t('En iPhone los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.')}</span></p>}
 
         {hc && auto && <button className={cx('btn mt16', conectando && 'off')} disabled={conectando} onClick={() => void actualizar()}><Ico n="arrows-clockwise" b />{t('Actualizar desde Health Connect')}</button>}
 
@@ -155,7 +155,7 @@ function ApuntarPasos({ hoy }: { hoy: string }) {
   const aviso = useAviso()
   const ayer = sumarDias(hoy, -1)
   const [fecha, setFecha] = useState(hoy)
-  const actual = useLiveQuery(() => db.pasos.get(fecha), [fecha])
+  const actual = useLiveQuery(() => pasosDelDia(fecha), [fecha])
   const [pasos, setPasos] = useState<number | null>(null)
   const valor = pasos ?? actual?.pasos ?? 0
   const guardar = async () => {

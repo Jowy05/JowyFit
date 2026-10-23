@@ -1,15 +1,17 @@
 // RUT-01 · Mi plan
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { contarEntrenosDeRutina, sesionDeHoy } from '../../datos/consultas'
 import { deISO, diaSemana, hoyISO, numeroSemana } from '../../dominio/fechas'
 import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAjustes, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { useAviso } from '../../ui/aviso'
-import { abrevDia, CabRutina, duracionPlan, filas, listaDias, minutos, nombreDia, nombreEj, SS, SS_EXPLICA, seriesTxt, tituloDia } from './comun'
+import { abrevDia, listaDias, nombreDia, seriesTxt, tituloDia } from './comun'
+import { CabRutina } from './CabRutina'
+import { duracionPlan, filas, minutosDia } from '../../dominio/rutina'
+import { nombreEjercicio } from '../../catalogo/catalogo'
 import { capital } from '../../dominio/formato'
 import { nombreEntreno, nombreEstructura } from '../../dominio/nombres'
-import { abrirEntreno } from '../entreno/iniciar'
 import { iniciarEntreno } from '../../datos/acciones/entreno'
 import { t, tn } from '../../i18n'
 
@@ -26,12 +28,12 @@ export function MiPlan() {
   const ds = diaSemana(deISO(hoy))
   const crumb = a.inicio ? t('Semana {n}', { n: numeroSemana(a.inicio, hoy) }) : undefined
   // Entrenos de calibración que cuentan: los de esta rutina y no libres (igual que en el fin del entreno).
-  const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === r.id && s.letra !== 'L').length), [r?.id]) ?? 0
+  const sesiones = useLiveQuery(async () => (r?.id == null ? 0 : contarEntrenosDeRutina(r.id)), [r?.id]) ?? 0
   const unaVez = useUnaVez()
 
   // Si hoy ya se entrenó, la tarjeta de hoy lo dice: con «Empezar rutina» parecería que no se guardó.
   // Va antes de los return: los hooks siempre en el mismo orden.
-  const hechoHoy = useLiveQuery(async () => (await db.sesiones.where('fecha').equals(hoyISO()).toArray()).find(s => s.estado === 'hecha'), [])
+  const hechoHoy = useLiveQuery(sesionDeHoy, [])
   if (r === undefined) return <Pantalla><CabRutina actual="rut" crumb={crumb} /></Pantalla>
   if (r === null) return (
     <Pantalla>
@@ -46,7 +48,7 @@ export function MiPlan() {
   const opc = r.dias.filter(d => d.opcional)
   // Un doble toque no abre dos entrenos libres; abrirEntreno sirve aunque la app se cerrara a mitad.
   const libre = unaVez(async () => {
-    if (enCurso) { aviso(t('Ya tienes un entreno en curso')); abrirEntreno(nav); return }
+    if (enCurso) { aviso(t('Ya tienes un entreno en curso')); nav.abrirEntreno(); return }
     await iniciarEntreno({ libre: true })
     nav.completa('entreno')
   })
@@ -54,7 +56,7 @@ export function MiPlan() {
   const conDia = fijos.filter(d => d.dia != null).map(d => d.dia!)
   // «Dos seguidos» (superserie) se explica la primera vez que sale en la pantalla.
   let ssVista = false
-  const ss = () => { const x = ssVista ? '' : ` · ${SS_EXPLICA()}`; ssVista = true; return x }
+  const ss = () => { const x = ssVista ? '' : ` · ${t('sin descanso entre los dos')}`; ssVista = true; return x }
 
   return (
     <Pantalla>
@@ -68,7 +70,7 @@ export function MiPlan() {
             </div>
             <div className="spec">
               <p><span>{t('Días')}</span><b className="ux-rut-wrap">{conDia.length ? capital(listaDias(conDia)) : t('{n} a la semana', { n: fijos.length })}</b></p>
-              {opc[0]?.dia != null && <p><span>{t('Día extra')}</span><b className="ux-rut-wrap">{t('{dia}, si te apetece · ~{min} min', { dia: nombreDia(opc[0]), min: minutos(opc[0]) })}</b></p>}
+              {opc[0]?.dia != null && <p><span>{t('Día extra')}</span><b className="ux-rut-wrap">{t('{dia}, si te apetece · ~{min} min', { dia: nombreDia(opc[0]), min: minutosDia(opc[0]) })}</b></p>}
               {/* Mismo rango que al crear la rutina («48-55 min»). */}
               <p><span>{t('Duración')}</span><b>{duracionPlan(r)}</b></p>
             </div>
@@ -84,16 +86,16 @@ export function MiPlan() {
               <div key={d.letra} className={cx('dayc card hot', i && 'mt8')}>
                 <button className="dayc-h" onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
-                  <span className="tx"><b>{tituloDia(d)}</b><small>{t('{nombre} · ~{min} min · con prisa ~{corta}', { nombre: nombreEntreno(d), min: minutos(d), corta: minutos(d, true) })}</small></span>
+                  <span className="tx"><b>{tituloDia(d)}</b><small>{t('{nombre} · ~{min} min · con prisa ~{corta}', { nombre: nombreEntreno(d), min: minutosDia(d), corta: minutosDia(d, true) })}</small></span>
                   {hechoHoy ? <span className="tag ok"><Ico n="check" b />{t('Hecho')}</span> : <span className="tag go">{t('Hoy')}</span>}
                 </button>
                 <div className="pl-list">
                   {filas(d.bloques).map(f => Array.isArray(f) ? (
                     <div key={f[0].uid} className="ssb">
-                      <span className="ss-l">{SS()}{ss()}</span>
-                      {f.map(b => <p key={b.uid} className={cx('pl', b.fueraEnCorta && 'cut')}><span>{nombreEj(b.ejercicio)}</span><b data-cut={b.fueraEnCorta ? cut() : undefined}>{seriesTxt(b)}</b></p>)}
+                      <span className="ss-l">{t('Dos seguidos')}{ss()}</span>
+                      {f.map(b => <p key={b.uid} className={cx('pl', b.fueraEnCorta && 'cut')}><span>{nombreEjercicio(b.ejercicio)}</span><b data-cut={b.fueraEnCorta ? cut() : undefined}>{seriesTxt(b)}</b></p>)}
                     </div>
-                  ) : <p key={f.uid} className={cx('pl', f.fueraEnCorta && 'cut')}><span>{nombreEj(f.ejercicio)}</span><b data-cut={f.fueraEnCorta ? cut() : undefined}>{seriesTxt(f)}</b></p>)}
+                  ) : <p key={f.uid} className={cx('pl', f.fueraEnCorta && 'cut')}><span>{nombreEjercicio(f.ejercicio)}</span><b data-cut={f.fueraEnCorta ? cut() : undefined}>{seriesTxt(f)}</b></p>)}
                   <p className="small muted ux-rut-leyenda">{t('«3 × 6-10» = 3 series de 6 a 10 repeticiones.')}</p>
                 </div>
                 <div className="pd">
@@ -109,7 +111,7 @@ export function MiPlan() {
               <button key={d.letra} className={cx('dayc card', i && 'mt8', d.opcional && 'optd')} onClick={() => nav.ir('rut-dia', { letra: d.letra })}>
                 <span className="dayc-h">
                   <span className={cx('dl', d.dia != null && 'ux-rut-dl')}>{abrevDia(d)}</span>
-                  <span className="tx"><b>{d.opcional ? t('{dia} · opcional', { dia: tituloDia(d) }) : tituloDia(d)}</b><small>{d.dia != null ? nombreEntreno(d) : t('Día {letra}', { letra: d.letra })} · {tn(nEj, '{n} ejercicio', '{n} ejercicios')} · ~{minutos(d)} min</small></span>
+                  <span className="tx"><b>{d.opcional ? t('{dia} · opcional', { dia: tituloDia(d) }) : tituloDia(d)}</b><small>{d.dia != null ? nombreEntreno(d) : t('Día {letra}', { letra: d.letra })} · {tn(nEj, '{n} ejercicio', '{n} ejercicios')} · ~{minutosDia(d)} min</small></span>
                   <Ico n="caret-right" className="car" />
                 </span>
               </button>

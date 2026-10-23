@@ -8,6 +8,14 @@ describe('botón atrás del móvil', () => {
     // Con una hoja abierta encima (la lista, «Ocupado»…), atrás cierra la hoja.
     expect(queHaceAtras(reducirNav(entreno, { t: 'hoja', ruta: { p: 'sheet-lista' } }))).toBe('atras')
   })
+  it('volver al entreno: lo restaura si se minimizó; si no (la app se cerró a mitad), lo abre', () => {
+    const entreno = reducirNav(estadoInicial(), { t: 'completa', ruta: { p: 'entreno' } })
+    const minimizado = reducirNav(reducirNav(entreno, { t: 'minimizar' }), { t: 'hoja', ruta: { p: 'sheet-peso' } })
+    const vuelto = reducirNav(minimizado, { t: 'abrirEntreno' })
+    expect([vuelto.completa?.p, vuelto.minimizada, vuelto.hoja]).toEqual(['entreno', null, null])
+    const abierto = reducirNav(reducirNav(estadoInicial(), { t: 'hoja', ruta: { p: 'sheet-lista' } }), { t: 'abrirEntreno' })
+    expect([abierto.completa?.p, abierto.hoja]).toEqual(['entreno', null])
+  })
   it('fuera del entreno vuelve atrás, y en Inicio deja minimizar la app', () => {
     expect(queHaceAtras(estadoInicial())).toBe('minimizar-app')
     expect(queHaceAtras(reducirNav(estadoInicial(), { t: 'pestana', pestana: 'com' }))).toBe('atras')

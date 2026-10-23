@@ -4,12 +4,11 @@ import { guardarPerfil } from '../../datos/repos'
 import type { DiaRutina, Perfil } from '../../datos/tipos'
 import { DIAS, horaActual, minutosDe } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
-import { esNativo, permisoNotificaciones } from '../../plataforma'
+import { capacidades, permisoNotificaciones } from '../../plataforma'
 import { cx, FilaInterruptor, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfilCargado, useRutina, useSesionEnCurso } from '../../datos/hooks'
-import { abrirEntreno } from './iniciar'
 import { calentarAntes, iniciarEntreno } from '../../datos/acciones/entreno'
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -26,7 +25,7 @@ export function HojaEmpezar({ ruta }: { ruta: Ruta<'sheet-ses1'> }) {
   if (enCurso) return (
     <Hoja titulo={t('Ya estás entrenando')}>
       <p className="muted">{t('Tienes «{nombre}» en curso.', { nombre: nombreEntreno(enCurso) })}</p>
-      <button className="btn xl mt16" onClick={() => { nav.hoja(null); abrirEntreno(nav) }}><Ico n="play" b />{t('Continuar')}</button>
+      <button className="btn xl mt16" onClick={() => nav.abrirEntreno()}><Ico n="play" b />{t('Continuar')}</button>
     </Hoja>
   )
   const dia = r?.dias.find(d => d.letra === ruta.d.letra) ?? r?.dias[0]
@@ -60,7 +59,7 @@ function FormEmpezar({ dia, perfil, corta: empezarCorta }: { dia: DiaRutina; per
   // Un doble toque en «Empezar» crearía dos entrenos en curso.
   const empezar = unaVez(async () => {
     // Sin permiso de notificaciones no llega el aviso de fin de descanso (ni al reloj): se pide al empezar.
-    if (esNativo() && !(await permisoNotificaciones(true))) aviso(t('Sin permiso de notificaciones: no te avisaremos al acabar el descanso (actívalo en Ajustes)'))
+    if (capacidades().recordatorios && !(await permisoNotificaciones(true))) aviso(t('Sin permiso de notificaciones: no te avisaremos al acabar el descanso (actívalo en Ajustes)'))
     if (hora !== horaPerfil) await guardarPerfil({ horaLimite: { ...perfil.horaLimite, [perfil.transporte]: hora } })
     const id = await iniciarEntreno({ letra: dia.letra, version: modo, horaLimite: hora })
     if (calentar) await calentarAntes(id)

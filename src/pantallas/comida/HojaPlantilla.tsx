@@ -1,7 +1,7 @@
 // COM-06 · Crear/editar una comida de «Mis comidas» (en el código, plantilla): lo que trae el plato o la bolsa entera.
 // Debajo, «Poco · Normal · Mucho» al apuntarla: plato → ⅓ · el plato · plato y medio; picoteo → ⅓ · la mitad · todo.
 import { useEffect, useState } from 'react'
-import { db } from '../../datos/db'
+import { leerPlantilla } from '../../datos/consultas'
 import type { Plantilla } from '../../datos/tipos'
 import { FRANJAS, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora, nombreFranja, tipoRacion } from '../../dominio/comida'
 import { t, tc, tk } from '../../i18n'
@@ -34,7 +34,7 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta<'sheet-plant'> }) {
   const unaVez = useUnaVez()
   useEffect(() => {
     // Las comidas de partida se guardan en castellano: al editarlas, el nombre sale (y se guarda) en el idioma de la app.
-    if (id != null) void db.plantillas.get(id).then(x => setP(x ? { ...x, nombre: t(x.nombre) } : nueva()))
+    if (id != null) void leerPlantilla(id).then(x => setP(x ? { ...x, nombre: t(x.nombre) } : nueva()))
   }, [id])
   if (!p) return <Hoja titulo={t('Mis comidas')}><p className="muted">{t('Cargando…')}</p></Hoja>
   const cambia = (c: Partial<Plantilla>) => setP({ ...p, ...c })

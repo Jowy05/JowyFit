@@ -122,6 +122,12 @@ export function fechaCorta(s: string): string {
   return diaMes(d.getDate(), d.getMonth())
 }
 
+/** Mes y año: «abril 2027» (en inglés, «April 2027»). Como etiqueta suelta, con capital(): «Abril 2027». */
+export function mesAnio(s: string): string {
+  const d = deISO(s)
+  return `${MESES[d.getMonth()]} ${d.getFullYear()}`
+}
+
 /** «5:31» a partir de una marca de tiempo («5:31 AM» en inglés). */
 export function horaDe(ts: number): string {
   const d = new Date(ts)

@@ -1,7 +1,7 @@
 // PRO-02 · Fuerza
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { metasDeTipo } from '../../datos/consultas'
 import { sesionesHechas } from '../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { patron } from '../../catalogo/clasificacion'
@@ -25,7 +25,7 @@ const NIVEL = { poco: tk('poco'), bien: tk('bien'), mucho: tk('mucho') } as cons
 export function Fuerza() {
   const nav = useNav()
   const sesiones = useLiveQuery(() => sesionesHechas(), [])
-  const metas = useLiveQuery(() => db.metas.where('tipo').equals('ejercicio').toArray(), []) ?? []
+  const metas = useLiveQuery(() => metasDeTipo('ejercicio'), []) ?? []
   const [elegido, setElegido] = useState<string | null>(null)
   const [cuantos, setCuantos] = useState(12)
   const [todosEj, setTodosEj] = useState(false)

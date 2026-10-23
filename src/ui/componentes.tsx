@@ -5,8 +5,7 @@ import { imagen, miniatura } from '../catalogo/catalogo'
 import { siguiente } from '../dominio/pesos'
 import { useNav } from '../app/nav'
 import { t } from '../i18n'
-import { regionNumeros } from '../i18n'
-import { leerNumero } from '../dominio/formato'
+import { leerNumero, num } from '../dominio/formato'
 
 export const cx = (...c: (string | number | false | null | undefined)[]) => c.filter(x => typeof x === 'string' && x).join(' ')
 export const estilo = (o: Record<string, string | number>) => o as CSSProperties
@@ -89,7 +88,7 @@ export function Stepper({ valor, onCambio, lista, paso = 1, min, max, className,
     if (max != null) n = Math.min(max, n)
     onCambio(n)
   }
-  const texto = valor == null ? '—' : v.toLocaleString(regionNumeros(), { maximumFractionDigits: decimales })
+  const texto = valor == null ? '—' : num(v, decimales)
   return (
     <div className={cx('stp', className)} role="group" aria-label={etiqueta}>
       <button type="button" aria-label={t('Menos')} onClick={() => mover(-1)}><Ico n="minus" b /></button>

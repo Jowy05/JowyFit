@@ -8,7 +8,8 @@ import { cx, FilaInterruptor, Ico } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes } from '../../datos/hooks'
 import { copiaCompartiendo, hacerCopiaAhora, type CopiaPreparada } from '../../app/servicios'
-import { regionNumeros, t } from '../../i18n'
+import { miles } from '../../dominio/formato'
+import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
 type Copia = { nombre: string; fecha: number; tam: number }
@@ -112,7 +113,7 @@ export function CopiaDeSeguridad({ refTitulo }: { refTitulo: Ref<HTMLParagraphEl
             <div className="list">
               {copias.slice(0, 8).map(c => (
                 <div key={c.nombre} className="it">
-                  <span className="tx"><b className="small">{c.fecha ? cuando(new Date(c.fecha).toISOString()) : c.nombre}</b><small className="mono">{c.nombre}{c.tam ? ` · ${Math.max(1, Math.round(c.tam / 1024)).toLocaleString(regionNumeros())} KB` : ''}</small></span>
+                  <span className="tx"><b className="small">{c.fecha ? cuando(new Date(c.fecha).toISOString()) : c.nombre}</b><small className="mono">{c.nombre}{c.tam ? ` · ${miles(Math.max(1, Math.round(c.tam / 1024)))} KB` : ''}</small></span>
                   <button className={cx('btn sm auto', confirmar === c.nombre ? 'badf' : 'gry')} disabled={ocupado} onClick={() => void restaurarGuardada(c.nombre)}>
                     {confirmar === c.nombre ? t('¿Seguro?') : t('Recuperar')}
                   </button>

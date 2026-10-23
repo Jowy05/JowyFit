@@ -5,7 +5,7 @@
 // Las 8 zonas están traducidas: la parte estricta (faltan / sobran / duplicados) corre siempre (ESTRICTO_SIEMPRE).
 // Además se buscan en los .tsx textos que se pintan sin pasar por t() (ver «textos sin envolver», abajo).
 // Para mirar solo una zona: I18N_SOLO=src/pantallas/inicio (rutas separadas por comas: qué archivos se miran
-// para «faltan») e I18N_ZONA=inicio (qué diccionario se mira para «sobran»). Más en docs/I18N-APP.md.
+// para «faltan») e I18N_ZONA=inicio (qué diccionario se mira para «sobran»). Más en el README, «Idiomas».
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'

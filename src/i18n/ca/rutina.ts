@@ -1,16 +1,14 @@
 // Catalán (IEC, variante central) · zona «rutina».
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
-  // Cabecera y piezas comunes (rutina/comun.tsx)
+  // Cabecera y piezas comunes (rutina/CabRutina.tsx, rutina/comun.ts)
   'Sin gimnasio': 'Sense gimnàs',
   'Mi plan': 'El meu pla',
   'Ejercicios': 'Exercicis',
   'Gimnasios': 'Gimnasos',
   'Cualquier día': 'Qualsevol dia',
-  '{lista} y {ultimo}': '{lista} i {ultimo}',
-  '3+|{lista} y {ultimo}': '{lista} i {ultimo}',
   'sin descanso entre los dos': 'sense descans entre tots dos',
   'Dos seguidos': 'Dos seguits',
   'Barra guiada': 'Barra guiada',

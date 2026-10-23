@@ -3,11 +3,11 @@ import type { Medicion, Meta, Perfil } from '../../datos/tipos'
 import { cinturaAltura, imc } from '../../dominio/calculos'
 import { conUnidad, kg, num, MENOS, conSigno, fijo } from '../../dominio/formato'
 import { basalDia } from '../../dominio/energia'
-import { fechaCorta, sumarDias } from '../../dominio/fechas'
+import { fechaCorta, mesAnio, sumarDias } from '../../dominio/fechas'
 import { cambioDesdeInicio, faltaMeta, hitosDominadas, mediasSemanales, pendienteSemanal, pesoMaximo, progresoMeta, serieMedida, seriesDe, ultimoValor, veredictoCinturaAltura, veredictoGrasa, veredictoImc, type Tono, grasaEn } from '../../dominio/tendencias'
 import { t, tk } from '../../i18n'
 import type { Cambio, ControlPeso, CuerpoInforme, Evaluacion, MetaInforme, PuntoCuerpo, ResumenInforme, SerieCuerpo, TonoInforme, ZonaCuerpo } from './tipos'
-import { dia10, entre, mesAnio, r1 } from './comun'
+import { dia10, entre, r1 } from './comun'
 import { edadEn, leerCintura, leerGrasaBascula, leerPeso, nombreDe, type Ctx } from './contexto'
 
 const ZONAS_IMC = { cortes: [18.5, 25] as [number, number], escala: [10, 40] as [number, number], marcas: [10, 15, 18.5, 25, 30, 35, 40] }

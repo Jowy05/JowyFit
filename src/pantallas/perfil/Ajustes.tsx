@@ -3,26 +3,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import paquete from '../../../package.json'
-import { db } from '../../datos/db'
-import { guardarAjustes } from '../../datos/repos'
+import { guardarAjustes, leerPerfil } from '../../datos/repos'
+import { guardarAvisos, reprogramarNotificaciones } from '../../datos/acciones/avisos'
 import { objetivosEnergia } from '../../datos/consultas'
 import type { Ajustes as TAjustes } from '../../datos/tipos'
 import { useCatalogo } from '../../catalogo/catalogo'
 import { duracion } from '../../dominio/fechas'
-import { num } from '../../dominio/formato'
-import { capacidades, estaInstalada, permisoNotificaciones } from '../../plataforma'
+import { miles, num } from '../../dominio/formato'
+import { capacidades, permisoNotificaciones } from '../../plataforma'
 import { cx, Cab, Elegir, FilaInterruptor, Ico, Interruptor, Pantalla, Stepper } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useGimnasio, usePerfil } from '../../datos/hooks'
 import { guardarLetra, guardarTema, letraGuardada, temaGuardado, type Letra, type PreferenciaTema } from '../../ui/tema'
-import { reprogramarNotificaciones } from '../../app/servicios'
 import { lanzarTutorial } from '../../ui/tutorial/Tutorial'
 import { abrirInstrucciones } from '../instalar/Instalar'
 import { diasTxt } from './textos'
 import { CopiaDeSeguridad } from './AjustesCopias'
 import { PasosYBascula, RelojYBascula, useSalud } from './AjustesSalud'
-import { IDIOMAS, idioma, ponerIdioma, regionNumeros, t, tn } from '../../i18n'
+import { IDIOMAS, idioma, ponerIdioma, t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
 type Noti = TAjustes['noti']
@@ -47,7 +46,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
   const [masAbierto, setMasAbierto] = useState(ruta.d?.seccion === 'comida')
 
   const auto = useLiveQuery(async () => {
-    const perfil = await db.perfil.get('yo')
+    const perfil = await leerPerfil()
     return perfil ? objetivosEnergia(perfil) : undefined
   }, [])
 
@@ -85,8 +84,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
       setPermNoti(ok)
       if (!ok) aviso(t('Sin permiso: actívalo en los ajustes del móvil para recibir avisos'))
     }
-    await guardarAjustes({ noti: { ...a.noti, ...c } })
-    await reprogramarNotificaciones()
+    await guardarAvisos(c)
   }
   const activarNoti = async () => {
     const ok = await permisoNotificaciones(true)
@@ -154,7 +152,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
             <div className="list" data-tour="instalar">
               <button className="it" onClick={abrirInstrucciones}>
                 <span className="ico"><Ico n={cap.instalar === 'dock' ? 'desktop' : 'device-mobile'} /></span>
-                <span className="tx"><b>{cap.instalar === 'dock' ? t('Cómo ponerla en el Dock') : t('Cómo ponerla en la pantalla de inicio')}</b><small>{estaInstalada() ? t('Ya la tienes instalada · ver los pasos') : t('Se abre como una app, a pantalla completa y sin internet')}</small></span>
+                <span className="tx"><b>{cap.instalar === 'dock' ? t('Cómo ponerla en el Dock') : t('Cómo ponerla en la pantalla de inicio')}</b><small>{cap.instalada ? t('Ya la tienes instalada · ver los pasos') : t('Se abre como una app, a pantalla completa y sin internet')}</small></span>
                 <Ico n="caret-right" className="car" />
               </button>
             </div>
@@ -258,7 +256,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'aju'> }) {
             <Ico n="caret-right" className="car" />
           </button>
         </div>
-        <p className="small muted mt8 center">{t('JowyFit {version} · {n} ejercicios', { version: paquete.version, n: catalogo ? catalogo.ejercicios.length.toLocaleString(regionNumeros()) : '—' })}</p>
+        <p className="small muted mt8 center">{t('JowyFit {version} · {n} ejercicios', { version: paquete.version, n: catalogo ? miles(catalogo.ejercicios.length) : '—' })}</p>
 
         {/* Borrar todo: al final y aparte. */}
         <div className="list aju-borrar">

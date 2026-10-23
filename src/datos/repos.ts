@@ -161,6 +161,11 @@ export async function marcar(id: string, cambios: Partial<MarcaEjercicio>) {
   })
 }
 
+/** Pide al navegador que no borre los datos (importante en iPhone). */
+export async function pedirPersistencia(): Promise<boolean> {
+  try { return (await navigator.storage?.persist?.()) ?? false } catch { return false }
+}
+
 /** Asegura que hay ajustes y plantillas iniciales (primera vez que se abre la app). */
 export async function prepararBase() {
   await leerAjustes()

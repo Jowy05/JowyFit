@@ -12,11 +12,11 @@ describe('dónde se está ejecutando', () => {
     expect(plat.esAndroid()).toBe(false)
     expect(plat.esNativo()).toBe(false)
   })
-  it('esIPhone mira el navegador', () => {
+  it('los pasos a mano miran el navegador', () => {
     vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)' })
-    expect(plat.esIPhone()).toBe(true)
+    expect(plat.capacidades().pasosAMano).toBe(true)
     vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 15)' })
-    expect(plat.esIPhone()).toBe(false)
+    expect(plat.capacidades().pasosAMano).toBe(false)
   })
 })
 

@@ -1,6 +1,6 @@
 // Editar algo ya apuntado: nombre, cuándo (franja), cuánto («Poco · Normal · Mucho»), hora y, en «Afinar», los números.
 import { useEffect, useState } from 'react'
-import { db } from '../../datos/db'
+import { leerComida } from '../../datos/consultas'
 import { borrarComida, guardarComida } from '../../datos/acciones/comida'
 import type { Comida, Franja } from '../../datos/tipos'
 import { FRANJAS, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, escalarMacros, factorRacion, nombreFranja, notaPorTamano, tamanoDe, tipoRacion, type Racion, type TamanoNota } from '../../dominio/comida'
@@ -20,7 +20,7 @@ export function HojaComida({ ruta }: { ruta: Ruta<'sheet-comida'> }) {
   const [tam, setTam] = useState<TamanoNota | null>(null)
   const fotoUrl = useUrlBlob(c?.foto)
   useEffect(() => {
-    void db.comidas.get(id).then(x => {
+    void leerComida(id).then(x => {
       // El nombre en el idioma de la app (lo apuntado de una comida de partida está en castellano); deshacer usa el original.
       setC(x ? { ...x, nombre: t(x.nombre) } : null)
       setOriginal(x ?? null)

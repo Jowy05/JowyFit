@@ -86,18 +86,31 @@ export async function buscarPendientes(): Promise<number> {
   return n
 }
 
-/** Lo marca como tomado y, si es el batido, lo apunta como comida (suma al día). Devuelve cómo deshacerlo. */
-export async function marcarSuplemento(perfil: Perfil, fecha: string, s: string): Promise<Deshacer> {
-  const id = await db.transaction('rw', [db.suplementos, db.comidas], async () => {
+/**
+ * Lo marca como tomado y, si es el batido, lo apunta como comida (suma al día). Devuelve cómo deshacerlo, o null si
+ * ya estaba tomado: mirar y marcar van en la misma transacción, así un doble toque no apunta dos batidos.
+ */
+export async function marcarSuplemento(perfil: Perfil, fecha: string, s: string): Promise<Deshacer | null> {
+  const r = await db.transaction('rw', [db.suplementos, db.comidas], async () => {
     const tomados = new Set((await db.suplementos.get(fecha))?.tomados ?? [])
+    if (tomados.has(s)) return null
     tomados.add(s)
     await db.suplementos.put({ fecha, tomados: [...tomados] })
-    if (!esBatido(s)) return undefined
+    if (!esBatido(s)) return { id: undefined }
     const b = batidoDe(perfil.batido)
     const hora = fecha === hoyISO() ? horaActual() : '17:30'
-    return (await db.comidas.add({ fecha, hora, franja: franjaPorHora(hora), nombre: s, kcal: b.kcal, proteina: b.proteina, racion: 'N', tipo: 'plantilla', suplemento: s })) as number
+    return { id: (await db.comidas.add({ fecha, hora, franja: franjaPorHora(hora), nombre: s, kcal: b.kcal, proteina: b.proteina, racion: 'N', tipo: 'plantilla', suplemento: s })) as number }
   })
-  return () => { void desmarcarSuplemento(fecha, s, id) }
+  return r && (() => { void desmarcarSuplemento(fecha, s, r.id) })
+}
+
+/** Un toque en el suplemento: si no estaba tomado lo marca (y devuelve cómo deshacerlo); si lo estaba, lo desmarca (null). */
+export async function alternarSuplemento(perfil: Perfil, fecha: string, s: string): Promise<Deshacer | null> {
+  return db.transaction('rw', [db.suplementos, db.comidas], async () => {
+    if (!((await db.suplementos.get(fecha))?.tomados ?? []).includes(s)) return marcarSuplemento(perfil, fecha, s)
+    await desmarcarSuplemento(fecha, s)
+    return null
+  })
 }
 
 /** Lo quita de tomados y borra el batido que se apuntó al marcarlo (el apuntado a mano no se toca). */

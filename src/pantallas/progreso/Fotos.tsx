@@ -1,7 +1,7 @@
 // PRO-06 · Fotos
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { fotosPorFecha } from '../../datos/consultas'
 import { guardarFoto } from '../../datos/acciones/cuerpo'
 import type { Foto, Medicion } from '../../datos/tipos'
 import { num } from '../../dominio/formato'
@@ -11,7 +11,7 @@ import { hacerFoto } from '../../plataforma'
 import { Chip, cx, Ico, Pantalla, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, usePerfil } from '../../datos/hooks'
+import { useAjustes, useMediciones, usePerfil } from '../../datos/hooks'
 import { CabProgreso, useUrlsFotos } from './comun'
 import { t, tc, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -27,8 +27,8 @@ export function Fotos() {
   const aviso = useAviso()
   const perfil = usePerfil()
   const ajustes = useAjustes()
-  const fotos = useLiveQuery(() => db.fotos.orderBy('fecha').toArray(), [])
-  const ms = useLiveQuery(() => db.mediciones.toArray(), []) ?? []
+  const fotos = useLiveQuery(fotosPorFecha, [])
+  const ms = useMediciones() ?? []
   const urls = useUrlsFotos(fotos ?? [])
   const [pose, setPose] = useState<Pose>('frente')
   const [poseNueva, setPoseNueva] = useState<Pose>('frente')

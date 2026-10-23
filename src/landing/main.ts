@@ -14,6 +14,17 @@ import { t, textos } from './i18n'
 
 const raiz = document.documentElement
 
+/** Las capturas de la app, en el idioma de la página (public/landing/capturas/<idioma>/). */
+function capturas(idioma: string = textos.idioma()) {
+  for (const img of document.querySelectorAll<HTMLImageElement>('img[src*="landing/capturas/"]')) {
+    const src = img.getAttribute('src')!.replace(/landing\/capturas\/(es|ca|en)\//, `landing/capturas/${idioma}/`)
+    if (src !== img.getAttribute('src')) img.setAttribute('src', src)
+  }
+}
+// Lo primero: el script del <head> ya ha puesto el idioma en <html lang>. Así, en catalán o inglés no se bajan ni se
+// ven las capturas en castellano mientras carga el diccionario (la maqueta del hero las pide enseguida).
+if (/^(es|ca|en)$/.test(raiz.lang)) capturas(raiz.lang)
+
 /** «Letra grande»: la misma preferencia que la app (localStorage «jf-letra»). */
 function letra() {
   const boton = document.querySelector<HTMLButtonElement>('[data-letra-boton]')
@@ -94,14 +105,6 @@ function preguntas() {
     const a = (e.target as Element | null)?.closest<HTMLElement>('[data-abrir]')
     if (a) abrir(a.dataset.abrir ?? null)
   })
-}
-
-/** Las capturas de la app, en el idioma de la página (public/landing/capturas/<idioma>/). */
-function capturas() {
-  for (const img of document.querySelectorAll<HTMLImageElement>('img[src*="landing/capturas/"]')) {
-    const src = img.getAttribute('src')!.replace(/landing\/capturas\/(es|ca|en)\//, `landing/capturas/${textos.idioma()}/`)
-    if (src !== img.getAttribute('src')) img.setAttribute('src', src)
-  }
 }
 
 /** Idioma: el selector y los textos (si no es castellano). Al cambiar, se repinta lo que escribe el JS: la línea de

@@ -1,5 +1,5 @@
 // Inglés (EE. UU., sencillo) · zona «inicio» (Inicio, apuntar peso, pendientes, alta, instalar en Apple y tutorial).
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -166,8 +166,6 @@ export default {
   'Paso {n} de {total}': 'Step {n} of {total}',
   'Atrás': 'Back',
   'Siguiente': 'Next',
-  '{lista} y {ultimo}': '{lista} and {ultimo}',
-  '3+|{lista} y {ultimo}': '{lista}, and {ultimo}',
   // Alta: sobre ti
   'Sobre ti': 'About you',
   'Para calcular cuánto comer. Lo puedes cambiar luego en Perfil.': 'To figure out how much to eat. You can change it later in Profile.',

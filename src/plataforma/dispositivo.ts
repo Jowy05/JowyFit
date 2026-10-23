@@ -3,7 +3,6 @@ import { Capacitor } from '@capacitor/core'
 
 export const esAndroid = (): boolean => Capacitor.getPlatform() === 'android'
 export const esNativo = (): boolean => Capacitor.isNativePlatform()
-export const esIPhone = (): boolean => !esNativo() && /iPhone|iPad|iPod/.test(navigator.userAgent)
 
 export type DispositivoApple = 'iphone' | 'ipad' | 'mac'
 /**
@@ -30,18 +29,29 @@ export function estaInstalada(): boolean {
 /** Hay vibración de verdad: en Android sí; en Safari (iPhone) no existe `navigator.vibrate`. */
 export const puedeVibrar = (): boolean => esNativo() || typeof navigator.vibrate === 'function'
 
+/** Lo que puede hacer este aparato. Las pantallas preguntan aquí, nunca por la plataforma directamente. */
 export type Capacidades = {
-  /** Recordatorios programados (notificaciones): solo el APK. */
+  /** Recordatorios programados (notificaciones, con su permiso): solo el APK. */
   recordatorios: boolean
   /** Health Connect (pasos, peso y grasa): solo Android. */
   salud: boolean
   vibracion: boolean
   /** Copias en Documentos/JowyFit, que se listan y se hacen solas cada semana: solo el APK. */
   copiasEnDocumentos: boolean
+  /** Archivos (PDF) guardados en Documentos/JowyFit y compartidos con el menú del sistema: solo el APK. */
+  compartirNativo: boolean
+  /** Escáner de códigos del sistema (ML Kit, con su propia pantalla): solo Android. En la web, la cámara en la página. */
+  escanerNativo: boolean
+  /** Pasos apuntados a mano (se miran en la app Salud): iPhone y iPad, que no tienen Health Connect ni recordatorios. */
+  pasosAMano: boolean
   /** Navegador de Apple: la copia sale por el menú Compartir y no se nombra nada que sea solo de Android. */
   apple: boolean
+  /** Qué aparato de Apple es (para nombrarlo al explicar cómo instalarla); null fuera de Apple. */
+  aparatoApple: DispositivoApple | null
   /** Cómo se pone como app en un navegador de Apple: en el Dock (Mac) o en la pantalla de inicio; null fuera de Apple. */
   instalar: 'dock' | 'inicio' | null
+  /** Abierta como app (el APK, o la web desde la pantalla de inicio o el Dock). */
+  instalada: boolean
 }
 
 export function capacidades(): Capacidades {
@@ -51,8 +61,13 @@ export function capacidades(): Capacidades {
     salud: esAndroid(),
     vibracion: puedeVibrar(),
     copiasEnDocumentos: esNativo(),
+    compartirNativo: esNativo(),
+    escanerNativo: esAndroid(),
+    pasosAMano: apple === 'iphone' || apple === 'ipad',
     apple: apple !== null,
+    aparatoApple: apple,
     instalar: apple === 'mac' ? 'dock' : apple ? 'inicio' : null,
+    instalada: estaInstalada(),
   }
 }
 

@@ -1,10 +1,10 @@
 // Datos locales (IndexedDB simulada con fake-indexeddb): valores por defecto, perfil y ajustes,
 // marcas de ejercicio, gimnasio activo, consultas que combinan tablas y sugerencias de peso.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BaseJowyFit, TABLAS, db, pedirPersistencia } from '../src/datos/db'
+import { BaseJowyFit, TABLAS, db } from '../src/datos/db'
 import {
   ajustesPorDefecto, gimnasioActivo, gimnasioNuevo, guardarAjustes, guardarPerfil, leerAjustes, leerPerfil, marcaDe, marcar, perfilPorDefecto,
-  plantillasIniciales, prepararBase,
+  pedirPersistencia, plantillasIniciales, prepararBase,
 } from '../src/datos/repos'
 import { comidasDe, gastoDelDia, grasaReciente, historialDe, objetivosEnergia, pesoActual, sesionDeHoy, sesionesHechas, sugerenciaPara, ultimaMedicion, ultimasSeries } from '../src/datos/consultas'
 import { totalesComida } from '../src/dominio/comida'

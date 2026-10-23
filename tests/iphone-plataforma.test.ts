@@ -1,7 +1,7 @@
 // iPhone (versión web): quién es un navegador de Apple, si está instalada, la vibración, el menú Compartir y
 // cuándo salen las instrucciones para instalarla.
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { compartirArchivo, dispositivoApple, esWebApple, estaInstalada, puedeVibrar } from '../src/plataforma'
+import { capacidades, compartirArchivo, dispositivoApple, esWebApple, estaInstalada, puedeVibrar } from '../src/plataforma'
 
 const UA = {
   iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
@@ -31,6 +31,24 @@ describe('navegador de Apple', () => {
   it('Android y Chrome de Mac no son «de Apple»', () => {
     navegador({ userAgent: UA.android }); expect(esWebApple()).toBe(false)
     navegador({ userAgent: UA.chromeMac }); expect(esWebApple()).toBe(false)
+  })
+})
+
+describe('lo que puede hacer cada aparato (capacidades)', () => {
+  it('pasos a mano en iPhone y en iPad (también el que se presenta como Mac); no en Mac, Android ni Chrome de Mac', () => {
+    const pasos = (n: Record<string, unknown>) => { navegador(n); return capacidades().pasosAMano }
+    expect(pasos({ userAgent: UA.iphone })).toBe(true)
+    expect(pasos({ userAgent: UA.ipad })).toBe(true)
+    expect(pasos({ userAgent: UA.mac, maxTouchPoints: 5 })).toBe(true)
+    expect(pasos({ userAgent: UA.mac })).toBe(false)
+    expect(pasos({ userAgent: UA.android })).toBe(false)
+    expect(pasos({ userAgent: UA.chromeMac })).toBe(false)
+  })
+  it('en la web no hay escáner del sistema, ni recordatorios, ni archivos en Documentos', () => {
+    navegador({ userAgent: UA.iphone })
+    const c = capacidades()
+    expect([c.escanerNativo, c.recordatorios, c.compartirNativo, c.copiasEnDocumentos, c.salud]).toEqual([false, false, false, false, false])
+    expect([c.apple, c.aparatoApple, c.instalar]).toEqual([true, 'iphone', 'inicio'])
   })
 })
 

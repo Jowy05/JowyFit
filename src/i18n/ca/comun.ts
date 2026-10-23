@@ -1,5 +1,5 @@
 // Catalán (IEC, variante central) · piezas comunes (armazón, navegación, componentes, avisos, rescate, gráficas, fechas, catálogo, servicios, idioma).
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -26,6 +26,9 @@ export default {
   'Buenos días': 'Bon dia',
   'Buenas tardes': 'Bona tarda',
   'Buenas noches': 'Bona nit',
+  // Listas en una frase (dominio/formato: enLista): «a y b», «a, b y c»
+  '{lista} y {ultimo}': '{lista} i {ultimo}',
+  '3+|{lista} y {ultimo}': '{lista} i {ultimo}',
   // Catálogo de ejercicios
   'No se pudo cargar el catálogo ({estado})': "No s'ha pogut carregar el catàleg ({estado})",
   'Ejercicio': 'Exercici',
@@ -54,7 +57,7 @@ export default {
   'Borrar todo': 'Esborrar-ho tot',
   'Borrar todos los datos': 'Esborrar totes les dades',
   'Detalle: {detalle}': 'Detall: {detalle}',
-  // Recordatorios (servicios.ts)
+  // Recordatorios (datos/acciones/avisos.ts)
   'Mañana: {dia}': 'Demà: {dia}',
   'A las {hora}. En 1 h, a dormir 😴': "A les {hora}. D'aquí a 1 h, a dormir 😴",
   'Hoy toca pesarse': 'Avui toca pesar-se',
@@ -91,7 +94,7 @@ export default {
   'Última pesada: {datos} ({fecha}, {fuente})': 'Última pesada: {datos} ({fecha}, {fuente})',
   '{n} % grasa': '{n} % de greix',
   'No hay pesadas en Health Connect de los últimos 30 días.': 'No hi ha pesades a Health Connect dels últims 30 dies.',
-  // Canales de avisos de Android (plataforma/index.ts)
+  // Canales de avisos de Android (plataforma/avisos.ts)
   'Fin del descanso': 'Fi del descans',
   'Avisa cuando toca la siguiente serie (también en el reloj)': 'Avisa quan toca la sèrie següent (també al rellotge)',
   'Recordatorios': 'Recordatoris',

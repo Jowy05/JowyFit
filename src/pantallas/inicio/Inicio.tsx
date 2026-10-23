@@ -1,7 +1,6 @@
 // INI-01 · Inicio
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
-import { gastoDelDia, objetivosEnergia } from '../../datos/consultas'
+import { comidasDe, gastoDelDia, hayEntrenoHecho, objetivosEnergia, pasosDelDia, sesionesEntre } from '../../datos/consultas'
 import { totalesComida } from '../../dominio/comida'
 import { basalHastaAhora } from '../../dominio/energia'
 import { DIAS, DIAS_ABREV, DIAS_CORTOS, deISO, diaMes, diaSemana, formatoHora, hoyISO, numeroSemana, saludo, semanaDe, sumarDias } from '../../dominio/fechas'
@@ -35,10 +34,10 @@ export function Inicio() {
   const enCurso = useSesionEnCurso()
   const hoy = hoyISO()
   const dias = semanaDe(hoy)
-  const sesiones = useLiveQuery(() => db.sesiones.where('fecha').between(sumarDias(dias[0]!, -7), dias[6]!, true, true).toArray(), [hoy]) ?? []
-  const comidas = useLiveQuery(() => db.comidas.where('fecha').equals(hoy).toArray(), [hoy]) ?? []
-  const pasos = useLiveQuery(() => db.pasos.get(hoy), [hoy])
-  const yaEntreno = useLiveQuery(async () => !!(await db.sesiones.where('estado').equals('hecha').first()), []) ?? false
+  const sesiones = useLiveQuery(() => sesionesEntre(sumarDias(dias[0]!, -7), dias[6]!), [hoy]) ?? []
+  const comidas = useLiveQuery(() => comidasDe(hoy), [hoy]) ?? []
+  const pasos = useLiveQuery(() => pasosDelDia(hoy), [hoy])
+  const yaEntreno = useLiveQuery(hayEntrenoHecho, []) ?? false
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
   // Lo que gastas hoy: en reposo y por ejercicio (pasos + entreno). Se recalcula al cambiar pasos, entrenos o medidas.
   const gasto = useLiveQuery(() => gastoDelDia(perfil, hoy), [perfil, hoy])

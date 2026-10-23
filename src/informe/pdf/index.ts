@@ -1,5 +1,5 @@
 // Informe en PDF: dibuja el Informe (informe/calculo) en A4 vertical con pdf-lib y la Helvetica estándar.
-// pdf-lib se carga con import() al crear el PDF, para que no pese al abrir la app. Diseño: docs/INFORME-PDF-DISENO.md.
+// pdf-lib se carga con import() al crear el PDF, para que no pese al abrir la app.
 import type { Informe, RangoInforme } from '../calculo/tipos'
 import { archivoPeriodo } from '../calculo/periodo'
 import { idioma, t } from '../../i18n'

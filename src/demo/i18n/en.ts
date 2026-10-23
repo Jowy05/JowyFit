@@ -1,5 +1,5 @@
 // Textos de la demo en inglés (EE. UU., sencillo). Mismas claves que es.ts: TypeScript avisa si falta alguna.
-// Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
+// Glosario y avisos: README, «Idiomas».
 import type es from './es'
 
 const en: Record<keyof typeof es, string> = {
@@ -11,7 +11,7 @@ const en: Record<keyof typeof es, string> = {
   'demo.cab.volver': 'Back to the page',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
-  'idioma.boton': 'Language: {nombre}',
+  'idioma.boton': '{codigo} · Language: {nombre}',
 
   // Presentación (encima del móvil, en el ordenador)
   'demo.intro.titulillo': 'Demo · screenshots of the real app',

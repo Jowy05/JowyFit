@@ -1,5 +1,5 @@
 // Catalán (IEC, variante central) · zona «progreso».
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -365,6 +365,7 @@ export default {
   'faltan {n}': 'en falten {n}',
   'Incluye trote de {n} km': 'Inclou {n} km corrent',
   'En iPhone los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.': "A l'iPhone els passos s'apunten a mà: mira els de l'app Salut i escriu-los aquí.",
+  'En iPad los pasos se apuntan a mano: mira los de Salud y escríbelos aquí.': "A l'iPad els passos s'apunten a mà: mira els de l'app Salut i escriu-los aquí.",
   'Actualizar desde Health Connect': 'Actualitzar des de Health Connect',
   '+ Trote / carrera': '+ Córrer',
   'Últimos 7 días': 'Últims 7 dies',

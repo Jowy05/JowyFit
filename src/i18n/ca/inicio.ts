@@ -1,5 +1,5 @@
 // Catalán (IEC, variante central) · zona «inicio» (Inicio, apuntar peso, pendientes, alta, instalar en Apple y tutorial).
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -166,8 +166,6 @@ export default {
   'Paso {n} de {total}': 'Pas {n} de {total}',
   'Atrás': 'Enrere',
   'Siguiente': 'Següent',
-  '{lista} y {ultimo}': '{lista} i {ultimo}',
-  '3+|{lista} y {ultimo}': '{lista} i {ultimo}',
   // Alta: sobre ti
   'Sobre ti': 'Sobre tu',
   'Para calcular cuánto comer. Lo puedes cambiar luego en Perfil.': 'Per calcular quant has de menjar. Ho pots canviar després a Perfil.',

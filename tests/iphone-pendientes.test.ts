@@ -1,7 +1,7 @@
 // iPhone: sin recordatorios ni pasos automáticos, «Pendientes de hoy» recuerda apuntar los pasos por la tarde.
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../src/datos/db'
-import { pendientesDeHoy } from '../src/pantallas/inicio/pendientes'
+import { pendientesDeHoy } from '../src/datos/pendientes'
 import { perfilEjemplo } from './ayuda'
 
 const HOY = '2026-10-13'

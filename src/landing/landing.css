@@ -1,6 +1,6 @@
 /* Landing de JowyFit · concepto «Las 5:30»: empieza de noche (hero) y acaba con el sol ya fuera (cierre).
    Las franjas de noche no cambian con el modo; las del medio siguen el modo claro u oscuro del sistema.
-   Diseño y reglas: docs/DESIGN.md (un solo brillo, el sol; superficies por tono, no por sombras ni bordes). */
+   Reglas del diseño: un solo brillo, el sol; superficies por tono, no por sombras ni bordes. */
 
 /* Botón según el navegador (lo marca el enrutador de index.html). */
 html[data-plataforma='apple'] .solo-otro, html[data-plataforma='otro'] .solo-apple { display: none !important; }

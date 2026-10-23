@@ -1,5 +1,5 @@
 // Textos de la demo en catalán (normativa del IEC, variante central; de tú). Mismas claves que es.ts:
-// TypeScript avisa si falta alguna. Glosario y avisos: docs/GLOSARIO-IDIOMAS.md.
+// TypeScript avisa si falta alguna. Glosario y avisos: README, «Idiomas».
 import type es from './es'
 
 const ca: Record<keyof typeof es, string> = {
@@ -11,7 +11,7 @@ const ca: Record<keyof typeof es, string> = {
   'demo.cab.volver': 'Tornar a la pàgina',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
-  'idioma.boton': 'Idioma: {nombre}',
+  'idioma.boton': '{codigo} · Idioma: {nombre}',
 
   // Presentación (encima del móvil, en el ordenador)
   'demo.intro.titulillo': 'Demo · captures de l’app de veritat',

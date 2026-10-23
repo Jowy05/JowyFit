@@ -1,8 +1,7 @@
 // PER-01 · Perfil: tus datos, los números que calcula la app y las secciones para editar.
 import type { ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
-import { perfilPorDefecto } from '../../datos/repos'
+import { leerPerfil, perfilPorDefecto } from '../../datos/repos'
 import { objetivosEnergia, ultimaMedicion } from '../../datos/consultas'
 import type { Perfil as TPerfil } from '../../datos/tipos'
 import { cinturaAltura, grasaMarina, imc } from '../../dominio/calculos'
@@ -10,10 +9,10 @@ import { capital, kg, num } from '../../dominio/formato'
 import { veredictoCinturaAltura, veredictoGrasa, veredictoImc } from '../../dominio/tendencias'
 import { edad } from '../../dominio/fechas'
 import { Cab, cx, Ico, Pantalla } from '../../ui/componentes'
-import { useNav } from '../../app/nav'
+import { useNav, type ClaveSeccion } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfil } from '../../datos/hooks'
-import { diasTxt, enFrase, iniciales, tituloSeccion, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
+import { diasTxt, enFrase, iniciales, tituloSeccion, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_SENSIBLES } from './textos'
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -31,7 +30,7 @@ type Numeros = {
 
 /** Calcula todo dentro de la consulta en vivo: se actualiza solo al pesarse o medirse. */
 async function calcular(): Promise<Numeros> {
-  const p = (await db.perfil.get('yo')) ?? perfilPorDefecto()
+  const p = (await leerPerfil()) ?? perfilPorDefecto()
   const [e, mCint, mCuello, mCadera] = await Promise.all([objetivosEnergia(p), ultimaMedicion('cintura'), ultimaMedicion('cuello'), ultimaMedicion('cadera')])
   const cintura = mCint?.perimetros?.cintura ?? null
   const cuello = mCuello?.perimetros?.cuello

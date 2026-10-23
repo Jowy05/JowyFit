@@ -1,8 +1,7 @@
 // PRO-01 · Semana («¿Voy bien?»)
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
-import { objetivosEnergia, sesionesHechas } from '../../datos/consultas'
+import { datosSemana } from '../../datos/consultas'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { num, kg, capital } from '../../dominio/formato'
 import { deISO, diaMes, diaSemana, hoyISO, lunesDe, MESES_CORTOS, numeroSemana, semanaDe, sumarDias } from '../../dominio/fechas'
@@ -51,14 +50,8 @@ export function Semana() {
   const nSemana = numeroSemana(inicio, lunes)
 
   const datos = useLiveQuery(async () => {
-    const [sesiones, mediciones, comidas, pasos, energia] = await Promise.all([
-      sesionesHechas(),
-      db.mediciones.toArray(),
-      db.comidas.where('fecha').between(sumarDias(lunes, -21), domingo, true, true).toArray(),
-      db.pasos.where('fecha').between(sumarDias(lunes, -7), domingo, true, true).toArray(),
-      objetivosEnergia(perfil),
-    ])
-    return { sesiones, mediciones: mediciones.filter(m => m.fecha.slice(0, 10) <= domingo), comidas, pasos, energia }
+    const d = await datosSemana(lunes, perfil)
+    return { ...d, mediciones: d.mediciones.filter(m => m.fecha.slice(0, 10) <= domingo) }
   }, [lunes, domingo, perfil])
 
   const cab = (

@@ -1,8 +1,7 @@
 // SES-10 · Fin del entreno
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
-import { sesionesHechas } from '../../datos/consultas'
+import { contarEntrenosDeRutina, leerSesion, sesionesHechas } from '../../datos/consultas'
 import { historialEn } from '../../dominio/progresion'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { resumen } from '../../dominio/sesion'
@@ -27,7 +26,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
   const perfil = usePerfil()
   const ajustes = useAjustes()
   const r = useRutina()
-  const s = useLiveQuery(() => db.sesiones.get(Number(ruta.d.id)), [ruta.d.id])
+  const s = useLiveQuery(() => leerSesion(Number(ruta.d.id)), [ruta.d.id])
   // Hora de fin: ahora, salvo que la última serie quede muy lejos (la app se cerró en el resumen o se guarda
   // al día siguiente): entonces, poco después de la última serie, para que la duración no salga en horas.
   const [abierto] = useState(Date.now())
@@ -49,8 +48,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'ses-fin'> }) {
     return out
   }, [s?.id]) ?? []
   const calibCompleta = useLiveQuery(async () => {
-    if (!r?.calibracion || !s) return false
-    const hechas = (await db.sesiones.where('estado').equals('hecha').toArray()).filter(x => x.rutinaId === r.id && x.letra !== 'L').length + (s.letra !== 'L' ? 1 : 0)
+    if (!r?.calibracion || !s || r.id == null) return false
+    const hechas = (await contarEntrenosDeRutina(r.id)) + (s.letra !== 'L' ? 1 : 0)
     return hechas >= r.dias.filter(d => !d.opcional).length
   }, [r?.id, s?.id])
 

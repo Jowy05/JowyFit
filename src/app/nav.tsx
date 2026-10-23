@@ -2,9 +2,11 @@
 // y pantallas completas (alta de usuario, entreno en curso). Sin dependencias (solo tipos): es un reducer.
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react'
 import type { Franja, Meta } from '../datos/tipos'
-import type { ClaveSeccion } from '../pantallas/perfil/textos'
 
 export type Pestana = 'ini' | 'rut' | 'com' | 'pro' | 'per'
+
+/** Secciones de Perfil que se abren como pantalla (los textos de cada una están en pantallas/perfil/textos). */
+export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento'
 
 /** Id de algo guardado: Dexie lo tipa opcional, pero lo leído de la base siempre lo tiene. */
 type Id = number | undefined
@@ -117,6 +119,8 @@ type AccionNav =
   | { t: 'completa'; ruta: Ruta<CodigoPantalla> | null }
   | { t: 'minimizar' }
   | { t: 'restaurar' }
+  /** Vuelve al entreno en curso: lo restaura si se minimizó en esta visita; si la app se cerró a mitad, lo abre de nuevo. */
+  | { t: 'abrirEntreno' }
   | { t: 'raiz'; pestana: Pestana }
   /** Vuelve a un estado guardado (el tutorial deja la app como la encontró). */
   | { t: 'poner'; estado: EstadoNav }
@@ -154,6 +158,8 @@ export function reducirNav(s: EstadoNav, a: AccionNav): EstadoNav {
       return s.completa ? { ...s, completa: null, hoja: null, minimizada: s.completa } : s
     case 'restaurar':
       return s.minimizada ? { ...s, completa: s.minimizada, minimizada: null, hoja: null } : s
+    case 'abrirEntreno':
+      return reducirNav(s, s.minimizada ? { t: 'restaurar' } : { t: 'completa', ruta: { p: 'entreno' } })
     case 'poner':
       return a.estado
   }
@@ -184,6 +190,7 @@ type Nav = {
   completa: { (p: null): void; <C extends CodigoPantalla>(p: C, ...d: Datos<C>): void }
   minimizar: () => void
   restaurar: () => void
+  abrirEntreno: () => void
   poner: (estado: EstadoNav) => void
   actual: Ruta<CodigoPantalla>
 }
@@ -202,11 +209,12 @@ export function ProveedorNav({ children, inicial }: { children: ReactNode; inici
   const completa = useCallback((p: CodigoPantalla | null, datos?: unknown) => d({ t: 'completa', ruta: p ? { p, d: datos } as Ruta<CodigoPantalla> : null }), []) as Nav['completa']
   const minimizar = useCallback(() => d({ t: 'minimizar' }), [])
   const restaurar = useCallback(() => d({ t: 'restaurar' }), [])
+  const abrirEntreno = useCallback(() => d({ t: 'abrirEntreno' }), [])
   const poner = useCallback((e: EstadoNav) => d({ t: 'poner', estado: e }), [])
   const pila = estado.pilas[estado.pestana]
   const actual = estado.completa ?? pila[pila.length - 1]!
-  const valor = useMemo<Nav>(() => ({ estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, poner, actual }),
-    [estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, poner, actual])
+  const valor = useMemo<Nav>(() => ({ estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, abrirEntreno, poner, actual }),
+    [estado, ir, reemplazar, atras, pestana, raiz, hoja, completa, minimizar, restaurar, abrirEntreno, poner, actual])
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
 }
 

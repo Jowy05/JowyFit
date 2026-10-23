@@ -79,7 +79,7 @@ function revivir(v: unknown, archivos: Record<string, Uint8Array>): unknown {
   return v
 }
 
-function leerJSON(texto: string): any {
+function leerJSON(texto: string): unknown {
   try {
     return JSON.parse(texto.replace(/^﻿/, ''))
   } catch {
@@ -141,7 +141,7 @@ export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
     if (bytes.length > LIMITES_ZIP.json) throw new Error(t('El archivo es demasiado grande para ser una copia de JowyFit'))
     const obj = leerJSON(new TextDecoder().decode(bytes))
     // La copia sin comprimir (datos.json suelto) también se comprueba entera.
-    if (obj?.app === 'JowyFit') {
+    if (typeof obj === 'object' && obj !== null && 'app' in obj && obj.app === 'JowyFit') {
       comprobarCabecera(obj)
       await restaurar(validarDatos(obj.datos).tablas, {})
       return 'copia'
@@ -186,7 +186,7 @@ export async function borrarTodosLosDatos(): Promise<void> {
   try { localStorage.clear() } catch { /* nada */ }
 }
 
-/** Formato de data/perfil.ejemplo.json: perfil + mediciones + logística + objetivos. */
+/** Formato del perfil sencillo (un JSON escrito a mano): perfil + mediciones + logística + objetivos. */
 const numero = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 /** Quita los campos sin número (la plantilla de ejemplo trae todo a null). Undefined si no queda nada. */
 function soloNumeros<T extends Record<string, unknown>>(o: T): Partial<Record<keyof T, number>> | undefined {
@@ -198,8 +198,10 @@ const dosCifras = (n: number) => String(n).padStart(2, '0')
 const ahoraLocal = (d = new Date()) => `${d.getFullYear()}-${dosCifras(d.getMonth() + 1)}-${dosCifras(d.getDate())}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}`
 const hora = (v: unknown): string | undefined => (typeof v === 'string' && /^\d{1,2}:\d{2}$/.test(v.trim()) ? v.trim().padStart(5, '0') : undefined)
 
-async function importarPerfilSencillo(o: Record<string, any>) {
-  if (!o || typeof o !== 'object' || Array.isArray(o) || !(o.perfil || o.logistica || o.mediciones)) {
+async function importarPerfilSencillo(v: unknown) {
+  // Formato libre: comprobado que es un objeto, cada campo se mira uno a uno antes de usarlo.
+  const o = (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) as Record<string, any>
+  if (!(o.perfil || o.logistica || o.mediciones)) {
     throw new Error(t('El archivo no es una copia de JowyFit ni un perfil'))
   }
   const p = o.perfil ?? {}

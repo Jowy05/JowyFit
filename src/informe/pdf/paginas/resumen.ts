@@ -3,7 +3,7 @@ import { num, fijo } from '../../../dominio/formato'
 import { fechaCorta } from '../../../dominio/fechas'
 import { t, tc } from '../../../i18n'
 import type { FilaResumen, Informe, ResumenInforme, SemanaInforme } from '../../calculo/tipos'
-import { lista } from '../../calculo/comun'
+import { enLista } from '../../../dominio/formato'
 import { TAM, type Lienzo } from '../lienzo'
 import { altoZonas, filasZonas, grafica, type BarraGrafica, type FilaZonas } from '../graficas'
 import { FILA_KV, Flujo, IZQ, altoConsejo, altoH2, altoH3, altoNota, chip, claro, consejo, h2, h3, kv, nota, type Maqueta } from '../piezas'
@@ -35,7 +35,7 @@ function resumenTabla(f: Flujo, r: ResumenInforme) {
   // Las filas con la misma nota la comparten: «Peso, grasa corporal y cintura: al empezar, tu medida del 13 oct…».
   const porNota = new Map<string, string[]>()
   for (const x of r.tabla) if (x.nota) porNota.set(x.nota, [...(porNota.get(x.nota) ?? []), x.dato.replace(/ \(.*\)$/, '')])
-  const notas = [...porNota.entries()].map(([n, datos]) => `${lista(datos.map((d, i) => (i ? d.charAt(0).toLowerCase() + d.slice(1) : d)))}: ${n}`)
+  const notas = [...porNota.entries()].map(([n, datos]) => `${enLista(datos.map((d, i) => (i ? d.charAt(0).toLowerCase() + d.slice(1) : d)))}: ${n}`)
   const textoNotas = notas.join(' · ')
   // Dos tablas: lo que ha cambiado desde el principio y lo que se mide contra un objetivo (cada columna, un significado).
   const cambios = r.tabla.filter(x => !x.contra), contra = r.tabla.filter(x => x.contra)

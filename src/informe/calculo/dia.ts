@@ -1,12 +1,12 @@
 // «Tu día» (Hoy o Ayer): lo de ese día contra lo normal de las últimas semanas.
 import type { Perfil, Serie, Sesion } from '../../datos/tipos'
-import { conUnidad, kg, num, capital, conSigno, fijo } from '../../dominio/formato'
+import { conUnidad, kg, num, capital, conSigno, enLista, fijo } from '../../dominio/formato'
 import { fechaCorta, sumarDias } from '../../dominio/fechas'
 import { ejerciciosHechos, hechasAsc, logros, seriesDe, ultimoValor } from '../../dominio/tendencias'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t, tn } from '../../i18n'
 import type { Comparacion, Direccion, FilaHoyNormal, Juicio, TonoInforme, TuDiaInforme } from './tipos'
-import { agrupar, conRpe, dia10, entre, lista, media, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, r1, serieFuerza, suma, textoDuracion, textoFuerza, textoPct, textoSerie, trabajo, unico, unidadFuerza, valorFuerza } from './comun'
+import { agrupar, conRpe, dia10, entre, media, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, r1, serieFuerza, suma, textoDuracion, textoFuerza, textoPct, textoSerie, trabajo, unico, unidadFuerza, valorFuerza } from './comun'
 import { estadosDias, leerCintura, leerGrasaBascula, leerPeso, nombreDe, nombreEnFrase, type Ctx } from './contexto'
 import { filaComida, gastoEnDia, totalDe } from './comidaPasos'
 
@@ -199,8 +199,8 @@ function fraseDia(ejs: FilaHoyNormal[], prot: Comparacion, pasos: Comparacion, p
   for (const e of ejs.filter(x => x.record)) bien.push(t('récord en {nombre} ({valor})', { nombre: min(e.nombre), valor: textoFuerza(e.hoy, e.unidad) }))
   const masPeso = ejs.filter(e => !e.record && e.juicio === 'mejor' && e.por === 'peso').map(e => min(e.nombre))
   const masReps = ejs.filter(e => !e.record && e.juicio === 'mejor' && e.por === 'reps').map(e => min(e.nombre))
-  if (masPeso.length) bien.push(ejs.some(e => e.unidad === 'asistido' && masPeso.includes(min(e.nombre))) ? t('mejor en {lista}', { lista: lista(masPeso) }) : t('más peso en {lista}', { lista: lista(masPeso) }))
-  if (masReps.length) bien.push(t('más repeticiones en {lista}', { lista: lista(masReps) }))
+  if (masPeso.length) bien.push(ejs.some(e => e.unidad === 'asistido' && masPeso.includes(min(e.nombre))) ? t('mejor en {lista}', { lista: enLista(masPeso) }) : t('más peso en {lista}', { lista: enLista(masPeso) }))
+  if (masReps.length) bien.push(t('más repeticiones en {lista}', { lista: enLista(masReps) }))
   if (prot.juicio === 'mejor') bien.push(t('más proteína'))
   if (pasos.juicio === 'mejor') bien.push(t('más pasos'))
   if (peso.juicio === 'mejor') bien.push(t('bajas de peso'))
@@ -211,8 +211,8 @@ function fraseDia(ejs: FilaHoyNormal[], prot: Comparacion, pasos: Comparacion, p
     ...(peso.juicio === 'peor' ? [t('el peso (sube)')] : []),
   ]
   const partes = [inicio]
-  if (bien.length) partes.push(`${capital(lista(bien))}.`)
-  if (peor.length) partes.push(t('Peor: {lista}.', { lista: lista(peor) }))
+  if (bien.length) partes.push(`${capital(enLista(bien))}.`)
+  if (peor.length) partes.push(t('Peor: {lista}.', { lista: enLista(peor) }))
   if (!bien.length && !peor.length && ejs.length) partes.push(palabra === 'ayer' ? t('Ayer, como lo normal.') : t('Hoy, como lo normal.'))
   return partes.join(' ')
 }

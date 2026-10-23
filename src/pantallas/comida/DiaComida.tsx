@@ -1,8 +1,7 @@
 // COM-01 · Día: la proteína del día (lo principal), kcal orientativas, comidas por momento, cafeína, suplementos y cómo vas.
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
-import { objetivosEnergia } from '../../datos/consultas'
+import { comidasDe, comidasEntre, objetivosEnergia, suplementosDelDia } from '../../datos/consultas'
 import type { Comida } from '../../datos/tipos'
 import { FRANJAS, avisoCafeina, batidoDe, datosQuincena, dosisDe, esBatido, nombreFranja, picoteoDeSemana, textoRacion, totalesComida, batidoAMano } from '../../dominio/comida'
 import { DIAS, deISO, diaMes, diaSemana, horaActual, hoyISO, semanaDe, sumarDias } from '../../dominio/fechas'
@@ -11,9 +10,9 @@ import { t, tn } from '../../i18n'
 import { Barra, cx, Ico, Pantalla, Seccion, useUnaVez, recortar } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, usePerfil } from '../../datos/hooks'
+import { useAjustes, useMediciones, usePerfil } from '../../datos/hooks'
 import { CabComida, Deslizable, Mini } from './comun'
-import { desmarcarSuplemento, marcarSuplemento, borrarComida } from '../../datos/acciones/comida'
+import { alternarSuplemento, borrarComida } from '../../datos/acciones/comida'
 
 
 export function DiaComida() {
@@ -23,14 +22,14 @@ export function DiaComida() {
   const ajustes = useAjustes()
   const hoy = hoyISO()
   const [fecha, setFecha] = useState(hoy)
-  const comidas = useLiveQuery(() => db.comidas.where('fecha').equals(fecha).toArray(), [fecha]) ?? []
+  const comidas = useLiveQuery(() => comidasDe(fecha), [fecha]) ?? []
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
   const semana = semanaDe(fecha)
   const semanaAnt = semanaDe(sumarDias(semana[0]!, -1))
-  const recientes = useLiveQuery(() => db.comidas.where('fecha').between(sumarDias(hoy, -27), hoy, true, true).toArray(), [hoy]) ?? []
-  const deSemanas = useLiveQuery(() => db.comidas.where('fecha').between(semanaAnt[0]!, semana[6]!, true, true).toArray(), [fecha]) ?? []
-  const mediciones = useLiveQuery(() => db.mediciones.toArray(), []) ?? []
-  const supl = useLiveQuery(() => db.suplementos.get(fecha), [fecha])
+  const recientes = useLiveQuery(() => comidasEntre(sumarDias(hoy, -27), hoy), [hoy]) ?? []
+  const deSemanas = useLiveQuery(() => comidasEntre(semanaAnt[0]!, semana[6]!), [fecha]) ?? []
+  const mediciones = useMediciones() ?? []
+  const supl = useLiveQuery(() => suplementosDelDia(fecha), [fecha])
   const tot = totalesComida(comidas)
   const d = deISO(fecha)
   const esHoy = fecha === hoy
@@ -46,13 +45,11 @@ export function DiaComida() {
     aviso(t('Borrado: {nombre}', { nombre: t(c.nombre) }), await borrarComida(c))
   }
   // El batido, al marcarlo, se apunta con su proteína (suma al día); al desmarcarlo, se quita.
-  // Un doble toque no mete dos batidos ni lo desmarca: una sola vez, leyendo lo tomado de la base de datos.
+  // Un doble toque no mete dos batidos ni lo desmarca: una sola vez, y lo tomado se mira dentro de la transacción.
   const unaVez = useUnaVez()
-  const alternarSuplemento = unaVez(async (s: string) => {
-    const yaTomado = ((await db.suplementos.get(fecha))?.tomados ?? []).includes(s)
-    if (yaTomado) { await desmarcarSuplemento(fecha, s); return }
-    const deshacer = await marcarSuplemento(perfil, fecha, s)
-    if (esBatido(s)) aviso(t('Apuntado: {nombre} · {n} g proteína', { nombre: t(s), n: batidoDe(perfil.batido).proteina }), deshacer)
+  const tocarSuplemento = unaVez(async (s: string) => {
+    const deshacer = await alternarSuplemento(perfil, fecha, s)
+    if (deshacer && esBatido(s)) aviso(t('Apuntado: {nombre} · {n} g proteína', { nombre: t(s), n: batidoDe(perfil.batido).proteina }), deshacer)
   })
   const verDia = (n: number) => setFecha(f => sumarDias(f, n))
   // Redondeado: las raciones P/G dejan decimales («Faltan 112.6 g»).
@@ -149,7 +146,7 @@ export function DiaComida() {
                 const detalle = [dosis, batido ? `${t('{n} g proteína', { n: batidoDe(perfil.batido).proteina })}${hecho && !aMano ? ` · ${t('sumada al día')}` : ''}` : '', aMano ? t('ya apuntado') : ''].filter(Boolean).join(' · ')
                 return (
                   <div key={s} className="it tpl">
-                    <button className={cx('tpl-m todo', hecho && 'done')} onClick={() => aMano ? aviso(t('Ya tienes un batido apuntado hoy')) : void alternarSuplemento(s)}>
+                    <button className={cx('tpl-m todo', hecho && 'done')} onClick={() => aMano ? aviso(t('Ya tienes un batido apuntado hoy')) : void tocarSuplemento(s)}>
                       <span className="box"><Ico n="check" b /></span>
                       <span className="tx"><b>{t(s)}</b><small>{detalle || (hecho ? t('Tomado') : t('Toca cuando lo tomes'))}</small></span>
                     </button>

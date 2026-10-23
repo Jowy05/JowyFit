@@ -1,7 +1,7 @@
 // INI-01 · Primeros pasos: guía para quien acaba de llegar (sin tutorial). Lo cerrado se recuerda en localStorage.
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { contarComidas, contarEntrenosHechos, leerMediciones } from '../../datos/consultas'
 import { DIAS, deISO, diaSemana, diasEntre, hoyISO } from '../../dominio/fechas'
 import type { tarjetaHoy } from '../../dominio/semana'
 import { cx, Ico, Seccion } from '../../ui/componentes'
@@ -32,7 +32,7 @@ export function usePrimerosPasos(tar: ReturnType<typeof tarjetaHoy>): Guia | nul
   const hoy = hoyISO()
   const [estado, setEstado] = useState<EstadoPasos>(leerPasos)
   const hechos = useLiveQuery(async () => {
-    const [entrenos, mediciones, comidas] = await Promise.all([db.sesiones.where('estado').equals('hecha').count(), db.mediciones.toArray(), db.comidas.count()])
+    const [entrenos, mediciones, comidas] = await Promise.all([contarEntrenosHechos(), leerMediciones(), contarComidas()])
     // El peso del alta se guarda como «manual»: el paso se marca al apuntarlo otra vez.
     const pesos = mediciones.filter(m => m.pesoKg != null)
     return { entreno: entrenos > 0, peso: pesos.length >= 2 || pesos.some(m => m.origen !== 'manual'), comida: comidas > 0 }

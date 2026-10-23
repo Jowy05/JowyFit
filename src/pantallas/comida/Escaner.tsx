@@ -1,10 +1,10 @@
 // COM-03 · Escáner: lee el código, lo busca en lo ya guardado y si no en Open Food Facts.
 import { useEffect, useRef, useState } from 'react'
-import { db } from '../../datos/db'
+import { leerProducto } from '../../datos/consultas'
 import type { Producto } from '../../datos/tipos'
 import { buscarOFF, codigoValido, porRacion } from '../../dominio/comida'
 import { hoyISO } from '../../dominio/fechas'
-import { escanearNativo, esAndroid, vibrar } from '../../plataforma'
+import { capacidades, escanearNativo, vibrar } from '../../plataforma'
 import type { Camara } from '../../plataforma/escanerWeb'
 import { cx, Ico, Pantalla, Stepper, useUnaVez, recortar, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -43,7 +43,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
     camara.current?.parar(); camara.current = null
     void vibrar('corta')
     setEstado({ e: 'buscando', codigo })
-    const guardado = await db.productos.get(codigo)
+    const guardado = await leerProducto(codigo)
     if (guardado && !guardado.pendiente) { setEstado({ e: 'encontrado', p: guardado, ya: true }); return }
     const r = await buscarOFF(codigo)
     if (r.estado === 'encontrado') {
@@ -56,7 +56,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
     if (estado.e !== 'camara' || escribir) return
     let cancelado = false
     void (async () => {
-      if (esAndroid()) {
+      if (capacidades().escanerNativo) {
         const c = await escanearNativo()
         if (cancelado) return
         if (c === 'cancelado') { setEscribir(true); return }
@@ -109,7 +109,7 @@ export function Escaner({ ruta }: { ruta: Ruta<'com-scan'> }) {
         <div className="cam-top" style={{ position: 'relative' }}>
           <button className="cam-b" aria-label={t('Cerrar')} onClick={() => nav.atras()}><Ico n="x" b /></button>
           <span className="cam-t">{t('Escanear código')}</span>
-          {enCamara && !esAndroid() && hayLuz
+          {enCamara && !capacidades().escanerNativo && hayLuz
             ? <button className={cx('cam-b', luz && 'on')} aria-label={t('Linterna')} onClick={async () => { const ok = await camara.current?.linterna(!luz); if (ok) setLuz(!luz); else aviso(t('Este móvil no deja encender la linterna desde aquí')) }}><Ico n="flashlight" b /></button>
             : <span style={{ width: 48 }} />}
         </div>

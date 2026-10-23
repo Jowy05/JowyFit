@@ -2,7 +2,7 @@
 // o atrás), el foco se apaga mientras algo se mueve, las anclas son `data-tour` y al cerrar la app vuelve a como estaba.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { esAndroid, esWebApple, estaInstalada } from '../../plataforma'
+import { capacidades } from '../../plataforma'
 import { cx, Hoja, Ico } from '../componentes'
 import { RAIZ, useNav } from '../../app/nav'
 import { pasosTutorial } from './pasos'
@@ -58,7 +58,8 @@ export function Tutorial({ alCerrar }: { alCerrar: () => void }) {
   const nav = useNav()
   const navRef = useRef(nav)
   navRef.current = nav
-  const pasos = useMemo(() => pasosTutorial({ apple: esWebApple(), android: esAndroid(), instalada: estaInstalada() }), [])
+  // El guion de Android es el del APK: el que tiene Health Connect (y los avisos que llegan al reloj).
+  const pasos = useMemo(() => { const c = capacidades(); return pasosTutorial({ apple: c.apple, android: c.salud, instalada: c.instalada }) }, [])
   // Al cerrar, la app vuelve a como estaba al empezar.
   const foto = useRef(nav.estado)
   const [i, setI] = useState(0)

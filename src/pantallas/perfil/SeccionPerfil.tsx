@@ -1,18 +1,19 @@
 // PER-02 a PER-11 · Secciones del perfil. Cada cambio se guarda al momento.
 import { useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { contarEvitados, leerMetas, medicionesPorFecha } from '../../datos/consultas'
+import { PERIMETROS } from '../../dominio/medidas'
 import { guardarPerfil } from '../../datos/repos'
-import type { Bascula, Dia, Medicion, Perfil, Zona } from '../../datos/tipos'
+import type { Bascula, Dia, Perfil, Zona } from '../../datos/tipos'
 import { kg, num } from '../../dominio/formato'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, FilaInterruptor, Ico, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
-import { useNav, type Ruta } from '../../app/nav'
+import { useNav, type ClaveSeccion, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfilCargado } from '../../datos/hooks'
-import { reprogramarNotificaciones } from '../../app/servicios'
+import { guardarPerfilYAvisos } from '../../datos/acciones/avisos'
 import { Horarios } from './Horarios'
-import { NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, tituloSeccion, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES, type ClaveSeccion } from './textos'
+import { NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, tituloSeccion, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES } from './textos'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -55,10 +56,10 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta<'per-sec'> }) {
     salud: <Salud p={p} guardar={guardar} />,
     experiencia: <Experiencia p={p} guardar={guardar} />,
     preferencias: <Preferencias p={p} guardar={guardar} />,
-    horario: <Horarios p={p} cambia={c => { void guardarPerfil(c).then(() => reprogramarNotificaciones()) }} />,
+    horario: <Horarios p={p} cambia={c => { void guardarPerfilYAvisos(c) }} />,
     alimentacion: <Alimentacion p={p} guardar={guardar} />,
     vida: <Vida p={p} guardar={guardar} />,
-    seguimiento: <Seguimiento p={p} guardar={c => { void guardarPerfil(c).then(() => reprogramarNotificaciones()) }} />,
+    seguimiento: <Seguimiento p={p} guardar={c => { void guardarPerfilYAvisos(c) }} />,
   }
 
   return (
@@ -114,9 +115,6 @@ function Datos({ p, guardar }: Props) {
 
 // PER-03 · Cuerpo y composición
 // Nombres con tk(): se traducen al pintarlos (las unidades kg, %, kcal pasan por t() sin cambiar).
-const PERIMETROS: [keyof NonNullable<Medicion['perimetros']>, string][] = [
-  ['cintura', tk('Cintura')], ['cuello', tk('Cuello')], ['cadera', tk('Cadera')], ['pecho', tk('Pecho')], ['brazo', tk('Brazo relajado')], ['brazoContraido', tk('Brazo contraído')], ['muslo', tk('Muslo')],
-]
 const BASCULA: [keyof Bascula, string, string][] = [
   ['grasaPct', tk('% de grasa'), '%'], ['masaGrasaKg', tk('Masa grasa'), 'kg'], ['masaLibreKg', tk('Masa libre de grasa'), 'kg'], ['musculoKg', tk('Masa muscular'), 'kg'],
   ['musculoEsqKg', tk('Músculo esquelético'), 'kg'], ['aguaPct', tk('Agua'), '%'], ['proteinaPct', tk('Proteína'), '%'], ['oseaKg', tk('Masa ósea'), 'kg'],
@@ -126,9 +124,9 @@ const BASCULA: [keyof Bascula, string, string][] = [
 function Cuerpo() {
   const nav = useNav()
   const datos = useLiveQuery(async () => {
-    const todas = await db.mediciones.orderBy('fecha').reverse().toArray()
+    const todas = (await medicionesPorFecha()).reverse()
     const peso = todas.find(m => m.pesoKg != null)
-    const per = PERIMETROS.map(([k, nombre]) => {
+    const per = PERIMETROS.map(({ k, t: nombre }) => {
       const m = todas.find(x => x.perimetros?.[k] != null)
       return { k, nombre, v: m?.perimetros?.[k] ?? null, fecha: m?.fecha ?? null }
     }).filter(x => x.v != null)
@@ -177,7 +175,7 @@ const SUGERENCIAS = [tk('Quitar barriga'), tk('Press de banca'), tk('Dominadas')
 function Objetivos({ p, guardar }: Props) {
   const nav = useNav()
   const [nueva, setNueva] = useState('')
-  const metas = useLiveQuery(() => db.metas.toArray(), []) ?? []
+  const metas = useLiveQuery(leerMetas, []) ?? []
   const activas = metas.filter(m => !m.hecha).length
   const mover = (i: number, dir: -1 | 1) => {
     const j = i + dir
@@ -247,7 +245,7 @@ function Objetivos({ p, guardar }: Props) {
 // PER-05 · Salud
 function Salud({ p, guardar }: Props) {
   const nav = useNav()
-  const evitados = useLiveQuery(() => db.marcas.filter(m => !!m.odiado || !!m.duele).count(), []) ?? 0
+  const evitados = useLiveQuery(contarEvitados, []) ?? 0
   return (
     <>
       <div className="fields mt16">

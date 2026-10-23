@@ -3,8 +3,7 @@ import { Suspense, useCallback, useEffect, useRef, useState, type ComponentType 
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cargarCatalogo } from '../catalogo/catalogo'
 import { cargarIdioma, t, tk } from '../i18n'
-import { db, pedirPersistencia } from '../datos/db'
-import { prepararBase } from '../datos/repos'
+import { leerPerfil, pedirPersistencia, prepararBase } from '../datos/repos'
 import { alPulsarAtras, marcarPlataforma, prepararSonido } from '../plataforma'
 import { ProveedorAviso } from '../ui/aviso'
 import { cx, Ico } from '../ui/componentes'
@@ -35,7 +34,7 @@ export function App() {
       .then(() => { setListo(true); void pedirPersistencia() })
       .catch(e => setError(String(e?.message ?? e)))
   }, [])
-  const perfil = useLiveQuery(() => db.perfil.get('yo'), [], null)
+  const perfil = useLiveQuery(leerPerfil, [], null)
   // Instrucciones para instalarla (solo Apple sin instalar al empezar; también desde Ajustes).
   const [instalar, setInstalar] = useState(ensenarAlEmpezar)
   useEffect(() => alPedirInstrucciones(() => setInstalar(true)), [])

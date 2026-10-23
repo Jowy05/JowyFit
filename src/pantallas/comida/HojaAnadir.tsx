@@ -2,7 +2,7 @@
 // que sirve para cualquier plato; luego lo de ayer, recientes, Comidas, picoteo y bebida de un toque y, al final, buscar.
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { comidasEntre, leerPlantillas, leerProductos } from '../../datos/consultas'
 import type { Comida, Franja, Plantilla, Producto } from '../../datos/tipos'
 import { FRANJAS, TAMANOS_NOTA, conRacion, deAyer, franjaPorHora, nombreFranja, notaPorTamano, ordenarPlantillas, porRacion, recientes, soloMacros, textoRacion, type Racion, type TamanoNota } from '../../dominio/comida'
 import { idioma, t, tc } from '../../i18n'
@@ -41,9 +41,9 @@ export function HojaAnadir({ ruta }: { ruta: Ruta<'sheet-add'> }) {
   const fotoUrl = useUrlBlob(foto)
   const notaRef = useRef<HTMLDivElement>(null)
   const notaInput = useRef<HTMLInputElement>(null)
-  const plantillas = useLiveQuery(() => db.plantillas.toArray(), []) ?? []
-  const productos = useLiveQuery(() => db.productos.toArray(), []) ?? []
-  const ultimas = useLiveQuery(() => db.comidas.where('fecha').between(sumarDias(fecha, -14), fecha, true, true).toArray(), [fecha]) ?? []
+  const plantillas = useLiveQuery(leerPlantillas, []) ?? []
+  const productos = useLiveQuery(leerProductos, []) ?? []
+  const ultimas = useLiveQuery(() => comidasEntre(sumarDias(fecha, -14), fecha), [fecha]) ?? []
   const ayer = deAyer(ultimas, sumarDias(fecha, -1), franja)
   const recien = recientes(ultimas, fecha, plantillas, MAX_RECIENTES)
   const comidas = ordenarPlantillas(plantillas.filter(p => p.tipo === 'comida'))

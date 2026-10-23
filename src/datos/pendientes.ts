@@ -1,14 +1,14 @@
-// Pendientes de hoy: pesarse, suplementos, medir cintura, foto de progreso (y en iPhone, apuntar los pasos).
-import { db } from '../../datos/db'
-import type { Perfil } from '../../datos/tipos'
-import { deISO, diaSemana, diasEntre } from '../../dominio/fechas'
-import { batidoDe, dosisDe, esBatido } from '../../dominio/comida'
-import { t } from '../../i18n'
+// Pendientes de hoy (Inicio): pesarse, suplementos, medir cintura, foto de progreso (y en iPhone o iPad, apuntar los pasos).
+import { db } from './db'
+import type { Perfil } from './tipos'
+import { deISO, diaSemana, diasEntre } from '../dominio/fechas'
+import { batidoDe, dosisDe, esBatido } from '../dominio/comida'
+import { t } from '../i18n'
 
 type Pendiente = { id: string; titulo: string; detalle: string; icono: string; accion: 'peso' | 'medir' | 'foto' | 'suplemento' | 'pasos'; hecho?: boolean }
 
-/** `pasosAMano` + `tarde`: en iPhone no hay recordatorios ni pasos automáticos; desde las 18 h, si hoy no hay pasos
- * apuntados, se recuerda apuntarlos (se miran en la app Salud). */
+/** `pasosAMano` + `tarde`: en iPhone y iPad no hay recordatorios ni pasos automáticos; desde las 18 h, si hoy no hay
+ * pasos apuntados, se recuerda apuntarlos (se miran en la app Salud). */
 export async function pendientesDeHoy(p: Perfil, hoy: string, o: { pasosAMano?: boolean; tarde?: boolean } = {}): Promise<Pendiente[]> {
   const out: Pendiente[] = []
   const mediciones = await db.mediciones.toArray()
@@ -22,7 +22,7 @@ export async function pendientesDeHoy(p: Perfil, hoy: string, o: { pasosAMano?: 
     const detalle = esBatido(s)
       ? t('{dosis} · {n} g proteína · después de entrenar o en la merienda', { dosis, n: batidoDe(p.batido).proteina })
       : dosis ? t('{dosis} · cualquier hora', { dosis }) : t('Hoy')
-    out.push({ id: s, titulo: s, detalle, icono: /prote/i.test(s) ? 'drop' : 'pill', accion: 'suplemento' })
+    out.push({ id: s, titulo: t(s), detalle, icono: /prote/i.test(s) ? 'drop' : 'pill', accion: 'suplemento' })
   }
   const cinturas = mediciones.filter(m => m.perimetros?.cintura != null).map(m => m.fecha.slice(0, 10)).sort()
   const ultima = cinturas[cinturas.length - 1]

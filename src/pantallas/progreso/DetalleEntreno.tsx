@@ -1,7 +1,7 @@
 // PRO-03 · Detalle de un entreno pasado. Una serie mal apuntada se corrige tocándola (la progresión parte de ella).
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { leerGimnasio, leerSesion } from '../../datos/consultas'
 import type { EjercicioSesion, Sesion } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { num, capital, textoSerie } from '../../dominio/formato'
@@ -18,8 +18,8 @@ const DESCANSOS = { cortos: tk('Cortos'), bien: tk('Bien'), largos: tk('Largos')
 export function DetalleEntreno({ ruta }: { ruta: Ruta<'pro-entreno'> }) {
   const nav = useNav()
   const id = Number(ruta.d.id)
-  const s = useLiveQuery(async () => (await db.sesiones.get(id)) ?? null, [id])
-  const gym = useLiveQuery(async () => (s?.gimnasioId != null ? (await db.gimnasios.get(s.gimnasioId)) ?? null : null), [s?.gimnasioId])
+  const s = useLiveQuery(async () => (await leerSesion(id)) ?? null, [id])
+  const gym = useLiveQuery(async () => (s?.gimnasioId != null ? (await leerGimnasio(s.gimnasioId)) ?? null : null), [s?.gimnasioId])
   // Serie que se está corrigiendo: ejercicio (posición) y serie (posición en sus series).
   const [corr, setCorr] = useState<{ idx: number; k: number } | null>(null)
 

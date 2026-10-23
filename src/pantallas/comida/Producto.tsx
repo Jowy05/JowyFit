@@ -2,7 +2,7 @@
 // La ficha técnica, plegada, y dentro lo raro: guardarlo en Mis comidas (si aún no está) y borrarlo.
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { leerProducto, productoEnMisComidas } from '../../datos/consultas'
 import type { Producto as TProducto } from '../../datos/tipos'
 import { NOMBRE_RACION, aspecto, buscarOFF, escalarMacros, imagenOFF, factorRacion, porRacion, soloMacros, textoRacion, type Racion } from '../../dominio/comida'
 import { hoyISO } from '../../dominio/fechas'
@@ -22,9 +22,9 @@ export function Producto({ ruta }: { ruta: Ruta<'com-prod'> }) {
   const codigo = ruta.d.codigo
   const fecha = ruta.d.fecha ?? hoyISO()
   const franja = ruta.d.franja
-  const p = useLiveQuery(() => db.productos.get(codigo).then(x => x ?? null), [codigo])
+  const p = useLiveQuery(async () => (await leerProducto(codigo)) ?? null, [codigo])
   // Si ya está en Mis comidas, el botón de guardarlo sobra.
-  const enMisComidas = useLiveQuery(() => db.plantillas.filter(x => x.codigo === codigo).count().then(n => n > 0), [codigo]) ?? true
+  const enMisComidas = useLiveQuery(() => productoEnMisComidas(codigo), [codigo]) ?? true
   const [racion, setRacion] = useState<Racion>('N')
   const [unidades, setUnidades] = useState(1)
   const [buscando, setBuscando] = useState(false)

@@ -1,10 +1,9 @@
 // SES-04 · Máquina ocupada: la del plan → alternativa → otra → reordenar (solo nombres, sin letras A/B/C)
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
 import { guardarSesion } from '../../datos/acciones/entreno'
 import { marcaDe } from '../../datos/repos'
-import { sugerenciaPara } from '../../datos/consultas'
+import { leerRutina, sugerenciaPara } from '../../datos/consultas'
 import { catalogoCargado, ejercicio, nombreMaterial } from '../../catalogo/catalogo'
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import { alternativasDe } from '../../dominio/generador'
@@ -29,7 +28,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'sheet-ocup'> }) {
   const e = s?.ejercicios[idx]
   const plan = useLiveQuery(async () => {
     if (!s || !e) return [] as string[]
-    const r = s.rutinaId != null ? await db.rutinas.get(s.rutinaId) : undefined
+    const r = s.rutinaId != null ? await leerRutina(s.rutinaId) : undefined
     const b = r?.dias.flatMap(d => d.bloques).find(x => x.uid === e.uid)
     const base = b?.alternativas.length ? b.alternativas : alternativasDe(e.planificado, { perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] })
     return [e.planificado, ...base].filter((x, i, a) => a.indexOf(x) === i)

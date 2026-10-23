@@ -1,6 +1,6 @@
 // Ayudantes para escribir y leer datos en pantalla: números con la coma o el punto del idioma, series y textos.
 import type { EjercicioSesion, Serie, TipoRegistro } from '../datos/tipos'
-import { idioma, regionNumeros, t } from '../i18n'
+import { idioma, regionNumeros, t, tc } from '../i18n'
 
 /** Redondea a 1 decimal con la coma o el punto del idioma (en inglés, punto decimal y coma de miles). */
 export function num(n: number | null | undefined, decimales = 1): string {
@@ -10,6 +10,9 @@ export function num(n: number | null | undefined, decimales = 1): string {
   const r = Math.round(n * f) / f
   return (r === 0 ? 0 : r).toLocaleString(regionNumeros(), { minimumFractionDigits: 0, maximumFractionDigits: decimales })
 }
+
+/** Número entero con la separación de miles del idioma: «12.500» (en inglés, «12,500»; con 4 cifras, «8000» y «8,000»). */
+export const miles = (n: number) => num(n, 0)
 
 /** Peso con coma y sin decimales sobrantes: 47,5 · 40 */
 export const kg = (n: number | null | undefined) => num(n, 2)
@@ -41,6 +44,16 @@ export const decimal = (n: number) => (idioma() === 'en' ? String(n) : String(n)
 export function leerNumero(s: string | null | undefined): number | null {
   const n = parseFloat((s ?? '').replace(',', '.'))
   return Number.isFinite(n) ? n : null
+}
+
+/**
+ * Lista en una frase: «a», «a y b», «a, b y c». Con tres o más va con contexto «3+»: en inglés lleva coma antes de
+ * «and» («a, b, and c»); en catalán, «a, b i c».
+ */
+export function enLista(xs: string[]): string {
+  if (xs.length <= 1) return xs[0] ?? ''
+  const v = { lista: xs.slice(0, -1).join(', '), ultimo: xs[xs.length - 1]! }
+  return xs.length > 2 ? tc('3+', '{lista} y {ultimo}', v) : t('{lista} y {ultimo}', v)
 }
 
 /** Primera letra en mayúscula: «martes» → «Martes». */

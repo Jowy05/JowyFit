@@ -2,7 +2,7 @@
 // Los pendientes se buscan al volver la conexión.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { productosRecientes } from '../../datos/consultas'
 import { porRacion } from '../../dominio/comida'
 import { fechaCorta } from '../../dominio/fechas'
 import { normalizar } from '../../catalogo/catalogo'
@@ -18,7 +18,7 @@ export function Guardados() {
   const nav = useNav()
   const aviso = useAviso()
   const [busca, setBusca] = useState('')
-  const productos = useLiveQuery(() => db.productos.orderBy('guardado').reverse().toArray(), []) ?? []
+  const productos = useLiveQuery(productosRecientes, []) ?? []
   const hayPendientes = productos.some(p => p.pendiente)
   useEffect(() => {
     if (hayPendientes && navigator.onLine) void buscarPendientes().then(n => { if (n) aviso(tn(n, 'Encontrado 1 producto pendiente', 'Encontrados {n} productos pendientes')) })

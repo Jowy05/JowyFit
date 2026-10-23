@@ -1,21 +1,81 @@
-// Consultas que combinan tablas: historial de ejercicios, sugerencias, totales del día…
+// Lecturas de la base para las pantallas (que nunca leen db directamente): las de una tabla, arriba, y las que
+// combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
-import type { Comida, DiaRutina, Gimnasio, Medicion, Meta, Perfil, Serie, Sesion } from './tipos'
+import type { Comida, DiaRutina, DiaSuplementos, Foto, Gimnasio, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
 import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
 import { bloqueObjetivo, conPartida, desdeReferencia, historialEn, sugerir, type Hecho, type Sugerencia } from '../dominio/progresion'
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
-import { edad, hoyISO } from '../dominio/fechas'
+import { edad, hoyISO, sumarDias } from '../dominio/fechas'
 import { objetivos } from '../dominio/calculos'
 import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
 import { grasaActual, hitosDominadas, pesoMaximo, seriesDe, ultimoValor } from '../dominio/tendencias'
 import { kg } from '../dominio/formato'
 import { t } from '../i18n'
 
+// ── De una tabla ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Todas las mediciones, sin ordenar. */
+export const leerMediciones = (): Promise<Medicion[]> => db.mediciones.toArray()
+/** Todas las mediciones, de la más antigua a la más reciente. */
+export const medicionesPorFecha = (): Promise<Medicion[]> => db.mediciones.orderBy('fecha').toArray()
+
+/** Comidas apuntadas entre dos días (los dos incluidos). */
+export const comidasEntre = (desde: string, hasta: string): Promise<Comida[]> => db.comidas.where('fecha').between(desde, hasta, true, true).toArray()
+export const leerComida = (id: number): Promise<Comida | undefined> => db.comidas.get(id)
+export const contarComidas = (): Promise<number> => db.comidas.count()
+
+export const pasosDelDia = (fecha: string): Promise<PasosDia | undefined> => db.pasos.get(fecha)
+export const pasosEntre = (desde: string, hasta: string): Promise<PasosDia[]> => db.pasos.where('fecha').between(desde, hasta, true, true).toArray()
+
+export const suplementosDelDia = (fecha: string): Promise<DiaSuplementos | undefined> => db.suplementos.get(fecha)
+
+export const leerSesion = (id: number): Promise<Sesion | undefined> => db.sesiones.get(id)
+/** Todas las sesiones (también las en curso y las canceladas). */
+export const leerSesiones = (): Promise<Sesion[]> => db.sesiones.toArray()
+/** Sesiones de unos días (los dos incluidos), en cualquier estado. */
+export const sesionesEntre = (desde: string, hasta: string): Promise<Sesion[]> => db.sesiones.where('fecha').between(desde, hasta, true, true).toArray()
+export const hayEntrenoHecho = async (): Promise<boolean> => !!(await db.sesiones.where('estado').equals('hecha').first())
+export const contarEntrenosHechos = (): Promise<number> => db.sesiones.where('estado').equals('hecha').count()
+
+export const leerMetas = (): Promise<Meta[]> => db.metas.toArray()
+export const leerMeta = (id: number): Promise<Meta | undefined> => db.metas.get(id)
+export const metasDeTipo = (tipo: Meta['tipo']): Promise<Meta[]> => db.metas.where('tipo').equals(tipo).toArray()
+
+/** Fotos de progreso, de la más antigua a la más reciente. */
+export const fotosPorFecha = (): Promise<Foto[]> => db.fotos.orderBy('fecha').toArray()
+
+export const leerProductos = (): Promise<Producto[]> => db.productos.toArray()
+/** Productos escaneados, del último guardado al primero. */
+export const productosRecientes = (): Promise<Producto[]> => db.productos.orderBy('guardado').reverse().toArray()
+export const leerProducto = (codigo: string): Promise<Producto | undefined> => db.productos.get(codigo)
+
+export const leerPlantillas = (): Promise<Plantilla[]> => db.plantillas.toArray()
+export const leerPlantilla = (id: number): Promise<Plantilla | undefined> => db.plantillas.get(id)
+/** ¿El producto ya está en Mis comidas? */
+export const productoEnMisComidas = async (codigo: string): Promise<boolean> => (await db.plantillas.filter(x => x.codigo === codigo).count()) > 0
+
+export const leerGimnasio = (id: number): Promise<Gimnasio | undefined> => db.gimnasios.get(id)
+export const leerRutina = (id: number): Promise<Rutina | undefined> => db.rutinas.get(id)
+/** Ejercicios marcados como odiados o que duelen. */
+export const contarEvitados = (): Promise<number> => db.marcas.filter(m => !!m.odiado || !!m.duele).count()
+
+// ── Combinadas ───────────────────────────────────────────────────────────────────────────────────────────────────
+
 /** Sesiones terminadas, de la más reciente a la más antigua. */
 export async function sesionesHechas(): Promise<Sesion[]> {
   return (await db.sesiones.where('estado').equals('hecha').toArray()).sort((a, b) => b.inicio - a.inicio)
+}
+
+/** Sesiones terminadas de una rutina (también los entrenos libres hechos con ella), de la más reciente a la más antigua. */
+export async function sesionesHechasDeRutina(rutinaId: number): Promise<Sesion[]> {
+  return (await sesionesHechas()).filter(s => s.rutinaId === rutinaId)
+}
+
+/** Entrenos de la rutina que cuentan para la calibración: los hechos con ella, sin los libres. */
+export async function contarEntrenosDeRutina(rutinaId: number): Promise<number> {
+  return (await sesionesHechasDeRutina(rutinaId)).filter(s => s.letra !== 'L').length
 }
 
 /** Historial de un ejercicio (más reciente primero), solo sesiones con series hechas. */
@@ -130,6 +190,19 @@ export async function valorActualMeta(tipo: Meta['tipo'], ejercicioId: string | 
   return grasaActual(ms, perfil, hoyISO())
 }
 
+/**
+ * Lo que mira el resumen de una semana («¿Voy bien?» y Progreso → Semana): las sesiones hechas, todas las mediciones,
+ * comidas desde 3 semanas antes y pasos desde la semana anterior (para comparar), y los objetivos de energía.
+ */
+export async function datosSemana(lunes: string, p: Perfil) {
+  const domingo = sumarDias(lunes, 6)
+  const [sesiones, mediciones, comidas, pasos, energia] = await Promise.all([
+    sesionesHechas(), leerMediciones(), comidasEntre(sumarDias(lunes, -21), domingo), pasosEntre(sumarDias(lunes, -7), domingo), objetivosEnergia(p),
+  ])
+  return { sesiones, mediciones, comidas, pasos, energia }
+}
+
+/** El entreno ya hecho hoy, si lo hay. */
 export async function sesionDeHoy(): Promise<Sesion | undefined> {
   const hoy = hoyISO()
   return (await db.sesiones.where('fecha').equals(hoy).toArray()).find(s => s.estado === 'hecha')

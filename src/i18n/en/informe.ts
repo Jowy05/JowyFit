@@ -1,5 +1,5 @@
 // Inglés (EE. UU., sencillo) · zona «informe»: el informe en PDF (src/informe/) y la hoja «Informe en PDF».
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -127,8 +127,6 @@ export default {
   'Un solo entreno en estos días': 'Just one workout in this period',
   'último: {valor} ({fecha})': 'last: {valor} ({fecha})',
   'al empezar, tu medida del {fecha} (de antes de estos días; dentro solo hay una)': 'at start, your measurement from {fecha} (from before this period; there is only one in it)',
-  '{a} y {b}': '{a} and {b}',
-  '3+|{a} y {b}': '{a}, and {b}',
   'Cómo está tu cuerpo': 'How your body is doing',
   'IMC (kg/m²)': 'BMI (kg/m²)',
   'Grasa corporal (%) (por medidas)': 'Body fat (%) (from measurements)',

@@ -1,8 +1,6 @@
 // INI-02 · Apuntar peso: el número se escribe directamente (cualquier decimal) o con − y + de 0,5 en 0,5; el origen y los datos
 // de la báscula, plegados; la tendencia solo cuando ya hay datos.
 import { useEffect, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
 import { apuntarMedicion } from '../../datos/acciones/cuerpo'
 import type { Bascula, OrigenMedicion } from '../../datos/tipos'
 import { horaActual, hoyISO } from '../../dominio/fechas'
@@ -12,7 +10,8 @@ import { tendenciaPeso } from '../../dominio/tendencias'
 import { Chip, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { regionNumeros, t, tc, tk } from '../../i18n'
+import { useMediciones } from '../../datos/hooks'
+import { t, tc, tk } from '../../i18n'
 
 // Nombres marcados con tk(): se traducen al pintarlos (con nombreCampo).
 const CAMPOS: { k: keyof Bascula; t: string; u: string; paso: number }[] = [
@@ -31,14 +30,12 @@ const nombreCampo = (c: typeof CAMPOS[number]) => (c.k === 'grasaPct' ? tc('bás
 const textoTendencia = (k: number | null) =>
   k == null ? t('Aún pocos datos') : Math.abs(k) < 0.1 ? t('Estable') : t('{n} kg/semana', { n: `${k > 0 ? '+' : '−'}${num(Math.abs(k))}` })
 
-const formato = (v: number) => v.toLocaleString(regionNumeros(), { maximumFractionDigits: 1 })
-
 export function HojaPeso() {
   const nav = useNav()
   const aviso = useAviso()
   const hoy = hoyISO()
   const hora = horaActual()
-  const mediciones = useLiveQuery(() => db.mediciones.toArray(), [])
+  const mediciones = useMediciones()
   // El peso se guarda como texto: así se puede escribir «72,5» tecla a tecla sin que desaparezca la coma.
   const [texto, setTexto] = useState<string | null>(null)
   // Báscula de casa por defecto; se cambia dentro de «Más datos de la báscula».
@@ -48,7 +45,7 @@ export function HojaPeso() {
   useEffect(() => {
     if (texto != null || !mediciones) return
     const ultima = [...mediciones].filter(m => m.pesoKg != null).sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
-    setTexto(formato(ultima?.pesoKg ?? 75))
+    setTexto(num(ultima?.pesoKg ?? 75))
   }, [mediciones, texto])
   const tend = tendenciaPeso(mediciones ?? [], hoy)
   const peso = texto == null ? null : leerNumero(texto)
@@ -57,7 +54,7 @@ export function HojaPeso() {
   const mover = (dir: 1 | -1) => {
     const base = peso ?? 75
     const medios = dir > 0 ? Math.floor(base * 2 + 1e-9) + 1 : Math.ceil(base * 2 - 1e-9) - 1
-    setTexto(formato(Math.min(MAX, Math.max(MIN, medios / 2))))
+    setTexto(num(Math.min(MAX, Math.max(MIN, medios / 2))))
   }
 
   const guardar = unaVez(async () => {

@@ -1,17 +1,18 @@
 // RUT-03 · Generar rutina (también la rutina definitiva tras la semana de prueba)
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { sesionesHechasDeRutina } from '../../datos/consultas'
 import { activarRutina } from '../../datos/acciones/rutina'
 import type { Rutina } from '../../datos/tipos'
-import { catalogoCargado, ejercicio } from '../../catalogo/catalogo'
+import { catalogoCargado, ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { ES_MAQUINA } from '../../catalogo/clasificacion'
 import { cambiosRutina, generarRutina, nombreZona, rutinaDefinitiva, tiemposReales } from '../../dominio/generador'
 import { Cab, FilaInterruptor, Ico, Pantalla, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos/hooks'
-import { abrevDia, filas, listaDias, minutos, nombreEj, SS, SS_EXPLICA, tituloDia } from './comun'
+import { abrevDia, listaDias, tituloDia } from './comun'
+import { filas, minutosDia } from '../../dominio/rutina'
 import { capital } from '../../dominio/formato'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -30,7 +31,7 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
   const definitiva = !!ruta.d?.definitiva
   const [variante, setVariante] = useState(0)
   const [evitar, setEvitar] = useState<Set<string>>(new Set())
-  const calib = useLiveQuery(async () => (definitiva && actual?.id ? (await db.sesiones.where('estado').equals('hecha').toArray()).filter(s => s.rutinaId === actual.id) : []), [definitiva, actual?.id]) ?? []
+  const calib = useLiveQuery(async () => (definitiva && actual?.id ? sesionesHechasDeRutina(actual.id) : []), [definitiva, actual?.id]) ?? []
   const evitados = [...marcas.values()].filter(m => m.odiado || m.duele)
   // Semana de prueba: la primera rutina siempre; al rehacerla, se mantiene si la actual aún estaba en prueba. Se puede cambiar.
   const [conPrueba, setConPrueba] = useState<boolean | null>(null)
@@ -45,7 +46,7 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
     if (definitiva && actual) return rutinaDefinitiva(actual, { perfil, tiempos, compuesto: id => ejercicio(id)?.mecanica === 'compound' })
     return generarRutina({ perfil, gimnasio: g ?? null, marcas, ejercicios: c.ejercicios, calibracion: prueba, evitar, tiempos, descansos: { compuesto: ajustes.descansoCompuesto, aislamiento: ajustes.descansoAislamiento } })
   }, [perfil, g?.id, g?.material.length, marcas.size, variante, definitiva, calib.length, actual?.id, prueba, ajustes.descansoCompuesto, ajustes.descansoAislamiento])
-  const cambios = definitiva && actual && propuesta ? cambiosRutina(actual, propuesta, id => nombreEj(id), tituloDia) : []
+  const cambios = definitiva && actual && propuesta ? cambiosRutina(actual, propuesta, nombreEjercicio, tituloDia) : []
 
   // Un doble toque no guarda dos rutinas.
   const unaVez = useUnaVez()
@@ -98,8 +99,8 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
                 <div key={d.letra} className="prev-d">
                   <span className={d.dia != null ? 'dl ux-rut-dl' : 'dl'}>{abrevDia(d)}</span>
                   <p>
-                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>{SS()}</em> {nombreEj(f[0].ejercicio)} + {nombreEj(f[1].ejercicio)}</> : nombreEj(f.ejercicio)}</span>)}
-                    <span className="muted"> · ~{minutos(d)} min</span>
+                    {filas(d.bloques).map((f, k) => <span key={k}>{k > 0 && ' · '}{Array.isArray(f) ? <><em>{t('Dos seguidos')}</em> {nombreEjercicio(f[0].ejercicio)} + {nombreEjercicio(f[1].ejercicio)}</> : nombreEjercicio(f.ejercicio)}</span>)}
+                    <span className="muted"> · ~{minutosDia(d)} min</span>
                   </p>
                 </div>
               ))}
@@ -115,7 +116,7 @@ export function Generar({ ruta }: { ruta: Ruta<'rut-gen'> }) {
               {propuesta.porque.map(x => <p key={x}><Ico n="check-circle" /><span>{x}</span></p>)}
               {perfil.preferencia === 'maquinas' && <p><Ico n="check-circle" /><span>{tr('Prefieres máquinas → {cuantos}', { cuantos: <b>{t('{n} de {total} en máquina o polea', { n: enMaquina, total })}</b> })}</span></p>}
             </div>
-            {propuesta.dias.some(d => d.bloques.some(b => b.superserie)) && <p className="small muted mt8">{t('{nombre}: haces uno y luego el otro, {explica}; descansas al acabar los dos.', { nombre: SS(), explica: SS_EXPLICA() })}</p>}
+            {propuesta.dias.some(d => d.bloques.some(b => b.superserie)) && <p className="small muted mt8">{t('{nombre}: haces uno y luego el otro, {explica}; descansas al acabar los dos.', { nombre: t('Dos seguidos'), explica: t('sin descanso entre los dos') })}</p>}
             <p className="note ok mt16"><Ico n="shield-check" /><span>{actual && !definitiva ? <>{tr('Si pulsas «Usar esta rutina», <b>sustituye a la que tienes ahora</b>.', { b: x => <b>{x}</b> })} </> : null}{tr('<b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.', { b: x => <b>{x}</b> })}</span></p>
           </div>
         )}

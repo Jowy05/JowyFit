@@ -1,6 +1,6 @@
 // RUT-09 · Máquina propia (para lo que no está en el catálogo)
 import { useEffect, useState } from 'react'
-import { db } from '../../datos/db'
+import { leerGimnasio } from '../../datos/consultas'
 import { guardarMaquinaPropia } from '../../datos/acciones/rutina'
 import type { MaquinaPropia } from '../../datos/tipos'
 import { catalogoCargado, nombreMaterial } from '../../catalogo/catalogo'
@@ -21,7 +21,7 @@ export function HojaMaquina({ ruta }: { ruta: Ruta<'sheet-maq'> }) {
   const [m, setM] = useState<MaquinaPropia>({ id: ruta.d.id ?? `m${Date.now().toString(36)}`, nombre: '', parecida: null, notas: '' })
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
-    void db.gimnasios.get(gymId).then(g => { const p = g?.propias.find(x => x.id === ruta.d.id); if (p) setM(p) })
+    void leerGimnasio(gymId).then(g => { const p = g?.propias.find(x => x.id === ruta.d.id); if (p) setM(p) })
   }, [gymId, ruta.d.id])
   useEffect(() => { if (!m.foto) return; const u = URL.createObjectURL(m.foto); setUrl(u); return () => URL.revokeObjectURL(u) }, [m.foto])
   const suma = m.parecida ? (catalogoCargado()?.ejercicios ?? []).filter(e => e.material === m.parecida).length : 0

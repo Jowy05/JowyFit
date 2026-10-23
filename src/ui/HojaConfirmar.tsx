@@ -37,6 +37,8 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta<'sheet-confirmar'> }) {
   const hacer = unaVez(async () => {
     if (!('id' in d)) return SIN_ID[d.accion]({ nav, aviso })
     if (d.id != null) return CON_ID[d.accion](d.id, { nav, aviso })
+    // Sin id no hay nada que borrar: se cierra la hoja en vez de dejar el botón sin hacer nada.
+    nav.hoja(null)
   })
   return (
     <Hoja titulo={d.titulo}>

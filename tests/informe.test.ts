@@ -1,11 +1,12 @@
-// Informe en PDF: cada número que sale en el informe (docs/INFORME-PDF-DISENO.md §5), los casos con pocos datos,
+// Informe en PDF: cada número que sale en el informe (§5 del diseño del informe), los casos con pocos datos,
 // el esfuerzo de los entrenos y las comparaciones con lo normal («55 kg · lo normal: 50 kg · +10 %»).
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import type { Ajustes, Comida, DiaRutina, EjercicioSesion, Medicion, Meta, PasosDia, Perfil, Rutina, Serie, Sesion } from '../src/datos/tipos'
 import type { CatalogoInforme, EntradaInforme, Informe, PeriodoInforme } from '../src/informe/calculo/tipos'
-import { diasDe, esfuerzoDe, etiquetaSemana, fechaDia, lista, mediaEsfuerzo, mediana, mesAnio, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, serieFuerza, textoDuracion, textoFuerza, textoPct, unidadFuerza, valorFuerza, zonaEsfuerzo } from '../src/informe/calculo/comun'
-import { conSigno } from '../src/dominio/formato'
+import { diasDe, esfuerzoDe, etiquetaSemana, fechaDia, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, serieFuerza, textoDuracion, textoFuerza, textoPct, unidadFuerza, valorFuerza, zonaEsfuerzo } from '../src/informe/calculo/comun'
+import { conSigno, enLista } from '../src/dominio/formato'
+import { mesAnio } from '../src/dominio/fechas'
 import { etiquetaPeriodo, hayDatosEn, primerDato, rangoInforme } from '../src/informe/calculo/periodo'
 import { edadEn, objetivosInforme } from '../src/informe/calculo/contexto'
 import { palabraPuntuacion, puntuacionDe } from '../src/informe/calculo/semanas'
@@ -140,10 +141,10 @@ describe('utilidades de texto y números', () => {
     expect(mediana([])).toBeNull()
     expect(mediana([3, 1, 2])).toBe(2)
     expect(mediana([47.5, 50, 52.5, 50])).toBe(50)
-    expect(lista([])).toBe('')
-    expect(lista(['a'])).toBe('a')
-    expect(lista(['a', 'b'])).toBe('a y b')
-    expect(lista(['a', 'b', 'c'])).toBe('a, b y c')
+    expect(enLista([])).toBe('')
+    expect(enLista(['a'])).toBe('a')
+    expect(enLista(['a', 'b'])).toBe('a y b')
+    expect(enLista(['a', 'b', 'c'])).toBe('a, b y c')
     expect(textoDuracion(null)).toBe('—')
     expect(textoDuracion(68)).toBe('1 h 8 min')
     expect(textoDuracion(60)).toBe('1 h')

@@ -1,7 +1,7 @@
 // PRO-04 · Cuerpo
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { medicionesPorFecha, metasDeTipo } from '../../datos/consultas'
 import type { Medicion, OrigenMedicion } from '../../datos/tipos'
 import { cinturaAltura } from '../../dominio/calculos'
 import { conUnidad, num, capital } from '../../dominio/formato'
@@ -14,9 +14,10 @@ import { useAjustes, usePerfil } from '../../datos/hooks'
 import { useAviso } from '../../ui/aviso'
 import { guardarAjustes } from '../../datos/repos'
 import { nombreFuente } from '../../dominio/bascula'
-import { esAndroid, pasosDisponibles } from '../../plataforma'
+import { capacidades, pasosDisponibles } from '../../plataforma'
 import { activarBascula } from '../../app/servicios'
-import { CabProgreso, fechaPunto, ICONO_ORIGEN, NOMBRE_ORIGEN, PERIMETROS } from './comun'
+import { CabProgreso, fechaPunto, ICONO_ORIGEN, NOMBRE_ORIGEN } from './comun'
+import { PERIMETROS } from '../../dominio/medidas'
 import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -37,8 +38,8 @@ function textoMedicion(m: Medicion, max = 3): string {
 export function Cuerpo() {
   const nav = useNav()
   const perfil = usePerfil()
-  const ms = useLiveQuery(() => db.mediciones.orderBy('fecha').toArray(), [])
-  const metaCintura = useLiveQuery(async () => (await db.metas.where('tipo').equals('cintura').toArray()).find(m => !m.hecha) ?? null, [])
+  const ms = useLiveQuery(medicionesPorFecha, [])
+  const metaCintura = useLiveQuery(async () => (await metasDeTipo('cintura')).find(m => !m.hecha) ?? null, [])
   const [cuantas, setCuantas] = useState(15)
   const ajustes = useAjustes()
   const aviso = useAviso()
@@ -190,7 +191,7 @@ export function Cuerpo() {
             {historial.slice(0, cuantas).map(m => (
               <div key={m.id} className="it">
                 <span className="code">{fechaCorta(m.fecha)}</span>
-                <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {m.hc?.length ? `${nombreFuente(m.fuente)} · ${esAndroid() ? 'Health Connect' : t('báscula')}` : t(NOMBRE_ORIGEN[m.origen])}</small></span>
+                <span className="tx"><b className="mono">{textoMedicion(m)}</b><small><Ico n={ICONO_ORIGEN[m.origen]} /> {m.hc?.length ? `${nombreFuente(m.fuente)} · ${capacidades().salud ? 'Health Connect' : t('báscula')}` : t(NOMBRE_ORIGEN[m.origen])}</small></span>
                 <button className="ib" aria-label={t('Borrar medición')} onClick={() => nav.hoja('sheet-confirmar', {
                   titulo: t('¿Borrar esta medición?'), texto: `${textoMedicion(m, 9)} · ${fechaCorta(m.fecha)}`, si: t('Borrar'), peligro: true, accion: 'borrar-medicion', id: m.id,
                 })}><Ico n="trash" /></button>

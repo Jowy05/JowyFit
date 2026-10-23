@@ -1,5 +1,5 @@
 // Busca en el código las llamadas a t(), tn(), tc(), tr() y tk() y saca sus textos (las claves de los diccionarios).
-// Lo usa tests/i18n-cobertura.test.ts. No es un analizador de TypeScript completo: basta con las formas de docs/I18N-APP.md.
+// Lo usa tests/i18n-cobertura.test.ts. No es un analizador de TypeScript completo: basta con las formas que usa la app (README, «Idiomas»).
 import fs from 'node:fs'
 import path from 'node:path'
 

@@ -1,16 +1,14 @@
 // Inglés (EE. UU., sencillo) · zona «rutina».
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
-  // Cabecera y piezas comunes (rutina/comun.tsx)
+  // Cabecera y piezas comunes (rutina/CabRutina.tsx, rutina/comun.ts)
   'Sin gimnasio': 'No gym',
   'Mi plan': 'My plan',
   'Ejercicios': 'Exercises',
   'Gimnasios': 'Gyms',
   'Cualquier día': 'Any day',
-  '{lista} y {ultimo}': '{lista} and {ultimo}',
-  '3+|{lista} y {ultimo}': '{lista}, and {ultimo}',
   'sin descanso entre los dos': 'no rest in between',
   'Dos seguidos': 'Back to back',
   'Barra guiada': 'Smith machine',

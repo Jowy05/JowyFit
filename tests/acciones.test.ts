@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TABLAS, db } from '../src/datos/db'
 import { gimnasioNuevo, guardarAjustes, leerAjustes, perfilPorDefecto } from '../src/datos/repos'
 import { completarAlta, type DatosAlta } from '../src/datos/acciones/alta'
-import { apuntarPlantilla, desmarcarSuplemento, guardarSuplemento, marcarSuplemento, plantillaDeProducto } from '../src/datos/acciones/comida'
+import { alternarSuplemento, apuntarPlantilla, desmarcarSuplemento, guardarSuplemento, marcarSuplemento, plantillaDeProducto } from '../src/datos/acciones/comida'
 import { borrarMedicion, guardarLecturasBascula, guardarPasos, guardarPasosAuto, sumarTrote } from '../src/datos/acciones/cuerpo'
 import { alargarDescanso, apuntarHecha, descartarEntreno, iniciarEntreno, pasarACorta, quitarDescanso, terminarEntreno } from '../src/datos/acciones/entreno'
-import { activarRutina, borrarGimnasio, guardarMaquinaPropia } from '../src/datos/acciones/rutina'
+import { activarRutina, borrarGimnasio, guardarMaquinaPropia, recolocarSesion, SIN_DIA } from '../src/datos/acciones/rutina'
 import { hoyISO } from '../src/dominio/fechas'
 import type { DiaRutina, Plantilla, Rutina } from '../src/datos/tipos'
 
@@ -75,8 +75,21 @@ describe('comida', () => {
     const deshacer = await marcarSuplemento(perfilPorDefecto(), HOY, 'Batido de proteína')
     expect((await db.suplementos.get(HOY))?.tomados).toEqual(['Batido de proteína'])
     expect(await db.comidas.count()).toBe(1)
-    deshacer()
+    deshacer!()
     await esperar()
+    expect((await db.suplementos.get(HOY))?.tomados).toEqual([])
+    expect(await db.comidas.count()).toBe(0)
+  })
+  it('marcar dos veces a la vez (doble toque) apunta un solo batido; la segunda devuelve null', async () => {
+    const [a, b] = await Promise.all([marcarSuplemento(perfilPorDefecto(), HOY, 'Batido de proteína'), marcarSuplemento(perfilPorDefecto(), HOY, 'Batido de proteína')])
+    expect([a, b].filter(x => x === null)).toHaveLength(1)
+    expect((await db.suplementos.get(HOY))?.tomados).toEqual(['Batido de proteína'])
+    expect(await db.comidas.count()).toBe(1)
+  })
+  it('alternar: el primer toque lo marca (con deshacer) y el segundo lo desmarca y quita el batido', async () => {
+    expect(typeof await alternarSuplemento(perfilPorDefecto(), HOY, 'Batido de proteína')).toBe('function')
+    expect(await db.comidas.count()).toBe(1)
+    expect(await alternarSuplemento(perfilPorDefecto(), HOY, 'Batido de proteína')).toBeNull()
     expect((await db.suplementos.get(HOY))?.tomados).toEqual([])
     expect(await db.comidas.count()).toBe(0)
   })
@@ -181,6 +194,13 @@ describe('cuerpo', () => {
 })
 
 describe('rutina y gimnasios', () => {
+  it('recolocar dos sesiones perdidas a la vez guarda las dos (no se pisan)', async () => {
+    await Promise.all([
+      recolocarSesion({ fecha: '2026-10-17', letra: 'A', desde: '2026-10-13' }),
+      recolocarSesion({ fecha: SIN_DIA, letra: 'B', desde: '2026-10-15' }),
+    ])
+    expect((await db.ajustes.get('app'))?.recolocadas.map(r => r.letra).sort()).toEqual(['A', 'B'])
+  })
   const rutina = (x: Partial<Rutina> = {}): Omit<Rutina, 'id'> => ({ creada: '2026-10-01', activa: true, estructura: 'x', porque: [], calibracion: false, gimnasioId: null, dias: [], ...x })
 
   it('activar una rutina apaga las demás', async () => {

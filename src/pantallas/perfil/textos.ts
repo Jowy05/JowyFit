@@ -1,6 +1,7 @@
 // Textos compartidos por las pantallas de Perfil (etiquetas de cada opción y lista de secciones).
 // Van marcados con tk(): se calculan al importar, antes de cargar el idioma; se traducen al pintarlos con t(x).
 import type { Dia, Nivel, Perfil, Reps, TipoObjetivo, Trabajo, Zona } from '../../datos/tipos'
+import type { ClaveSeccion } from '../../app/nav'
 import { DIAS_ABREV } from '../../dominio/fechas'
 import { capital } from '../../dominio/formato'
 import { idioma, t, tc, tk } from '../../i18n'
@@ -25,7 +26,6 @@ export const REFERENCIAS: { k: string; t: string }[] = [
   { k: 'remo', t: tk('Remo') }, { k: 'pressMilitar', t: tk('Press militar') }, { k: 'jalon', t: tk('Jalón al pecho') },
 ]
 
-export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento'
 
 /** Secciones del perfil. Las `mas: true` salen plegadas en «Más secciones»: se tocan poco. */
 export const SECCIONES: { s: ClaveSeccion; t: string; ico: string; mas?: boolean }[] = [

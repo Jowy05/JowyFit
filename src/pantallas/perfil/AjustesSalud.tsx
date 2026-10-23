@@ -9,7 +9,8 @@ import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
 import { activarBascula, comprobarSalud, conectarSalud, sincronizarPasos } from '../../app/servicios'
-import { regionNumeros, t } from '../../i18n'
+import { miles } from '../../dominio/formato'
+import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
 export type Salud = { hayPasos: boolean; activarPasos: () => Promise<void> }
@@ -107,7 +108,7 @@ export function PasosYBascula({ salud }: { salud: Salud }) {
         )}
         <button className="it" onClick={() => nav.ir('pro-pasos', undefined, 'pro')}>
           <span className="tx"><b>{t('Objetivo de pasos')}</b><small>{t('Se cambia en la pantalla Pasos')}</small></span>
-          <span className="end small">{p.pasosObjetivo.toLocaleString(regionNumeros())}</span>
+          <span className="end small">{miles(p.pasosObjetivo)}</span>
           <Ico n="caret-right" className="car" />
         </button>
       </div>

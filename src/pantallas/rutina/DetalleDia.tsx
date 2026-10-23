@@ -2,14 +2,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Bloque } from '../../datos/tipos'
 import { sugerenciasDia } from '../../datos/consultas'
-import { ejercicio } from '../../catalogo/catalogo'
+import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { duracion, formatoHora } from '../../dominio/fechas'
 import { kg } from '../../dominio/formato'
 import type { Sugerencia } from '../../dominio/progresion'
 import { Cab, cx, Ico, Pantalla, Th } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useGimnasio, usePerfil, useRutina } from '../../datos/hooks'
-import { filas, materialCorto, minutos, musculosComunes, nombreEj, SS, SS_EXPLICA, tituloDia } from './comun'
+import { materialCorto, musculosComunes, tituloDia } from './comun'
+import { filas, minutosDia } from '../../dominio/rutina'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t } from '../../i18n'
 
@@ -28,8 +29,8 @@ export function DetalleDia({ ruta }: { ruta: Ruta<'rut-dia'> }) {
         derecha={<button className="lnk ux-rut-edit" onClick={() => nav.ir('rut-edit', { letra: dia.letra })}><Ico n="pencil-simple" />{t('Editar')}</button>} />
       <div className="pg">
         <div className="strip">
-          <p><span className="lbl">{t('Dura')}</span><b>~{minutos(dia)} min</b></p>
-          <p><span className="lbl">{t('Con prisa')}</span><b>~{minutos(dia, true)} min</b></p>
+          <p><span className="lbl">{t('Dura')}</span><b>~{minutosDia(dia)} min</b></p>
+          <p><span className="lbl">{t('Con prisa')}</span><b>~{minutosDia(dia, true)} min</b></p>
           <p><span className="lbl">{t('Ejercicios')}</span><b>{dia.bloques.length}</b></p>
         </div>
         {dia.bloques.some(b => b.fueraEnCorta) && <p className="small muted mt8"><Ico n="scissors" className="warnc" /> {t('Con raya discontinua: lo que se quita si vas con prisa.')}</p>}
@@ -38,7 +39,7 @@ export function DetalleDia({ ruta }: { ruta: Ruta<'rut-dia'> }) {
             const i1 = ++n, i2 = ++n
             return (
               <div key={f[0].uid} className="ssg mt8">
-                <p className="ss-head">{SS()}{todas.findIndex(Array.isArray) === k ? ` · ${SS_EXPLICA()}` : ''} · {t('descansas {tiempo} al acabar', { tiempo: duracion(f[0].descanso) })}</p>
+                <p className="ss-head">{t('Dos seguidos')}{todas.findIndex(Array.isArray) === k ? ` · ${t('sin descanso entre los dos')}` : ''} · {t('descansas {tiempo} al acabar', { tiempo: duracion(f[0].descanso) })}</p>
                 <Tarjeta b={f[0]} etiqueta={String(i1)} s={sug?.get(f[0].ejercicio)} n={i1} sigue />
                 <div className="mt8"><Tarjeta b={f[1]} etiqueta={String(i2)} s={sug?.get(f[1].ejercicio)} n={i2} /></div>
               </div>
@@ -63,7 +64,7 @@ function Tarjeta({ b, etiqueta, s, sigue }: { b: Bloque; etiqueta: string; s?: S
         <Th ej={e} size="m" />
         <span className="tx">
           <small className="lbl">{etiqueta} · {musculosComunes(e?.principales ?? [], 2).join(' · ').toLowerCase()}</small>
-          <b>{nombreEj(e)}</b>
+          <b>{nombreEjercicio(b.ejercicio)}</b>
         </span>
         <span className={cx('nx', s?.accion === 'subir' && 'hot')}>
           <small>{t('Peso')}</small>

@@ -1,12 +1,11 @@
 // INI-01 · Tarjetas de Inicio que salen solo a veces: semana suave, «¿Voy bien?», pendientes de hoy y tu progreso.
 import { useEffect, useState, type ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
 import { guardarAjustes } from '../../datos/repos'
-import { objetivosEnergia, sesionesHechas } from '../../datos/consultas'
+import { datosSemana, leerMetas, sesionesHechas } from '../../datos/consultas'
 import type { Rutina } from '../../datos/tipos'
-import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
-import { deISO, diaSemana, fechaCorta, hoyISO, lunesDe, semanaDe, sumarDias } from '../../dominio/fechas'
+import { nombreEjercicio } from '../../catalogo/catalogo'
+import { deISO, diaSemana, fechaCorta, hoyISO, lunesDe, semanaDe } from '../../dominio/fechas'
 import { propuestaDescarga } from '../../dominio/descarga'
 import { racha } from '../../dominio/semana'
 import { resumenSemana } from '../../dominio/resumen'
@@ -17,9 +16,9 @@ import { cx, Ico, Seccion, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
-import { pendientesDeHoy } from './pendientes'
+import { pendientesDeHoy } from '../../datos/pendientes'
 import { marcarSuplemento } from '../../datos/acciones/comida'
-import { dispositivoApple } from '../../plataforma'
+import { capacidades } from '../../plataforma'
 import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -33,7 +32,7 @@ export function SemanaSuave({ rutina }: { rutina: Rutina | null }) {
   const prop = useLiveQuery(async () => {
     if (!rutina || rutina.calibracion || enSuave) return null
     return propuestaDescarga({
-      hoy, sesiones: await db.sesiones.where('estado').equals('hecha').toArray(),
+      hoy, sesiones: await sesionesHechas(),
       ejerciciosRutina: rutina.dias.flatMap(d => d.bloques.map(b => b.ejercicio)),
       semanaSuave: ajustes.semanaSuave ?? null, pospuesta: ajustes.suavePospuesta ?? null, nombre: nombreEjercicio,
     })
@@ -78,13 +77,7 @@ export function VoyBien({ rutina }: { rutina: Rutina | null }) {
   const r = useLiveQuery(async () => {
     const dias = semanaDe(hoy)
     const domingo = dias[6]!
-    const [sesiones, mediciones, comidas, pasos, energia] = await Promise.all([
-      sesionesHechas(),
-      db.mediciones.toArray(),
-      db.comidas.where('fecha').between(sumarDias(dias[0]!, -21), domingo, true, true).toArray(),
-      db.pasos.where('fecha').between(sumarDias(dias[0]!, -7), domingo, true, true).toArray(),
-      objetivosEnergia(perfil),
-    ])
+    const { sesiones, mediciones, comidas, pasos, energia } = await datosSemana(dias[0]!, perfil)
     const hayDatos = sesiones.some(s => dias.includes(s.fecha)) || mediciones.some(m => dias.includes(m.fecha.slice(0, 10)))
       || comidas.some(c => dias.includes(c.fecha)) || pasos.some(p => dias.includes(p.fecha))
     if (!hayDatos) return null
@@ -118,8 +111,8 @@ export function Pendientes() {
   const nav = useNav()
   const perfil = usePerfil()
   const hoy = hoyISO()
-  // iPhone: sin pasos automáticos ni recordatorios, por la tarde se recuerda apuntar los pasos.
-  const pasosAMano = dispositivoApple() === 'iphone'
+  // iPhone y iPad: sin pasos automáticos ni recordatorios, por la tarde se recuerda apuntar los pasos.
+  const pasosAMano = capacidades().pasosAMano
   const tarde = new Date().getHours() >= 18
   const lista = useLiveQuery(() => pendientesDeHoy(perfil, hoy, { pasosAMano, tarde }), [perfil, hoy, pasosAMano, tarde]) ?? []
   const aviso = useAviso()
@@ -127,10 +120,9 @@ export function Pendientes() {
   // Igual que en Comida: el batido se apunta con su proteína y suma al día.
   const unaVez = useUnaVez()
   const marcar = unaVez(async (s: string) => {
-    // Doble toque: no se marca (ni se apunta el batido) dos veces.
-    if (((await db.suplementos.get(hoy))?.tomados ?? []).includes(s)) return
+    // Doble toque: marcarSuplemento no lo marca (ni apunta el batido) dos veces y devuelve null.
     const deshacer = await marcarSuplemento(perfil, hoy, s)
-    if (esBatido(s)) aviso(t('Apuntado: {nombre} · {n} g proteína', { nombre: s, n: batidoDe(perfil.batido).proteina }), () => { deshacer(); setOcultos(o => o.filter(x => x !== s)) })
+    if (deshacer && esBatido(s)) aviso(t('Apuntado: {nombre} · {n} g proteína', { nombre: t(s), n: batidoDe(perfil.batido).proteina }), () => { deshacer(); setOcultos(o => o.filter(x => x !== s)) })
     setTimeout(() => setOcultos(o => [...o, s]), 700)
   })
   const visibles = lista.filter(p => !ocultos.includes(p.id))
@@ -161,12 +153,11 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
   const nav = useNav()
   const hoy = hoyISO()
   const datos = useLiveQuery(async () => {
-    const metas = (await db.metas.toArray()).filter(m => !m.hecha)
-    const sesiones = await db.sesiones.where('estado').equals('hecha').toArray()
-    sesiones.sort((a, b) => b.inicio - a.inicio)
+    const metas = (await leerMetas()).filter(m => !m.hecha)
+    const sesiones = await sesionesHechas()
     let logro = null as { nombre: string; peso: number; reps: number; fecha: string } | null
     for (const s of sesiones) {
-      for (const e of s.ejercicios) for (const x of e.series) if (x.record && x.peso != null && x.reps != null) { logro = { nombre: ejercicio(e.ejercicio)?.nombre ?? '', peso: x.peso, reps: x.reps, fecha: s.fecha }; break }
+      for (const e of s.ejercicios) for (const x of e.series) if (x.record && x.peso != null && x.reps != null) { logro = { nombre: nombreEjercicio(e.ejercicio), peso: x.peso, reps: x.reps, fecha: s.fecha }; break }
       if (logro) break
     }
     return { meta: metas[0], logro, racha: racha(rutina, sesiones, hoy) }

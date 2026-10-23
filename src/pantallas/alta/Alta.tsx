@@ -1,15 +1,16 @@
 // ALT · Alta de usuario (primera vez). Pocos pasos y pocas preguntas: lo que no se sabe contestar
 // sin saber de gimnasio se queda con un valor por defecto y se cambia después en Perfil.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { db } from '../../datos/db'
-import { gimnasioNuevo, guardarPerfil, perfilPorDefecto } from '../../datos/repos'
+import { gimnasioNuevo, guardarPerfil, leerPerfil, perfilPorDefecto } from '../../datos/repos'
+import { leerMediciones } from '../../datos/consultas'
 import { completarAlta } from '../../datos/acciones/alta'
 import { importar } from '../../datos/copias'
 import type { Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../datos/tipos'
 import { TODAS_LAS_CLAVES } from '../../catalogo/clasificacion'
 import { estadoSemana } from '../../dominio/semana'
 import { DIAS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
-import { capital, decimal, leerNumero } from '../../dominio/formato'
+import { capital, decimal, enLista, leerNumero } from '../../dominio/formato'
+import { PERIMETROS, type Perimetro } from '../../dominio/medidas'
 import { elegirArchivo } from '../../plataforma'
 import { cx, Elegir, FilaInterruptor, Ico, LARGO } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
@@ -19,7 +20,7 @@ import { HorariosAlta } from '../perfil/Horarios'
 import { FechaFacil } from './FechaFacil'
 import { Medir } from './Medir'
 // Los minutos de cada día salen del mismo cálculo que usa Mi plan, para que digan lo mismo.
-import { minutos } from '../rutina/comun'
+import { minutosDia } from '../../dominio/rutina'
 import { propio } from '../../dominio/claves'
 import { t, tc, tk, tn } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -29,19 +30,15 @@ import { tr } from '../../i18n/jsx'
 const PASO = { bienvenida: 1, sobreTi: 2, objetivo: 3, entrenar: 4, horarios: 5, salud: 6, gimnasio: 7, lista: 8 } as const
 const TOTAL = 8
 
-/** «a», «a y b», «a, b y c». */
-const enLista = (xs: string[]) => xs.length < 2 ? xs.join('') : xs.length > 2 ? tc('3+', '{lista} y {ultimo}', { lista: xs.slice(0, -1).join(', '), ultimo: xs[xs.length - 1]! }) : t('{lista} y {ultimo}', { lista: xs[0]!, ultimo: xs[1]! })
 // Los nombres de las zonas, marcados con tk(): se traducen al pintarlos.
 const ZONA_TXT: Record<string, string> = { brazos: tk('brazos'), pecho: tk('pecho'), espalda: tk('espalda'), hombros: tk('hombros'), piernas: tk('piernas'), gluteo: tk('glúteo'), abdomen: tk('abdomen') }
 
 type Datos = { nacimiento: string; sexo: Sexo | null; altura: string; peso: string }
-const PERIMETROS = [['cintura', tk('Cintura')], ['cuello', tk('Cuello')], ['cadera', tk('Cadera')], ['pecho', tk('Pecho')], ['brazo', tk('Brazo relajado')], ['brazoContraido', tk('Brazo contraído')], ['muslo', tk('Muslo')]] as const
-type ClaveMedida = typeof PERIMETROS[number][0]
-type Medidas = Record<ClaveMedida, string>
+type Medidas = Record<Perimetro, string>
 type Fallo = { msg: string; campos: string[] }
 const SIN_MEDIDAS: Medidas = { cintura: '', cuello: '', cadera: '', pecho: '', brazo: '', brazoContraido: '', muslo: '' }
 /** Las medidas escritas, solo las que tienen un número válido. */
-const medidasEnCm = (m: Medidas) => Object.fromEntries(PERIMETROS.map(([k]) => [k, leerNumero(m[k]) ?? 0]).filter(([, v]) => (v as number) > 0)) as Partial<Record<ClaveMedida, number>>
+const medidasEnCm = (m: Medidas) => Object.fromEntries(PERIMETROS.map(({ k }) => [k, leerNumero(m[k]) ?? 0]).filter(([, v]) => (v as number) > 0)) as Partial<Record<Perimetro, number>>
 const firma = (peso: number | null, m: Medidas) => JSON.stringify([peso, medidasEnCm(m)])
 const aTexto = (n: number | null | undefined) => (n != null && n > 0 ? decimal(n) : '')
 
@@ -124,15 +121,15 @@ export function Alta() {
     try {
       const tipo = await importar(f.bytes)
       if (tipo === 'copia') { aviso(t('Copia restaurada')); return } // la app se recarga sola al ver el perfil
-      const guardado = await db.perfil.get('yo')
+      const guardado = await leerPerfil()
       if (guardado) {
         setP({ ...guardado, altaCompleta: false })
         dato({ nacimiento: guardado.nacimiento, sexo: guardado.sexo, altura: String(guardado.alturaCm) })
       }
-      const ult = (await db.mediciones.toArray()).sort((a, b) => b.fecha.localeCompare(a.fecha))
+      const ult = (await leerMediciones()).sort((a, b) => b.fecha.localeCompare(a.fecha))
       const peso = ult.find(m => m.pesoKg != null)?.pesoKg ?? null
       const per = ult.find(m => m.perimetros?.cintura)?.perimetros
-      const m = Object.fromEntries(PERIMETROS.map(([k]) => [k, aTexto(per?.[k])])) as Medidas
+      const m = Object.fromEntries(PERIMETROS.map(({ k }) => [k, aTexto(per?.[k])])) as Medidas
       setMedidas(m)
       if (peso != null) dato({ peso: aTexto(peso) })
       setImportado(firma(peso, m))
@@ -159,7 +156,7 @@ export function Alta() {
     const fijos = rutina.dias.filter(d => !d.opcional)
     const extra = rutina.dias.find(d => d.opcional)
     const diasTxt = tn(fijos.length, '{n} día', '{n} días')
-    const minMax = fijos.length ? Math.max(...fijos.map(d => minutos(d))) : 0
+    const minMax = fijos.length ? Math.max(...fijos.map(d => minutosDia(d))) : 0
     setResumen({
       tipo: rutina.estructura.split(' · ')[0] ?? rutina.estructura,
       // «3 días + sábado si puedes · ~55 min». Los minutos, igual que la «Duración» de Mi plan (el día más largo).
@@ -171,7 +168,7 @@ export function Alta() {
         const nombre = d.dia != null ? capital(DIAS[d.dia]) : t('Cuando puedas')
         return {
           t: d.opcional ? t('{dia} (si puedes)', { dia: nombre }) : nombre,
-          d: t('{n} ejercicios · ~{min} min', { n: d.bloques.length, min: minutos(d) }),
+          d: t('{n} ejercicios · ~{min} min', { n: d.bloques.length, min: minutosDia(d) }),
         }
       }),
       primero: primerEntreno(rutina, perfil.horaEntreno, hoy),
@@ -266,7 +263,7 @@ export function Alta() {
             <p className="small muted">{t('Si tienes una cinta métrica a mano. Si no, déjalo: lo puedes apuntar otro día en Progreso.')}</p>
             <Medir />
             <div className="grid2 mt12">
-              {PERIMETROS.map(([k, nombre]) => (
+              {PERIMETROS.map(({ k, t: nombre }) => (
                 <label key={k}><span className="lbl fl">{t(nombre)}</span>
                   <span className="alta-unid"><input className="inp" inputMode="decimal" aria-label={t('{medida} en centímetros', { medida: t(nombre) })} value={medidas[k]} onChange={e => { const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 5); setMedidas(c => ({ ...c, [k]: v })) }} /><span>cm</span></span>
                 </label>

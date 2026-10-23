@@ -1,7 +1,7 @@
 // Instrucciones para instalar la app en la pantalla de inicio, solo en los navegadores de Apple.
 // Salen al empezar en Safari sin instalar (sobre todo desde la landing, con «?instalar=1») y desde Perfil → Ajustes.
 import type { ReactNode } from 'react'
-import { dispositivoApple, estaInstalada, type DispositivoApple } from '../../plataforma'
+import { capacidades, type DispositivoApple } from '../../plataforma'
 import { cx, Ico } from '../../ui/componentes'
 import { t, tc } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -22,7 +22,8 @@ function pideInstalar(): boolean {
 
 /** ¿Se enseñan al abrir la app? Solo en Apple, sin instalar, y si se piden (?instalar=1) o aún no se han visto. */
 export function ensenarAlEmpezar(): boolean {
-  if (!dispositivoApple() || estaInstalada()) return false
+  const cap = capacidades()
+  if (!cap.apple || cap.instalada) return false
   if (pideInstalar()) return true
   try { return !localStorage.getItem(CLAVE_VISTO) } catch { return true }
 }
@@ -117,8 +118,9 @@ function pasos(d: DispositivoApple): Paso[] {
 }
 
 export function Instalar({ alCerrar, conDatos, letra }: { alCerrar: () => void; conDatos: boolean; letra: string }) {
-  const d = dispositivoApple() ?? 'iphone'
-  const instalada = estaInstalada()
+  const cap = capacidades()
+  const d = cap.aparatoApple ?? 'iphone'
+  const instalada = cap.instalada
   // Frases enteras para el Mac y para el iPhone o iPad: en cada idioma «el Dock» y «la pantalla de inicio» cambian la frase.
   const mac = d === 'mac'
   const nombre = d === 'mac' ? 'Mac' : d === 'ipad' ? 'iPad' : 'iPhone'

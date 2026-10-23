@@ -1,5 +1,5 @@
 // Gráficas vectoriales del PDF (§4 del diseño): líneas o barras con ejes redondos, bandas, objetivo y marcas, y filas de zonas.
-// Se dibujan sobre el Lienzo en mm; las medidas son las de la maqueta (.cache/pdf-maqueta/generar-maqueta.mjs).
+// Se dibujan sobre el Lienzo en mm; las medidas son las de la maqueta del diseño.
 import { num } from '../../dominio/formato'
 import { DIAS_CORTOS, MESES_CORTOS, deISO, diasEntre, fechaCorta } from '../../dominio/fechas'
 import { t } from '../../i18n'

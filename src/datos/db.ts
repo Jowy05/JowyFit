@@ -45,8 +45,3 @@ export const db = new BaseJowyFit()
 
 export const TABLAS = ['perfil', 'ajustes', 'mediciones', 'fotos', 'gimnasios', 'marcas', 'rutinas', 'sesiones', 'comidas', 'plantillas', 'productos', 'pasos', 'suplementos', 'metas'] as const
 export type NombreTabla = (typeof TABLAS)[number]
-
-/** Pide al navegador que no borre los datos (importante en iPhone). */
-export async function pedirPersistencia(): Promise<boolean> {
-  try { return (await navigator.storage?.persist?.()) ?? false } catch { return false }
-}

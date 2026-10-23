@@ -1,5 +1,5 @@
 // Inglés (EE. UU., sencillo) · piezas comunes (armazón, navegación, componentes, avisos, rescate, gráficas, fechas, catálogo, servicios, idioma).
-// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario: docs/GLOSARIO-IDIOMAS.md.
+// Clave = texto en castellano exacto, tal como está en t('…'); valor = traducción. Glosario y avisos: README, «Idiomas».
 import type { Diccionario } from '../tipos'
 
 export default {
@@ -26,6 +26,9 @@ export default {
   'Buenos días': 'Good morning',
   'Buenas tardes': 'Good afternoon',
   'Buenas noches': 'Good evening',
+  // Listas en una frase (dominio/formato: enLista): «a y b», «a, b y c»
+  '{lista} y {ultimo}': '{lista} and {ultimo}',
+  '3+|{lista} y {ultimo}': '{lista}, and {ultimo}',
   // Catálogo de ejercicios
   'No se pudo cargar el catálogo ({estado})': "Couldn't load the exercises ({estado})",
   'Ejercicio': 'Exercise',
@@ -54,7 +57,7 @@ export default {
   'Borrar todo': 'Delete everything',
   'Borrar todos los datos': 'Delete all data',
   'Detalle: {detalle}': 'Details: {detalle}',
-  // Recordatorios (servicios.ts)
+  // Recordatorios (datos/acciones/avisos.ts)
   'Mañana: {dia}': 'Tomorrow: {dia}',
   'A las {hora}. En 1 h, a dormir 😴': 'At {hora}. In 1 hour, time for bed 😴',
   'Hoy toca pesarse': 'Time to weigh yourself',
@@ -91,7 +94,7 @@ export default {
   'Última pesada: {datos} ({fecha}, {fuente})': 'Last weigh-in: {datos} ({fecha}, {fuente})',
   '{n} % grasa': '{n}% body fat',
   'No hay pesadas en Health Connect de los últimos 30 días.': 'No weigh-ins in Health Connect in the last 30 days.',
-  // Canales de avisos de Android (plataforma/index.ts)
+  // Canales de avisos de Android (plataforma/avisos.ts)
   'Fin del descanso': 'Rest over',
   'Avisa cuando toca la siguiente serie (también en el reloj)': "Lets you know when it's time for the next set (on your watch too)",
   'Recordatorios': 'Reminders',

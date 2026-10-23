@@ -1,6 +1,6 @@
 // RUT-08 · Editor de gimnasio
 import { useEffect, useState } from 'react'
-import { db } from '../../datos/db'
+import { leerGimnasio } from '../../datos/consultas'
 import { guardarGimnasio } from '../../datos/acciones/rutina'
 import type { Gimnasio } from '../../datos/tipos'
 import { Cab, Ico, Pantalla, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
@@ -21,7 +21,7 @@ export function EditorGimnasio({ ruta }: { ruta: Ruta<'rut-gym-edit'> }) {
   useEffect(() => {
     // Sin id válido (p. ej. sin gimnasios) Dexie rechaza la consulta y la pantalla se quedaría en blanco.
     if (!Number.isFinite(id)) return
-    void db.gimnasios.get(id).then(x => setG(x ?? null), () => setG(null))
+    void leerGimnasio(id).then(x => setG(x ?? null), () => setG(null))
   }, [id])
   // Las máquinas propias se guardan desde su hoja, que también marca el material al que se parecen:
   // se recargan al volver, o «Guardar» aquí lo perdería.

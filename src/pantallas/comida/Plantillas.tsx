@@ -2,7 +2,7 @@
 // Tocar una fila la apunta hoy (con «Deshacer»); para cambiarla, el lápiz de la derecha.
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../datos/db'
+import { leerPlantillas, productosRecientes } from '../../datos/consultas'
 import { escaneadosSueltos, ordenarPlantillas, porRacion, textoRacion, type Racion } from '../../dominio/comida'
 import { hoyISO } from '../../dominio/fechas'
 import type { Plantilla } from '../../datos/tipos'
@@ -21,8 +21,8 @@ const MAX_ESCANEADOS = 8
 export function Plantillas() {
   const nav = useNav()
   const aviso = useAviso()
-  const lista = ordenarPlantillas(useLiveQuery(() => db.plantillas.toArray(), []) ?? [])
-  const productos = useLiveQuery(() => db.productos.orderBy('guardado').reverse().toArray(), []) ?? []
+  const lista = ordenarPlantillas(useLiveQuery(leerPlantillas, []) ?? [])
+  const productos = useLiveQuery(productosRecientes, []) ?? []
   const comidas = lista.filter(p => p.tipo === 'comida')
   const otras = lista.filter(p => p.tipo !== 'comida')
   const escaneados = escaneadosSueltos(productos, lista)

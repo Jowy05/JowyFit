@@ -1,7 +1,7 @@
 // Ayudantes del informe: formatos de número y fecha, el esfuerzo de las series y la fuerza de un ejercicio.
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
 import { conSigno, conUnidad, fijo, kg, num } from '../../dominio/formato'
-import { DIAS_ABREV, MESES, MESES_CORTOS, deISO, diaSemana, fechaCorta, sumarDias } from '../../dominio/fechas'
+import { DIAS_ABREV, MESES_CORTOS, deISO, diaSemana, fechaCorta, sumarDias } from '../../dominio/fechas'
 import { hechasAsc, pesoMaximo, repsMaximas, seriesDe } from '../../dominio/tendencias'
 import { t, tc, tk } from '../../i18n'
 import type { EsfuerzoInforme, PalabraEsfuerzo, TonoInforme, UnidadFuerza } from './tipos'
@@ -36,14 +36,6 @@ export const textoPct = (p: number) => conUnidad(conSigno(p, v => String(Math.ro
 /** Porcentaje de cambio redondeado: Math.round((hoy − normal) / normal × 100). */
 export const pctCambio = (valor: number, normal: number): number | null => (normal ? Math.round(((valor - normal) / Math.abs(normal)) * 100) : null)
 
-/** «a», «a y b», «a, b y c» */
-export function lista(xs: string[]): string {
-  if (xs.length <= 1) return xs[0] ?? ''
-  // Con tres o más, contexto «3+»: en inglés lleva coma antes de «and».
-  const v = { a: xs.slice(0, -1).join(', '), b: xs[xs.length - 1]! }
-  return xs.length > 2 ? tc('3+', '{a} y {b}', v) : t('{a} y {b}', v)
-}
-
 /** «1 h 8 min», «59 min», «1 h», «—». */
 export function textoDuracion(min: number | null): string {
   if (min == null) return '—'
@@ -53,9 +45,6 @@ export function textoDuracion(min: number | null): string {
 
 /** «mar 22 sep» */
 export const fechaDia = (f: string) => `${DIAS_ABREV[diaSemana(deISO(f))]} ${fechaCorta(f)}`
-
-/** «abril 2027» */
-export const mesAnio = (f: string) => `${MESES[deISO(f).getMonth()]} ${anio(f)}`
 
 /** «21-27 sep», «28 sep-4 oct» */
 export function etiquetaSemana(desde: string, hasta: string): string {

@@ -1,5 +1,6 @@
-// Movimiento de la landing: revelado al hacer scroll, contadores, la maqueta del hero (capturas reales que se
-// encadenan), el aviso «Descarga empezada» al tocar «Descargar» y la barra fija del móvil. Sin librerías; solo transform y opacity.
+// Movimiento de la landing: revelado al hacer scroll, contadores, la hora del hero (capturas reales que se encadenan),
+// las historias del móvil, el aviso «Descarga empezada» al tocar «Descargar» y la barra fija del móvil.
+// Sin librerías; solo transform y opacity.
 // Con «reducir movimiento» no se mueve nada solo, y sin JS todo se ve igual (el CSS por defecto es el estado final).
 import { t, textos, type Clave } from './i18n'
 
@@ -68,129 +69,79 @@ function contadores() {
   })
 }
 
-// ---------- Maqueta del hero: Hoy te toca → serie → «Hecho» → descanso → aviso (Android) ----------
-const L = 10000
-const o = (ms: number) => ms / L
-const MAT = 'cubic-bezier(.4,0,.2,1)' // sin cola larga: la pantalla que entra no se queda a un dedo de llegar
-const SAL = 'cubic-bezier(.16,1,.3,1)', EST = 'cubic-bezier(.2,.8,.2,1)', ENT = 'cubic-bezier(.4,0,1,1)', REB = 'cubic-bezier(.34,1.56,.64,1)'
-type Pista = [string, Keyframe[]]
-const toque = (desde: number): Keyframe[] => [
-  { offset: 0, opacity: 0, transform: 'scale(1)' },
-  { offset: o(desde), opacity: 0, transform: 'scale(1.3)' },
-  { offset: o(desde + 150), opacity: 1, transform: 'scale(1)' },
-  { offset: o(desde + 300), opacity: 1, transform: 'scale(.78)', easing: REB },
-  { offset: o(desde + 450), opacity: 1, transform: 'scale(1)' },
-  { offset: o(desde + 650), opacity: 0, transform: 'scale(1)' },
-  { offset: 1, opacity: 0, transform: 'scale(1)' },
-]
-// La pantalla nueva entra por la derecha y tapa a la de debajo, que no se mueve (así nunca asoman letras cortadas);
-// al final de cada vuelta sale por la derecha, como al volver atrás. Nunca hay dos capturas a medio fundir.
-const PISTAS: Pista[] = [
-  ['.c-serie', [
-    { offset: 0, opacity: 1, transform: 'translateX(102%)' },
-    { offset: o(1500), opacity: 1, transform: 'translateX(102%)', easing: MAT },
-    { offset: o(1850), opacity: 1, transform: 'none' },
-    { offset: o(9300), opacity: 1, transform: 'none', easing: MAT },
-    { offset: o(9700), opacity: 1, transform: 'translateX(102%)' },
-    { offset: 1, opacity: 1, transform: 'translateX(102%)' },
-  ]],
-  // El panel del descanso sube desde abajo (en las dos capturas empieza a la mitad de la altura) y se va con la serie.
-  ['.c-desc', [
-    { offset: 0, opacity: 1, transform: 'none', clipPath: 'inset(100% 0 0 0)' },
-    { offset: o(3050), opacity: 1, transform: 'none', clipPath: 'inset(100% 0 0 0)', easing: SAL },
-    { offset: o(3450), opacity: 1, transform: 'none', clipPath: 'inset(49.9% 0 0 0)' },
-    { offset: o(9300), opacity: 1, transform: 'none', clipPath: 'inset(49.9% 0 0 0)', easing: MAT },
-    { offset: o(9700), opacity: 1, transform: 'translateX(102%)', clipPath: 'inset(49.9% 0 0 0)' },
-    { offset: o(9701), opacity: 1, transform: 'none', clipPath: 'inset(100% 0 0 0)' },
-    { offset: 1, opacity: 1, transform: 'none', clipPath: 'inset(100% 0 0 0)' },
-  ]],
-  ['.dedo-1', toque(650)],
-  ['.dedo-2', toque(2450)],
-  // La hora del móvil y la del reloj van juntas: 5:20 en «Hoy te toca» y 5:34 ya entrenando.
-  ['.hora-a', [{ offset: 0, opacity: 1 }, { offset: o(1700), opacity: 1 }, { offset: o(1850), opacity: 0 }, { offset: o(9300), opacity: 0 }, { offset: o(9450), opacity: 1 }, { offset: 1, opacity: 1 }]],
-  ['.hora-b', [{ offset: 0, opacity: 0 }, { offset: o(1700), opacity: 0 }, { offset: o(1850), opacity: 1 }, { offset: o(9300), opacity: 1 }, { offset: o(9450), opacity: 0 }, { offset: 1, opacity: 0 }]],
-]
-/** Tramos en movimiento: si se pausa en medio de uno, se salta a su final para que la imagen quieta tenga sentido. */
-const TRAMOS: [number, number][] = [[1500, 1850], [3050, 3450], [6000, 6350], [8600, 8900], [9300, 9700]]
-// Solo fuera de Apple: el aviso de fin de descanso y el reloj (en iPhone no existen).
-const PISTAS_ANDROID: Pista[] = [
-  ['.aviso', [
-    { offset: 0, opacity: 0, transform: 'translateY(-150%)' },
-    { offset: o(6000), opacity: 0, transform: 'translateY(-150%)', easing: EST },
-    { offset: o(6350), opacity: 1, transform: 'none' },
-    { offset: o(8600), opacity: 1, transform: 'none', easing: ENT },
-    { offset: o(8900), opacity: 0, transform: 'translateY(-150%)' },
-    { offset: 1, opacity: 0, transform: 'translateY(-150%)' },
-  ]],
-  ['.hero-visual .reloj-cara', [
-    { offset: 0, transform: 'none' }, { offset: o(6100), transform: 'none' },
-    { offset: o(6170), transform: 'rotate(-5deg)' }, { offset: o(6240), transform: 'rotate(5deg)' },
-    { offset: o(6310), transform: 'rotate(-4deg)' }, { offset: o(6380), transform: 'rotate(4deg)' },
-    { offset: o(6450), transform: 'none' }, { offset: 1, transform: 'none' },
-  ]],
-  ['.hero-visual .reloj-aviso', [{ offset: 0, opacity: 0 }, { offset: o(6100), opacity: 0 }, { offset: o(6250), opacity: 1 }, { offset: o(8700), opacity: 1 }, { offset: o(9000), opacity: 0 }, { offset: 1, opacity: 0 }]],
-  ['.hero-visual .reloj-hora', [{ offset: 0, opacity: 1 }, { offset: o(6100), opacity: 1 }, { offset: o(6250), opacity: 0 }, { offset: o(8700), opacity: 0 }, { offset: o(9000), opacity: 1 }, { offset: 1, opacity: 1 }]],
-]
-
+// ---------- Hero (ordenador): la hora grande y el móvil avanzan juntos: 5:30 Hoy te toca → 5:31 la serie → 5:34 el descanso ----------
 function maquetaHero() {
-  const maqueta = $('[data-maqueta]')
-  const visual = maqueta?.closest<HTMLElement>('.hero-visual')
+  const pantalla = $('[data-capas]')
   const boton = $<HTMLButtonElement>('[data-control]')
   const txt = $('[data-control-txt]')
-  if (!maqueta || !visual || !boton || !txt || !('animate' in Element.prototype)) return
-  let anims: Animation[] = []
-  let estado: 'inicio' | 'jugando' | 'pausa' | 'fin' = 'inicio'
-  let visible = true
-  const pintar = (e: typeof estado) => {
-    estado = e
-    boton.dataset.estado = e
-    txt.textContent = t(({ inicio: 'anim.ver', jugando: 'anim.pausar', pausa: 'anim.seguir', fin: 'anim.otra' } as const)[e])
+  if (!pantalla || !boton || !txt) return
+  const pasos = $$('.hora-grande [data-paso]')
+  const ordenador = matchMedia('(min-width: 900px)')
+  let paso = 0, reloj = 0, visible = true, pausada = false
+  const mostrar = (k: number) => {
+    paso = k
+    pantalla.dataset.ver = String(k)
+    for (const el of pasos) { const es = Number(el.dataset.paso) === k; el.classList.toggle('ver', es); el.classList.toggle('fuera', !es) }
   }
-  textos.alCambiar(() => pintar(estado))
-  const crear = (vueltas: number) => {
-    anims.forEach(a => a.cancel())
-    const pistas = plataforma() === 'apple' ? PISTAS : [...PISTAS, ...PISTAS_ANDROID]
-    anims = pistas.flatMap(([sel, k]) => $$(sel, visual).map(el => el.animate(k, { duration: L, iterations: vueltas, fill: 'both' })))
-    anims[0]?.finished.then(() => {
-      anims.forEach(a => a.cancel()) // vuelve al CSS por defecto: «Hoy te toca»
-      anims = []
-      pintar('fin')
-    }).catch(() => { /* cancelada */ })
-    pintar('jugando')
-    if (!visible || document.hidden) { anims.forEach(a => a.pause()); pintar('pausa') }
+  const pintar = () => {
+    boton.dataset.estado = pausada ? 'pausa' : 'jugando'
+    txt.textContent = t(pausada ? 'anim.seguir' : 'anim.pausar')
   }
-  const estable = () => {
-    const t = Number(anims[0]?.currentTime ?? 0)
-    const local = t % L
-    const tramo = TRAMOS.find(([d, h]) => local > d && local < h)
-    if (tramo) anims.forEach(a => { a.currentTime = t - local + tramo[1] })
+  const parar = () => { clearInterval(reloj); reloj = 0 }
+  // Solo se mueve en el ordenador, a la vista, con la pestaña delante y si no se ha pausado.
+  const decidir = () => {
+    boton.hidden = !ordenador.matches || reduce()
+    if (!ordenador.matches || reduce()) { parar(); mostrar(0); return }
+    const mueve = !pausada && visible && !document.hidden
+    if (mueve && !reloj) reloj = window.setInterval(() => mostrar((paso + 1) % 3), 3400)
+    if (!mueve) parar()
   }
-  boton.hidden = false
-  boton.addEventListener('click', () => {
-    if (estado === 'jugando') { anims.forEach(a => a.pause()); estable(); pintar('pausa') }
-    else if (estado === 'pausa') { anims.forEach(a => a.play()); pintar('jugando') }
-    else crear(reduce() ? 1 : 3)
+  boton.addEventListener('click', () => { pausada = !pausada; pintar(); decidir() })
+  textos.alCambiar(pintar)
+  new IntersectionObserver(([e]) => { visible = !!e?.isIntersecting; decidir() }, { threshold: 0.25 }).observe(pantalla)
+  document.addEventListener('visibilitychange', decidir)
+  ordenador.addEventListener('change', decidir)
+  menosMovimiento.addEventListener('change', decidir)
+  mostrar(0)
+  pintar()
+  decidir()
+}
+
+// ---------- Historias (móvil): segmentos de progreso, la de delante se enciende y tocar el móvil pasa a la siguiente ----------
+function historias() {
+  const hs = $$('.historia')
+  if (!hs.length) return
+  const seguir = document.getElementById('seguir')
+  hs.forEach((h, i) => {
+    const ol = document.createElement('ol')
+    ol.className = 'h-seg'
+    ol.setAttribute('aria-hidden', 'true')
+    hs.forEach((_, j) => {
+      const li = document.createElement('li')
+      if (j < i) li.className = 'lleno'
+      if (j === i) li.className = 'ahora'
+      li.append(document.createElement('i'))
+      ol.append(li)
+    })
+    $('.h-barra', h)?.prepend(ol)
+    $('[data-siguiente]', h)?.addEventListener('click', () => (hs[i + 1] ?? seguir)?.scrollIntoView({ behavior: reduce() ? 'auto' : 'smooth', block: 'start' }))
   })
-  // Solo se mueve a la vista y con la pestaña delante.
-  new IntersectionObserver(([e]) => {
-    visible = !!e?.isIntersecting
-    if (!visible && estado === 'jugando') anims.forEach(a => a.pause())
-    if (visible && estado === 'jugando') anims.forEach(a => a.play())
-  }, { threshold: 0.25 }).observe(maqueta)
-  document.addEventListener('visibilitychange', () => {
-    if (estado !== 'jugando') return
-    if (document.hidden) anims.forEach(a => a.pause()); else if (visible) anims.forEach(a => a.play())
-  })
-  // Si se activa «reducir movimiento» con la maqueta en marcha, se para.
-  menosMovimiento.addEventListener('change', () => { if (reduce() && estado === 'jugando') { anims.forEach(a => a.pause()); estable(); pintar('pausa') } })
-  if (reduce()) { pintar('inicio'); return }
-  pintar('jugando')
-  // Arranca cuando las tres capturas están listas (sin saltos) y tras la entrada del hero.
-  const imgs = $$<HTMLImageElement>('.capa', visual)
-  imgs.forEach(i => { i.loading = 'eager' })
-  const listas = Promise.all(imgs.map(i => i.decode().catch(() => undefined)))
-  const espera = new Promise(r => setTimeout(r, 1200))
-  Promise.all([listas, espera]).then(() => { if (estado === 'jugando' && !anims.length) crear(3) })
+  // El segmento de la historia actual se llena según se baja por ella.
+  let pendiente = false
+  const progreso = () => {
+    pendiente = false
+    const vh = innerHeight
+    for (const h of hs) h.style.setProperty('--p', Math.max(0, Math.min(1, (vh - h.getBoundingClientRect().top) / vh)).toFixed(3))
+  }
+  addEventListener('scroll', () => { if (!pendiente) { pendiente = true; requestAnimationFrame(progreso) } }, { passive: true })
+  progreso()
+  const io = new IntersectionObserver(es => { for (const e of es) e.target.classList.toggle('activa', e.intersectionRatio > 0.45) }, { threshold: [0, 0.45, 0.8] })
+  hs.forEach(h => io.observe(h))
+}
+
+/** Los ceros de privacidad ruedan hasta 0 y el sol del cierre sube, una vez, al verse. */
+function alLlegar() {
+  alVer($$('[data-ceros], [data-cierre]'), 0.3, el => el.classList.add('visto'))
 }
 
 /** Al tocar «Descargar»: el texto cambia un momento a «Descarga empezada» (y se dice a los lectores de pantalla). */
@@ -210,16 +161,16 @@ function descargaEmpezada() {
 }
 
 /** Barra fija con el botón (solo en el móvil): sale al pasar el botón del hero y se va al llegar al cierre.
- *  Mientras bajas leyendo se esconde (para no tapar el texto) y vuelve en cuanto subes un poco. */
+ *  No se esconde al bajar: las historias se leen bajando y dejan su hueco abajo. */
 function barraFija() {
   const barra = $('[data-barra]')
-  const cta = $('.hero-cta')
+  const cta = $('.hero-botones')
   const cierre = $('.cierre')
   if (!barra || !cta || !cierre) return
-  let pasado = false, enCierre = false, bajando = false, ultimo = scrollY
+  let pasado = false, enCierre = false
   const movil = matchMedia('(max-width: 899px)')
   const pintar = () => {
-    const ver = movil.matches && pasado && !enCierre && !bajando
+    const ver = movil.matches && pasado && !enCierre
     barra.classList.toggle('ver', ver)
     barra.setAttribute('aria-hidden', String(!ver))
     for (const a of $$('a', barra)) a.tabIndex = ver ? 0 : -1
@@ -228,13 +179,6 @@ function barraFija() {
   new IntersectionObserver(([e]) => { if (e) { pasado = !e.isIntersecting && e.boundingClientRect.top < 0; pintar() } }).observe(cta)
   new IntersectionObserver(([e]) => { if (e) { enCierre = e.isIntersecting; pintar() } }).observe(cierre)
   movil.addEventListener('change', pintar)
-  addEventListener('scroll', () => {
-    const y = scrollY
-    if (Math.abs(y - ultimo) < 24) return
-    const ahora = y > ultimo
-    ultimo = y
-    if (ahora !== bajando) { bajando = ahora; pintar() }
-  }, { passive: true })
 }
 
 /** El reloj del bloque «El descanso te avisa» vibra dos veces al verse. */
@@ -256,6 +200,8 @@ export function arrancar() {
   revelar()
   contadores()
   maquetaHero()
+  historias()
   barraFija()
   relojBloque()
+  alLlegar()
 }

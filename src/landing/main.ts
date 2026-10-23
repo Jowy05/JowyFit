@@ -10,6 +10,7 @@ import './landing.css'
 import { version } from '../../package.json'
 import { arrancar } from './anim'
 import { APK } from './apk'
+import { planes } from './plan'
 import { t, textos } from './i18n'
 
 const raiz = document.documentElement
@@ -115,6 +116,6 @@ function idioma() {
 }
 
 // Cada paso por separado: si uno falla, los demás siguen (antes un fallo dejaba la página a medio arrancar).
-for (const paso of [idioma, letra, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, arrancar, huella]) {
+for (const paso of [idioma, letra, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, planes, arrancar, huella]) {
   try { paso() } catch (e) { console.error('Landing:', e) }
 }

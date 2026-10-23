@@ -103,12 +103,18 @@
     <a class="saltar" href="#contenido" data-i18n="cab.saltar">Ir al contenido</a>
 
     <header class="cab-sitio">
-      <div class="cab contenedor">
+      <div class="cab marco">
         <a class="marca" href="./" aria-label="JowyFit, inicio" data-i18n-attr="aria-label:cab.marca">
           <img class="marca-logo" src="iconos/icono-64.png" width="36" height="36" alt="" />
           <span translate="no">JowyFit</span>
         </a>
         <div class="cab-der">
+          <nav class="cab-enlaces" aria-label="Secciones" data-i18n-attr="aria-label:cab.secciones">
+            <a class="solo-otro" href="#android" data-abrir="d-android" data-i18n="cab.instalar">Cómo se instala</a>
+            <a class="solo-apple" href="#iphone" data-abrir="d-iphone" data-i18n="cab.instalar">Cómo se instala</a>
+            <a href="#privacidad" data-i18n="cab.privacidad">Privacidad</a>
+            <a href="#t-preguntas" data-i18n="cab.preguntas">Preguntas</a>
+          </nav>
           <!-- Idioma: el código del actual y un menú con los tres (cada uno en su idioma). Lo maneja src/landing/i18n/idioma.ts. -->
           <div class="idioma" data-idioma-selector>
             <button class="boton-letra boton-idioma" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-idioma" aria-label="ES · Idioma: Español" data-idioma-boton>
@@ -128,335 +134,375 @@
     </header>
 
     <main id="contenido">
-      <div class="noche noche-hero">
-        <section class="hero" id="inicio" aria-labelledby="titulo">
-          <div class="contenedor hero-grid">
-            <div class="hero-texto">
-              <h1 id="titulo">
-                <span class="linea"><span data-i18n="hero.titulo.1">Menos pensar.</span></span>
-                <span class="linea"><span data-i18n-html="hero.titulo.2">Más <em class="subrayado">entrenar.</em></span></span>
-              </h1>
-              <p class="hero-sub" data-i18n="hero.sub">La app gratis que te hace la rutina según tus días y tu tiempo, y te sube los pesos sola.</p>
+      <!-- ===== Las 5:30: de noche, con el sol saliendo del horizonte detrás del móvil ===== -->
+      <section class="hero f-noche" id="inicio" aria-labelledby="titulo">
+        <div class="marco hero-grid">
+          <div class="hero-texto">
+            <h1 id="titulo">
+              <span class="linea"><span data-i18n="hero.titulo.1">Menos pensar.</span></span>
+              <span class="linea"><span data-i18n-html="hero.titulo.2">Más <em class="subrayado">entrenar.</em></span></span>
+            </h1>
+            <p class="hero-sub" data-i18n="hero.sub">La app gratis que te hace la rutina según tus días y tu tiempo, y te sube los pesos sola.</p>
+          </div>
 
-              <div class="hero-cta">
-                <a id="cta-apk" class="boton-go solo-otro" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk" data-apk>
-                  <svg class="ico ico-bajar" aria-hidden="true"><use href="#i-download-simple"/></svg>
-                  <span class="boton-txt"><span class="t1" data-i18n="cta.descargar">Descargar la app gratis</span><span class="t2" aria-hidden="true" data-i18n="cta.empezada">Descarga empezada</span></span>
-                </a>
-                <a id="cta-app" class="boton-go solo-apple" href="app.html?instalar=1">
-                  <span data-i18n="cta.abrir">Abrir JowyFit gratis</span>
-                  <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-                </a>
-                <a class="boton-demo" href="Demo"><span class="bd-play"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span><span data-i18n-html="cta.demo">Ver la demo <small class="solo-otro">· 1&nbsp;minuto</small><small class="solo-apple">· minuto y medio</small></span></a>
+          <div class="escena">
+            <div class="sol" aria-hidden="true"></div>
+            <div class="hora-grande" aria-hidden="true">
+              <p class="hg-t"><span data-paso="0">5:30</span><span data-paso="1" class="solo-esc">5:31</span><span data-paso="2" class="solo-esc">5:34</span></p>
+              <p class="hg-d"><span data-paso="0" data-i18n="hora.0">Martes. Tu rutina ya está lista.</span><span data-paso="1" class="solo-esc" data-i18n="hora.1">Apuntas la serie en dos toques.</span><span data-paso="2" class="solo-esc" data-i18n="hora.2">Descanso. Te avisa al acabar.</span></p>
+            </div>
+            <figure class="movil hero-movil" data-maqueta data-ui>
+              <div class="pantalla" data-capas>
+                <div class="barra-estado" aria-hidden="true"><span class="horas"><span>5:30</span><span>5:31</span><span>5:34</span></span><i class="isla"></i><span class="bat"></span></div>
+                <div class="capas">
+                  <img class="capa" src="landing/capturas/es/hoy-te-toca.webp" width="640" height="1385" fetchpriority="high" decoding="async" data-i18n-attr="alt:maqueta.alt"
+                    alt="La pantalla de inicio de JowyFit un martes a las 5:30: «Hoy te toca» Cuerpo completo A, unos 48 minutos, con sus ejercicios y el botón Empezar rutina." />
+                  <img class="capa solo-esc" src="landing/capturas/es/serie-2.webp" width="640" height="1385" loading="lazy" decoding="async" alt="" />
+                  <img class="capa solo-esc" src="landing/capturas/es/descanso.webp" width="640" height="1385" loading="lazy" decoding="async" alt="" />
+                </div>
+              </div>
+            </figure>
+            <button class="control-anim" type="button" hidden data-control>
+              <svg class="ico ico-pausa" aria-hidden="true"><use href="#i-pause"/></svg>
+              <svg class="ico ico-play" aria-hidden="true"><use href="#i-play"/></svg>
+              <span data-control-txt>Pausar</span>
+            </button>
+          </div>
 
-                <ul class="garantias" aria-label="En resumen" data-i18n-attr="aria-label:garantias.aria">
-                  <li data-i18n="garantias.gratis"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Gratis</li>
-                  <li data-i18n="garantias.cuentas"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Sin cuentas</li>
-                  <li data-i18n="garantias.anuncios"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Sin anuncios</li>
-                  <li data-i18n="garantias.internet"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Funciona sin internet</li>
-                </ul>
-                <p class="linea-version solo-otro" data-version>Para Android 8 o superior</p>
+          <div class="hero-cta">
+            <div class="hero-botones">
+              <a id="cta-apk" class="boton-go solo-otro" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk" data-apk>
+                <svg class="ico ico-bajar" aria-hidden="true"><use href="#i-download-simple"/></svg>
+                <span class="boton-txt"><span class="t1" data-i18n="cta.descargar">Descargar la app gratis</span><span class="t2" aria-hidden="true" data-i18n="cta.empezada">Descarga empezada</span></span>
+              </a>
+              <a id="cta-app" class="boton-go solo-apple" href="app.html?instalar=1">
+                <span data-i18n="cta.abrir">Abrir JowyFit gratis</span>
+                <svg class="ico" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+              </a>
+              <a class="boton-demo" href="Demo"><span class="bd-play"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span><span data-i18n-html="cta.demo">Ver la demo <small class="solo-otro">· 1&nbsp;minuto</small><small class="solo-apple">· minuto y medio</small></span></a>
+            </div>
 
-                <!-- Android: por qué es seguro, junto al botón -->
-                <details class="segura solo-otro" id="d-segura">
-                  <summary id="segura">
-                    <svg class="ico segura-ico" aria-hidden="true"><use href="#i-shield-check"/></svg>
-                    <span><b data-i18n="segura.titulo">¿Es seguro instalarla?</b><small data-i18n="segura.sub">Qué permisos pide y qué hace con tus datos</small></span>
-                    <svg class="ico chev" aria-hidden="true"><use href="#i-caret-down"/></svg>
-                  </summary>
-                  <div class="segura-cuerpo">
-                    <p data-i18n="segura.p1">Se instala con un archivo de esta página, no desde Google Play. Por eso el móvil te pide permiso y te avisa: lo hace con cualquier app de fuera de la tienda.</p>
-                    <ul>
-                      <li data-i18n-html="segura.permisos"><b>Pide pocos permisos.</b> Avisos, para que suene el final del descanso; la cámara, solo para escanear códigos de barras. Y, solo si tú lo activas, leer tus pasos, tu peso y tu grasa de Health Connect, la app de salud de Android.</li>
-                      <li data-i18n-html="segura.no-pide"><b>No pide</b> tu ubicación, tus contactos ni el micrófono.</li>
-                      <li data-i18n-html="segura.datos"><b>Tus datos no salen del móvil.</b> Solo usa internet con el escáner: busca el código de barras en Open Food Facts (una lista pública de alimentos) y enseña la foto del producto desde sus servidores. Envía ese número y nada más.</li>
-                      <li data-i18n-html="segura.play-protect"><b>Google Play Protect</b>, que viene en los móviles Android, puede revisarla al instalarla, como a cualquier app.</li>
-                      <li data-i18n-html="segura.firma"><b>Siempre con la misma firma:</b> el móvil solo deja instalar encima versiones hechas por la misma persona.</li>
-                      <li hidden data-huella data-i18n-html="segura.huella"><b>Para comprobar que es el archivo de verdad:</b> su huella (SHA-256) es <code class="huella" data-huella-valor></code>. Si la calculas con el archivo que has descargado y sale igual, es exactamente el que se publicó y nadie lo ha cambiado.</li>
-                      <li data-i18n-html="segura.quitar"><b>Se quita como cualquier app:</b> mantén pulsado el icono y toca «Desinstalar».</li>
-                    </ul>
+            <ul class="garantias" aria-label="En resumen" data-i18n-attr="aria-label:garantias.aria">
+              <li data-i18n="garantias.gratis"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Gratis</li>
+              <li data-i18n="garantias.cuentas"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Sin cuentas</li>
+              <li data-i18n="garantias.anuncios"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Sin anuncios</li>
+              <li data-i18n="garantias.internet"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Funciona sin internet</li>
+            </ul>
+            <p class="linea-version solo-otro" data-version>Para Android 8 o superior</p>
+
+            <!-- Android -->
+            <p class="nota-hero solo-otro" data-i18n-html="hero.nota-android">
+              No viene de Google Play: se instala con el archivo de esta página, en 3 pasos.
+              <a href="#android" data-abrir="d-android">Ver cómo se instala</a>
+            </p>
+            <p class="nota-hero nota-pc" hidden data-solo-pc data-i18n="hero.nota-pc">
+              <svg class="ico" aria-hidden="true"><use href="#i-device-mobile"/></svg>
+              Estás en un ordenador: abre esta página en tu móvil Android para instalarla allí.
+            </p>
+            <p class="hero-otras solo-otro">
+              <a class="enlace" href="#segura" data-abrir="d-segura"><svg class="ico" aria-hidden="true"><use href="#i-shield-check"/></svg><span data-i18n="segura.titulo">¿Es seguro instalarla?</span></a>
+              <a class="enlace" href="#iphone" data-abrir="d-iphone"><svg class="ico" aria-hidden="true"><use href="#i-apple-logo"/></svg><span data-i18n="hero.tienes-iphone">¿Tienes iPhone?</span></a>
+            </p>
+
+            <!-- iPhone / iPad: qué pasa al tocar y los pasos, a la vista -->
+            <p class="aviso-dentro solo-apple" hidden data-dentro-app>
+              <svg class="ico" aria-hidden="true"><use href="#i-compass"/></svg>
+              <span data-i18n-html="hero.dentro-app"><b>Estás dentro de otra app.</b> Para dejar JowyFit en tu pantalla, ábrela en Safari: toca «···» o la brújula y elige «Abrir en Safari».</span>
+            </p>
+            <p class="nota-hero nota-apple solo-apple" data-i18n="hero.nota-apple">Al tocarlo se abre la app en Safari y te enseña a dejarla en tu pantalla de inicio, como un icono más.</p>
+            <p class="nota-hero solo-apple" data-i18n-html="hero.nota-appstore">No está en la App Store y no hace falta: funciona desde Safari, gratis y sin descargar nada. <a href="#appstore" data-abrir="d-appstore">¿Por qué?</a></p>
+            <div class="pi-antes solo-apple">
+              <span class="pi-n pi-safari" aria-hidden="true"><svg class="ico"><use href="#i-compass"/></svg></span>
+              <div>
+                <p data-i18n-html="ios.paso0"><b>Antes, ábrela en Safari</b>, la brújula azul.</p>
+                <details class="pi-whatsapp" id="d-whatsapp">
+                  <summary id="whatsapp"><span data-i18n="ios.whatsapp.titulo">¿Te la han mandado por WhatsApp?</span><svg class="ico chev" aria-hidden="true"><use href="#i-caret-down"/></svg></summary>
+                  <div>
+                    <p data-i18n="ios.whatsapp.texto">Se abre dentro de WhatsApp y desde ahí no se puede instalar. Toca la brújula (abajo a la derecha) o los tres puntos «···» y elige «Abrir en Safari».</p>
+                    <div class="pantallita pantallita-ios mini" aria-hidden="true" data-ui><p class="pt-fila"><span data-i18n="pantallita.abrir-safari">Abrir en Safari</span><svg class="ico pt-ico-peq azul"><use href="#i-compass"/></svg></p></div>
                   </div>
                 </details>
-                <p class="nota-hero solo-otro" data-i18n-html="hero.nota-android">
-                  No viene de Google Play: se instala con el archivo de esta página, en 3 pasos.
-                  <a href="#android" data-abrir="d-android">Ver cómo se instala</a>
-                </p>
-                <p class="nota-hero nota-pc" hidden data-solo-pc data-i18n="hero.nota-pc">
-                  <svg class="ico" aria-hidden="true"><use href="#i-device-mobile"/></svg>
-                  Estás en un ordenador: abre esta página en tu móvil Android para instalarla allí.
-                </p>
-
-                <!-- iPhone / iPad: qué pasa al tocar y los pasos, a la vista -->
-                <p class="aviso-dentro solo-apple" hidden data-dentro-app>
-                  <svg class="ico" aria-hidden="true"><use href="#i-compass"/></svg>
-                  <span data-i18n-html="hero.dentro-app"><b>Estás dentro de otra app.</b> Para dejar JowyFit en tu pantalla, ábrela en Safari: toca «···» o la brújula y elige «Abrir en Safari».</span>
-                </p>
-                <p class="nota-hero nota-apple solo-apple" data-i18n="hero.nota-apple">Al tocarlo se abre la app en Safari y te enseña a dejarla en tu pantalla de inicio, como un icono más.</p>
-                <p class="nota-hero solo-apple" data-i18n-html="hero.nota-appstore">No está en la App Store y no hace falta: funciona desde Safari, gratis y sin descargar nada. <a href="#appstore" data-abrir="d-appstore">¿Por qué?</a></p>
-                <div class="pi-antes solo-apple">
-                    <span class="pi-n pi-safari" aria-hidden="true"><svg class="ico"><use href="#i-compass"/></svg></span>
-                    <div>
-                      <p data-i18n-html="ios.paso0"><b>Antes, ábrela en Safari</b>, la brújula azul.</p>
-                      <details class="pi-whatsapp" id="d-whatsapp">
-                        <summary id="whatsapp"><span data-i18n="ios.whatsapp.titulo">¿Te la han mandado por WhatsApp?</span><svg class="ico chev" aria-hidden="true"><use href="#i-caret-down"/></svg></summary>
-                        <div>
-                          <p data-i18n="ios.whatsapp.texto">Se abre dentro de WhatsApp y desde ahí no se puede instalar. Toca la brújula (abajo a la derecha) o los tres puntos «···» y elige «Abrir en Safari».</p>
-                          <div class="pantallita pantallita-ios mini" aria-hidden="true" data-ui><p class="pt-fila"><span data-i18n="pantallita.abrir-safari">Abrir en Safari</span><svg class="ico pt-ico-peq azul"><use href="#i-compass"/></svg></p></div>
-                        </div>
-                      </details>
-                    </div>
-                </div>
-                <ol class="pasos-ios solo-apple" aria-label="Cómo dejarla en el iPhone" data-i18n-attr="aria-label:ios.aria">
-                  <li>
-                    <span class="pi-n" aria-hidden="true">1</span>
-                    <div><p data-i18n-html="ios.paso1"><b>Toca «Abrir JowyFit gratis».</b> Se abre la app.</p></div>
-                  </li>
-                  <li>
-                    <span class="pi-n" aria-hidden="true">2</span>
-                    <div>
-                      <p data-i18n-html="ios.paso2"><b>Allí, toca Compartir</b>, abajo en la pantalla.</p>
-                      <div class="pantallita pantallita-ios mini" aria-hidden="true" data-ui><svg class="ico pt-ico"><use href="#i-export"/></svg><p class="pt-txt" data-i18n="pantallita.compartir">Compartir</p></div>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="pi-n" aria-hidden="true">3</span>
-                    <div>
-                      <p data-i18n-html="ios.paso3"><b>Toca «Añadir a pantalla de inicio»</b> y luego <b>«Añadir»</b>.</p>
-                      <div class="pantallita pantallita-ios mini" aria-hidden="true" data-ui>
-                        <p class="pt-fila"><span data-i18n="pantallita.anadir-inicio">Añadir a pantalla de inicio</span><svg class="ico pt-ico-peq"><use href="#i-plus-square"/></svg></p>
-                        <p class="pt-bots"><span data-i18n="pantallita.cancelar">Cancelar</span><span class="pt-si" data-i18n="pantallita.anadir">Añadir</span></p>
-                      </div>
-                    </div>
-                  </li>
-                </ol>
-                <p class="nota-peq-hero solo-apple" data-i18n="ios.ipad-mac">En el iPad, Compartir está arriba a la derecha. En el Mac: menú Archivo → «Añadir al Dock».</p>
-
-                <p class="otra-plataforma solo-otro"><a href="#iphone" data-abrir="d-iphone" data-i18n="hero.otra-iphone"><svg class="ico" aria-hidden="true"><use href="#i-apple-logo"/></svg>¿Tienes iPhone? Se usa desde Safari, sin descargar nada</a></p>
-                <p class="otra-plataforma peq solo-apple"><a href="?plataforma=otro#inicio" data-i18n="hero.otra-android"><svg class="ico" aria-hidden="true"><use href="#i-android-logo"/></svg>¿Tienes Android? Mira cómo se descarga</a></p>
               </div>
             </div>
-
-            <div class="hero-visual">
-              <div class="sol" aria-hidden="true"></div>
-              <div class="movil-parallax">
-                <div class="movil-entrada">
-                  <figure class="movil movil-hero" data-maqueta data-ui>
-                    <div class="pantalla">
-                      <div class="barra-estado" aria-hidden="true">
-                        <span class="horas"><span class="hora hora-a">5:20</span><span class="hora hora-b">5:34</span></span>
-                        <i class="isla"></i><span class="bat"></span>
-                      </div>
-                      <div class="capas">
-                        <img class="capa c-hoy" src="landing/capturas/es/hoy-te-toca.webp" width="640" height="1385" fetchpriority="high" decoding="async" data-i18n-attr="alt:maqueta.alt"
-                          alt="La pantalla de inicio de JowyFit un martes a las 5:20: «Hoy te toca» Cuerpo completo A, unos 48 minutos, con sus ejercicios y el botón Empezar rutina." />
-                        <img class="capa c-serie" src="landing/capturas/es/serie-2.webp" width="640" height="1385" loading="lazy" decoding="async" alt="" />
-                        <img class="capa c-desc" src="landing/capturas/es/descanso.webp" width="640" height="1385" loading="lazy" decoding="async" alt="" />
-                        <div class="aviso solo-otro" aria-hidden="true">
-                          <img class="aviso-logo" src="iconos/icono-64.png" width="64" height="64" alt="" />
-                          <span data-i18n-html="maqueta.aviso"><b>Descanso terminado</b>Sentadilla Trasera con Barra · siguiente serie</span>
-                        </div>
-                        <i class="dedo dedo-1" aria-hidden="true"></i>
-                        <i class="dedo dedo-2" aria-hidden="true"></i>
-                      </div>
-                    </div>
-                  </figure>
+            <ol class="pasos-ios solo-apple" aria-label="Cómo dejarla en el iPhone" data-i18n-attr="aria-label:ios.aria">
+              <li>
+                <span class="pi-n" aria-hidden="true">1</span>
+                <div><p data-i18n-html="ios.paso1"><b>Toca «Abrir JowyFit gratis».</b> Se abre la app.</p></div>
+              </li>
+              <li>
+                <span class="pi-n" aria-hidden="true">2</span>
+                <div>
+                  <p data-i18n-html="ios.paso2"><b>Allí, toca Compartir</b>, abajo en la pantalla.</p>
+                  <div class="pantallita pantallita-ios mini" aria-hidden="true" data-ui><svg class="ico pt-ico"><use href="#i-export"/></svg><p class="pt-txt" data-i18n="pantallita.compartir">Compartir</p></div>
                 </div>
-              </div>
-              <div class="reloj solo-otro" aria-hidden="true" data-ui>
-                <div class="reloj-cara">
-                  <span class="reloj-hora"><span class="hora hora-a">5:20</span><span class="hora hora-b">5:34</span></span>
-                  <span class="reloj-aviso" data-i18n="reloj.terminado"><svg class="ico"><use href="#i-bell-ringing"/></svg>Descanso terminado</span>
+              </li>
+              <li>
+                <span class="pi-n" aria-hidden="true">3</span>
+                <div>
+                  <p data-i18n-html="ios.paso3"><b>Toca «Añadir a pantalla de inicio»</b> y luego <b>«Añadir»</b>.</p>
+                  <div class="pantallita pantallita-ios mini" aria-hidden="true" data-ui>
+                    <p class="pt-fila"><span data-i18n="pantallita.anadir-inicio">Añadir a pantalla de inicio</span><svg class="ico pt-ico-peq"><use href="#i-plus-square"/></svg></p>
+                    <p class="pt-bots"><span data-i18n="pantallita.cancelar">Cancelar</span><span class="pt-si" data-i18n="pantallita.anadir">Añadir</span></p>
+                  </div>
                 </div>
-              </div>
-              <div class="maqueta-pie">
-                <button class="control-anim" type="button" hidden data-control>
-                  <svg class="ico ico-pausa" aria-hidden="true"><use href="#i-pause"/></svg>
-                  <svg class="ico ico-play" aria-hidden="true"><use href="#i-play"/></svg>
-                  <svg class="ico ico-otra" aria-hidden="true"><use href="#i-arrow-counter-clockwise"/></svg>
-                  <span data-control-txt>Pausar</span>
-                </button>
-                <p class="pie-maqueta" data-i18n-html="maqueta.pie">Capturas reales de la app.<span class="solo-otro"> El reloj es un dibujo: en Android, el aviso llega también al reloj.</span></p>
-              </div>
-            </div>
-          </div>
-
-        </section>
-      </div>
-
-      <!-- ===== Lo que hace por ti ===== -->
-      <section class="seccion dia" aria-labelledby="t-hace">
-        <div class="contenedor">
-          <h2 id="t-hace" data-i18n="hace.titulo">Lo que hace por ti.</h2>
-          <ul class="beneficios">
-            <li data-revelar style="--i:0">
-              <h3 data-i18n="hace.hoy.titulo">Te dice qué toca hoy</h3>
-              <p data-i18n="hace.hoy.texto">Le dices qué días vas y cuánto tiempo tienes. La rutina se hace sola.</p>
-            </li>
-            <li data-revelar style="--i:1">
-              <h3 data-i18n="hace.toques.titulo">Apuntas en dos toques</h3>
-              <p data-i18n="hace.toques.texto">Tocas «Hecho» o «Igual que la anterior», y a descansar.</p>
-            </li>
-            <li data-revelar style="--i:2">
-              <h3 data-i18n="hace.peso.titulo">Sube el peso cuando toca</h3>
-              <p data-i18n="hace.peso.texto">Cuando una serie te sale fácil, la próxima vez te pone un poco más.</p>
-            </li>
-          </ul>
-          <p class="cifra-linea" data-revelar><span class="cifra" data-contar="600" data-contar-clave="cifras.mas-de">Más de 600</span> <span data-i18n="cifras.ejercicios">ejercicios, cada uno con su dibujo</span></p>
-        </div>
-      </section>
-
-      <!-- ===== Así empiezas ===== -->
-      <section class="seccion dia alt" aria-labelledby="t-empiezas">
-        <div class="contenedor dos-col">
-          <div>
-            <h2 id="t-empiezas" data-i18n="empiezas.titulo">Tu plan, en unas preguntas.</h2>
-            <ol class="dias" aria-label="Ejemplo: martes, jueves y viernes" data-i18n-attr="aria-label:empiezas.dias.aria" data-revelar>
-              <li data-i18n="empiezas.dias.l">L</li><li class="si" data-i18n="empiezas.dias.m">M</li><li data-i18n="empiezas.dias.x">X</li><li class="si" data-i18n="empiezas.dias.j">J</li><li class="si" data-i18n="empiezas.dias.v">V</li><li data-i18n="empiezas.dias.s">S</li><li data-i18n="empiezas.dias.d">D</li>
+              </li>
             </ol>
-            <ol class="pasos">
-              <li data-revelar style="--i:0"><span class="paso-n" aria-hidden="true">1</span><div><h3 data-i18n="empiezas.paso1.titulo">Dinos tus días y tu tiempo</h3><p data-i18n="empiezas.paso1.texto">Martes, jueves y viernes, una hora… lo que tengas.</p></div></li>
-              <li data-revelar style="--i:1"><span class="paso-n" aria-hidden="true">2</span><div><h3 data-i18n="empiezas.paso2.titulo">Elige tu gimnasio</h3><p data-i18n="empiezas.paso2.texto">Uno completo, o marcas tú las máquinas que hay.</p></div></li>
-              <li data-revelar style="--i:2"><span class="paso-n" aria-hidden="true">3</span><div><h3 data-i18n="empiezas.paso3.titulo">Semana de prueba</h3><p data-i18n="empiezas.paso3.texto">La primera semana mide cuánto tardas de verdad y ajusta la rutina.</p></div></li>
-              <li data-revelar style="--i:3"><span class="paso-n" aria-hidden="true">4</span><div><h3 data-i18n="empiezas.paso4.titulo">Entrena y apunta</h3><p data-i18n="empiezas.paso4.texto">Cada serie en segundos. Los pesos suben solos.</p></div></li>
-            </ol>
-          </div>
-          <div class="col-movil" data-revelar="der">
-            <figure class="movil movil-dia" data-ui>
-              <div class="pantalla">
-                <div class="barra-estado" aria-hidden="true"><span>21:05</span><i class="isla"></i><span class="bat"></span></div>
-                <img src="landing/capturas/es/horarios.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:empiezas.alt"
-                  alt="El paso «Tus horarios»: martes, jueves y viernes marcados, a las 5:30 y 60 minutos cada día." />
-              </div>
-            </figure>
+            <p class="nota-peq-hero solo-apple" data-i18n="ios.ipad-mac">En el iPad, Compartir está arriba a la derecha. En el Mac: menú Archivo → «Añadir al Dock».</p>
+            <p class="hero-otras solo-apple"><a class="enlace" href="?plataforma=otro#inicio" data-i18n="hero.otra-android"><svg class="ico" aria-hidden="true"><use href="#i-android-logo"/></svg>¿Tienes Android? Mira cómo se descarga</a></p>
           </div>
         </div>
       </section>
 
-      <!-- ===== Bloques de funciones ===== -->
-      <section class="seccion dia funciones" aria-label="Lo que hace la app" data-i18n-attr="aria-label:funciones.aria">
-        <article class="bloque contenedor dos-col" aria-labelledby="t-ocupado">
-          <div class="bloque-texto">
-            <h2 id="t-ocupado" data-i18n="ocupado.titulo">¿Máquina ocupada? Te da otra.</h2>
-            <p data-i18n="ocupado.texto">En hora punta, toca «Ocupado» y te propone otro ejercicio que trabaja lo mismo, con el peso ya puesto. Y se acuerda de qué haces cada día.</p>
-          </div>
-          <div class="col-movil" data-revelar="der">
-            <figure class="movil movil-dia" data-ui>
-              <div class="pantalla">
-                <div class="barra-estado" aria-hidden="true"><span>5:41</span><i class="isla"></i><span class="bat"></span></div>
-                <img src="landing/capturas/es/ocupado.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:ocupado.alt"
-                  alt="La hoja «Ocupado»: si la sentadilla con barra está ocupada, propone la prensa de piernas con 10 kg × 6-10." />
+      <!-- ===== Móvil: lo que hace por ti, contado en siete historias a pantalla completa ===== -->
+      <section class="historias solo-movil" aria-label="Lo que hace por ti, en siete historias" data-i18n-attr="aria-label:historias.aria" data-historias>
+        <article class="historia f-c1" aria-labelledby="h1-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.1">Historia 1 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.saltar">Saltar historias</a></div>
+          <div class="h-texto">
+            <h2 id="h1-t" data-i18n="empiezas.titulo">Tu plan, en unas preguntas.</h2>
+            <div class="plan" data-plan>
+              <div class="plan-dias" role="group" aria-label="¿Qué días vas? Toca para marcar o quitar" data-i18n-attr="aria-label:plan.aria">
+                <button type="button" aria-pressed="false" data-dia="0" data-i18n="empiezas.dias.l">L</button><button type="button" aria-pressed="true" data-dia="1" data-i18n="empiezas.dias.m">M</button><button type="button" aria-pressed="false" data-dia="2" data-i18n="empiezas.dias.x">X</button><button type="button" aria-pressed="true" data-dia="3" data-i18n="empiezas.dias.j">J</button><button type="button" aria-pressed="true" data-dia="4" data-i18n="empiezas.dias.v">V</button><button type="button" aria-pressed="false" data-dia="5" data-i18n="empiezas.dias.s">S</button><button type="button" aria-pressed="false" data-dia="6" data-i18n="empiezas.dias.d">D</button>
               </div>
-            </figure>
+              <p class="plan-salida" aria-live="polite" data-plan-salida>Martes, jueves y viernes: 3 días, 60 min cada día. La rutina se hace sola.</p>
+            </div>
           </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>21:05</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/horarios.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:empiezas.alt" alt="El paso «Tus horarios»: martes, jueves y viernes marcados, a las 5:30 y 60 minutos cada día." /></div></div></figure>
         </article>
 
-        <article class="bloque contenedor dos-col invertido" aria-labelledby="t-comer">
-          <div class="bloque-texto">
-            <h2 id="t-comer" data-i18n="comida.titulo">Come sin contar calorías.</h2>
-            <p data-i18n-html="comida.texto">Apunta lo que comes con <strong>Poco</strong>, <strong>Normal</strong> o <strong>Mucho</strong>. Primero ves la proteína; lo demás, en segundo plano. Y si tiene código de barras, lo escaneas.</p>
-            <p class="nota-peq" data-i18n="comida.nota">Los productos escaneados salen de Open Food Facts, una lista pública y gratuita de alimentos: al escanear se le envía el código de barras y la foto del producto se carga de sus servidores.</p>
+        <article class="historia f-c2" aria-labelledby="h2-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.2">Historia 2 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.saltar">Saltar historias</a></div>
+          <div class="h-texto">
+            <h2 id="h2-t" data-i18n="historias.toques.titulo">Apuntas en dos toques.</h2>
+            <p data-i18n="historias.toques.texto">Tocas «Hecho» o «Igual que la anterior». Si te sale fácil, la próxima vez te pone un poco más.</p>
           </div>
-          <div class="col-movil" data-revelar="izq">
-            <figure class="movil movil-dia" data-ui>
-              <div class="pantalla">
-                <div class="barra-estado" aria-hidden="true"><span>14:10</span><i class="isla"></i><span class="bat"></span></div>
-                <img src="landing/capturas/es/comida-poco-normal-mucho.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:comida.alt"
-                  alt="Apuntar comida: «Lentejas con chorizo» con los botones Poco, Normal y Mucho, y Normal marcado (unas 600 kcal)." />
-              </div>
-            </figure>
-          </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>5:31</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/serie-2.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:historias.toques.alt" alt="Una serie de sentadilla: la última vez 20 kg × 6; hoy, 20 kg, con los botones Ocupado y Hecho." /></div></div></figure>
         </article>
 
-        <article class="bloque contenedor dos-col" aria-labelledby="t-voybien">
-          <div class="bloque-texto">
-            <h2 id="t-voybien" data-i18n="voybien.titulo">¿Voy bien?</h2>
+        <article class="historia f-c3" aria-labelledby="h3-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.3">Historia 3 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.saltar">Saltar historias</a></div>
+          <div class="h-texto">
+            <h2 id="h3-t" data-i18n="historias.descanso.titulo">El descanso te avisa.</h2>
+            <p class="solo-otro" data-i18n="reloj.texto">Suena al acabar aunque lleves el móvil en el bolsillo. Si tienes un reloj conectado al móvil, vibra en la muñeca.</p>
+            <p class="solo-apple" data-i18n="historias.descanso.iphone">Una cuenta atrás entre series. Al acabar suena un pitido y la pantalla destella: déjala abierta.</p>
+          </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>5:34</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/descanso.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:historias.descanso.alt" alt="El descanso entre series: quedan 2:29 y lo siguiente es la serie 2, 20 kg × 6-10." /></div></div></figure>
+        </article>
+
+        <article class="historia f-c4" aria-labelledby="h4-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.4">Historia 4 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.saltar">Saltar historias</a></div>
+          <div class="h-texto">
+            <h2 id="h4-t" data-i18n="ocupado.titulo">¿Máquina ocupada? Te da otra.</h2>
+            <p data-i18n="historias.ocupado.texto">Toca «Ocupado» y te propone otro ejercicio que trabaja lo mismo, con el peso ya puesto.</p>
+          </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>5:41</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/ocupado.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:ocupado.alt" alt="La hoja «Ocupado»: si la sentadilla con barra está ocupada, propone la prensa de piernas con 10 kg × 6-10." /></div></div></figure>
+        </article>
+
+        <article class="historia f-c5" aria-labelledby="h5-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.5">Historia 5 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.saltar">Saltar historias</a></div>
+          <div class="h-texto">
+            <h2 id="h5-t" data-i18n="comida.titulo">Come sin contar calorías.</h2>
+            <p data-i18n-html="historias.comida.texto">Apunta con <strong>Poco</strong>, <strong>Normal</strong> o <strong>Mucho</strong>. Primero ves la proteína. Y si tiene código de barras, lo escaneas.</p>
+          </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>14:10</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/comida-poco-normal-mucho.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:comida.alt" alt="Apuntar comida: «Lentejas con chorizo» con los botones Poco, Normal y Mucho, y Normal marcado (unas 600 kcal)." /></div></div></figure>
+        </article>
+
+        <article class="historia f-c6" aria-labelledby="h6-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.6">Historia 6 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.saltar">Saltar historias</a></div>
+          <div class="h-texto">
+            <h2 id="h6-t" data-i18n="voybien.titulo">¿Voy bien?</h2>
             <p data-i18n="voybien.p1">Cada domingo, un semáforo te dice cómo ha ido la semana: lo que va bien y lo que puedes mejorar.</p>
-            <p data-i18n="voybien.p2">Si algo flojea, como la proteína, te lo señala para la semana siguiente. Las cuentas las hace la app: tú solo apuntas lo que comes.</p>
+            <p class="peq" data-i18n="comun.datos-ejemplo">Datos de ejemplo.</p>
           </div>
-          <div class="col-movil" data-revelar="der">
-            <figure class="movil movil-dia" data-ui>
-              <div class="pantalla">
-                <div class="barra-estado" aria-hidden="true"><span>10:15</span><i class="isla"></i><span class="bat"></span></div>
-                <img src="landing/capturas/es/voy-bien.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:voybien.alt"
-                  alt="La revisión del domingo: semáforo en ámbar, «Casi»: 3 de 3 entrenos, un centímetro menos de cintura y, a mejorar, la proteína." />
-              </div>
-              <figcaption data-i18n="comun.datos-ejemplo">Datos de ejemplo.</figcaption>
-            </figure>
-          </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>10:15</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/voy-bien.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:voybien.alt" alt="La revisión del domingo: semáforo en ámbar, «Casi»: 3 de 3 entrenos, un centímetro menos de cintura y, a mejorar, la proteína." /></div></div></figure>
         </article>
 
-        <article class="bloque contenedor dos-col invertido" aria-labelledby="t-cambias">
-          <div class="bloque-texto">
-            <h2 id="t-cambias" data-i18n="cuerpo.titulo">Ve cómo cambias.</h2>
-            <p data-i18n="cuerpo.p1">Peso, cintura y grasa corporal en una gráfica sencilla. Con la media de cada semana, porque el peso de un día suelto engaña.</p>
-            <p class="solo-otro" data-i18n="cuerpo.android">Si tienes una báscula o un reloj conectados al móvil, los pasos y el peso se apuntan solos (a través de Health Connect, la app de salud de Android, y solo si tú lo activas).</p>
-            <p class="solo-apple" data-i18n="cuerpo.iphone">En el iPhone, el peso y los pasos los apuntas tú en un momento.</p>
+        <article class="historia f-piedra" aria-labelledby="h7-t">
+          <div class="h-barra" data-ui><p class="oculto" data-i18n="historias.7">Historia 7 de 7</p><a class="h-saltar" href="#seguir" data-i18n="historias.seguir">Seguir</a></div>
+          <div class="h-texto">
+            <h2 id="h7-t" data-i18n="cuerpo.titulo">Ve cómo cambias.</h2>
+            <p data-i18n="historias.cuerpo.texto">Peso, cintura y grasa, con la media de cada semana: el peso de un día suelto engaña.</p>
+            <p class="peq" data-i18n="comun.datos-ejemplo">Datos de ejemplo.</p>
           </div>
-          <div class="col-movil" data-revelar="izq">
-            <figure class="movil movil-dia" data-ui>
-              <div class="pantalla">
-                <div class="barra-estado" aria-hidden="true"><span>20:30</span><i class="isla"></i><span class="bat"></span></div>
-                <img src="landing/capturas/es/cuerpo.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:cuerpo.alt"
-                  alt="Progreso, pestaña Cuerpo: el peso baja de 85,2 a 82,3 kg en siete semanas y la cintura, de 98 a 95 cm." />
-              </div>
-              <figcaption data-i18n="comun.datos-ejemplo">Datos de ejemplo.</figcaption>
-            </figure>
-          </div>
+          <figure class="h-fig" data-siguiente><div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>20:30</span><i class="isla"></i><span class="bat"></span></div>
+            <img src="landing/capturas/es/cuerpo.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:cuerpo.alt" alt="Progreso, pestaña Cuerpo: el peso baja de 85,2 a 82,3 kg en siete semanas y la cintura, de 98 a 95 cm." /></div></div></figure>
         </article>
+      </section>
 
-        <article class="bloque contenedor dos-col solo-otro" aria-labelledby="t-reloj">
-          <div class="bloque-texto">
-            <h2 id="t-reloj" data-i18n="reloj.titulo">El descanso te avisa, también en el reloj.</h2>
-            <p data-i18n="reloj.texto">Suena al acabar aunque lleves el móvil en el bolsillo. Si tienes un reloj conectado al móvil, vibra en la muñeca.</p>
+      <section class="sec f-piedra2 solo-movil seis-movil" id="seguir" aria-labelledby="t-seis">
+        <div class="marco">
+          <h2 id="t-seis"><span class="cifra" data-contar="600" data-contar-clave="cifras.mas-de">Más de 600</span> <span data-i18n="seis.ejercicios">ejercicios.</span></h2>
+          <p class="lead" data-i18n="seis.texto">Cada uno con su dibujo, también de calistenia y cardio. Le dices qué hay en tu gimnasio y elige entre ellos.</p>
+        </div>
+      </section>
+
+      <!-- ===== Escritorio: lo que hace por ti ===== -->
+      <section class="sec f-c1 hace solo-esc" aria-labelledby="t-hace">
+        <div class="marco rejilla">
+          <div class="hace-izq">
+            <h2 id="t-hace" data-i18n="hace.titulo" data-revelar>Lo que hace por ti.</h2>
+            <p class="seis" data-revelar style="--i:1"><span class="n cifra" data-contar="600" data-contar-clave="cifras.mas-de">Más de 600</span><span class="l" data-i18n="cifras.ejercicios">ejercicios, cada uno con su dibujo</span></p>
           </div>
-          <div class="col-movil col-reloj" data-revelar="der">
-            <div class="reloj reloj-grande" aria-hidden="true" data-reloj-bloque data-ui>
-              <div class="reloj-cara">
-                <span class="reloj-aviso" data-i18n="reloj.terminado"><svg class="ico"><use href="#i-bell-ringing"/></svg>Descanso terminado</span>
-                <span class="reloj-sub" data-i18n="reloj.serie">Serie 2</span>
+          <ul class="beneficios">
+            <li data-revelar style="--i:1"><h3 data-i18n="hace.hoy.titulo">Te dice qué toca hoy</h3><p data-i18n="hace.hoy.texto">Le dices qué días vas y cuánto tiempo tienes. La rutina se hace sola.</p></li>
+            <li data-revelar style="--i:2"><h3 data-i18n="hace.toques.titulo">Apuntas en dos toques</h3><p data-i18n="hace.toques.texto">Tocas «Hecho» o «Igual que la anterior», y a descansar.</p></li>
+            <li data-revelar style="--i:3"><h3 data-i18n="hace.peso.titulo">Sube el peso cuando toca</h3><p data-i18n="hace.peso.texto">Cuando una serie te sale fácil, la próxima vez te pone un poco más.</p></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="sec f-c2 plan-sec solo-esc" aria-labelledby="t-empiezas">
+        <div class="marco rejilla">
+          <div class="col-texto">
+            <h2 id="t-empiezas" data-i18n="empiezas.titulo" data-revelar>Tu plan, en unas preguntas.</h2>
+            <div class="plan" data-plan data-revelar style="--i:1">
+              <div class="plan-dias" role="group" aria-label="¿Qué días vas? Toca para marcar o quitar" data-i18n-attr="aria-label:plan.aria">
+                <button type="button" aria-pressed="false" data-dia="0" data-i18n="empiezas.dias.l">L</button><button type="button" aria-pressed="true" data-dia="1" data-i18n="empiezas.dias.m">M</button><button type="button" aria-pressed="false" data-dia="2" data-i18n="empiezas.dias.x">X</button><button type="button" aria-pressed="true" data-dia="3" data-i18n="empiezas.dias.j">J</button><button type="button" aria-pressed="true" data-dia="4" data-i18n="empiezas.dias.v">V</button><button type="button" aria-pressed="false" data-dia="5" data-i18n="empiezas.dias.s">S</button><button type="button" aria-pressed="false" data-dia="6" data-i18n="empiezas.dias.d">D</button>
               </div>
+              <div class="plan-min"><button type="button" aria-label="Menos tiempo" data-i18n-attr="aria-label:plan.menos" data-min="-15">−</button><output data-min-salida>60 min</output><button type="button" aria-label="Más tiempo" data-i18n-attr="aria-label:plan.mas" data-min="15">+</button></div>
+              <p class="plan-salida" aria-live="polite" data-plan-salida>Martes, jueves y viernes: 3 días, 60 min cada día. La rutina se hace sola.</p>
             </div>
-            <p class="etiqueta-dibujo" data-i18n="reloj.etiqueta">Dibujo · en Android</p>
+            <ol class="pasos">
+              <li style="--i:2"><h3 data-i18n="empiezas.paso1.titulo">Dinos tus días y tu tiempo</h3><p data-i18n="empiezas.paso1.texto">Martes, jueves y viernes, una hora… lo que tengas.</p></li>
+              <li style="--i:3"><h3 data-i18n="empiezas.paso2.titulo">Elige tu gimnasio</h3><p data-i18n="empiezas.paso2.texto">Uno completo, o marcas tú las máquinas que hay.</p></li>
+              <li style="--i:4"><h3 data-i18n="empiezas.paso3.titulo">Semana de prueba</h3><p data-i18n="empiezas.paso3.texto">La primera semana mide cuánto tardas de verdad y ajusta la rutina.</p></li>
+              <li style="--i:5"><h3 data-i18n="empiezas.paso4.titulo">Entrena y apunta</h3><p data-i18n="empiezas.paso4.texto">Cada serie en segundos. Los pesos suben solos.</p></li>
+            </ol>
+          </div>
+          <figure class="col-movil" data-revelar="movil" style="--i:1">
+            <div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>21:05</span><i class="isla"></i><span class="bat"></span></div>
+              <img src="landing/capturas/es/horarios.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:empiezas.alt" alt="El paso «Tus horarios»: martes, jueves y viernes marcados, a las 5:30 y 60 minutos cada día." /></div></div>
+          </figure>
+        </div>
+      </section>
+
+      <section class="solo-esc" aria-label="Lo que hace la app" data-i18n-attr="aria-label:funciones.aria">
+        <article class="sec f-c3" aria-labelledby="t-ocupado">
+          <div class="marco rejilla">
+            <div class="col-texto">
+              <h2 id="t-ocupado" data-i18n="ocupado.titulo" data-revelar>¿Máquina ocupada? Te da otra.</h2>
+              <p class="lead" data-i18n="ocupado.texto" data-revelar style="--i:1">En hora punta, toca «Ocupado» y te propone otro ejercicio que trabaja lo mismo, con el peso ya puesto. Y se acuerda de qué haces cada día.</p>
+            </div>
+            <figure class="col-movil" data-revelar="movil" style="--i:1">
+              <div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>5:41</span><i class="isla"></i><span class="bat"></span></div>
+                <img src="landing/capturas/es/ocupado.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:ocupado.alt" alt="La hoja «Ocupado»: si la sentadilla con barra está ocupada, propone la prensa de piernas con 10 kg × 6-10." /></div></div>
+            </figure>
+          </div>
+        </article>
+
+        <article class="sec f-c5 inv" aria-labelledby="t-comer">
+          <div class="marco rejilla">
+            <div class="col-texto">
+              <h2 id="t-comer" data-i18n="comida.titulo" data-revelar>Come sin contar calorías.</h2>
+              <p class="lead" data-i18n-html="comida.texto" data-revelar style="--i:1">Apunta lo que comes con <strong>Poco</strong>, <strong>Normal</strong> o <strong>Mucho</strong>. Primero ves la proteína; lo demás, en segundo plano. Y si tiene código de barras, lo escaneas.</p>
+              <p class="nota-peq" data-i18n="comida.nota" data-revelar style="--i:2">Los productos escaneados salen de Open Food Facts, una lista pública y gratuita de alimentos: al escanear se le envía el código de barras y la foto del producto se carga de sus servidores.</p>
+            </div>
+            <figure class="col-movil" data-revelar="movil" style="--i:1">
+              <div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>14:10</span><i class="isla"></i><span class="bat"></span></div>
+                <img src="landing/capturas/es/comida-poco-normal-mucho.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:comida.alt" alt="Apuntar comida: «Lentejas con chorizo» con los botones Poco, Normal y Mucho, y Normal marcado (unas 600 kcal)." /></div></div>
+            </figure>
+          </div>
+        </article>
+
+        <article class="sec f-c6 centro" aria-labelledby="t-voybien">
+          <div class="marco">
+            <h2 id="t-voybien" data-i18n="voybien.titulo" data-revelar>¿Voy bien?</h2>
+            <p class="lead" data-i18n="voybien.p1" data-revelar style="--i:1">Cada domingo, un semáforo te dice cómo ha ido la semana: lo que va bien y lo que puedes mejorar.</p>
+            <p data-i18n="voybien.p2" data-revelar style="--i:2">Si algo flojea, como la proteína, te lo señala para la semana siguiente. Las cuentas las hace la app: tú solo apuntas lo que comes.</p>
+            <figure data-revelar="movil" style="--i:2">
+              <div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>10:15</span><i class="isla"></i><span class="bat"></span></div>
+                <img src="landing/capturas/es/voy-bien.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:voybien.alt" alt="La revisión del domingo: semáforo en ámbar, «Casi»: 3 de 3 entrenos, un centímetro menos de cintura y, a mejorar, la proteína." /></div></div>
+              <figcaption class="cap" data-i18n="comun.datos-ejemplo">Datos de ejemplo.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <article class="sec f-piedra horizonte" aria-labelledby="t-cambias">
+          <div class="marco rejilla">
+            <div class="col-texto">
+              <h2 id="t-cambias" data-i18n="cuerpo.titulo" data-revelar>Ve cómo cambias.</h2>
+              <p class="lead" data-i18n="cuerpo.p1" data-revelar style="--i:1">Peso, cintura y grasa corporal en una gráfica sencilla. Con la media de cada semana, porque el peso de un día suelto engaña.</p>
+              <p class="solo-otro" data-i18n="cuerpo.android" data-revelar style="--i:2">Si tienes una báscula o un reloj conectados al móvil, los pasos y el peso se apuntan solos (a través de Health Connect, la app de salud de Android, y solo si tú lo activas).</p>
+              <p class="solo-apple" data-i18n="cuerpo.iphone" data-revelar style="--i:2">En el iPhone, el peso y los pasos los apuntas tú en un momento.</p>
+            </div>
+            <figure class="col-movil" data-revelar="movil" style="--i:1">
+              <div class="movil" data-ui><div class="pantalla"><div class="barra-estado" aria-hidden="true"><span>20:30</span><i class="isla"></i><span class="bat"></span></div>
+                <img src="landing/capturas/es/cuerpo.webp" width="640" height="1385" loading="lazy" decoding="async" data-i18n-attr="alt:cuerpo.alt" alt="Progreso, pestaña Cuerpo: el peso baja de 85,2 a 82,3 kg en siete semanas y la cintura, de 98 a 95 cm." /></div></div>
+              <figcaption data-i18n="comun.datos-ejemplo">Datos de ejemplo.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <article class="sec f-piedra2 inv solo-otro" aria-labelledby="t-reloj">
+          <div class="marco rejilla">
+            <div class="col-texto">
+              <h2 id="t-reloj" data-i18n="reloj.titulo" data-revelar>El descanso te avisa, también en el reloj.</h2>
+              <p class="lead" data-i18n="reloj.texto" data-revelar style="--i:1">Suena al acabar aunque lleves el móvil en el bolsillo. Si tienes un reloj conectado al móvil, vibra en la muñeca.</p>
+            </div>
+            <figure class="col-movil" data-revelar style="--i:1">
+              <div class="reloj" aria-hidden="true" data-reloj-bloque data-ui>
+                <div class="reloj-cara">
+                  <svg class="ico"><use href="#i-bell-ringing"/></svg>
+                  <b data-i18n="reloj.terminado">Descanso terminado</b>
+                  <span data-i18n="reloj.serie">Serie 2</span>
+                </div>
+              </div>
+              <figcaption class="rotulo" data-i18n="reloj.etiqueta">Dibujo · en Android</figcaption>
+            </figure>
           </div>
         </article>
       </section>
 
       <!-- ===== Privacidad ===== -->
-      <section class="seccion dia alt privacidad" id="privacidad" aria-labelledby="t-datos">
-        <div class="contenedor centrado">
-          <h2 id="t-datos" data-i18n="privacidad.titulo">Tus datos se quedan en tu móvil.</h2>
-          <p class="intro" data-i18n="privacidad.intro">No hay cuentas ni nube. No hay nada que robar ni que vender.</p>
-          <ul class="garantias-datos">
-            <li data-revelar style="--i:0"><svg class="ico" aria-hidden="true"><use href="#i-eye-slash"/></svg><div><b data-i18n="privacidad.pagina.titulo">Esta página tampoco te sigue</b><span data-i18n="privacidad.pagina.texto">No tiene analíticas ni cookies.</span></div></li>
-            <li data-revelar style="--i:1"><svg class="ico" aria-hidden="true"><use href="#i-wifi-slash"/></svg><div><b data-i18n="privacidad.internet.titulo">Funciona sin internet</b><span data-i18n="privacidad.internet.texto">Solo el escáner necesita conexión: busca el código en Open Food Facts y carga de allí la foto del producto. Nada más sale del móvil.</span></div></li>
-            <li data-revelar style="--i:2"><svg class="ico" aria-hidden="true"><use href="#i-user-circle-minus"/></svg><div><b data-i18n="privacidad.cuentas.titulo">Sin cuentas ni contraseñas</b><span data-i18n="privacidad.cuentas.texto">Abres la app y empiezas.</span></div></li>
-            <li data-revelar style="--i:3"><svg class="ico" aria-hidden="true"><use href="#i-shield-check"/></svg><div><b data-i18n="privacidad.copia.titulo">Tu copia, en tu archivo</b><span data-i18n="privacidad.copia.texto">Guarda una copia cuando quieras y llévatela a otro móvil.</span></div></li>
+      <section class="sec f-piedra priv" id="privacidad" aria-labelledby="t-datos">
+        <div class="marco">
+          <div class="rejilla">
+            <div class="col-texto">
+              <h2 id="t-datos" data-i18n="privacidad.titulo" data-revelar>Tus datos se quedan en tu móvil.</h2>
+              <p class="lead" data-i18n="privacidad.intro" data-revelar style="--i:1">No hay cuentas ni nube. No hay nada que robar ni que vender.</p>
+            </div>
+            <ul class="ceros" data-ceros>
+              <li class="cero" style="--i:0"><span class="n" aria-hidden="true"><span class="rodillo"></span></span><span class="l" data-i18n-html="privacidad.cero.cuentas"><span class="oculto">Cero </span>cuentas que crear</span></li>
+              <li class="cero" style="--i:1"><span class="n" aria-hidden="true"><span class="rodillo"></span></span><span class="l" data-i18n-html="privacidad.cero.anuncios"><span class="oculto">Cero </span>anuncios</span></li>
+              <li class="cero" style="--i:2"><span class="n" aria-hidden="true"><span class="rodillo"></span></span><span class="l" data-i18n-html="privacidad.cero.nube"><span class="oculto">Cero </span>datos en la nube</span></li>
+              <li class="cero" style="--i:3"><span class="n" aria-hidden="true"><span class="rodillo"></span></span><span class="l" data-i18n-html="privacidad.cero.cookies"><span class="oculto">Cero </span>cookies en esta página</span></li>
+            </ul>
+          </div>
+          <ul class="datos-lista">
+            <li data-revelar style="--i:0"><h3 data-i18n="privacidad.internet.titulo">Funciona sin internet</h3><p data-i18n="privacidad.internet.texto">Solo el escáner necesita conexión: busca el código en Open Food Facts y carga de allí la foto del producto. Nada más sale del móvil.</p></li>
+            <li data-revelar style="--i:1"><h3 data-i18n="privacidad.cuentas.titulo">Sin cuentas ni contraseñas</h3><p data-i18n="privacidad.cuentas.texto">Abres la app y empiezas.</p></li>
+            <li data-revelar style="--i:2"><h3 data-i18n="privacidad.copia.titulo">Tu copia, en tu archivo</h3><p data-i18n="privacidad.copia.texto">Guarda una copia cuando quieras y llévatela a otro móvil.</p></li>
+            <li data-revelar style="--i:3"><h3 data-i18n="privacidad.pagina.titulo">Esta página tampoco te sigue</h3><p data-i18n="privacidad.pagina.texto">No tiene analíticas ni cookies.</p></li>
           </ul>
-          <div class="si-pierdes" data-revelar>
-            <svg class="ico" aria-hidden="true"><use href="#i-info"/></svg>
-            <p data-i18n-html="privacidad.pierdo"><b>¿Y si pierdo el móvil?</b> Como nadie más tiene tus datos, se perderían con él: haz una copia de vez en cuando (la app te lo recuerda). <a href="#cambiar" data-abrir="d-cambiar">Cómo se hace</a></p>
+          <p class="pierdo" data-i18n-html="privacidad.pierdo" data-revelar><b>¿Y si pierdo el móvil?</b> Como nadie más tiene tus datos, se perderían con él: haz una copia de vez en cuando (la app te lo recuerda). <a href="#cambiar" data-abrir="d-cambiar">Cómo se hace</a></p>
+        </div>
+      </section>
+
+      <!-- ===== Quién la ha hecho: un trozo de noche dentro del día ===== -->
+      <section class="f-piedra autor-sec" aria-labelledby="t-quien">
+        <div class="marco">
+          <div class="autor-panel" data-revelar>
+            <h2 id="t-quien" data-i18n="autor.titulo">Hecha por alguien que entrena temprano.</h2>
+            <div class="autor-der">
+              <p class="autor-cita" data-i18n-html="autor.texto">La hice para mí. Entreno temprano, tres días a la semana, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.</p>
+              <p class="autor-firma" translate="no">Jowy</p>
+              <div class="autor-acc">
+                <a class="boton-sec" href="#novedades" data-abrir="d-novedades" data-i18n="autor.novedades"><svg class="ico" aria-hidden="true"><use href="#i-list-bullets"/></svg>Novedades de cada versión</a>
+              </div>
+              <p class="autor-codigo" data-i18n-html="autor.codigo">El código es público: cualquiera que sepa programar puede ver lo que hace la app por dentro, y usarlo o cambiarlo diciendo quién lo hizo. Lo único que no se puede es venderlo. <a href="https://github.com/Jowy05/JowyFit/tree/prod">Ver el código</a></p>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- ===== Quién la ha hecho ===== -->
-      <section class="seccion dia" aria-labelledby="t-quien">
-        <div class="contenedor">
-          <h2 id="t-quien" data-i18n="autor.titulo">Hecha por alguien que entrena temprano.</h2>
-          <article class="ficha ficha-autor" data-revelar>
-            <p class="autor-texto" data-i18n-html="autor.texto">La hice para mí. Entreno temprano, tres días a la semana, y quería abrir el móvil y saber qué tocaba sin pensar. También pensé en mi padre: si él la entiende sin ayuda, está bien hecha.</p>
-            <p class="autor-firma" translate="no">Jowy</p>
-            <div class="botones-sec">
-              <a class="boton-sec" href="#novedades" data-abrir="d-novedades" data-i18n="autor.novedades"><svg class="ico" aria-hidden="true"><use href="#i-list-bullets"/></svg>Novedades de cada versión</a>
-            </div>
-            <p class="nota-peq" data-i18n-html="autor.codigo">El código es público: cualquiera que sepa programar puede ver lo que hace la app por dentro, y usarlo o cambiarlo diciendo quién lo hizo. Lo único que no se puede es venderlo. <a href="https://github.com/Jowy05/JowyFit/tree/prod">Ver el código</a></p>
-          </article>
-        </div>
-      </section>
-
       <!-- ===== Preguntas frecuentes ===== -->
-      <section class="seccion dia alt" id="instalar" aria-labelledby="t-preguntas">
-        <div class="contenedor estrecho">
+      <section class="sec f-piedra2 faq" id="instalar" aria-labelledby="t-preguntas">
+        <div class="marco rejilla">
           <h2 id="t-preguntas" data-i18n="faq.titulo">Lo que te puedes preguntar.</h2>
           <div class="preguntas">
             <details id="d-android" class="solo-otro">
@@ -489,6 +535,21 @@
                 </ol>
                 <p class="rotulo-dibujo" data-i18n="faq.android.rotulo">Dibujo orientativo: en tu móvil puede verse un poco distinto.</p>
                 <p data-i18n-html="faq.android.p2">Puedes quitar ese permiso después, en los ajustes del móvil. Funciona en Android 8 o superior. <a href="#segura" data-abrir="d-segura">¿Es seguro instalarla?</a></p>
+              </div>
+            </details>
+            <details id="d-segura" class="solo-otro">
+              <summary id="segura"><span data-i18n="segura.titulo">¿Es seguro instalarla?</span><svg class="ico chev" aria-hidden="true"><use href="#i-caret-down"/></svg></summary>
+              <div class="respuesta">
+                <p data-i18n="segura.p1">Se instala con un archivo de esta página, no desde Google Play. Por eso el móvil te pide permiso y te avisa: lo hace con cualquier app de fuera de la tienda.</p>
+                <ul class="puntos">
+                  <li data-i18n-html="segura.permisos"><b>Pide pocos permisos.</b> Avisos, para que suene el final del descanso; la cámara, solo para escanear códigos de barras. Y, solo si tú lo activas, leer tus pasos, tu peso y tu grasa de Health Connect, la app de salud de Android.</li>
+                  <li data-i18n-html="segura.no-pide"><b>No pide</b> tu ubicación, tus contactos ni el micrófono.</li>
+                  <li data-i18n-html="segura.datos"><b>Tus datos no salen del móvil.</b> Solo usa internet con el escáner: busca el código de barras en Open Food Facts (una lista pública de alimentos) y enseña la foto del producto desde sus servidores. Envía ese número y nada más.</li>
+                  <li data-i18n-html="segura.play-protect"><b>Google Play Protect</b>, que viene en los móviles Android, puede revisarla al instalarla, como a cualquier app.</li>
+                  <li data-i18n-html="segura.firma"><b>Siempre con la misma firma:</b> el móvil solo deja instalar encima versiones hechas por la misma persona.</li>
+                  <li hidden data-huella data-i18n-html="segura.huella"><b>Para comprobar que es el archivo de verdad:</b> su huella (SHA-256) es <code class="huella" data-huella-valor></code>. Si la calculas con el archivo que has descargado y sale igual, es exactamente el que se publicó y nadie lo ha cambiado.</li>
+                  <li data-i18n-html="segura.quitar"><b>Se quita como cualquier app:</b> mantén pulsado el icono y toca «Desinstalar».</li>
+                </ul>
               </div>
             </details>
             <details class="solo-otro">
@@ -583,14 +644,14 @@
         </div>
       </section>
 
-      <!-- ===== Cierre ===== -->
-      <section class="noche cierre" aria-labelledby="t-cierre">
-        <div class="contenedor centrado">
-          <div class="sol-logo" aria-hidden="true" data-revelar="escala">
-            <img src="iconos/icono-192.png" width="160" height="160" alt="" loading="lazy" decoding="async" />
-          </div>
+
+      <!-- ===== Cierre: el sol ya ha salido ===== -->
+      <section class="cierre f-c6" aria-labelledby="t-cierre" data-cierre>
+        <div class="disco" aria-hidden="true"></div>
+        <div class="marco">
+          <img class="icono-sol" src="iconos/icono-192.png" width="160" height="160" alt="" loading="lazy" decoding="async" />
           <h2 id="t-cierre" data-i18n="cierre.titulo">Empieza suave. Sigue constante.</h2>
-          <div class="botones" data-revelar>
+          <div class="cierre-botones">
             <a class="boton-go solo-otro" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk" data-apk>
               <svg class="ico ico-bajar" aria-hidden="true"><use href="#i-download-simple"/></svg>
               <span class="boton-txt"><span class="t1" data-i18n="cta.descargar">Descargar la app gratis</span><span class="t2" aria-hidden="true" data-i18n="cta.empezada">Descarga empezada</span></span>
@@ -599,7 +660,7 @@
             <a class="boton-demo" href="Demo"><span class="bd-play"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span><span data-i18n-html="cta.demo">Ver la demo <small class="solo-otro">· 1&nbsp;minuto</small><small class="solo-apple">· minuto y medio</small></span></a>
           </div>
           <p class="linea-version solo-otro" data-version>Android 8 o superior</p>
-          <p class="nota-hero solo-apple" data-i18n="cierre.iphone">En iPhone y iPad, ábrela en Safari y déjala en tu pantalla de inicio.</p>
+          <p class="nota-cierre solo-apple" data-i18n="cierre.iphone">En iPhone y iPad, ábrela en Safari y déjala en tu pantalla de inicio.</p>
         </div>
       </section>
     </main>
@@ -607,12 +668,13 @@
     <p class="oculto" aria-live="polite" data-aviso-descarga></p>
 
     <footer class="pie">
-      <div class="contenedor">
+      <div class="marco">
         <p data-i18n-html="pie.enlaces"><b translate="no">JowyFit</b> · Gratis y con el código a la vista · <a href="#novedades" data-abrir="d-novedades">Novedades</a> · <a href="privacypolicy.html">Política de privacidad</a></p>
         <p class="pie-creditos" data-i18n-html="pie.creditos">Créditos: los ejercicios y sus dibujos son de RepDB; los alimentos, de Open Food Facts. Iconos Phosphor y letra Barlow. <span data-version-corta></span> · Licencia PolyForm Noncommercial · <a href="https://github.com/Jowy05/JowyFit/tree/prod">Código</a></p>
       </div>
     </footer>
 
+    <!-- El botón, a mano del pulgar (solo en el móvil): sale cuando el del principio se va y se esconde en el cierre. -->
     <div class="barra-fija" aria-hidden="true" data-barra>
       <a class="boton-go boton-barra solo-otro" href="https://github.com/Jowy05/JowyFit/releases/latest/download/JowyFit.apk" tabindex="-1" data-apk-barra>
         <svg class="ico" aria-hidden="true"><use href="#i-download-simple"/></svg><span data-i18n="barra.descargar">Descargar gratis</span>

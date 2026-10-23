@@ -511,10 +511,10 @@ const CABECERA = sel => `
   })
   return f`
 
-/** Los siete días de «Así empiezas», en una sola fila. */
+/** Los siete días de «Tu plan» (los que se ven: en el móvil, los de la primera historia), en una sola fila. */
 const DIAS = `
-  const ds = [...document.querySelectorAll('.dias li')].map(d => d.getBoundingClientRect().top)
-  return ds.length === 7 && Math.max(...ds) - Math.min(...ds) < 2 ? [] : ['los días de «Así empiezas» no caben en una fila']`
+  const ds = [...document.querySelectorAll('[data-plan] .plan-dias button')].filter(b => b.getBoundingClientRect().width > 0).map(d => d.getBoundingClientRect().top)
+  return ds.length === 7 && Math.max(...ds) - Math.min(...ds) < 2 ? [] : ['los días de «Tu plan» no caben en una fila (' + ds.length + ')']`
 
 for (const l of IDIOMAS) {
   await prueba(`${l} a 360 y 390 px: nada se sale de la landing ni de la demo y las cabeceras caben en una línea`, async () => {

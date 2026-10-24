@@ -4,6 +4,7 @@ import type { Gimnasio, Medicion, Perfil, Rutina } from '../tipos'
 import { guardarAjustes, guardarPerfil } from '../repos'
 import { catalogoCargado } from '../../catalogo/catalogo'
 import { generarRutina } from '../../dominio/generador'
+import { primerEntrenoDesde } from '../../dominio/semana'
 
 export type DatosAlta = {
   /** El gimnasio del alta. Su `creado` hace de clave: repetir el alta lo actualiza en vez de crear otro. */
@@ -26,7 +27,8 @@ export async function completarAlta(a: DatosAlta): Promise<{ perfil: Perfil; rut
     const rutina = generarRutina({ perfil, gimnasio: { ...a.gimnasio, id: gymId }, marcas: new Map(), ejercicios: catalogoCargado()?.ejercicios ?? [], calibracion: true })
     const anterior = previo ? await db.rutinas.filter(r => r.activa && r.gimnasioId === gymId).last() : undefined
     await db.rutinas.put(anterior ? { ...rutina, id: anterior.id } : rutina)
-    await guardarAjustes({ gimnasioActivo: gymId, inicio: a.hoy })
+    // La semana 1 es la del primer entreno: con el alta en domingo y el primero el martes, el lunes aún es la semana 1.
+    await guardarAjustes({ gimnasioActivo: gymId, inicio: primerEntrenoDesde(rutina as Rutina, a.hoy)?.fecha ?? a.hoy })
     return { perfil, rutina }
   })
 }

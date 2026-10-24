@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-6-1.cab': "<b>Versión 0.6.1</b> · 24 de octubre de 2026",
+  'nov.0-6-1.texto': "Arreglos: los avisos de la copia y de la foto ya no se aplazan cada vez que abres la app; el aviso del descanso vuelve si el móvil cierra la app; los escaneados sin conexión se buscan solos al volver la cobertura; y si te das de alta en fin de semana, la semana 1 empieza con tu primer entreno.",
   'nov.0-6-0.cab': "<b>Versión 0.6.0</b> · 24 de octubre de 2026",
   'nov.0-6-0.texto': "Los ejercicios, en catalán: el nombre, los pasos y los consejos de los más de 600. Y en inglés, los récords pasan a llamarse «PR».",
   'nov.0-5-0.cab': '<b>Versión 0.5.0</b> · 23 de octubre de 2026',

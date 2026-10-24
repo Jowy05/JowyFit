@@ -4,6 +4,7 @@ import type { Foto, Guardado, Medicion, Meta } from '../tipos'
 import { guardarAjustes } from '../repos'
 import type { grasaTardia } from '../../dominio/bascula'
 import { PASOS_POR_KM } from '../../dominio/tendencias'
+import { reprogramarNotificaciones } from './avisos'
 
 /** Guarda una medición y devuelve cómo deshacerlo. */
 export async function apuntarMedicion(m: Medicion): Promise<() => void> {
@@ -71,12 +72,15 @@ export async function guardarPasosAuto(dias: Record<string, number>) {
   })
 }
 
+// El aviso de la foto cuenta desde la última: al hacer o borrar una, se vuelve a calcular.
 export async function guardarFoto(f: Omit<Foto, 'id'>) {
   await db.fotos.add(f)
+  await reprogramarNotificaciones()
 }
 
 export async function borrarFoto(id: number) {
   await db.fotos.delete(id)
+  await reprogramarNotificaciones()
 }
 
 export async function guardarMeta(m: Meta) {

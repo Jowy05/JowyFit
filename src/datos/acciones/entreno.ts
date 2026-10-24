@@ -20,6 +20,18 @@ function avisarFin(hasta: number, titulo: string, texto: string) {
   void programar([{ id: ID, titulo, texto, cuando: new Date(hasta) }], [ID])
 }
 
+const avisarFinDeSerie = (s: Sesion, hasta: number) =>
+  avisarFin(hasta, t('Descanso terminado'), t('{ejercicio} · siguiente serie', { ejercicio: nombreEjercicio(s.ejercicios[indiceActual(s)]?.ejercicio) }))
+
+/** Al abrir la app o volver a ella: el aviso del descanso en marcha, otra vez (Android lo borra si cierra la app a la fuerza). */
+export async function reponerAvisoDescanso() {
+  const s = await db.sesiones.where('estado').equals('curso').first()
+  if (!s?.descansoHasta || s.descansoHasta <= Date.now()) return
+  const calentando = !s.ejercicios.some(e => e.series.some(x => x.hecha))
+  if (calentando) avisarFin(s.descansoHasta, t('Calentamiento terminado'), t('A por la primera serie'))
+  else avisarFinDeSerie(s, s.descansoHasta)
+}
+
 export async function guardarSesion(s: Sesion) {
   await db.sesiones.put(s)
 }
@@ -66,7 +78,7 @@ export async function apuntarHecha(s: Sesion, idx: number, datos: Pick<Serie, 'p
   const r = apuntarSerie(s, idx, datos, previas)
   if (!r) return null
   const { sesion } = r
-  if (sesion.descansoHasta) avisarFin(sesion.descansoHasta, t('Descanso terminado'), t('{ejercicio} · siguiente serie', { ejercicio: nombreEjercicio(sesion.ejercicios[indiceActual(sesion)]?.ejercicio) }))
+  if (sesion.descansoHasta) avisarFinDeSerie(sesion, sesion.descansoHasta)
   await guardarSesion(sesion)
   return r.record
 }

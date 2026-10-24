@@ -1,6 +1,6 @@
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
-import { estadoSemana, racha, tarjetaHoy } from '../src/dominio/semana'
+import { estadoSemana, primerEntrenoDesde, racha, tarjetaHoy } from '../src/dominio/semana'
 import type { EjercicioSesion, Rutina, Sesion } from '../src/datos/tipos'
 
 const rutina = (creada: string) => ({
@@ -59,5 +59,17 @@ describe('semana: casos límite', () => {
     const vacia = { ...rutina, dias: [] }
     expect(estadoSemana(vacia, [], '2026-10-14').every(d => d.estado === 'descanso')).toBe(true)
     expect(racha(vacia, [], '2026-10-14')).toBe(0)
+  })
+})
+
+describe('primerEntrenoDesde', () => {
+  // Rutina de martes (A) y jueves (B).
+  it('el primer día fijo desde la fecha, también la semana siguiente', () => {
+    expect(primerEntrenoDesde(rutina('2026-10-01T10:00:00.000Z'), '2026-10-13')).toMatchObject({ fecha: '2026-10-13', dia: { letra: 'A' } })
+    expect(primerEntrenoDesde(rutina('2026-10-01T10:00:00.000Z'), '2026-10-16')).toMatchObject({ fecha: '2026-10-20', dia: { letra: 'A' } })
+    expect(primerEntrenoDesde(rutina('2026-10-01T10:00:00.000Z'), '2026-10-25')).toMatchObject({ fecha: '2026-10-27' })
+  })
+  it('sin rutina o sin días fijos, nada', () => {
+    expect(primerEntrenoDesde(null, '2026-10-13')).toBeNull()
   })
 })

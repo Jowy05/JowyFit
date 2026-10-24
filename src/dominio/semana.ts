@@ -1,6 +1,6 @@
 // Estado de la semana: qué toca cada día, qué se hizo y qué se perdió.
 import type { DiaRutina, Rutina, Sesion } from '../datos/tipos'
-import { aISO, deISO, diaSemana, semanaDe } from './fechas'
+import { aISO, deISO, diaSemana, semanaDe, sumarDias } from './fechas'
 
 export type Recolocada = { fecha: string; letra: string; desde: string }
 
@@ -22,6 +22,16 @@ function planDe(r: Rutina | null | undefined, fecha: string, recolocadas: Recolo
   if (fijo) return { dia: fijo, opcional: false }
   const opc = r.dias.find(d => d.opcional && d.dia === ds)
   return opc ? { dia: opc, opcional: true } : { opcional: false }
+}
+
+/** El primer entreno fijo desde `desde` (incluido), en las dos semanas siguientes: fecha y día de la rutina. */
+export function primerEntrenoDesde(r: Rutina | null | undefined, desde: string): { fecha: string; dia: DiaRutina } | null {
+  for (let i = 0; i < 14; i++) {
+    const fecha = sumarDias(desde, i)
+    const { dia, opcional } = planDe(r, fecha, [])
+    if (dia && !opcional) return { fecha, dia }
+  }
+  return null
 }
 
 export function estadoSemana<S extends Sesion>(r: Rutina | null | undefined, sesiones: S[], hoy: string, recolocadas: Recolocada[] = []): EstadoDia<S>[] {

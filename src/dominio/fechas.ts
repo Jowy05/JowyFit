@@ -63,6 +63,23 @@ export function sumarDias(s: string, n: number): string {
   return aISO(d)
 }
 
+/**
+ * El próximo aviso de algo que toca cada `dias` días contando desde `desde` (AAAA-MM-DD), a la hora `hhmm`.
+ * Si ya tocaba, el siguiente de la misma serie: no se mueve por abrir la app cada día.
+ */
+export function proximoAviso(desde: string, dias: number, hhmm: string, ahora = new Date()): Date {
+  const paso = Math.max(1, Math.round(dias))
+  const a = (fecha: string) => {
+    const d = deISO(fecha)
+    const m = minutosDe(hhmm)
+    d.setHours(Math.floor(m / 60), m % 60, 0, 0)
+    return d
+  }
+  let fecha = sumarDias(desde, paso)
+  while (a(fecha).getTime() <= ahora.getTime()) fecha = sumarDias(fecha, paso)
+  return a(fecha)
+}
+
 export function lunesDe(s: string): string {
   return sumarDias(s, -diaSemana(deISO(s)))
 }

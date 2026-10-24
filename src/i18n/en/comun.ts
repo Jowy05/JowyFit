@@ -69,6 +69,7 @@ export default {
   'Tu dosis': 'Your dose',
   'Copia de seguridad': 'Backup',
   'Hace una semana de la última copia. Tus datos solo están en este móvil.': "It's been a week since your last backup. Your data is only on this phone.",
+  'Aún no has hecho ninguna copia. Tus datos solo están en este móvil.': "You haven't made a backup yet. Your data is only on this phone.",
   '¿Voy bien?': 'Am I on track?',
   'Tu semana, en 10 segundos': 'Your week, in 10 seconds',
   'Foto de progreso': 'Progress photo',

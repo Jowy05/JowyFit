@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-6-1.cab': "<b>Version 0.6.1</b> · October 24, 2026",
+  'nov.0-6-1.texto': "Fixes: the backup and photo reminders no longer get pushed back every time you open the app; the rest reminder comes back if your phone closes the app; items scanned offline are looked up on their own when you’re back online; and if you sign up on a weekend, week 1 starts with your first workout.",
   'nov.0-6-0.cab': "<b>Version 0.6.0</b> · October 24, 2026",
   'nov.0-6-0.texto': "Exercises in Catalan: the name, steps, and tips for all 600+. And in English, personal records are now called “PR.”",
   'nov.0-5-0.cab': '<b>Version 0.5.0</b> · October 23, 2026',

@@ -26,7 +26,7 @@ export function MiPlan() {
   const enCurso = useSesionEnCurso()
   const hoy = hoyISO()
   const ds = diaSemana(deISO(hoy))
-  const crumb = a.inicio ? t('Semana {n}', { n: numeroSemana(a.inicio, hoy) }) : undefined
+  const crumb = a.inicio ? t('Semana {n}', { n: Math.max(1, numeroSemana(a.inicio, hoy)) }) : undefined
   // Entrenos de calibración que cuentan: los de esta rutina y no libres (igual que en el fin del entreno).
   const sesiones = useLiveQuery(async () => (r ? contarEntrenosDeRutina(r.id) : 0), [r?.id]) ?? 0
   const unaVez = useUnaVez()

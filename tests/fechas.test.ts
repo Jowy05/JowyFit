@@ -4,7 +4,7 @@ process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import {
   DIAS, DIAS_CORTOS, MESES, MESES_CORTOS, aISO, deISO, diaSemana, diasEntre, duracion, edad, fechaCorta, fechaLarga, formatoHora,
-  horaActual, horaDe, hoyISO, lunesDe, minutosDe, numeroSemana, saludo, semanaDe, sumarDias,
+  horaActual, horaDe, hoyISO, lunesDe, minutosDe, numeroSemana, proximoAviso, saludo, semanaDe, sumarDias,
 } from '../src/dominio/fechas'
 import { estadoHora } from '../src/dominio/tiempos'
 import type { Sesion } from '../src/datos/tipos'
@@ -198,5 +198,18 @@ describe('fechas en Europa/Madrid', () => {
     const s: Sesion = { fecha: '2026-03-29', rutinaId: null, letra: 'A', nombre: 'A', gimnasioId: null, inicio, horaLimite: '06:45', version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
     const e = estadoHora(s, inicio)!
     expect(e.minutosTarde).toBe(-105)
+  })
+})
+
+describe('proximoAviso: los recordatorios cuentan desde la última vez', () => {
+  const hora = (d: Date) => `${aISO(d)} ${horaActual(d)}`
+  it('a los 7 días de la última copia, y no se mueve por abrir la app cada día', () => {
+    expect(hora(proximoAviso('2026-10-10', 7, '20:00', new Date(2026, 9, 12, 9, 0)))).toBe('2026-10-17 20:00')
+    expect(hora(proximoAviso('2026-10-10', 7, '20:00', new Date(2026, 9, 16, 9, 0)))).toBe('2026-10-17 20:00')
+  })
+  it('si ya tocaba y no se hizo, el siguiente de la misma serie (cada semana, no cada día)', () => {
+    expect(hora(proximoAviso('2026-10-10', 7, '20:00', new Date(2026, 9, 17, 21, 0)))).toBe('2026-10-24 20:00')
+    expect(hora(proximoAviso('2026-10-10', 7, '20:00', new Date(2026, 9, 17, 19, 0)))).toBe('2026-10-17 20:00')
+    expect(hora(proximoAviso('2026-09-01', 14, '19:30', new Date(2026, 9, 24, 12, 0)))).toBe('2026-10-27 19:30')
   })
 })

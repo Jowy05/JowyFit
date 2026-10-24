@@ -2,6 +2,8 @@
 import { exportar, nombreCopia } from '../datos/copias'
 import { guardarLecturasBascula, guardarPasosAuto } from '../datos/acciones/cuerpo'
 import { reprogramarNotificaciones } from '../datos/acciones/avisos'
+import { reponerAvisoDescanso } from '../datos/acciones/entreno'
+import { buscarPendientes } from '../datos/acciones/comida'
 import { leerMediciones } from '../datos/consultas'
 import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { hoyISO, sumarDias } from '../dominio/fechas'
@@ -107,6 +109,7 @@ export async function copiaAutomatica(): Promise<boolean> {
   try {
     await guardarArchivo(await nombreCopiaLibre(), await exportar())
     await guardarAjustes({ ultimaCopia: new Date().toISOString() })
+    await reprogramarNotificaciones()
     return true
   } catch { return false }
 }
@@ -117,6 +120,7 @@ export async function hacerCopiaAhora(): Promise<string> {
   const nombre = await nombreCopiaLibre()
   await guardarArchivo(nombre, bytes, 'application/zip')
   await guardarAjustes({ ultimaCopia: new Date().toISOString() })
+  await reprogramarNotificaciones()
   return nombre
 }
 
@@ -131,6 +135,7 @@ export async function copiaCompartiendo(lista?: CopiaPreparada): Promise<{ resul
   if (r === 'cancelado' || r === 'sin-gesto') return { resultado: r, copia }
   if (r === 'no-se-puede') await guardarArchivo(copia.nombre, copia.bytes, 'application/zip')
   await guardarAjustes({ ultimaCopia: new Date().toISOString() })
+  await reprogramarNotificaciones()
   return { resultado: r === 'compartido' ? 'compartido' : 'descargado', copia }
 }
 
@@ -138,9 +143,16 @@ let arrancado = false
 export function arrancarServicios(): () => void {
   if (arrancado) return () => {}
   arrancado = true
-  const tarea = () => { void sincronizarPasos(); void sincronizarBascula(); void copiaAutomatica(); void reprogramarNotificaciones() }
+  // Los escaneados sin conexión se buscan al abrir la app, al volver a ella y en cuanto vuelve la cobertura.
+  const pendientes = () => { if (navigator.onLine) void buscarPendientes().catch(() => {}) }
+  const tarea = () => {
+    void sincronizarPasos(); void sincronizarBascula(); void reponerAvisoDescanso(); pendientes()
+    // La copia automática va antes que los avisos: el de la copia cuenta desde ella.
+    void copiaAutomatica().finally(() => { void reprogramarNotificaciones() })
+  }
   tarea()
+  addEventListener('online', pendientes)
   let quitar = () => {}
   void alVolverAPrimerPlano(tarea).then(f => { quitar = f })
-  return () => { quitar(); arrancado = false }
+  return () => { quitar(); removeEventListener('online', pendientes); arrancado = false }
 }

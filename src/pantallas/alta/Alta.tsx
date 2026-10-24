@@ -7,7 +7,7 @@ import { completarAlta } from '../../datos/acciones/alta'
 import { importar } from '../../datos/copias'
 import type { Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../datos/tipos'
 import { TODAS_LAS_CLAVES } from '../../catalogo/clasificacion'
-import { estadoSemana } from '../../dominio/semana'
+import { primerEntrenoDesde } from '../../dominio/semana'
 import { DIAS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
 import { capital, decimal, enLista, leerNumero } from '../../dominio/formato'
 import { PERIMETROS, type Perimetro } from '../../dominio/medidas'
@@ -62,10 +62,8 @@ function falloSobreTi(d: Datos): Fallo | null {
 
 /** «Tu primer entreno: martes a las 5:30 · Cuerpo completo A», con la rutina recién hecha. */
 function primerEntreno(r: Omit<Rutina, 'id'>, hora: string, hoy: string): { cuando: string; nombre: string } | null {
-  const rut = r as Rutina
-  const sem = [...estadoSemana(rut, [], hoy), ...estadoSemana(rut, [], sumarDias(hoy, 7))]
-  const d = sem.find(x => x.fecha >= hoy && x.estado === 'plan' && x.dia)
-  if (!d?.dia) return null
+  const d = primerEntrenoDesde(r as Rutina, hoy)
+  if (!d) return null
   const h = formatoHora(hora)
   const cuando = d.fecha === hoy
     ? (minutosDe(horaActual()) <= minutosDe(hora) ? t('hoy a las {hora}', { hora: h }) : t('hoy mismo, cuando puedas'))

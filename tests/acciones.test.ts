@@ -39,7 +39,14 @@ describe('completarAlta', () => {
     expect((await db.rutinas.toArray()).map(r => r.gimnasioId)).toEqual([g.id])
     const a = await leerAjustes()
     expect(a.gimnasioActivo).toBe(g.id)
-    expect(a.inicio).toBe(HOY)
+    expect(a.inicio! >= HOY).toBe(true) // el día del primer entreno (ver «la semana 1 es la del primer entreno»)
+  })
+  it('la semana 1 es la del primer entreno: alta en domingo y primer entreno el martes', async () => {
+    // diasFijos [1, 3, 5]: martes, jueves y sábado.
+    await completarAlta(alta({ hoy: '2026-10-25' }))
+    expect((await leerAjustes()).inicio).toBe('2026-10-27')
+    await completarAlta(alta({ hoy: '2026-10-27' }))
+    expect((await leerAjustes()).inicio).toBe('2026-10-27')
   })
   it('repetirlo no crea otro gimnasio, ni otra rutina, ni otra medición', async () => {
     await completarAlta(alta())

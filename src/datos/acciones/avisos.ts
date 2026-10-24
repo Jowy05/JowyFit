@@ -3,7 +3,7 @@
 import { db } from '../db'
 import type { Ajustes, Perfil } from '../tipos'
 import { guardarAjustes, guardarPerfil, leerAjustes, leerPerfil, rutinaActiva } from '../repos'
-import { deISO, diaSemana, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
+import { aISO, deISO, diaSemana, hoyISO, minutosDe, proximoAviso, sumarDias } from '../../dominio/fechas'
 import { estadoSemana } from '../../dominio/semana'
 import { dosisDe } from '../../dominio/comida'
 import { cancelar, esNativo, ID_AVISO, programar, type Aviso } from '../../plataforma'
@@ -45,12 +45,22 @@ export async function reprogramarNotificaciones(): Promise<void> {
   })
   if (a.noti.batido) avisos.push({ id: ID_AVISO.batido, titulo: t('¿Batido de proteína?'), texto: t('Te ayuda a llegar a tu proteína del día'), cuando: enFecha(hoy, a.noti.batidoHora), repetirCada: 'day' })
   if (a.noti.creatina) avisos.push({ id: ID_AVISO.creatina, titulo: t('La creatina de hoy'), texto: t('{dosis}, a cualquier hora', { dosis: dosisDe(p.dosisSuplementos, 'Creatina') || t('Tu dosis') }), cuando: enFecha(hoy, a.noti.creatinaHora), repetirCada: 'day' })
-  if (a.noti.copia) avisos.push({ id: ID_AVISO.copia, titulo: t('Copia de seguridad'), texto: t('Hace una semana de la última copia. Tus datos solo están en este móvil.'), cuando: enFecha(sumarDias(hoy, 7), '20:00') })
+  // La copia y la foto cuentan desde la última (o desde el alta): reprogramar al abrir la app no las aplaza.
+  const alta = aISO(new Date(p.creado))
+  if (a.noti.copia) {
+    const desde = a.ultimaCopia ? aISO(new Date(a.ultimaCopia)) : alta
+    const texto = a.ultimaCopia ? t('Hace una semana de la última copia. Tus datos solo están en este móvil.') : t('Aún no has hecho ninguna copia. Tus datos solo están en este móvil.')
+    avisos.push({ id: ID_AVISO.copia, titulo: t('Copia de seguridad'), texto, cuando: proximoAviso(desde, 7, '20:00', new Date(ahora)) })
+  }
   if (a.noti.domingo) {
     const hoyD = diaSemana(deISO(hoy))
     avisos.push({ id: ID_AVISO.domingo, titulo: t('¿Voy bien?'), texto: t('Tu semana, en 10 segundos'), cuando: enFecha(sumarDias(hoy, (6 - hoyD + 7) % 7 || 7), '19:00'), repetirCada: 'week' })
   }
-  if (a.noti.fotos && p.fotosCadaSemanas > 0) avisos.push({ id: ID_AVISO.fotos, titulo: t('Foto de progreso'), texto: t('Misma pose y misma luz que la última'), cuando: enFecha(sumarDias(hoy, p.fotosCadaSemanas * 7), '19:30') })
+  if (a.noti.fotos && p.fotosCadaSemanas > 0) {
+    const ultima = await db.fotos.orderBy('fecha').last()
+    const desde = ultima ? ultima.fecha.slice(0, 10) : alta
+    avisos.push({ id: ID_AVISO.fotos, titulo: t('Foto de progreso'), texto: t('Misma pose y misma luz que la última'), cuando: proximoAviso(desde, p.fotosCadaSemanas * 7, '19:30', new Date(ahora)) })
+  }
   await programar(avisos.filter(x => x.cuando.getTime() > ahora || x.repetirCada))
 }
 

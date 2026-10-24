@@ -46,7 +46,8 @@ export function Inicio() {
   const tarjeta = tarjetaHoy(rutina, semana, hoy, !!enCurso, perfil.sesionPerdida === 'sabado', proxSemana)
   const tot = totalesComida(comidas)
   const d = deISO(hoy)
-  const nSemana = ajustes.inicio ? numeroSemana(ajustes.inicio, hoy) : 1
+  // Antes del primer entreno también es la semana 1.
+  const nSemana = ajustes.inicio ? Math.max(1, numeroSemana(ajustes.inicio, hoy)) : 1
   // Mientras se ve la guía «Primeros pasos» no salen «Pendientes de hoy» ni la tarjeta de pasos (dos listas casi iguales).
   const guia = usePrimerosPasos(tarjeta)
   const conGuia = guia !== null

@@ -48,6 +48,7 @@ export function Semana() {
   const domingo = dias[6]!
   const inicio = ajustes.inicio ?? perfil.creado.slice(0, 10)
   const nSemana = numeroSemana(inicio, lunes)
+  const primeraSemana = lunesDe([inicio, perfil.creado.slice(0, 10)].sort()[0]!)
 
   const datos = useLiveQuery(async () => {
     const d = await datosSemana(lunes, perfil)
@@ -59,7 +60,7 @@ export function Semana() {
   )
   const selector = (
     <div className="daysel">
-      <button className={cx('ib', nSemana <= 1 && 'dim')} aria-label={t('Semana anterior')} disabled={nSemana <= 1} onClick={() => setAtras(a => a + 1)}><Ico n="caret-left" /></button>
+      <button className={cx('ib', lunes <= primeraSemana && 'dim')} aria-label={t('Semana anterior')} disabled={lunes <= primeraSemana} onClick={() => setAtras(a => a + 1)}><Ico n="caret-left" /></button>
       <div><b>{t('Semana {n}', { n: Math.max(1, nSemana) })}</b><small>{atras === 0 ? t('Esta semana · {rango}', { rango: rango(dias) }) : rango(dias)}</small></div>
       <button className={cx('ib', atras === 0 && 'dim')} aria-label={t('Semana siguiente')} disabled={atras === 0} onClick={() => setAtras(a => Math.max(0, a - 1))}><Ico n="caret-right" /></button>
     </div>

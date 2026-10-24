@@ -69,6 +69,7 @@ export default {
   'Tu dosis': 'La teva dosi',
   'Copia de seguridad': 'Còpia de seguretat',
   'Hace una semana de la última copia. Tus datos solo están en este móvil.': "Fa una setmana de l'última còpia. Les teves dades només són en aquest mòbil.",
+  'Aún no has hecho ninguna copia. Tus datos solo están en este móvil.': 'Encara no has fet cap còpia. Les teves dades només són en aquest mòbil.',
   '¿Voy bien?': 'Vaig bé?',
   'Tu semana, en 10 segundos': 'La teva setmana, en 10 segons',
   'Foto de progreso': 'Foto de progrés',

@@ -72,8 +72,15 @@ export async function plantillaDeProducto(x: Plantilla & { codigo: string }): Pr
   })
 }
 
-/** Busca en Open Food Facts los códigos escaneados sin conexión. Devuelve cuántos encontró. */
-export async function buscarPendientes(): Promise<number> {
+let buscando: Promise<number> | null = null
+
+/** Busca en Open Food Facts los códigos escaneados sin conexión. Devuelve cuántos encontró. Si ya se está buscando, espera a esa misma búsqueda. */
+export function buscarPendientes(): Promise<number> {
+  buscando ??= buscarAhora().finally(() => { buscando = null })
+  return buscando
+}
+
+async function buscarAhora(): Promise<number> {
   const pend = await db.productos.filter(p => !!p.pendiente).toArray()
   let n = 0
   for (const [i, p] of pend.entries()) {

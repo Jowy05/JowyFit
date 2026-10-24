@@ -80,3 +80,28 @@ describe('aviso de la copia', () => {
     expect(await copia()).toBe('2026-10-29 20:00')
   })
 })
+
+describe('aviso de «a dormir»', () => {
+  // Martes (A), jueves (B) y viernes (C). Antes, la semana siguiente se miraba desde «dentro de 7 días» y sus
+  // primeros entrenos salían como perdidos: con el alta en fin de semana no quedaba ningún aviso.
+  const vispera = async (ahora: Date) => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(ahora)
+    nativo.si = true
+    await guardarPerfil({ ...perfilPorDefecto(), altaCompleta: true, creado: '2026-10-01T10:00:00.000Z', horaDormir: '22:00' })
+    await db.rutinas.add({ creada: '2026-10-01T10:00:00.000Z', activa: true, estructura: 'x', porque: [], calibracion: false, gimnasioId: null, dias: [
+      { letra: 'A', nombre: 'A', dia: 1, opcional: false, bloques: [] }, { letra: 'B', nombre: 'B', dia: 3, opcional: false, bloques: [] }, { letra: 'C', nombre: 'C', dia: 4, opcional: false, bloques: [] },
+    ] })
+    await reprogramarNotificaciones()
+    return programados().filter(x => x.id >= ID_AVISO.dormir && x.id < ID_AVISO.dormir + 14).map(x => `${aISO(x.cuando)} ${horaActual(x.cuando)}`)
+  }
+  it('con el alta un sábado, la víspera de cada entreno de la semana que viene', async () => {
+    expect(await vispera(new Date(2026, 9, 24, 18, 0))).toEqual(['2026-10-26 21:00', '2026-10-28 21:00', '2026-10-29 21:00'])
+  })
+  it('un jueves por la noche: el viernes y toda la semana siguiente (también el martes)', async () => {
+    expect(await vispera(new Date(2026, 9, 22, 21, 30))).toEqual(['2026-10-26 21:00', '2026-10-28 21:00', '2026-10-29 21:00'])
+  })
+  it('un miércoles: el jueves y el viernes de esta semana, y los tres de la siguiente', async () => {
+    expect(await vispera(new Date(2026, 9, 21, 12, 0))).toEqual(['2026-10-21 21:00', '2026-10-22 21:00', '2026-10-26 21:00', '2026-10-28 21:00', '2026-10-29 21:00'])
+  })
+})

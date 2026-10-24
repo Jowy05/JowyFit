@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-7-1.cab': "<b>Version 0.7.1</b> · October 24, 2026",
+  'nov.0-7-1.texto': "Fix: next week’s bedtime reminders are no longer lost (signing up on a weekend left none), and after a workout, “next” really is the next one.",
   'nov.0-7-0.cab': "<b>Version 0.7.0</b> · October 24, 2026",
   'nov.0-7-0.texto': "Create your own exercises: for anything that isn’t on the list, with its name, what it works, the equipment, and how you log it (plus a photo and notes, if you like). They’re marked “Yours,” go into your plan and workouts like any other, and if you delete one, what you’ve done stays in your history.",
   'nov.0-6-1.cab': "<b>Version 0.6.1</b> · October 24, 2026",

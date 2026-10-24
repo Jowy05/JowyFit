@@ -1,6 +1,6 @@
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
-import { estadoSemana, primerEntrenoDesde, racha, tarjetaHoy } from '../src/dominio/semana'
+import { entrenosPrevistos, estadoSemana, primerEntrenoDesde, racha, tarjetaHoy } from '../src/dominio/semana'
 import type { EjercicioSesion, Rutina, Sesion } from '../src/datos/tipos'
 
 const rutina = (creada: string) => ({
@@ -72,4 +72,20 @@ describe('primerEntrenoDesde', () => {
   it('sin rutina o sin días fijos, nada', () => {
     expect(primerEntrenoDesde(null, '2026-10-13')).toBeNull()
   })
+})
+
+describe('entrenosPrevistos', () => {
+  // Martes (A) y jueves (B). La semana siguiente cuenta entera, también los días anteriores al de hoy.
+  it('después de hoy: lo que queda de esta semana y toda la siguiente', () => {
+    const r = rutina('2026-10-01T10:00:00.000Z')
+    expect(entrenosPrevistos(r, '2026-10-14').map(d => d.fecha)).toEqual(['2026-10-15', '2026-10-20', '2026-10-22'])
+    expect(entrenosPrevistos(r, '2026-10-16').map(d => d.fecha)).toEqual(['2026-10-20', '2026-10-22'])
+    expect(entrenosPrevistos(r, '2026-10-18').map(d => d.fecha)).toEqual(['2026-10-20', '2026-10-22'])
+  })
+  it('una sesión pasada a otro día de la semana siguiente también cuenta', () => {
+    const r = rutina('2026-10-01T10:00:00.000Z')
+    expect(entrenosPrevistos(r, '2026-10-16', [{ fecha: '2026-10-24', letra: 'B', desde: '2026-10-22' }]).map(d => `${d.fecha} ${d.dia?.letra}`))
+      .toEqual(['2026-10-20 A', '2026-10-22 B', '2026-10-24 B'])
+  })
+  it('sin rutina, nada', () => expect(entrenosPrevistos(null, '2026-10-14')).toEqual([]))
 })

@@ -4,7 +4,7 @@ import { db } from '../db'
 import type { Ajustes, Perfil } from '../tipos'
 import { guardarAjustes, guardarPerfil, leerAjustes, leerPerfil, rutinaActiva } from '../repos'
 import { aISO, deISO, diaSemana, hoyISO, minutosDe, proximoAviso, sumarDias } from '../../dominio/fechas'
-import { estadoSemana } from '../../dominio/semana'
+import { entrenosPrevistos } from '../../dominio/semana'
 import { dosisDe } from '../../dominio/comida'
 import { cancelar, esNativo, ID_AVISO, programar, type Aviso } from '../../plataforma'
 import { t } from '../../i18n'
@@ -30,7 +30,7 @@ export async function reprogramarNotificaciones(): Promise<void> {
   const hoy = hoyISO()
   // 1 h antes de dormir, la víspera de cada entreno de las dos próximas semanas.
   if (a.noti.dormir && r) {
-    const dias = [...estadoSemana(r, [], hoy, a.recolocadas), ...estadoSemana(r, [], sumarDias(hoy, 7), a.recolocadas)].filter(d => d.estado === 'plan' && d.fecha > hoy && d.dia)
+    const dias = entrenosPrevistos(r, hoy, a.recolocadas).filter(d => d.dia)
     dias.slice(0, 14).forEach((d, i) => {
       const vispera = sumarDias(d.fecha, -1)
       const cuando = enFecha(vispera, p.horaDormir)

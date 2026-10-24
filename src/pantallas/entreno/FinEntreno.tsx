@@ -5,8 +5,8 @@ import { contarEntrenosDeRutina, leerSesion, sesionesHechas } from '../../datos/
 import { historialEn } from '../../dominio/progresion'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { resumen } from '../../dominio/sesion'
-import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO, sumarDias } from '../../dominio/fechas'
-import { estadoSemana } from '../../dominio/semana'
+import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO } from '../../dominio/fechas'
+import { entrenosPrevistos } from '../../dominio/semana'
 import { capital, kg } from '../../dominio/formato'
 import { terminarEntreno } from '../../datos/acciones/entreno'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
@@ -59,8 +59,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const res = resumen({ ...s, fin })
   const logros = s.ejercicios.flatMap(e => e.series.filter(x => x.record).map(x => ({ e, x })))
   const hoy = hoyISO()
-  const sem = r ? [...estadoSemana(r, [], hoy, ajustes.recolocadas), ...estadoSemana(r, [], sumarDias(hoy, 7), ajustes.recolocadas)] : []
-  const prox = sem.find(d => d.fecha > hoy && d.estado === 'plan')
+  const prox = entrenosPrevistos(r, hoy, ajustes.recolocadas)[0]
 
   // Un doble toque en «Guardar» no abre dos veces la rutina definitiva ni vuelve dos veces a Inicio.
   const guardar = unaVez(async () => {

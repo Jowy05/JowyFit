@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-7-1.cab': "<b>Versión 0.7.1</b> · 24 de octubre de 2026",
+  'nov.0-7-1.texto': "Arreglo: los avisos de «a dormir» de la semana que viene ya no se pierden (con el alta en fin de semana no salía ninguno), y al acabar un entreno el «próximo» es de verdad el siguiente.",
   'nov.0-7-0.cab': "<b>Versión 0.7.0</b> · 24 de octubre de 2026",
   'nov.0-7-0.texto': "Crea tus propios ejercicios: para lo que no está en la lista, con su nombre, qué trabaja, con qué y cómo lo apuntas (y una foto y notas, si quieres). Salen con la marca «Tuyo», se añaden al plan y al entreno como los demás y, si los borras, lo que ya hiciste se queda en el historial.",
   'nov.0-6-1.cab': "<b>Versión 0.6.1</b> · 24 de octubre de 2026",

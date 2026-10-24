@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-7-1.cab': "<b>Versió 0.7.1</b> · 24 d’octubre del 2026",
+  'nov.0-7-1.texto': "Arranjament: els avisos d’«a dormir» de la setmana vinent ja no es perden (amb l’alta el cap de setmana no en sortia cap), i en acabar un entrenament el «pròxim» és de debò el següent.",
   'nov.0-7-0.cab': "<b>Versió 0.7.0</b> · 24 d’octubre del 2026",
   'nov.0-7-0.texto': "Crea els teus propis exercicis: per al que no és a la llista, amb el seu nom, què treballa, amb què i com l’apuntes (i una foto i notes, si vols). Surten amb la marca «Teu», s’afegeixen al pla i a l’entrenament com els altres i, si els esborres, el que ja has fet es queda a l’historial.",
   'nov.0-6-1.cab': "<b>Versió 0.6.1</b> · 24 d’octubre del 2026",

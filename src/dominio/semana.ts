@@ -1,6 +1,6 @@
 // Estado de la semana: qué toca cada día, qué se hizo y qué se perdió.
 import type { DiaRutina, Rutina, Sesion } from '../datos/tipos'
-import { aISO, deISO, diaSemana, semanaDe, sumarDias } from './fechas'
+import { aISO, deISO, diaSemana, lunesDe, semanaDe, sumarDias } from './fechas'
 
 export type Recolocada = { fecha: string; letra: string; desde: string }
 
@@ -50,6 +50,15 @@ export function estadoSemana<S extends Sesion>(r: Rutina | null | undefined, ses
     if (dia && opcional) return { fecha, estado: 'opcional', hoy: esHoy, dia }
     return { fecha, estado: 'descanso', hoy: esHoy }
   })
+}
+
+/**
+ * Entrenos previstos después de hoy, esta semana y la siguiente, en orden. La siguiente se mira desde su lunes:
+ * vista desde «dentro de 7 días», sus primeros días saldrían como perdidos.
+ */
+export function entrenosPrevistos(r: Rutina | null | undefined, hoy: string, recolocadas: Recolocada[] = []): EstadoDia[] {
+  const siguiente = sumarDias(lunesDe(hoy), 7)
+  return [...estadoSemana(r, [], hoy, recolocadas), ...estadoSemana(r, [], siguiente, recolocadas)].filter(d => d.estado === 'plan' && d.fecha > hoy)
 }
 
 export type Tarjeta<S extends Sesion = Sesion> =

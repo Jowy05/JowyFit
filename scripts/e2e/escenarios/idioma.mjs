@@ -108,6 +108,11 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   await cdp.enviar('Page.reload', { ignoreCache: true })
   await esperarIdioma('ca')
   await ver(IDIOMA.ca.hoy)
+  // Los ejercicios, también en catalán (si la compilación tiene su traducción: va cifrada, con clave).
+  if (await js(`return await fetch('repdb/catalogo.ca.json').then(r => r.ok && /json/.test(r.headers.get('content-type') ?? '')).catch(() => false)`)) {
+    await ver(/Esquat/)
+    await noVer(/Sentadilla/)
+  }
 
   // 3. Algo apuntado en catalán (un peso, con coma) y una copia.
   await pestana('Inici')

@@ -2,6 +2,8 @@
 export type Ejercicio = {
   id: string
   nombre: string
+  /** El nombre en castellano (con los arreglos de nombreComun), en cualquier idioma: compara movimientos y se busca. */
+  nombreEs?: string
   descripcion: string
   instrucciones: string[]
   consejos: string[]
@@ -34,7 +36,7 @@ export type Catalogo = {
   ejercicios: Ejercicio[]
 }
 
-/** public/repdb/catalogo.en.json: los textos en inglés por id (la app los usa si está en inglés). */
+/** public/repdb/catalogo.en.json y catalogo.ca.json: los textos en inglés o catalán por id (la app los usa en ese idioma). */
 export type TextosCatalogo = {
   version: number
   generado: string

@@ -97,3 +97,18 @@ describe('seguridad · huella del catálogo RepDB', () => {
     expect(() => comprobarRepDB(fs.readFileSync(zip))).not.toThrow()
   })
 })
+
+describe('seguridad · textos de RepDB en catalán, cifrados en el repositorio', () => {
+  it('se descifran tal cual con la clave buena; con otra clave o tocados, falla', async () => {
+    const { cifrar, descifrar } = await import('../scripts/repdb-ca.mjs')
+    const k = Buffer.alloc(32, 7)
+    const json = JSON.stringify({ ejercicios: { 'push-up': { nombre: 'Flexions' } } })
+    const c = cifrar(json, k)
+    expect(c.toString('utf8')).not.toContain('Flexions')
+    expect(descifrar(c, k)).toBe(json)
+    expect(() => descifrar(c, Buffer.alloc(32, 8))).toThrow()
+    const tocado = Buffer.from(c)
+    tocado.writeUInt8(tocado.readUInt8(tocado.length - 1) ^ 1, tocado.length - 1)
+    expect(() => descifrar(tocado, k)).toThrow()
+  })
+})

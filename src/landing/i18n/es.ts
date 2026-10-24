@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-6-0.cab': "<b>Versión 0.6.0</b> · 24 de octubre de 2026",
+  'nov.0-6-0.texto': "Los ejercicios, en catalán: el nombre, los pasos y los consejos de los más de 600. Y en inglés, los récords pasan a llamarse «PR».",
   'nov.0-5-0.cab': '<b>Versión 0.5.0</b> · 23 de octubre de 2026',
   'nov.0-5-0.texto': 'Calistenia y cardio, fáciles de encontrar: en Rutina → Ejercicios hay dos filtros nuevos, y buscar «calistenia» o «cardio» también los encuentra. Las dominadas, los fondos, las anillas y el TRX se apuntan por repeticiones, sin pedirte kilos. La hora de entreno se puede poner a cualquier hora, también de noche y de madrugada. Y la licencia cambia: puedes usar, copiar y cambiar JowyFit diciendo quién lo hizo, pero no venderla.',
   'nov.0-4-1.cab': '<b>Versión 0.4.1</b> · 23 de octubre de 2026',

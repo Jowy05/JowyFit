@@ -104,11 +104,11 @@ const LADO = /\b(?:a\s+un\s+brazo|a\s+una\s+mano|unilateral)\b/g
 const RELLENO = new Set(['de', 'del', 'la', 'el', 'en', 'con', 'y', 'a', 'al', 'los', 'las', 'trasera', 'biceps'])
 const cacheClave = new WeakMap<Ejercicio, string>()
 
-/** Nombre del movimiento sin material ni relleno: «peso muerto rumano». */
+/** Nombre del movimiento sin material ni relleno: «peso muerto rumano». Siempre desde el castellano: las reglas son de ese idioma. */
 export function claveMovimiento(e: Ejercicio): string {
   let k = cacheClave.get(e)
   if (k === undefined) {
-    const limpio = ` ${e.nombre.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()} `
+    const limpio = ` ${(e.nombreEs ?? e.nombre).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()} `
       .replace(/\(.*?\)/g, ' ').replace(MATERIAL_EN_NOMBRE, ' ').replace(LADO, ' ')
     k = limpio.split(/[^a-z0-9]+/).filter(w => w && !RELLENO.has(w)).join(' ')
     cacheClave.set(e, k)

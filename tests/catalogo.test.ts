@@ -249,3 +249,14 @@ describe.skipIf(!hayCatalogo)('el catálogo real de RepDB', () => {
     expect(buscar('cardio', ej)).toHaveLength(car.length)
   })
 })
+
+describe('material corto en las listas', () => {
+  it('quita «Máquina de» en castellano y catalán, y «Machine» en inglés', async () => {
+    const { materialSinMaquina } = await import('../src/pantallas/rutina/comun')
+    expect(materialSinMaquina('Máquina de remo')).toBe('remo')
+    expect(materialSinMaquina('Màquina de rem')).toBe('rem')
+    expect(materialSinMaquina("Màquina d'extensió d'esquena")).toBe("extensió d'esquena")
+    expect(materialSinMaquina('Leg Press Machine')).toBe('Leg Press')
+    expect(materialSinMaquina('Barra')).toBe('Barra')
+  })
+})

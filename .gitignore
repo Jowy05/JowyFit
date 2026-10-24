@@ -16,7 +16,6 @@ desktop.ini
 node_modules/
 dist/
 build/
-.expo/
 *.apk
 *.aab
 *.log

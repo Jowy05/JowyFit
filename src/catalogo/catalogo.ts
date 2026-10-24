@@ -1,5 +1,5 @@
 // Catálogo de ejercicios RepDB: carga, búsqueda, imágenes y nombres en el idioma de la app.
-// En inglés usa catalogo.en.json; en catalán RepDB no trae textos y se quedan en castellano (pendiente de decidir).
+// En inglés usa catalogo.en.json (de RepDB) y en catalán catalogo.ca.json (traducción propia); si no llegan, castellano.
 import { useEffect, useState } from 'react'
 import type { Catalogo, Ejercicio, TextosCatalogo } from './tipos'
 import { propio } from '../dominio/claves'
@@ -23,11 +23,12 @@ export function textoComun(t: string): string {
 }
 
 /**
- * Deja listo el catálogo. Con textos en inglés, cada ejercicio, material, músculo y etiqueta que los tenga los usa
- * tal cual; lo que se queda en castellano lleva los arreglos de nombreComun/textoComun (son solo del castellano).
+ * Deja listo el catálogo. Con textos en otro idioma (inglés o catalán), cada ejercicio, material, músculo y etiqueta
+ * que los tenga los usa tal cual; lo que se queda en castellano lleva los arreglos de nombreComun/textoComun.
  */
 export function usarCatalogo(c: Catalogo, ingles?: TextosCatalogo | null) {
   for (const e of c.ejercicios) {
+    e.nombreEs ??= nombreComun(e.nombre)
     const en = ingles ? propio(ingles.ejercicios, e.id) : undefined
     if (en) {
       e.nombre = en.nombre
@@ -36,7 +37,7 @@ export function usarCatalogo(c: Catalogo, ingles?: TextosCatalogo | null) {
       e.consejos = en.consejos
       continue
     }
-    e.nombre = nombreComun(e.nombre)
+    e.nombre = e.nombreEs
     e.descripcion = textoComun(e.descripcion)
     e.instrucciones = e.instrucciones.map(textoComun)
     e.consejos = e.consejos.map(textoComun)
@@ -66,16 +67,16 @@ export async function cargarCatalogo(): Promise<Catalogo> {
       if (!r.ok) throw new Error(t('No se pudo cargar el catálogo ({estado})', { estado: r.status }))
       return r.json() as Promise<Catalogo>
     }),
-    idioma() === 'en' ? cargarIngles() : null,
+    idioma() === 'es' ? null : cargarTextos(idioma()),
   ]).then(([c, en]) => { usarCatalogo(c, en); return c })
   // Si falla (sin conexión, archivo a medio bajar), el fallo no se guarda: la próxima vez se vuelve a intentar.
   promesa.catch(() => { promesa = null })
   return promesa
 }
 
-/** Textos en inglés; si no llegan, el catálogo sale en castellano en vez de no abrir. */
-function cargarIngles(): Promise<TextosCatalogo | null> {
-  return fetch(`${base()}repdb/catalogo.en.json`)
+/** Textos en inglés o catalán; si no llegan, el catálogo sale en castellano en vez de no abrir. */
+function cargarTextos(l: string): Promise<TextosCatalogo | null> {
+  return fetch(`${base()}repdb/catalogo.${l}.json`)
     .then(r => (r.ok ? (r.json() as Promise<TextosCatalogo>) : null))
     .catch(() => null)
 }
@@ -140,7 +141,7 @@ export function buscar(texto: string, lista: Ejercicio[]): Ejercicio[] {
   if (!q) return lista
   const partes = q.split(/\s+/)
   return lista.filter(e => {
-    const h = normalizar(`${e.nombre} ${e.id.replace(/-/g, ' ')} ${e.principales.map(nombreMusculo).join(' ')} ${nombreMaterial(e.material)} ${palabrasDeTipo(e)}`)
+    const h = normalizar(`${e.nombre} ${e.nombreEs ?? ''} ${e.id.replace(/-/g, ' ')} ${e.principales.map(nombreMusculo).join(' ')} ${nombreMaterial(e.material)} ${palabrasDeTipo(e)}`)
     return partes.every(p => h.includes(p))
   })
 }

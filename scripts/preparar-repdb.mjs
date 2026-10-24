@@ -4,6 +4,7 @@
 // Salida:
 //   public/repdb/catalogo.json   ejercicios en español + etiquetas + músculos + material
 //   public/repdb/catalogo.en.json   solo los textos en inglés por id (la app lo carga si está en inglés)
+//   public/repdb/catalogo.ca.json   lo mismo en catalán: traducción propia, cifrada en el repositorio (scripts/repdb-ca.mjs)
 //   public/repdb/img/*.webp      imágenes 512×512 (inicio / final / única)
 //   public/repdb/mini/*.webp     miniaturas 160×160 para listas
 //   public/repdb/maq/*.webp      imágenes de material y máquinas
@@ -13,6 +14,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { unzipSync } from 'fflate'
 import sharp from 'sharp'
+import { CIFRADO, clave, descifrar } from './repdb-ca.mjs'
 
 const RAIZ = path.resolve(import.meta.dirname, '..')
 const CACHE = path.join(RAIZ, '.cache', 'repdb')
@@ -121,12 +123,40 @@ async function main() {
   fs.writeFileSync(path.join(SALIDA, 'catalogo.en.json'), JSON.stringify(ingles))
   console.log(`RepDB listo: ${ejercicios.length} ejercicios, ${n} imágenes, ${Object.keys(material).length} tipos de material, ${Object.keys(musculos).length} músculos.`)
   console.log(`Textos en inglés: ${Object.keys(ingles.ejercicios).length} ejercicios.`)
+  const catalan = textosCatalan(es)
+  if (catalan) {
+    fs.writeFileSync(path.join(SALIDA, 'catalogo.ca.json'), JSON.stringify(catalan))
+    console.log(`Textos en catalán: ${Object.keys(catalan.ejercicios).length} ejercicios.`)
+  } else {
+    fs.rmSync(path.join(SALIDA, 'catalogo.ca.json'), { force: true })
+    console.warn('Textos en catalán: sin clave (REPDB_CA_CLAVE) o sin el archivo cifrado: en catalán los ejercicios saldrán en castellano.')
+  }
+}
+
+/** Textos en catalán (traducción propia, cifrada en el repositorio): solo los ids que están en el catálogo. */
+function textosCatalan(es) {
+  const k = clave()
+  // En GitHub la web se publica con el catálogo en catalán: sin la clave no se sigue (si no, saldría en castellano sin avisar).
+  if (process.env.CI && !k) throw new Error('RepDB en catalán: falta el secreto REPDB_CA_CLAVE en GitHub.')
+  if (process.env.CI && !fs.existsSync(CIFRADO)) throw new Error('RepDB en catalán: falta assets/repdb/catalogo.ca.cifrado en el repositorio.')
+  if (!k || !fs.existsSync(CIFRADO)) return null
+  let ca
+  try {
+    ca = JSON.parse(descifrar(fs.readFileSync(CIFRADO), k))
+  } catch (e) {
+    throw new Error('RepDB en catalán: la clave no abre assets/repdb/catalogo.ca.cifrado (¿clave equivocada o archivo dañado?).', { cause: e })
+  }
+  const ids = new Set(es.exercises.map(e => e.id))
+  ca.ejercicios = Object.fromEntries(Object.entries(ca.ejercicios ?? {}).filter(([id]) => ids.has(id)))
+  const faltan = ids.size - Object.keys(ca.ejercicios).length
+  if (faltan > 0) console.warn(`RepDB en catalán: ${faltan} ejercicios sin traducir (salen en castellano). Hay que traducirlos y volver a cifrar.`)
+  return ca
 }
 
 /**
  * Textos en inglés de RepDB (free.en.json), por id: nombre, descripción, pasos y consejos de cada ejercicio, y los
  * nombres de material, músculos y etiquetas. Solo los ids que también están en español (el catálogo es el español).
- * En catalán RepDB no trae textos: la app los deja en castellano.
+ * En catalán RepDB no trae textos: van aparte, traducidos por nosotros (textosCatalan).
  */
 export function textosIngles(en, es) {
   const ids = new Set(es.exercises.map(e => e.id))

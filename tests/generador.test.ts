@@ -133,6 +133,15 @@ describe.skipIf(!hayCatalogo)('mismo movimiento: nunca dos variantes del mismo e
     expect(mismoMovimiento(ej('romanian-deadlift'), ej('romanian-deadlift'))).toBe(false)
   })
 
+  it('con la app en catalán o inglés compara igual: las reglas miran el nombre en castellano', () => {
+    const traducido = (id: string, nombre: string) => ({ ...ej(id), nombre, nombreEs: ej(id).nombre })
+    const rdl = traducido('romanian-deadlift', 'Pes Mort Romanès amb Barra')
+    const rdlManuelles = traducido('dumbbell-romanian-deadlift', 'Pes Mort Romanès amb Manuelles')
+    expect(claveMovimiento(rdl)).toBe('peso muerto rumano')
+    expect(mismoMovimiento(rdl, rdlManuelles)).toBe(true)
+    expect(mismoMovimiento(traducido('squat', 'Barbell Back Squat'), traducido('leg-press', 'Leg Press'))).toBe(false)
+  })
+
   it('el peso muerto rumano con mancuernas es de cadera, no un remo', () => {
     expect(patronGenerador(ej('dumbbell-romanian-deadlift'))).toBe('cadera')
     expect(patronGenerador(ej('seated-cable-row'))).toBe('tiron-h')

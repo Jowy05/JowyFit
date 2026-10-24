@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-6-0.cab': "<b>Version 0.6.0</b> · October 24, 2026",
+  'nov.0-6-0.texto': "Exercises in Catalan: the name, steps, and tips for all 600+. And in English, personal records are now called “PR.”",
   'nov.0-5-0.cab': '<b>Version 0.5.0</b> · October 23, 2026',
   'nov.0-5-0.texto': 'Calisthenics and cardio are easy to find: Routine → Exercises has two new filters, and searching “calisthenics” or “cardio” finds them too. Pull-ups, dips, rings, and TRX are logged by reps, with no weight to enter. You can set your workout for any time, including late at night and the early hours. And there’s a new license: you can use, copy and change JowyFit as long as you say who made it, but you can’t sell it.',
   'nov.0-4-1.cab': '<b>Version 0.4.1</b> · October 23, 2026',
@@ -237,7 +239,7 @@ const en: Record<keyof typeof es, string> = {
   'nov.0-2-1.cab': '<b>Version 0.2.1</b> · October 21, 2026',
   'nov.0-2-1.texto': 'A new look: a new icon, and the app goes from orange to purple. The PDF report gets a cleaner design, in the same purple.',
   'nov.0-2-0.cab': '<b>Version 0.2.0</b> · October 21, 2026',
-  'nov.0-2-0.texto': 'PDF report: pick the days and what goes in it (workouts, effort for each exercise, personal bests, food, body, and steps), then save or send it. Backups are checked before you restore them, and the app now works on iPhone from Safari.',
+  'nov.0-2-0.texto': 'PDF report: pick the days and what goes in it (workouts, effort for each exercise, personal records, food, body, and steps), then save or send it. Backups are checked before you restore them, and the app now works on iPhone from Safari.',
   'nov.0-1-6.cab': '<b>Version 0.1.6</b> · October 20, 2026',
   'nov.0-1-6.texto': 'A full review of the app and 20 bugs fixed: going back to the workout after the last set, rest notifications, keeping the iPhone screen on, and fixing the sets of a workout you already saved. “Delete everything” asks you to confirm twice.',
   'nov.0-1-5.cab': '<b>Version 0.1.5</b> · October 19, 2026',

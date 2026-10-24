@@ -112,6 +112,7 @@ La app sale en castellano (el original, por defecto), catalán e inglés; se eli
 - `tn(n, '{n} serie', '{n} series')` para plurales; `tc('máquina', 'Ocupado')` si el mismo castellano se traduce distinto según dónde sale (clave `máquina|Ocupado`); `tr('Toca <b>Hecho</b>', { b: s => <b>{s}</b> })` (`src/i18n/jsx.tsx`) para frases con negritas o iconos.
 - `tk('Pecho')` en listas y constantes del nivel del módulo (se evalúan antes de cargar el idioma): solo marca el texto, y se traduce al pintarlo con `t(x)`.
 - Las funciones de `dominio/` también llaman a `t()` a propósito: con gettext el texto ya sale traducido de donde se escribe, sin pasar claves por las pantallas.
+- Los ejercicios (RepDB) salen en inglés con `catalogo.en.json` de RepDB y en catalán con una traducción propia que va **cifrada** en `assets/repdb/catalogo.ca.cifrado`: la licencia de RepDB no deja publicar sus textos como dataset. `npm run repdb` la descifra con la clave `REPDB_CA_CLAVE` (secreto de GitHub; en local, `firmas/repdb-ca.clave`). Sin clave, en catalán salen en castellano (en GitHub, sin el secreto, la compilación falla a propósito). Para cambiar la traducción: `node scripts/repdb-ca.mjs cifrar <catalogo.ca.json>`. La clave son 64 caracteres hexadecimales (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`); guárdala con la copia de la firma de la app: GitHub no deja volver a leer un secreto.
 - `tests/i18n-cobertura.test.ts` es estricta: falla si un texto no está en catalán o en inglés, si sobra una clave, si una traducción cambia las `{variables}` o si un `.tsx` pinta castellano sin `t()`.
 
 Tono: de tú, frases cortas y palabras de la calle (la usan personas que no saben de gimnasios). Catalán del IEC, variante central; inglés de EE. UU., sencillo. Comillas « » en castellano y catalán, “ ” en inglés. Lo que sale en pantalla se llama igual en todas partes (app, landing y demo):
@@ -121,7 +122,7 @@ Tono: de tú, frases cortas y palabras de la calle (la usan personas que no sabe
 | Entreno · Serie · Descanso | Entrenament · Sèrie · Descans | Workout · Set · Rest |
 | Hoy te toca · Hecho · Saltar | Avui et toca · Fet · Saltar | Today's workout · Done · Skip |
 | Ajustes · Copia de seguridad | Configuració · Còpia de seguretat | Settings · Backup |
-| Semana suave · Récord · ¿Voy bien? | Setmana suau · Rècord · Vaig bé? | Easy week · Personal best (PB) · Am I on track? |
+| Semana suave · Récord · ¿Voy bien? | Setmana suau · Rècord · Vaig bé? | Easy week · Personal record (PR) · Am I on track? |
 | Pendientes de hoy · Picoteo | Pendents d'avui · Pica-pica | Today's to-dos · Snacks |
 
 No se traducen: JowyFit, Health Connect, Open Food Facts, RepDB, Safari, App Store, Google Play y los nombres de librerías y licencias.

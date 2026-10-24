@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-6-0.cab': "<b>Versió 0.6.0</b> · 24 d’octubre del 2026",
+  'nov.0-6-0.texto': "Els exercicis, en català: el nom, els passos i els consells de més de 600. I en anglès, els rècords passen a dir-se «PR».",
   'nov.0-5-0.cab': '<b>Versió 0.5.0</b> · 23 d’octubre del 2026',
   'nov.0-5-0.texto': 'Calistènia i cardio, fàcils de trobar: a Rutina → Exercicis hi ha dos filtres nous, i si cerques «calistènia» o «cardio» també els trobes. Les dominades, els fons, les anelles i el TRX s’apunten per repeticions, sense demanar-te quilos. L’hora d’entrenament es pot posar a qualsevol hora, també de nit i de matinada. I la llicència canvia: pots fer servir, copiar i canviar JowyFit dient qui l’ha fet, però no vendre-la.',
   'nov.0-4-1.cab': '<b>Versió 0.4.1</b> · 23 d’octubre del 2026',

@@ -25,8 +25,8 @@ export function materialCorto(id: string): string {
   return capital(materialSinMaquina(nombreMaterial(e.material)))
 }
 
-/** Material sin la palabra «Máquina» delante («Prensa de piernas»); en inglés, sin «Machine» detrás. */
-export const materialSinMaquina = (nombre: string) => nombre.replace(/^Máquina (de )?/, '').replace(/ [Mm]achine$/, '')
+/** Material sin la palabra «Máquina» delante («Prensa de piernas», «Premsa de cames»); en inglés, sin «Machine» detrás. */
+export const materialSinMaquina = (nombre: string) => nombre.replace(/^M[áà]quina (?:de |d['’])?/, '').replace(/ [Mm]achine$/, '')
 
 /** Nombres de la calle para los músculos del catálogo (el nombre técnico queda para la ficha). Se traducen al pintarlos. */
 const MUSCULO_COMUN: Record<string, string> = {

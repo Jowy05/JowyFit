@@ -204,7 +204,7 @@ export default {
   'Rehacer la rutina': 'Redo the routine',
   'Te propongo una rutina nueva con tus días, tu tiempo y tu gimnasio. Antes de cambiar nada, te la enseño.': "We'll suggest a new routine based on your days, your time, and your gym. We'll show it to you before changing anything.",
   '¿Rehacer la rutina desde cero?': 'Redo the routine from scratch?',
-  'Verás una rutina nueva. Si la aceptas con «Usar esta rutina», sustituye a la que tienes ahora, también los cambios que hayas hecho a mano. Tu historial y tus récords se conservan.': "You'll see a new routine. If you accept it with “Use this routine,” it replaces the one you have now, including any changes you made by hand. Your history and PBs are kept.",
+  'Verás una rutina nueva. Si la aceptas con «Usar esta rutina», sustituye a la que tienes ahora, también los cambios que hayas hecho a mano. Tu historial y tus récords se conservan.': "You'll see a new routine. If you accept it with “Use this routine,” it replaces the one you have now, including any changes you made by hand. Your history and PRs are kept.",
   'Ver la rutina nueva': 'See the new routine',
   'Rehacer la rutina desde cero': 'Redo the routine from scratch',
 
@@ -245,7 +245,7 @@ export default {
   '{n} de {total} en máquina o polea': '{n} of {total} on a machine or cable',
   '{nombre}: haces uno y luego el otro, {explica}; descansas al acabar los dos.': '{nombre}: do one and then the other, {explica}; rest after both.',
   'Si pulsas «Usar esta rutina», <b>sustituye a la que tienes ahora</b>.': 'If you tap “Use this routine,” <b>it replaces the one you have now</b>.',
-  '<b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.': '<b>Your history and PBs are always kept.</b> Only the plan changes.',
+  '<b>Tu historial y tus récords se conservan siempre.</b> Solo cambia el plan.': '<b>Your history and PRs are always kept.</b> Only the plan changes.',
   'Empezar con una semana de prueba': 'Start with a trial week',
   '3 entrenos con pesos cómodos; luego te propongo la rutina definitiva con tus tiempos reales.': "3 workouts with comfortable weights; then we'll suggest your final routine based on your real times.",
   'Usar esta rutina': 'Use this routine',
@@ -279,7 +279,7 @@ export default {
   'Crear mi gimnasio': 'Create my gym',
   'Borrar la búsqueda': 'Clear search',
   'En tu plan · {dia}': 'In your plan · {dia}',
-  'Récord': 'PB',
+  'Récord': 'PR',
   'Ver más ({n})': 'See more ({n})',
 
   // Ficha de ejercicio

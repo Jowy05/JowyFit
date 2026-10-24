@@ -139,9 +139,9 @@ function historias() {
   hs.forEach(h => io.observe(h))
 }
 
-/** Los ceros de privacidad ruedan hasta 0 y el sol del cierre sube, una vez, al verse. */
+/** Los ceros de privacidad ruedan hasta 0, una vez, al verse. */
 function alLlegar() {
-  alVer($$('[data-ceros], [data-cierre]'), 0.3, el => el.classList.add('visto'))
+  alVer($$('[data-ceros]'), 0.3, el => el.classList.add('visto'))
 }
 
 /** Al tocar «Descargar»: el texto cambia un momento a «Descarga empezada» (y se dice a los lectores de pantalla). */

@@ -1,18 +1,18 @@
-// Aviso breve inferior («toast»), con «Deshacer» opcional.
+// Aviso breve inferior («toast»), con «Deshacer» (u otro botón, como «Ver») opcional.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n'
 
-type Aviso = { id: number; texto: string; deshacer?: () => void }
-type Ctx = (texto: string, deshacer?: () => void) => void
+type Aviso = { id: number; texto: string; deshacer?: () => void; boton?: string }
+type Ctx = (texto: string, deshacer?: () => void, boton?: string) => void
 
 const AvisoCtx = createContext<Ctx>(() => {})
 
 export function ProveedorAviso({ children }: { children: ReactNode }) {
   const [aviso, setAviso] = useState<Aviso | null>(null)
   const temporizador = useRef<number | undefined>(undefined)
-  const mostrar = useCallback<Ctx>((texto, deshacer) => {
+  const mostrar = useCallback<Ctx>((texto, deshacer, boton) => {
     window.clearTimeout(temporizador.current)
-    setAviso({ id: Date.now(), texto, deshacer })
+    setAviso({ id: Date.now(), texto, deshacer, boton })
     temporizador.current = window.setTimeout(() => setAviso(null), deshacer ? 4500 : 2800)
   }, [])
   useEffect(() => () => window.clearTimeout(temporizador.current), [])
@@ -31,7 +31,7 @@ export function ProveedorAviso({ children }: { children: ReactNode }) {
           <span className="toast-msg" onClick={() => setAviso(null)}>{aviso.texto}</span>
           {aviso.deshacer && (
             <button className="toast-act" type="button" onClick={() => { aviso.deshacer?.(); setAviso(null) }}>
-              {t('Deshacer')}
+              {aviso.boton ?? t('Deshacer')}
             </button>
           )}
         </div>

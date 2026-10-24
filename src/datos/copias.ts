@@ -2,6 +2,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { db, TABLAS, type NombreTabla } from './db'
 import { ajustesPorDefecto, guardarPerfil, perfilPorDefecto } from './repos'
+import { cargarPropios } from './acciones/propios'
 import type { Medicion, Perfil } from './tipos'
 import { comprobarCabecera, TIPOS_FOTO, validarDatos, VERSION_COPIA, type RefArchivo } from './validarCopia'
 import { t } from '../i18n'
@@ -43,7 +44,9 @@ export async function exportar(): Promise<Uint8Array> {
       datos[tb]!.push(copia)
     }
   }
-  const json = JSON.stringify({ app: 'JowyFit', version: VERSION, creada: new Date().toISOString(), datos })
+  // Con ejercicios propios, versión 2: una app anterior avisa de que hay que actualizar en vez de perderlos sin decir nada.
+  const version = datos.propios?.length ? VERSION : 1
+  const json = JSON.stringify({ app: 'JowyFit', version, creada: new Date().toISOString(), datos })
   return zipSync({ 'datos.json': strToU8(json), ...archivos }, { level: 6 })
 }
 
@@ -171,6 +174,9 @@ async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<st
       if (filas[tb].length) await db.table(tb).bulkPut(filas[tb])
     }
   })
+  // Restaurar desde la bienvenida no recarga la app: el catálogo tiene que ver ya los ejercicios propios de la copia.
+  // Si fallara, la copia ya está puesta: se verán al volver a abrir la app.
+  await cargarPropios().catch(() => undefined)
 }
 
 /**

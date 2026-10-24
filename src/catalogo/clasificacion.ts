@@ -70,6 +70,7 @@ const APARATOS_DE_CALISTENIA = new Set(['pull_up_bar', 'dip_station', 'rings', '
 
 /** Cómo se apunta cada serie de este ejercicio. */
 export function tipoRegistro(e: Ejercicio): TipoRegistro {
+  if (e.propio) return e.propio.registro === 'peso' && e.propio.material === 'mancuernas' ? 'mancuerna' : e.propio.registro
   if (e.categoria === 'cardio') return 'cardio'
   if (e.material === 'assisted_pullup_machine' || e.material === 'dip_machine' || /assisted/.test(e.id)) return 'asistido'
   if (e.fuerza === 'static' || /(plank|-hold$|dead-hang|wall-sit|l-sit)/.test(e.id)) return 'tiempo'

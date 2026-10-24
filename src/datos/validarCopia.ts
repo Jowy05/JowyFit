@@ -155,6 +155,13 @@ const GIMNASIO = obj({
   barraKg: req(rango(0, 1000)), creado: req(fecha),
 })
 
+const PROPIO = obj({
+  id: req((v, d) => (typeof v === 'string' && /^mio-[\w-]{1,100}$/.test(v) ? v : mal(d, t('no es el esperado')))), nombre: req(nombre),
+  grupo: req(uno('pecho', 'espalda', 'hombro', 'brazo', 'abdomen', 'gluteo', 'pierna', 'completo')),
+  material: req(uno('corporal', 'barra', 'mancuernas', 'maquina', 'polea', 'otro')), registro: req(uno('peso', 'corporal', 'tiempo', 'cardio')),
+  foto: opc(archivo), notas: opc(nota), rutinaAuto: req(bool), creado: req(fecha), borrado: opc(fecha),
+})
+
 const MARCA = obj({ id: req(texto(200)), favorito: opc(bool), odiado: opc(bool), duele: opc(bool), notas: opc(nota), ajustes: opc(nombre) })
 
 const BLOQUE = obj({
@@ -206,16 +213,17 @@ const META = obj({
 
 const ESQUEMA: Record<NombreTabla, Regla> = {
   perfil: PERFIL, ajustes: AJUSTES, mediciones: MEDICION, fotos: FOTO, gimnasios: GIMNASIO, marcas: MARCA, rutinas: RUTINA, sesiones: SESION,
-  comidas: COMIDA, plantillas: PLANTILLA, productos: PRODUCTO, pasos: PASOS, suplementos: SUPLEMENTOS, metas: META,
+  comidas: COMIDA, plantillas: PLANTILLA, productos: PRODUCTO, pasos: PASOS, suplementos: SUPLEMENTOS, metas: META, propios: PROPIO,
 }
 // Con tk(): se traducen al usarlos (validarDatos), no al importar.
 const NOMBRE_TABLA: Record<NombreTabla, string> = {
   perfil: tk('perfil'), ajustes: tk('ajustes'), mediciones: tk('medidas'), fotos: tk('fotos'), gimnasios: tk('gimnasios'), marcas: tk('notas de ejercicios'), rutinas: tk('rutinas'),
   sesiones: tk('entrenos'), comidas: tk('comidas'), plantillas: tk('mis comidas'), productos: tk('productos'), pasos: tk('pasos'), suplementos: tk('suplementos'), metas: tk('metas'),
+  propios: tk('tus ejercicios'),
 }
 
-/** Versión del formato de la copia que entiende esta app. */
-export const VERSION_COPIA = 1
+/** Versión del formato de la copia que entiende esta app (2: trae ejercicios propios). */
+export const VERSION_COPIA = 2
 
 /** Comprueba la cabecera (app y versión). */
 export function comprobarCabecera(obj: unknown): asserts obj is { app: 'JowyFit'; version: number; datos: unknown } {

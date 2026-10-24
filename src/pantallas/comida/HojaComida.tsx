@@ -5,10 +5,10 @@ import { borrarComida, guardarComida } from '../../datos/acciones/comida'
 import type { Comida, Franja, Guardado } from '../../datos/tipos'
 import { FRANJAS, NOMBRE_RACION, PISTA_RACION, TAMANOS_NOTA, escalarMacros, factorRacion, nombreFranja, notaPorTamano, tamanoDe, tipoRacion, type Racion, type TamanoNota } from '../../dominio/comida'
 import { t } from '../../i18n'
-import { Chip, Hoja, Ico, Stepper, LARGO } from '../../ui/componentes'
+import { Chip, Hoja, Ico, Stepper, LARGO, useUrlBlob } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { LineaMacros, useUrlBlob } from './comun'
+import { LineaMacros } from './comun'
 
 export function HojaComida({ ruta }: { ruta: Ruta<'hoja-comida'> }) {
   const nav = useNav()

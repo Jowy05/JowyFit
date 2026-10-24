@@ -4,9 +4,9 @@ import { guardarSesion } from '../../datos/acciones/entreno'
 import { ejercicio, imagen } from '../../catalogo/catalogo'
 import { BARRAS, calentamiento, discosPorLado, pesosBarra, pesosPara } from '../../dominio/pesos'
 import { anadirSerie, cambiarSerie, conCalentamiento, quitarSerie, saltar, serieActual } from '../../dominio/sesion'
-import type { Serie, Sesion } from '../../datos/tipos'
+import type { EjercicioPropio, Serie, Sesion } from '../../datos/tipos'
 import { conUnidad, kg, num } from '../../dominio/formato'
-import { Chip, cx, Hoja, Ico, Interruptor, Stepper, LARGO } from '../../ui/componentes'
+import { Chip, cx, Hoja, Ico, Interruptor, Stepper, LARGO, useUrlBlob } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio, useSesionEnCurso } from '../../datos/hooks'
@@ -164,6 +164,7 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta<'hoja-calentamiento'> }
 export function HojaInstrucciones({ ruta }: { ruta: Ruta<'hoja-instrucciones'> }) {
   const ej = ejercicio(ruta.d.id)
   if (!ej) return <Hoja titulo={t('Instrucciones')}><p className="muted">{t('No encontrado.')}</p></Hoja>
+  if (ej.propio) return <NotasPropio p={ej.propio} />
   return (
     <Hoja titulo={t('Instrucciones')} sub={ej.nombre} className="tall">
       <div className="grid2">
@@ -172,6 +173,18 @@ export function HojaInstrucciones({ ruta }: { ruta: Ruta<'hoja-instrucciones'> }
       <ol className="steps mt16">{ej.instrucciones.map((paso, i) => <li key={i}>{paso}</li>)}</ol>
       {ej.consejos.length > 0 && <div className="why mt16"><p className="lbl">{t('Consejos')}</p>{ej.consejos.map((consejo, i) => <p key={i}><Ico n="check-circle" /><span>{consejo}</span></p>)}</div>}
       <p className="credit">Exercise data by RepDB (repdb.co)</p>
+    </Hoja>
+  )
+}
+
+/** Uno propio no tiene dibujos ni pasos de RepDB: su foto y sus notas. */
+function NotasPropio({ p }: { p: EjercicioPropio }) {
+  const url = useUrlBlob(p.foto)
+  return (
+    <Hoja titulo={t('Cómo se hace')} sub={p.nombre}>
+      {url && <img src={url} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 10 }} />}
+      {p.notas ? <p className="mynote mt8"><Ico n="note-pencil" />«{p.notas}»</p>
+        : <p className="muted mt8">{t('Es un ejercicio tuyo: ponle una foto o notas desde su ficha y las verás aquí.')}</p>}
     </Hoja>
   )
 }

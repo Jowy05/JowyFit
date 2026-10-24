@@ -123,6 +123,23 @@ export type MarcaEjercicio = {
 
 export type TipoRegistro = 'peso' | 'mancuerna' | 'asistido' | 'corporal' | 'tiempo' | 'cardio'
 
+/** Ejercicio creado por el usuario (lo que no está en RepDB). Su nombre es el suyo: no se traduce. */
+export type EjercicioPropio = {
+  id: string // «mio-…»
+  nombre: string
+  grupo: 'pecho' | 'espalda' | 'hombro' | 'brazo' | 'abdomen' | 'gluteo' | 'pierna' | 'completo'
+  material: 'corporal' | 'barra' | 'mancuernas' | 'maquina' | 'polea' | 'otro'
+  /** Con mancuernas, «peso» se apunta como los kg de cada una. */
+  registro: 'peso' | 'corporal' | 'tiempo' | 'cardio'
+  foto?: Blob
+  notas?: string
+  /** La rutina automática puede proponerlo (si no, solo sale donde lo pone el usuario). */
+  rutinaAuto: boolean
+  creado: string
+  /** Fecha en que se borró: se queda para que el historial y el informe sigan teniendo su nombre. */
+  borrado?: string
+}
+
 export type Bloque = {
   uid: string
   ejercicio: string // id RepDB (A)

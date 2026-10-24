@@ -71,7 +71,7 @@ type EntradaGenerador = {
 const RANGO_HABITUAL = new Map(HABITUALES.map((id, i) => [id, i]))
 
 function disponible(e: Ejercicio, material: Set<string> | null): boolean {
-  if (!e.material) return true
+  if (e.propio || !e.material) return true
   return material ? material.has(e.material) : ['dumbbell', 'barbell', 'cable', 'flat_bench', 'pull_up_bar', 'leg_press', 'smith_machine'].includes(e.material)
 }
 
@@ -144,6 +144,8 @@ function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null): 
   if (!disponible(e, material)) return false
   const m = x.marcas.get(e.id)
   if (m?.odiado || m?.duele) return false
+  // Uno propio solo si el usuario lo deja; RepDB no lo conoce, así que no hay etiquetas de zona ni dificultad que mirar.
+  if (e.propio) return e.propio.rutinaAuto
   for (const z of x.perfil.zonasSensibles) {
     const etiqueta = propio(ZONA_SEGURA, z)
     if (etiqueta && !e.etiquetas.includes(etiqueta)) return false
@@ -175,10 +177,15 @@ function puntuar(e: Ejercicio, h: Hueco, x: EntradaGenerador, usadosOtros: Set<s
   return s
 }
 
+/**
+ * Uno propio dice su grupo («Brazo»), no su movimiento (curl o extensión): ni recibe alternativas automáticas
+ * ni se propone como la de otro. Las elige el usuario.
+ */
 function alternativas(elegido: Ejercicio, h: Hueco, candidatos: Ejercicio[], x: EntradaGenerador): string[] {
+  if (elegido.propio) return []
   const out: Ejercicio[] = []
   const ordenados = candidatos
-    .filter(e => e.id !== elegido.id)
+    .filter(e => e.id !== elegido.id && !e.propio)
     .map(e => {
       let s = puntuar(e, h, x, new Set())
       if (e.material !== elegido.material) s += 12

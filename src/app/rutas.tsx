@@ -70,6 +70,7 @@ export const HOJAS: { [C in CodigoHoja]: P<C> } = {
   'hoja-suplemento': perezosa(() => import('../pantallas/comida/HojaSuplemento').then(m => m.HojaSuplemento)),
   'hoja-maquina': perezosa(() => import('../pantallas/rutina/HojaMaquina').then(m => m.HojaMaquina)),
   'hoja-elegir-ejercicio': perezosa(() => import('../pantallas/rutina/HojaElegirEjercicio').then(m => m.HojaElegirEjercicio)),
+  'hoja-propio': perezosa(() => import('../pantallas/rutina/HojaPropio').then(m => m.HojaPropio)),
   'hoja-meta': perezosa(() => import('../pantallas/progreso/Objetivos').then(m => m.HojaMeta)),
   'hoja-trote': perezosa(() => import('../pantallas/progreso/Pasos').then(m => m.HojaTrote)),
   'hoja-confirmar': HojaConfirmar,

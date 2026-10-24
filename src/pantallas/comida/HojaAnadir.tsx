@@ -9,10 +9,10 @@ import { idioma, t, tc } from '../../i18n'
 import { horaActual, hoyISO, sumarDias } from '../../dominio/fechas'
 import { normalizar } from '../../catalogo/catalogo'
 import { hacerFoto } from '../../plataforma'
-import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, recortar, LARGO } from '../../ui/componentes'
+import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, recortar, LARGO, useUrlBlob } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { ElegirCuanto, Mini, baseDeApuntada, kp, useUrlBlob, type ParaElegir } from './comun'
+import { ElegirCuanto, Mini, baseDeApuntada, kp, type ParaElegir } from './comun'
 import { apuntar, apuntarPlantilla } from '../../datos/acciones/comida'
 
 /** Comidas guardadas a la vista antes de «Ver todas». */

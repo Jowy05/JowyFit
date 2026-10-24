@@ -49,7 +49,7 @@ describe('nombres como se dicen en el gimnasio', () => {
     expect(b.instrucciones[0]).toContain('máquina de barra guiada')
     expect(b.consejos[0]).toContain('barra guiada')
     expect(cat.nombreMaterial('smith_machine')).toBe('Máquina de barra guiada')
-    expect(cat.catalogoCargado()).toBe(c)
+    expect(cat.catalogoCargado()!.ejercicios).toEqual(c.ejercicios)
   })
 })
 

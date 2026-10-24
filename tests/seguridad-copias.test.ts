@@ -110,7 +110,7 @@ describe('seguridad · versión de la copia', () => {
     it(`versión ${JSON.stringify(version)} se rechaza`, async () => { await rechazada(json(copia({ perfil: [perfil()] }, { version })), /versión/) })
   }
   it('sin versión se rechaza', async () => { await rechazada(json({ app: 'JowyFit', datos: { perfil: [perfil()] } }), /versión/) })
-  it('una versión más nueva lo dice', async () => { await rechazada(zipDe(copia({ perfil: [perfil()] }, { version: 2 })), /más nueva/) })
+  it('una versión más nueva lo dice', async () => { await rechazada(zipDe(copia({ perfil: [perfil()] }, { version: 3 })), /más nueva/) })
 })
 
 describe('seguridad · fotos de la copia (SVG/HTML podían ejecutar código)', () => {

@@ -1,7 +1,7 @@
 // Lecturas de la base para las pantallas (que nunca leen db directamente): las de una tabla, arriba, y las que
 // combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
-import type { Comida, DiaRutina, DiaSuplementos, Foto, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
+import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
 import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
@@ -58,6 +58,7 @@ export const productoEnMisComidas = async (codigo: string): Promise<boolean> => 
 
 export const leerGimnasio = (id: number): Promise<Guardado<Gimnasio> | undefined> => db.gimnasios.get(id)
 export const leerRutina = (id: number): Promise<Guardado<Rutina> | undefined> => db.rutinas.get(id)
+export const leerPropio = (id: string): Promise<EjercicioPropio | undefined> => db.propios.get(id)
 /** Ejercicios marcados como odiados o que duelen. */
 export const contarEvitados = (): Promise<number> => db.marcas.filter(m => !!m.odiado || !!m.duele).count()
 
@@ -76,6 +77,11 @@ export async function sesionesHechasDeRutina(rutinaId: number): Promise<Guardado
 /** Entrenos de la rutina que cuentan para la calibración: los hechos con ella, sin los libres. */
 export async function contarEntrenosDeRutina(rutinaId: number): Promise<number> {
   return (await sesionesHechasDeRutina(rutinaId)).filter(s => s.letra !== 'L').length
+}
+
+/** Cuántos entrenos (hechos) tienen este ejercicio: para explicar al borrarlo que se quedan. */
+export async function entrenosCon(id: string): Promise<number> {
+  return (await sesionesHechas()).filter(s => s.ejercicios.some(e => e.ejercicio === id && e.series.some(x => x.hecha))).length
 }
 
 /** Historial de un ejercicio (más reciente primero), solo sesiones con series hechas. */

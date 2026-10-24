@@ -1,4 +1,6 @@
 // Formato de public/repdb/catalogo.json (generado por scripts/preparar-repdb.mjs).
+import type { EjercicioPropio } from '../datos/tipos'
+
 export type Ejercicio = {
   id: string
   nombre: string
@@ -21,6 +23,8 @@ export type Ejercicio = {
   pesoCorporal: boolean
   poses: string[] // start/peak o main
   met: number | null
+  /** Solo en los creados por el usuario (no vienen de RepDB). */
+  propio?: EjercicioPropio
 }
 
 export type Musculo = { nombre: string; cientifico: string; zona: string; imagen?: string }

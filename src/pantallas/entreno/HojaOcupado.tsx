@@ -31,7 +31,8 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'hoja-ocupado'> }) {
     const r = s.rutinaId != null ? await leerRutina(s.rutinaId) : undefined
     const b = r?.dias.flatMap(d => d.bloques).find(x => x.uid === e.uid)
     const base = b?.alternativas.length ? b.alternativas : alternativasDe(e.planificado, { perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] })
-    return [e.planificado, ...base].filter((x, i, a) => a.indexOf(x) === i)
+    // Solo alternativas que existen (un ejercicio propio de una copia de otra versión podría no estar).
+    return [e.planificado, ...base.filter(id => ejercicio(id))].filter((x, i, a) => a.indexOf(x) === i)
     // El perfil, el gimnasio y las marcas llegan un instante después: hay que recalcular cuando llegan.
   }, [s?.id, e?.uid, perfil, g?.id, marcas]) ?? []
   const actualEn = Math.max(0, plan.indexOf(e?.ejercicio ?? ''))

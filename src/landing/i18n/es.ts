@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-7-0.cab': "<b>Versión 0.7.0</b> · 24 de octubre de 2026",
+  'nov.0-7-0.texto': "Crea tus propios ejercicios: para lo que no está en la lista, con su nombre, qué trabaja, con qué y cómo lo apuntas (y una foto y notas, si quieres). Salen con la marca «Tuyo», se añaden al plan y al entreno como los demás y, si los borras, lo que ya hiciste se queda en el historial.",
   'nov.0-6-1.cab': "<b>Versión 0.6.1</b> · 24 de octubre de 2026",
   'nov.0-6-1.texto': "Arreglos: los avisos de la copia y de la foto ya no se aplazan cada vez que abres la app; el aviso del descanso vuelve si el móvil cierra la app; los escaneados sin conexión se buscan solos al volver la cobertura; y si te das de alta en fin de semana, la semana 1 empieza con tu primer entreno.",
   'nov.0-6-0.cab': "<b>Versión 0.6.0</b> · 24 de octubre de 2026",

@@ -65,15 +65,37 @@ export function Seg<T extends string>({ opciones, valor, onCambio, fill }: { opc
   )
 }
 
-/** Miniatura cuadrada de un ejercicio con su imagen real (RepDB). */
+/** URL temporal para mostrar un Blob (se libera al desmontar). */
+export function useUrlBlob(b?: Blob): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!b) { setUrl(null); return }
+    const u = URL.createObjectURL(b)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [b])
+  return url
+}
+
+/** Primera letra de un nombre, para la miniatura de lo que no tiene foto. */
+export const inicial = (nombre: string) => [...nombre.trim()][0]?.toLocaleUpperCase() ?? '?'
+
+/** Miniatura cuadrada de un ejercicio con su imagen real (RepDB); los propios, con su foto o su inicial. */
 export function Th({ ej, size, grande, className, icono = 'barbell' }: { ej?: Ejercicio | null; size?: 'xs' | 's' | 'm' | 'l'; grande?: boolean; className?: string; icono?: string }) {
   const [error, setError] = useState(false)
+  if (ej?.propio) return <MiniPropio foto={ej.propio.foto} nombre={ej.nombre} className={cx(size, className)} />
   if (!ej || error) return <span className={cx('th', size, className)}><Ico n={icono} b /></span>
   return (
     <span className={cx('th img has-img', size, className)}>
       <img className="rep" src={grande ? imagen(ej, ej.poses.includes('peak') ? 'peak' : undefined) : miniatura(ej)} alt="" loading="lazy" onError={() => setError(true)} />
     </span>
   )
+}
+
+function MiniPropio({ foto, nombre, className }: { foto?: Blob; nombre: string; className?: string }) {
+  const url = useUrlBlob(foto)
+  if (url) return <span className={cx('th pr-foto', className)}><img src={url} alt="" /></span>
+  return <span className={cx('th pr-ini', className)} aria-hidden="true">{inicial(nombre)}</span>
 }
 
 /** − valor + que salta a pesos reales si hay lista. */

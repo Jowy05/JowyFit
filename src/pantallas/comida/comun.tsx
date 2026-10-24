@@ -1,11 +1,11 @@
 // Piezas compartidas de la pestaña Comida.
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Comida } from '../../datos/tipos'
 import { CLAVES_MACROS, NOMBRE_MACRO, NOMBRE_RACION, PISTA_RACION, aspecto, imagenOFF, conRacion, escalarMacros, factorRacion, tipoRacion, type Macros, type Racion } from '../../dominio/comida'
 import { t } from '../../i18n'
 import { num } from '../../dominio/formato'
-import { Cab, cx, Ico, recortar, Seg } from '../../ui/componentes'
+import { Cab, cx, Ico, recortar, Seg, useUrlBlob } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 
 type Vista = 'dia-comida' | 'plantillas'
@@ -29,18 +29,6 @@ export function Mini({ nombre, tipo, foto, imagen, className }: { nombre: string
   const src = url ?? imagenOFF(imagen)
   if (src) return <span className={cx('fp', className)} style={{ background: '#fff' }}><img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></span>
   return <span className={cx('fp', a.fp, className)}><Ico n={a.icono} b /></span>
-}
-
-/** URL temporal para mostrar un Blob (se libera al desmontar). */
-export function useUrlBlob(b?: Blob): string | null {
-  const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => {
-    if (!b) { setUrl(null); return }
-    const u = URL.createObjectURL(b)
-    setUrl(u)
-    return () => URL.revokeObjectURL(u)
-  }, [b])
-  return url
 }
 
 /** Fila deslizable: hacia la izquierda enseña «Borrar». */

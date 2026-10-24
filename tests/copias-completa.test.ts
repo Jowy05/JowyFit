@@ -10,7 +10,7 @@ import { exportar, importar, nombreCopia } from '../src/datos/copias'
 import { ajustesPorDefecto, leerAjustes, perfilPorDefecto } from '../src/datos/repos'
 import { sugerenciaPara, gastoDelDia } from '../src/datos/consultas'
 import type {
-  Ajustes, Bloque, Comida, DiaRutina, DiaSuplementos, EjercicioSesion, Foto, Gimnasio, MaquinaPropia, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil,
+  Ajustes, Bloque, Comida, DiaRutina, DiaSuplementos, EjercicioPropio, EjercicioSesion, Foto, Gimnasio, MaquinaPropia, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil,
   Plantilla, Producto, Rutina, Serie, Sesion,
 } from '../src/datos/tipos'
 
@@ -57,6 +57,10 @@ const plantilla: Required<Plantilla> = { id: 3, nombre: 'Arroz al curry', kcal: 
 const producto: Required<Producto> = { codigo: '8480000123458', nombre: 'Arroz al curry', marca: 'Hacendado', imagen: 'https://images.openfoodfacts.org/images/products/848/000/012/3458/front_es.3.200.jpg', kcal100: 167, proteina100: 6.1, hidratos100: 23, grasas100: 5, azucares100: 2.5, sal100: 0.8, cafeina100: null, racionG: 360, kcalRacion: 601, proteinaRacion: 22, guardado: '2026-10-13T10:00:00.000Z', pendiente: false, manual: false }
 const pasos: Required<PasosDia> = { fecha: '2026-10-13', pasos: 8123, fuente: 'auto', troteKm: 2.5 }
 const suple: Required<DiaSuplementos> = { fecha: '2026-10-13', tomados: ['Creatina'] }
+const propio: Required<EjercicioPropio> = {
+  id: 'mio-abc123', nombre: 'Remo con goma elástica', grupo: 'espalda', material: 'otro', registro: 'corporal', foto: imagen('goma'),
+  notas: 'Goma verde', rutinaAuto: true, creado: '2026-10-20', borrado: '2026-10-22',
+}
 const meta: Required<Meta> = { id: 1, tipo: 'ejercicio', titulo: 'Banca 60 kg', objetivo: 60, unidad: 'kg', fecha: '2027-06-01', ejercicio: 'bench-press', inicio: 40, hecha: false }
 
 async function sembrarTodo() {
@@ -75,6 +79,7 @@ async function sembrarTodo() {
   await db.pasos.put(pasos)
   await db.suplementos.put(suple)
   await db.metas.put(meta)
+  await db.propios.put(propio)
 }
 
 /** Instantánea comparable de toda la base (los Blob se pasan a texto + tipo). */
@@ -95,7 +100,7 @@ const copiaJSON = (datos: Record<string, unknown[]>, version = 1) => strToU8(JSO
 describe('copia completa: cada tabla y cada campo', () => {
   beforeEach(sembrarTodo)
 
-  it('las 14 tablas tienen una fila con todos sus campos', async () => {
+  it('las 15 tablas tienen una fila con todos sus campos', async () => {
     for (const t of TABLAS) expect(await db.table(t).count(), t).toBe(1)
   })
   it('exportar → borrar todo → importar deja cada campo igual (fotos, propias y campos nuevos incluidos)', async () => {
@@ -118,17 +123,19 @@ describe('copia completa: cada tabla y cada campo', () => {
     expect(c).toMatchObject({ suplemento: 'Batido de proteína', hidratos: 82.8, azucares: 9, grasas: 18, sal: 2.9 })
     expect(c.foto).toBeInstanceOf(Blob)
     expect((await db.plantillas.toArray())[0]!.foto).toBeInstanceOf(Blob)
+    expect((await db.propios.toArray())[0]!.foto).toBeInstanceOf(Blob)
     expect((await db.sesiones.toArray())[0]!.suave).toBe(false)
     expect((await db.sesiones.toArray())[0]!.respuestas).toEqual(sesion.respuestas)
   })
-  it('la copia es un zip con datos.json y un archivo por imagen (4: foto, máquina, plato y plantilla)', async () => {
+  it('la copia es un zip con datos.json y un archivo por imagen (5: foto, máquina, plato, plantilla y ejercicio propio)', async () => {
     const ar = unzipSync(await exportar())
     const nombres = Object.keys(ar)
     expect(nombres).toContain('datos.json')
-    expect(nombres.filter(n => n.startsWith('archivos/'))).toHaveLength(4)
+    expect(nombres.filter(n => n.startsWith('archivos/'))).toHaveLength(5)
     expect(nombres.some(n => n.endsWith('.png'))).toBe(true)
     const json = JSON.parse(strFromU8(ar['datos.json']!))
-    expect(json).toMatchObject({ app: 'JowyFit', version: 1 })
+    // Trae un ejercicio propio: versión 2 (una app anterior pide actualizar en vez de perderlo).
+    expect(json).toMatchObject({ app: 'JowyFit', version: 2 })
     expect(Object.keys(json.datos).sort()).toEqual([...TABLAS].sort())
     // Los Blob van como referencia al archivo, no como «{}».
     expect(json.datos.fotos[0].imagen).toMatchObject({ __archivo: expect.stringMatching(/^archivos\//), tipo: 'image/png' })
@@ -144,7 +151,7 @@ describe('copia completa: cada tabla y cada campo', () => {
   })
   it('fallaba: una copia sin comprimir de una versión más nueva entraba sin avisar', async () => {
     const antes = await instantanea()
-    await expect(importar(copiaJSON({ perfil: [] }, 2))).rejects.toThrow(/versión más nueva/)
+    await expect(importar(copiaJSON({ perfil: [] }, 3))).rejects.toThrow(/versión más nueva/)
     expect(await instantanea()).toEqual(antes)
   })
   it('una copia con un archivo de imagen que falta: la foto se queda fuera y el resto entra sin esa imagen', async () => {
@@ -185,8 +192,10 @@ describe('copias viejas (sin los campos nuevos)', () => {
 
   it('se importa (zip y sin comprimir) y las tablas que no traía quedan vacías', async () => {
     await db.metas.add({ ...meta, id: undefined })
+    await db.propios.put(propio)
     expect(await importar(zipSync({ 'datos.json': copiaJSON(vieja) }))).toBe('copia')
     expect(await db.metas.count()).toBe(0)
+    expect(await db.propios.count()).toBe(0)
     expect(await db.suplementos.count()).toBe(0)
     expect(await db.sesiones.count()).toBe(1)
     expect(await importar(copiaJSON(vieja))).toBe('copia')

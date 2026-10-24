@@ -113,6 +113,12 @@ export async function hacerFoto(max = 1280): Promise<Blob | null> {
   return f ? reducir(f, max) : null
 }
 
+/** Elige una foto de la galería (sin abrir la cámara) y la devuelve reducida a JPEG. */
+export async function elegirFoto(max = 1280): Promise<Blob | null> {
+  const f = await pedirArchivo(i => { i.accept = 'image/*' })
+  return f ? reducir(f, max) : null
+}
+
 export async function reducir(f: Blob, max = 1280): Promise<Blob> {
   try {
     const bmp = await createImageBitmap(f)

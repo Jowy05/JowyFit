@@ -1,8 +1,8 @@
 // RUT-05 · Ejercicios (biblioteca RepDB)
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { leerSesiones } from '../../datos/consultas'
-import { buscar, catalogoCargado, esCalistenia, esCardio, nombreMaterial } from '../../catalogo/catalogo'
+import { buscar, esCalistenia, esCardio, hayEn, nombreMaterial, useCatalogo } from '../../catalogo/catalogo'
 import { mejorMarca } from '../../dominio/progresion'
 import { hoyISO } from '../../dominio/fechas'
 import { kg } from '../../dominio/formato'
@@ -24,7 +24,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   const r = useRutina()
   const [q, setQ] = useState('')
   const [grupo, setGrupo] = useState('')
-  const [tipo, setTipo] = useState<'' | 'calistenia' | 'cardio'>('')
+  const [tipo, setTipo] = useState<'' | 'calistenia' | 'cardio' | 'tuyos'>('')
   const [musculo, setMusculo] = useState('')
   const [mas, setMas] = useState(false)
   const [material, setMaterial] = useState('')
@@ -32,7 +32,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   const [favs, setFavs] = useState(false)
   const [hoy, setHoy] = useState(false)
   const [evitados, setEvitados] = useState(ruta.d?.filtro === 'evitados')
-  const c = catalogoCargado()
+  const c = useCatalogo()
   const datos = useLiveQuery(async () => {
     const sesiones = await leerSesiones()
     const series = new Map<string, import('../../datos/tipos').Serie[]>()
@@ -51,8 +51,8 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   const sel = new Set(g?.material ?? [])
   const lista = useMemo(() => {
     let l = (c?.ejercicios ?? []).filter(e => e.categoria !== 'stretching' || q)
-    if (enGym && g) l = l.filter(e => !e.material || sel.has(e.material))
-    if (tipo) l = l.filter(tipo === 'calistenia' ? esCalistenia : esCardio)
+    if (enGym && g) l = l.filter(e => hayEn(e, sel))
+    if (tipo) l = l.filter(tipo === 'tuyos' ? e => !!e.propio : tipo === 'calistenia' ? esCalistenia : esCardio)
     if (grupo) l = l.filter(e => e.principales.some(x => musculoComun(x) === t(grupo)))
     if (musculo) l = l.filter(e => e.principales.includes(musculo) || e.secundarios.includes(musculo))
     if (material) l = l.filter(e => (material === 'corporal' ? !e.material : e.material === material))
@@ -64,6 +64,10 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
   }, [c, q, tipo, grupo, musculo, material, enGym, favs, hoy, evitados, g?.material.length, marcas, datos, enPlan])
   const [n, setN] = useState(40)
   const nFavs = [...marcas.values()].filter(m => m.favorito).length
+  const nTuyos = (c?.ejercicios ?? []).filter(e => e.propio).length
+  // Al borrar el último propio, el filtro «Tuyos» desaparece: no puede quedarse puesto sin verse.
+  useEffect(() => { if (!nTuyos) setTipo(v => (v === 'tuyos' ? '' : v)) }, [nTuyos])
+  const crear = (nombre?: string) => nav.hoja('hoja-propio', nombre ? { nombre } : undefined)
   // «En mi gimnasio» no cuenta: es lo normal.
   const hayFiltros = !!tipo || !!grupo || !!musculo || !!material || favs || hoy || evitados
   const quitarFiltros = () => { setTipo(''); setGrupo(''); setMusculo(''); setMaterial(''); setFavs(false); setHoy(false); setEvitados(false) }
@@ -80,6 +84,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
             <option value="">{t('Músculo ▾')}</option>
             {GRUPOS_SIMPLES.map(x => <option key={x} value={x}>{t(x)}</option>)}
           </select>
+          {nTuyos > 0 && <Chip on={tipo === 'tuyos'} onClick={() => setTipo(v => (v === 'tuyos' ? '' : 'tuyos'))}>{t('Tuyos')}<span className="n">{nTuyos}</span></Chip>}
           <Chip on={tipo === 'calistenia'} onClick={() => setTipo(v => (v === 'calistenia' ? '' : 'calistenia'))}>{t('Calistenia')}</Chip>
           <Chip on={tipo === 'cardio'} onClick={() => setTipo(v => (v === 'cardio' ? '' : 'cardio'))}>{t('Cardio')}</Chip>
           <Chip on={enGym} ck onClick={() => setEnGym(v => !v)}>{t('En mi gimnasio')}</Chip>
@@ -104,6 +109,10 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
         <div className="count"><p>{enGym && g
           ? (lista.length === 1 ? tr('{n} ejercicio en tu gimnasio', { n: cuenta }) : tr('{n} ejercicios en tu gimnasio', { n: cuenta }))
           : (lista.length === 1 ? tr('{n} ejercicio', { n: cuenta }) : tr('{n} ejercicios', { n: cuenta }))}</p>{hayFiltros && <button className="lnk" onClick={quitarFiltros}>{t('Quitar filtros')}</button>}</div>
+        <button className="pr-crear" onClick={() => crear()}>
+          <span className="ico"><Ico n="plus" b /></span>
+          <span className="tx"><b>{t('Crear un ejercicio')}</b><small>{t('¿No está el que haces? Ponle nombre y listo.')}</small></span>
+        </button>
         {lista.length === 0 ? (
           <div className="card pd empty">
             <span className="empty-ic"><Ico n="magnifying-glass" /></span>
@@ -111,7 +120,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
             <p className="muted">{q ? (hayFiltros ? t('Nada se llama «{q}» con estos filtros. Prueba con otra palabra, como «press» o «sentadilla».', { q }) : t('Nada se llama «{q}». Prueba con otra palabra, como «press» o «sentadilla».', { q })) : hayFiltros ? t('Hay demasiados filtros puestos.') : t('Tu gimnasio no tiene máquinas marcadas.')}</p>
             {hayFiltros ? <button className="btn mt12" onClick={quitarFiltros}>{t('Quitar filtros')}</button>
               : enGym && !q ? <button className="btn mt12" onClick={() => (g ? nav.ir('editor-gimnasio', { id: g.id }) : nav.reemplazar('gimnasios'))}>{g ? t('Marcar las máquinas de mi gimnasio') : t('Crear mi gimnasio')}</button>
-              : q ? <button className="btn gry sm mt12" onClick={() => setQ('')}>{t('Borrar la búsqueda')}</button> : null}
+              : q ? <div className="btns mt12"><button className="btn sm" onClick={() => crear(q.trim())}><Ico n="plus" b />{t('Crear «{nombre}»', { nombre: q.trim() })}</button><button className="btn gry sm" onClick={() => setQ('')}>{t('Borrar la búsqueda')}</button></div> : null}
           </div>
         ) : (
           <div className="ads">
@@ -125,7 +134,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
                     <b>{e.nombre}</b>
                     <small>{musculosComunes(e.principales, 2).join(' · ')} · {nombreMaterial(e.material)}</small>
                     <span className="ad-k">
-                      <span className="tag">{zonaComun(e.zona)}</span>
+                      {e.propio ? <span className="tag pr-tuyo">{t('Tuyo')}</span> : <span className="tag">{zonaComun(e.zona)}</span>}
                       {enPlan.has(e.id) && <span className="tag go">{t('En tu plan · {dia}', { dia: enPlan.get(e.id)! })}</span>}
                       <span className="marks">{m?.favorito && <Ico n="star" b className="ph-star" />}{m?.odiado && <Ico n="prohibit" b className="ph-prohibit" />}{m?.duele && <Ico n="warning" b className="ph-warning" />}</span>
                     </span>
@@ -135,6 +144,7 @@ export function Biblioteca({ ruta }: { ruta: Ruta<'biblioteca'> }) {
               )
             })}
             {lista.length > n && <button className="more" onClick={() => setN(x => x + 60)}>{t('Ver más ({n})', { n: lista.length - n })}</button>}
+            {q && lista.length <= n && <button className="lnk mt8" onClick={() => crear(q.trim())}>{t('¿No está? Créalo')}</button>}
           </div>
         )}
         <p className="credit">Exercise data by RepDB (repdb.co)</p>

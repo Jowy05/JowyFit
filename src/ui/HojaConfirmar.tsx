@@ -4,6 +4,7 @@ import { borrarTodosLosDatos } from '../datos/copias'
 import { borrarFoto, borrarMedicion } from '../datos/acciones/cuerpo'
 import { borrarSesion, descartarEntreno } from '../datos/acciones/entreno'
 import { borrarGimnasio } from '../datos/acciones/rutina'
+import { borrarPropio } from '../datos/acciones/propios'
 import { cx, Hoja, Ico, useUnaVez } from './componentes'
 import { useNav, type Ruta } from '../app/nav'
 import { useAviso } from './aviso'
@@ -11,9 +12,10 @@ import { t } from '../i18n'
 
 type Datos = Ruta<'hoja-confirmar'>['d']
 type ConId = Extract<Datos, { id: unknown }>['accion']
+type ConClave = Extract<Datos, { clave: unknown }>['accion']
 type Ctx = { nav: ReturnType<typeof useNav>; aviso: ReturnType<typeof useAviso> }
 
-const SIN_ID: Record<Exclude<Datos['accion'], ConId>, (c: Ctx) => Promise<void>> = {
+const SIN_ID: Record<Exclude<Datos['accion'], ConId | ConClave>, (c: Ctx) => Promise<void>> = {
   regenerar: async ({ nav }) => { nav.hoja(null); nav.ir('generar-rutina', undefined, 'rut') },
   // Borra la base entera: también reinicia los contadores que una copia rara puede dejar agotados.
   'borrar-todo': async () => { await borrarTodosLosDatos(); location.reload() },
@@ -27,6 +29,16 @@ const CON_ID: Record<ConId, (id: number, c: Ctx) => Promise<void>> = {
   'borrar-foto': async (id, { nav, aviso }) => { await borrarFoto(id); nav.hoja(null); aviso(t('Foto borrada')) },
 }
 
+const CON_CLAVE: Record<ConClave, (clave: string, c: Ctx) => Promise<void>> = {
+  // Se borra desde su ficha: se sale de ella, que ya no está en la lista.
+  'borrar-propio': async (clave, { nav, aviso }) => {
+    const deshacer = await borrarPropio(clave)
+    nav.hoja(null)
+    nav.atras()
+    aviso(t('Ejercicio borrado'), deshacer && (() => { deshacer().catch(() => aviso(t('No se ha podido deshacer. Inténtalo otra vez desde su ficha.'))) }))
+  },
+}
+
 export function HojaConfirmar({ ruta }: { ruta: Ruta<'hoja-confirmar'> }) {
   const nav = useNav()
   const aviso = useAviso()
@@ -35,7 +47,9 @@ export function HojaConfirmar({ ruta }: { ruta: Ruta<'hoja-confirmar'> }) {
   const [segunda, setSegunda] = useState(false)
   // Un doble toque haría dos veces «atrás» (borrar gimnasio o entreno) y sacaría de la pantalla anterior.
   const hacer = unaVez(async () => {
-    return 'id' in d ? CON_ID[d.accion](d.id, { nav, aviso }) : SIN_ID[d.accion]({ nav, aviso })
+    if ('id' in d) return CON_ID[d.accion](d.id, { nav, aviso })
+    if ('clave' in d) return CON_CLAVE[d.accion](d.clave, { nav, aviso })
+    return SIN_ID[d.accion]({ nav, aviso })
   })
   return (
     <Hoja titulo={d.titulo}>

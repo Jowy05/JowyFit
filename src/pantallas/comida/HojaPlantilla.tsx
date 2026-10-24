@@ -7,10 +7,10 @@ import { FRANJAS, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora
 import { t, tc, tk } from '../../i18n'
 import { horaActual, hoyISO } from '../../dominio/fechas'
 import { hacerFoto } from '../../plataforma'
-import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, LARGO } from '../../ui/componentes'
+import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, LARGO, useUrlBlob } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { LineaMacros, useUrlBlob } from './comun'
+import { LineaMacros } from './comun'
 import { apuntarPlantilla, borrarPlantilla, guardarPlantilla } from '../../datos/acciones/comida'
 
 /** Lo que trae por defecto cada tipo, para quien no sabe los números: un plato normal, una bolsa de picoteo, una lata. */

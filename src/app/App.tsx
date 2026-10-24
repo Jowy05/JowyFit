@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { cargarCatalogo } from '../catalogo/catalogo'
 import { cargarIdioma, t, tk } from '../i18n'
 import { leerPerfil, pedirPersistencia, prepararBase } from '../datos/repos'
+import { cargarPropios } from '../datos/acciones/propios'
 import { alPulsarAtras, marcarPlataforma, prepararSonido } from '../plataforma'
 import { ProveedorAviso } from '../ui/aviso'
 import { cx, Ico } from '../ui/componentes'
@@ -30,7 +31,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     // El idioma (si no es castellano) se carga antes de pintar nada: así todo sale ya traducido.
-    Promise.all([cargarIdioma(), cargarCatalogo(), prepararBase()])
+    Promise.all([cargarIdioma(), cargarCatalogo(), prepararBase().then(cargarPropios)])
       .then(() => { setListo(true); void pedirPersistencia() })
       .catch(e => setError(String(e?.message ?? e)))
   }, [])

@@ -1,0 +1,51 @@
+/* Ejercicios propios: la hoja de crear, su miniatura (foto o inicial), la etiqueta «Tuyo» y la cabecera de su ficha. */
+.pr-crear{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;margin-bottom:12px;padding:10px 14px;border:1.5px dashed var(--go);border-radius:10px;background:var(--surface);text-align:left;color:var(--ink)}
+.pr-crear .ico{display:grid;place-items:center;flex:none;background:var(--go-t);color:var(--go);width:44px;height:44px;font-size:24px;border-radius:10px}
+.pr-crear .tx{display:flex;flex-direction:column}
+.pr-crear .tx b{font-size:16.5px}
+.pr-crear .tx small{color:var(--muted)}
+
+.th.pr-ini{background:var(--raised);color:var(--muted);font-family:var(--font-display);font-weight:700}
+.th.pr-ini::before{background:repeating-linear-gradient(135deg,rgba(22,32,43,.035) 0 5px,transparent 5px 10px)}
+.th.m.pr-ini{font-size:32px}
+.th.s.pr-ini{font-size:21px}
+.th.l.pr-ini{font-size:42px}
+.th.pr-foto{background:var(--raised)}
+.th.pr-foto::before{display:none}
+.th.pr-foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+.tag.pr-tuyo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--go);color:var(--go)}
+
+.pr-hero{position:relative;margin-top:calc(-1 * var(--sb-h));height:calc(250px + var(--sb-h));background:var(--raised);overflow:hidden}
+.pr-hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pr-hero.ini{display:grid;place-items:center;padding-top:var(--sb-h);font:700 120px/1 var(--font-display);color:var(--muted)}
+.pr-hero .gal-cnt{background:var(--surface);color:var(--go)}
+.pr-hero .pr-fotobtn{position:absolute;right:14px;bottom:14px;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:20px;background:rgba(0,0,0,.42);color:#fff;font-weight:600;font-size:14px}
+
+.pr-campo{margin-top:14px}
+.pr-campo>.lbl{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+.pr-nombre{min-height:52px;font-size:18px;font-weight:600}
+.pr-nombre::placeholder{font-weight:400;font-size:16px;color:var(--muted);opacity:.8}
+.pr-regs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pr-reg{display:flex;align-items:center;gap:10px;min-height:58px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;color:var(--ink);min-width:0}
+.pr-reg>i{flex:none;font-size:22px;color:var(--blue)}
+.pr-reg b{display:block;font-weight:600;font-size:14.5px;line-height:1.2}
+.pr-reg small{display:block;color:var(--muted);font:500 12.5px var(--font-mono);margin-top:3px}
+.pr-reg.on{border-color:var(--go);background:var(--go-t);box-shadow:0 0 0 1px var(--go)}
+.pr-reg.on>i{color:var(--go)}
+.pr-hint{display:flex;gap:6px;align-items:flex-start;margin-top:8px;font-size:13.5px;color:var(--muted);line-height:1.35}
+.pr-hint i{flex:none;font-size:16px;color:var(--blue);margin-top:1px}
+.pr-pie{position:sticky;bottom:-30px;z-index:3;margin:18px -20px -30px;padding:14px 20px 26px;background:linear-gradient(0deg,var(--surface) 78%,transparent)}
+.pr-fotos{display:flex;gap:8px}
+.pr-fotos .btn{flex:1}
+.pr-fotoprev{display:flex;align-items:center;gap:12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.pr-fotoprev .tx{flex:1;display:flex;flex-direction:column}
+.pr-fotoprev .tx small{color:var(--muted)}
+.pr-sw{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;text-align:left;color:var(--ink)}
+.pr-sw .tx{flex:1;display:flex;flex-direction:column}
+.pr-sw .tx small{font-size:13px;color:var(--muted)}
+.pr-parecido{margin-top:8px}
+.pr-parecido .lnk{margin:0;padding:0 0 0 4px}
+
+/* Pantalla estrecha: los cuatro modos de apuntar, uno debajo de otro. */
+@media (max-width:340px){.pr-regs{grid-template-columns:1fr}}

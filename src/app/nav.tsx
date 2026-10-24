@@ -54,11 +54,9 @@ export type Rutas = {
   'hoja-comida': { id: number }
   'hoja-suplemento': { nombre: string }
   'hoja-maquina': { gym: number; id?: string }
-  'hoja-elegir-ejercicio':
-    | { modo: 'anadir'; letra: string }
-    | { modo: 'cambiar' | 'alternativa'; letra: string; uid: string; id: string }
-    | { modo: 'sesion-anadir' }
-    | { modo: 'sesion-cambiar'; idx: number; id?: string }
+  'hoja-elegir-ejercicio': ElegirEjercicio
+  /** Crear (o editar, con id) un ejercicio propio. Con `vuelta`, al guardar se vuelve a esa hoja con el nuevo ya buscado. */
+  'hoja-propio': { id?: string; nombre?: string; vuelta?: ElegirEjercicio } | undefined
   'hoja-meta': { id?: number; tipo?: Meta['tipo'] } | undefined
   'hoja-trote': undefined
   'hoja-confirmar': DatosConfirmar
@@ -66,10 +64,19 @@ export type Rutas = {
   'hoja-oferta-tutorial': undefined
 }
 
+/** Para qué se elige el ejercicio; `q`, lo que sale ya escrito en la búsqueda. */
+type ElegirEjercicio = (
+  | { modo: 'anadir'; letra: string }
+  | { modo: 'cambiar' | 'alternativa'; letra: string; uid: string; id: string }
+  | { modo: 'sesion-anadir' }
+  | { modo: 'sesion-cambiar'; idx: number; id?: string }
+) & { q?: string }
+
 /** Hoja de confirmación: los textos y qué se hace al aceptar (con el id de lo que se borra). */
 type DatosConfirmar = { titulo: string; texto?: string; si?: string; no?: string; peligro?: boolean } & (
   | { accion: 'regenerar' | 'borrar-todo' }
   | { accion: 'borrar-gimnasio' | 'borrar-sesion' | 'cancelar-entreno' | 'borrar-medicion' | 'borrar-foto'; id: number }
+  | { accion: 'borrar-propio'; clave: string }
 )
 
 export type CodigoRuta = keyof Rutas

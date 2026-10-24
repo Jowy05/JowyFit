@@ -1,10 +1,10 @@
-// RUT-06 · Ficha de ejercicio: todo lo de RepDB + tu progreso, tus ajustes y tus marcas.
+// RUT-06 · Ficha de ejercicio: todo lo de RepDB + tu progreso, tus ajustes y tus marcas. Los propios, con sus piezas (FichaPropio).
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { guardarSesion } from '../../datos/acciones/entreno'
 import { marcar } from '../../datos/repos'
 import { historialDe, sugerenciaPara } from '../../datos/consultas'
-import { catalogoCargado, ejercicio, etiqueta, imagen, imagenMaterial, imagenMusculo, nombreMaterial, nombreMusculo, relacionados } from '../../catalogo/catalogo'
+import { ejercicio, etiqueta, imagen, imagenMaterial, imagenMusculo, nombreMaterial, nombreMusculo, relacionados, useCatalogo } from '../../catalogo/catalogo'
 import { ETIQUETAS_ES, NOMBRE_PATRON, patron, tipoRegistro } from '../../catalogo/clasificacion'
 import { epley } from '../../dominio/calculos'
 import { kg, num } from '../../dominio/formato'
@@ -20,6 +20,7 @@ import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '
 import { guardarRutina } from '../../datos/acciones/rutina'
 import { propio } from '../../dominio/claves'
 import { musculoComun, musculosComunes, tituloDia, zonaComun } from './comun'
+import { CabeceraPropio, DatosPropio, PiePropio } from './FichaPropio'
 import { t, tc, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -28,7 +29,10 @@ const REGISTRO_TXT = { peso: tk('kg y repeticiones'), mancuerna: tk('kg de cada 
 export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
   const nav = useNav()
   const aviso = useAviso()
+  // Se suscribe al catálogo: al editar o borrar un ejercicio propio, la ficha se pone al día.
+  const catalogo = useCatalogo()
   const e = ejercicio(ruta.d.id)
+  const mio = e?.propio
   const marcas = useMarcas()
   const r = useRutina()
   const g = useGimnasio()
@@ -65,7 +69,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
     return { x: fechaCorta(h.fecha).replace(' ', '/'), peso: mx, rm, vol: volumen(h.series) }
   })
   const reg = tipoRegistro(e)
-  const alternativas = [...(enPlan?.b.alternativas ?? []).map(id => ({ id, t: '' })), ...relacionados(e, catalogoCargado()?.ejercicios ?? [], 8).map(x => ({ id: x.id, t: 'Otra' }))]
+  const alternativas = [...(enPlan?.b.alternativas ?? []).map(id => ({ id, t: '' })), ...relacionados(e, catalogo?.ejercicios ?? [], 8).map(x => ({ id: x.id, t: 'Otra' }))]
     .filter((x, i, a) => a.findIndex(y => y.id === x.id) === i).slice(0, 8)
   const prin = musculosComunes(e.principales)
   const secu = musculosComunes(e.secundarios).filter(x => !prin.includes(x))
@@ -73,7 +77,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
 
   const alEntreno = unaVez(async () => {
     if (!sesion) { aviso(t('Empieza un entreno y podrás añadirlo')); return }
-    const b = bloqueNuevo(e.id, { perfil, ejercicios: catalogoCargado()?.ejercicios ?? [], gimnasio: g ?? null, marcas })
+    const b = bloqueNuevo(e.id, { perfil, ejercicios: catalogo?.ejercicios ?? [], gimnasio: g ?? null, marcas })
     const s = structuredClone(sesion)
     const ej = desdeBloque(b, { peso: sug?.peso ?? null, reps: sug?.reps ?? b.repsMin })
     if (!s.ejercicios.some(x => x.estado === 'curso')) ej.estado = 'curso'
@@ -84,7 +88,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
   const anadirAlDia = unaVez(async (letra: string) => {
     if (!r) return
     const nueva = structuredClone(r)
-    nueva.dias.find(d => d.letra === letra)!.bloques.push(bloqueNuevo(e.id, { perfil, ejercicios: catalogoCargado()?.ejercicios ?? [], gimnasio: g ?? null, marcas }))
+    nueva.dias.find(d => d.letra === letra)!.bloques.push(bloqueNuevo(e.id, { perfil, ejercicios: catalogo?.ejercicios ?? [], gimnasio: g ?? null, marcas }))
     await guardarRutina(nueva)
     setAlPlan(false)
     aviso(t('Añadido a tu plan: {dia}', { dia: tituloDia(nueva.dias.find(d => d.letra === letra)!).toLowerCase() }))
@@ -92,7 +96,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
 
   return (
     <Pantalla>
-      <div className="gal">
+      {mio ? <CabeceraPropio p={mio} /> : <div className="gal">
         <button className="gal-back" onClick={nav.atras} aria-label={t('Atrás')}><Ico n="caret-left" b /></button>
         <span className="gal-cnt tag">RepDB · {pose + 1} / {e.poses.length}</span>
         {e.poses.map((p, i) => (
@@ -104,11 +108,12 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
             </figcaption>
           </figure>
         ))}
-      </div>
+      </div>}
       <div className="pg">
         <p className="lbl">{zonaComun(e.zona)} · {nombreMaterial(e.material).toLowerCase()}</p>
         <h1 className="ficha-t">{e.nombre}</h1>
-        {e.descripcion && <p className="muted mt4">{e.descripcion}</p>}
+        {e.descripcion && <p className="muted mt4">{mio ? `«${e.descripcion}»` : e.descripcion}</p>}
+        {mio && <DatosPropio p={mio} />}
 
         {e.instrucciones.length > 0 && (
           <div className="sec">
@@ -118,7 +123,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
           </div>
         )}
 
-        <div className="sec">
+        {!mio && <div className="sec">
           <div className="sec-h"><h2>{t('Músculos que trabaja')}</h2></div>
           <p className="ux-rut-trabaja">{secu.length > 0
             ? tr('Sobre todo {prin}; también {secu}.', { prin: <b>{prin.join(', ').toLowerCase()}</b>, secu: secu.join(', ').toLowerCase() })
@@ -134,7 +139,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
           {e.material && imagenMaterial(e.material) && (
             <div className="it card mt8"><span className="mus-img" style={{ background: '#fff' }}><img src={imagenMaterial(e.material)} alt="" style={{ width: 44, height: 44, objectFit: 'contain' }} /></span><span className="tx"><b>{nombreMaterial(e.material)}</b><small>{t('Lo que necesitas')}</small></span></div>
           )}
-        </div>
+        </div>}
 
         <div className="sec">
           <div className="sec-h"><h2>{t('Mi progreso')}</h2><span className="lbl">{tn(hist.length, '{n} vez', '{n} veces')}</span></div>
@@ -235,7 +240,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
             <Chip on={!!m?.duele} onClick={() => void marcar(e.id, { duele: !m?.duele })}><Ico n="warning" b />{t('Me duele')}</Chip>
           </div>
           {(m?.odiado || m?.duele) && <p className="small muted mt8">{t('No te lo propondremos en la rutina ni para cuando algo esté ocupado.')}</p>}
-          {alPlan && r ? (
+          {mio?.borrado ? null : alPlan && r ? (
             <>
               <p className="small muted mt12">{t('¿A qué día lo añado?')}</p>
               <div className="chips mt8">{r.dias.map(d => <Chip key={d.letra} onClick={() => void anadirAlDia(d.letra)}>{tituloDia(d)}</Chip>)}<Chip onClick={() => setAlPlan(false)}>{t('Cancelar')}</Chip></div>
@@ -248,8 +253,9 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
           )}
         </div>
 
+        {mio && <PiePropio p={mio} rutina={r} />}
         {/* Datos raros del catálogo: plegados. */}
-        <details className="fold mt20">
+        {!mio && <><details className="fold mt20">
           <summary><Ico n="info" className="blue" />{t('Ficha técnica')}<Ico n="caret-down" /></summary>
           <div className="in">
             <div className="spec c2">
@@ -271,7 +277,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
             {e.etiquetas.length > 0 && <div className="chips mt8">{e.etiquetas.map(x => { const k = propio(ETIQUETAS_ES, x); return <span key={x} className="tag blue">{k ? t(k) : x}</span> })}</div>}
           </div>
         </details>
-        <p className="credit">Exercise data by <a href="https://repdb.co" style={{ color: 'inherit' }}>RepDB (repdb.co)</a></p>
+        <p className="credit">Exercise data by <a href="https://repdb.co" style={{ color: 'inherit' }}>RepDB (repdb.co)</a></p></>}
       </div>
     </Pantalla>
   )

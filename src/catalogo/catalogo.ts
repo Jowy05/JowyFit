@@ -1,13 +1,32 @@
 // Catálogo de ejercicios RepDB: carga, búsqueda, imágenes y nombres en el idioma de la app.
 // En inglés usa catalogo.en.json (de RepDB) y en catalán catalogo.ca.json (traducción propia); si no llegan, castellano.
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import type { Catalogo, Ejercicio, TextosCatalogo } from './tipos'
 import { propio } from '../dominio/claves'
-import { idioma, t } from '../i18n'
+import { idioma, t, tk } from '../i18n'
 
+// El catálogo que ven las pantallas (`cache`) es el de RepDB más los ejercicios propios que no se han borrado.
+// El índice tiene también los borrados: el historial y el informe siguen sacando su nombre.
+let repdb: Catalogo | null = null
+let propios: Ejercicio[] = []
 let cache: Catalogo | null = null
 let promesa: Promise<Catalogo> | null = null
 let indice: Map<string, Ejercicio> = new Map()
+const oyentes = new Set<() => void>()
+
+function juntar() {
+  if (!repdb) return
+  // Siempre un objeto nuevo: las pantallas suscritas se vuelven a pintar aunque solo cambie el índice.
+  cache = { ...repdb, ejercicios: [...propios.filter(e => !e.propio?.borrado), ...repdb.ejercicios] }
+  indice = new Map([...repdb.ejercicios, ...propios].map(e => [e.id, e]))
+  for (const avisar of oyentes) avisar()
+}
+
+/** Los ejercicios del usuario (ya pasados a Ejercicio con comoEjercicio), también los borrados. */
+export function usarPropios(lista: Ejercicio[]) {
+  propios = lista
+  juntar()
+}
 
 const base = () => import.meta.env.BASE_URL ?? '/'
 
@@ -56,8 +75,8 @@ export function usarCatalogo(c: Catalogo, ingles?: TextosCatalogo | null) {
       if (en) for (const k of Object.keys(etiquetas)) { const v = propio(en, k); if (v) etiquetas[k] = v }
     }
   }
-  cache = c
-  indice = new Map(c.ejercicios.map(e => [e.id, e]))
+  repdb = c
+  juntar()
 }
 
 export async function cargarCatalogo(): Promise<Catalogo> {
@@ -68,7 +87,7 @@ export async function cargarCatalogo(): Promise<Catalogo> {
       return r.json() as Promise<Catalogo>
     }),
     idioma() === 'es' ? null : cargarTextos(idioma()),
-  ]).then(([c, en]) => { usarCatalogo(c, en); return c })
+  ]).then(([c, en]) => { usarCatalogo(c, en); return cache! })
   // Si falla (sin conexión, archivo a medio bajar), el fallo no se guarda: la próxima vez se vuelve a intentar.
   promesa.catch(() => { promesa = null })
   return promesa
@@ -85,13 +104,22 @@ export function catalogoCargado(): Catalogo | null {
   return cache
 }
 
+function suscribir(avisar: () => void) {
+  oyentes.add(avisar)
+  return () => { oyentes.delete(avisar) }
+}
+
+/** El catálogo, y vuelve a pintar la pantalla cuando cambia (al crear, editar o borrar un ejercicio propio). */
 export function useCatalogo(): Catalogo | null {
-  const [c, setC] = useState<Catalogo | null>(cache)
+  const c = useSyncExternalStore(suscribir, catalogoCargado)
   useEffect(() => {
-    if (!c) void cargarCatalogo().then(setC).catch(() => setC(null))
+    if (!c) void cargarCatalogo().catch(() => undefined)
   }, [c])
   return c
 }
+
+/** Se puede hacer en un gimnasio con este material. Los propios, siempre: el usuario los crea para lo que tiene. */
+export const hayEn = (e: Ejercicio, material: ReadonlySet<string>) => !!e.propio || !e.material || material.has(e.material)
 
 export function ejercicio(id: string | null | undefined): Ejercicio | undefined {
   return id ? indice.get(id) : undefined
@@ -119,8 +147,14 @@ export function imagenMusculo(clave: string): string | undefined {
   return m?.imagen ? `${base()}repdb/mus/${m.imagen}` : undefined
 }
 
-export const nombreMaterial = (clave: string | null) =>
-  clave ? (propio(cache?.material, clave)?.nombre ?? clave) : t('Peso corporal')
+/** Material de los ejercicios propios que no tiene uno de RepDB (ver catalogo/propios). */
+export const NOMBRE_MATERIAL_PROPIO: Record<string, string> = { 'mio-maquina': tk('Máquina'), 'mio-otro': tk('Otro') }
+
+export function nombreMaterial(clave: string | null): string {
+  if (!clave) return t('Peso corporal')
+  const mio = propio(NOMBRE_MATERIAL_PROPIO, clave)
+  return mio ? t(mio) : (propio(cache?.material, clave)?.nombre ?? clave)
+}
 export const nombreMusculo = (clave: string) => propio(cache?.musculos, clave)?.nombre ?? clave
 export const etiqueta = (grupo: string, clave: string) => propio(propio(cache?.etiquetas, grupo), clave) ?? clave
 

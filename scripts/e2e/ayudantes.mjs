@@ -2,6 +2,7 @@
 // preparar su base local y registrar los escenarios. correr.mjs abre el navegador y se lo pasa con conectar().
 import * as fsx from 'node:fs'
 import path from 'node:path'
+import { trasCarga } from './navegador.mjs'
 
 export const RAIZ = path.resolve(import.meta.dirname, '..', '..')
 export const DESCARGAS = path.join(RAIZ, '.cache', 'e2e-descargas')
@@ -42,8 +43,7 @@ export const noVer = texto => t('noVer', texto)
 
 /** Carga la app de cero (base vacía) a una fecha y hora concretas. */
 export async function deCero(fechaHora) {
-  await cdp.enviar('Page.navigate', { url: PAGINA_APP })
-  await esperar(300)
+  await trasCarga(cdp, () => cdp.enviar('Page.navigate', { url: PAGINA_APP }))
   await js(`
     sessionStorage.setItem('__e2e_fecha', String(new Date(${JSON.stringify(fechaHora)}).getTime() - Date.__real()));
     localStorage.clear();
@@ -54,8 +54,7 @@ export async function deCero(fechaHora) {
   await recargar()
 }
 export async function recargar() {
-  await cdp.enviar('Page.reload', { ignoreCache: true })
-  await esperar(400)
+  await trasCarga(cdp, () => cdp.enviar('Page.reload', { ignoreCache: true }))
   await t('ver', /JOWYFIT|Buenos|Buenas|Hoy te toca|Inicio/i, 15000)
 }
 /** Cambia la fecha simulada sin borrar datos (como si pasaran los días). */

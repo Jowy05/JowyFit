@@ -61,8 +61,36 @@ async function conectar(url) {
       if (m.error) mal(new Error(`${m.error.message} ${m.error.data ?? ''}`)); else ok(m.result)
     } else if (m.method) for (const f of oyentes.get(m.method) ?? []) f(m.params)
   })
-  return {
+  return contarNavegaciones({
     enviar: (method, params = {}) => new Promise((ok, mal) => { const n = ++id; pendientes.set(n, { ok, mal }); ws.send(JSON.stringify({ id: n, method, params })) }),
     al: (evento, f) => { oyentes.set(evento, [...(oyentes.get(evento) ?? []), f]) },
+  })
+}
+
+/**
+ * Añade a una conexión CDP (con Page.enable) cuántas veces ha cambiado de documento la página y cuál de esos
+ * documentos ha terminado de cargar: lo que necesita trasCarga.
+ */
+export function contarNavegaciones(cdp) {
+  let navegaciones = 0, cargada = 0
+  cdp.al('Page.frameNavigated', p => { if (!p.frame.parentId) navegaciones++ })
+  cdp.al('Page.loadEventFired', () => { cargada = navegaciones })
+  cdp.navegacion = () => ({ navegaciones, cargada })
+  return cdp
+}
+
+/**
+ * Hace algo que cambia de página (recargar, ir a otra, pulsar un enlace) y espera a que la nueva haya cargado.
+ * Con una espera fija, en una máquina lenta la recarga empieza después y lo siguiente que se le pregunta a la
+ * página muere a medias («Inspected target navigated or closed»).
+ */
+export async function trasCarga(cdp, accion, que = 'navegar', ms = 20_000) {
+  const antes = cdp.navegacion().navegaciones
+  await accion()
+  const fin = Date.now() + ms
+  // Un documento nuevo, que empezó después de la acción, y ya cargado (no vale la carga del de antes).
+  for (let n = cdp.navegacion(); n.navegaciones === antes || n.cargada !== n.navegaciones; n = cdp.navegacion()) {
+    if (Date.now() > fin) throw new Error(`La página no termina de cargar tras ${que}`)
+    await esperar(50)
   }
 }

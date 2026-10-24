@@ -2,6 +2,7 @@
 import * as fsx from 'node:fs'
 import path from 'node:path'
 import { altaRapida, cdp, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, esperar, js, meter, noVer, pestana, pulsar, revisarAqui, seg, t, tabla, ver, volcar } from '../ayudantes.mjs'
+import { trasCarga } from '../navegador.mjs'
 
 // Lo que se comprueba en cada idioma: el nombre de las pestañas y unos textos de Inicio, de una hoja, del tutorial
 // y de Ajustes (los mismos que en castellano, con su traducción de src/i18n).
@@ -45,8 +46,11 @@ async function abrirAjustes(i) {
 async function cambiarIdioma(de, a) {
   await abrirAjustes(de)
   // La app se recarga al tocarlo: el toque va en diferido para que la llamada vuelva antes de recargar.
-  const hay = await js(`const b = [...document.querySelectorAll('[data-idioma] button')].find(b => b.textContent.trim() === ${JSON.stringify(IDIOMA[a].nombre)}); if (b) setTimeout(() => b.click(), 50); return !!b`)
-  comprobar(hay, `No está «${IDIOMA[a].nombre}» en Ajustes → Idioma`)
+  let hay = false
+  await trasCarga(cdp, async () => {
+    hay = await js(`const b = [...document.querySelectorAll('[data-idioma] button')].find(b => b.textContent.trim() === ${JSON.stringify(IDIOMA[a].nombre)}); if (b) setTimeout(() => b.click(), 50); return !!b`)
+    comprobar(hay, `No está «${IDIOMA[a].nombre}» en Ajustes → Idioma`)
+  })
   await esperarIdioma(a)
 }
 
@@ -105,7 +109,7 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   await cambiarIdioma('es', 'ca')
   await repasarIdioma('ca')
   // Se recuerda al recargar.
-  await cdp.enviar('Page.reload', { ignoreCache: true })
+  await trasCarga(cdp, () => cdp.enviar('Page.reload', { ignoreCache: true }))
   await esperarIdioma('ca')
   await ver(IDIOMA.ca.hoy)
   // Los ejercicios, también en catalán (si la compilación tiene su traducción: va cifrada, con clave).
@@ -144,10 +148,16 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   await abrirAjustes('en')
   await pulsar('Restore a backup')
   await ver(/Restore jowyfit-[\d-]+\.jowyfit\?/)
-  await pulsar(/^Restore$/)
-  await ver('Backup restored', 8000)
+  // Al restaurar, la app avisa y se recarga sola enseguida: el aviso lo apunta la propia página (sessionStorage
+  // sobrevive a la recarga) para no tener que verlo a tiempo desde fuera.
+  await trasCarga(cdp, () => js(`
+    sessionStorage.removeItem('__e2e_aviso')
+    new MutationObserver((_, o) => { if (document.body.innerText.includes('Backup restored')) { sessionStorage.setItem('__e2e_aviso', '1'); o.disconnect() } })
+      .observe(document.body, { childList: true, subtree: true, characterData: true })
+    // Sin esperar a que vuelva: el toque es inmediato y la recarga llega después.
+    void __t.pulsar(/^Restore$/)`), 'restaurar la copia')
+  comprobar(await js(`return sessionStorage.getItem('__e2e_aviso')`) === '1', 'No salió «Backup restored» antes de recargar')
   entorno.archivoParaElegir = null
-  await esperar(1500)
   await esperarIdioma('en')
   const despues = await volcar()
   for (const tb of Object.keys(antes)) {
@@ -166,7 +176,7 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   // 5. Y de vuelta al castellano, como siempre.
   await cambiarIdioma('en', 'es')
   await repasarIdioma('es')
-  await cdp.enviar('Page.reload', { ignoreCache: true })
+  await trasCarga(cdp, () => cdp.enviar('Page.reload', { ignoreCache: true }))
   await esperarIdioma('es')
   await ver('Hoy te toca')
 })

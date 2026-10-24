@@ -9,7 +9,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { build, preview } from 'vite'
-import { abrirNavegador } from './navegador.mjs'
+import { abrirNavegador, trasCarga } from './navegador.mjs'
 
 const RAIZ = path.resolve(import.meta.dirname, '..', '..')
 const SALIDA = path.join(RAIZ, '.cache', 'dist-landing')
@@ -57,8 +57,7 @@ async function pantalla(ancho, alto, reducido = false) {
   await cdp.enviar('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reducido ? 'reduce' : 'no-preference' }] })
 }
 async function abrir(consulta) {
-  await cdp.enviar('Page.navigate', { url: BASE + consulta })
-  await esperar(400)
+  await trasCarga(cdp, () => cdp.enviar('Page.navigate', { url: BASE + consulta }))
   await js(`await new Promise(r => document.readyState === 'complete' ? r() : addEventListener('load', r)); await document.fonts.ready`)
   await esperar(300)
 }
@@ -280,9 +279,9 @@ await prueba('Demo: no pide nada a otros sitios y la plataforma se cambia con la
 
 // ---------------------------------------------------------------- idiomas (es, ca, en)
 const IDIOMAS = ['es', 'ca', 'en']
-/** Espera a que acabe de cargar la página a la que se ha ido (por un enlace o al recargar). */
-async function cargada() {
-  await esperar(500)
+/** Hace algo que cambia de página (pulsar un enlace, recargar) y espera a que la nueva acabe de cargar, con sus letras. */
+async function cargada(accion) {
+  await trasCarga(cdp, accion)
   await js(`await new Promise(r => document.readyState === 'complete' ? r() : addEventListener('load', r)); await document.fonts.ready`)
   await esperar(400)
 }
@@ -380,13 +379,11 @@ await prueba('Selector: cambia sin recargar, se recuerda al recargar y se lleva 
   if (!d.cerrado) f.push('el menú no se cierra')
   f.push(...distintos(await js(TEXTOS), ref.landing.en, 'landing en (sin recargar)'))
   // Al recargar, se queda.
-  await cdp.enviar('Page.reload')
-  await cargada()
+  await cargada(() => cdp.enviar('Page.reload'))
   if ((await js(`return document.documentElement.lang`)) !== 'en') f.push('al recargar vuelve al castellano')
   f.push(...distintos(await js(TEXTOS), ref.landing.en, 'landing en (recargada)'))
   // «Ver la demo» lleva a la demo en inglés.
-  await js(`document.querySelector('a.boton-demo').click()`)
-  await cargada()
+  await cargada(() => js(`document.querySelector('a.boton-demo').click()`))
   if (!/\/Demo/.test(await js(`return location.pathname`))) f.push('«Ver la demo» no lleva a la demo')
   if ((await js(`return document.documentElement.lang`)) !== 'en') f.push('la demo no sale en inglés')
   // En la demo se cambia a catalán sin recargar, y «Tornar a la pàgina» lo lleva de vuelta.
@@ -397,8 +394,7 @@ await prueba('Selector: cambia sin recargar, se recuerda al recargar y se lleva 
   d = await js(`return { sigue: window.__sinRecargar === 1, lang: document.documentElement.lang, n: document.querySelector('[data-n]').textContent }`)
   if (!d.sigue || d.lang !== 'ca') f.push(`demo al elegir Català: ${JSON.stringify(d)}`)
   if (!/^\d+ de \d+$/.test(d.n)) f.push(`demo en catalán: «${d.n}»`)
-  await js(`document.querySelector('.d-volver').click()`)
-  await cargada()
+  await cargada(() => js(`document.querySelector('.d-volver').click()`))
   if ((await js(`return document.documentElement.lang`)) !== 'ca') f.push('al volver, la landing no sale en catalán')
   f.push(...distintos(await js(TEXTOS), ref.landing.ca, 'landing ca (de vuelta)'))
   return f

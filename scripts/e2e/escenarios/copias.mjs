@@ -1,7 +1,8 @@
 // Copias de seguridad: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { altaRapida, compilada, DESCARGAS, entorno, escenario, esperar, js, pestana, pulsar, t, ver } from '../ayudantes.mjs'
+import { altaRapida, cdp, compilada, DESCARGAS, entorno, escenario, esperar, js, pestana, pulsar, t, ver } from '../ayudantes.mjs'
+import { trasCarga } from '../navegador.mjs'
 
 if (!compilada) escenario('copia de seguridad: exportar e importar', async () => {
   await altaRapida('2026-10-13T14:10:00')
@@ -38,8 +39,8 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   // Se confirma dos veces: la primera solo cambia el botón a «Sí, borrarlo todo».
   await pulsar(/^Borrar todo/, '.sheet')
   await ver('Sí, borrarlo todo')
-  await pulsar('Sí, borrarlo todo', '.sheet').catch(() => {}) // la app se recarga sola
-  await esperar(2500)
+  // La app se recarga sola: el toque puede no volver (eso, y solo eso, no es un fallo).
+  await trasCarga(cdp, () => pulsar('Sí, borrarlo todo', '.sheet').catch(e => { if (!/navigated|destroyed/i.test(e.message)) throw e }), '«Borrar todo»')
   await ver('Tu fuerza y tu comida', 10000)
   entorno.archivoParaElegir = path.join(DESCARGAS, archivo)
   await pulsar(/Tengo una copia/)

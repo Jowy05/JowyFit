@@ -1,5 +1,6 @@
 // Repaso visual, rendimiento y sin conexión: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import { altaRapida, cdp, cerrarHoja, compilada, comprobar, escenario, esperar, js, meterSesionHecha, movil, pestana, pulsar, revisarAqui, seg, t, tema, ver } from '../ayudantes.mjs'
+import { trasCarga } from '../navegador.mjs'
 
 for (const [ancho, alto] of [[360, 740], [390, 844], [412, 915]]) escenario(`repaso visual de todas las pestañas a ${ancho} px`, async () => {
   await altaRapida('2026-10-15T18:00:00')
@@ -27,9 +28,8 @@ escenario('rendimiento de carga', async () => {
   const ms = []
   for (let i = 0; i < 3; i++) {
     const t0 = Date.now()
-    await cdp.enviar('Page.reload', {})
-    await esperar(50)
-    await t('ver', 'Hoy te toca', 15000).catch(async () => { await esperar(300); await t('ver', 'Hoy te toca', 15000) })
+    await trasCarga(cdp, () => cdp.enviar('Page.reload', {}))
+    await t('ver', 'Hoy te toca', 15000)
     ms.push(Date.now() - t0)
   }
   const m = await cdp.enviar('Performance.getMetrics').catch(() => null)
@@ -43,7 +43,7 @@ if (compilada) escenario('sin conexión (versión compilada)', async () => {
   await js(`for (let i = 0; i < 240; i++) { let n = 0; for (const k of await caches.keys()) n += (await (await caches.open(k)).keys()).length; if (navigator.serviceWorker.controller && n > 2000) return n; await new Promise(r => setTimeout(r, 500)) } throw new Error('El service worker no terminó de guardar la app')`)
   await cdp.enviar('Network.enable')
   await cdp.enviar('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
-  await cdp.enviar('Page.reload', {})
+  await trasCarga(cdp, () => cdp.enviar('Page.reload', {}))
   await ver('Hoy te toca', 15000)
   await pestana('Rutina')
   await pulsar(/Cuerpo completo A/)

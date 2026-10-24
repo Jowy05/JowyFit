@@ -1,7 +1,8 @@
 // Perfil y Ajustes: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { ajustesBD, altaRapida, comprobar, entorno, escenario, esperar, js, perfilBD, pestana, pulsar, RAIZ, revisarAqui, soltarFoco, t, tabla, tema, ver, volver } from '../ayudantes.mjs'
+import { ajustesBD, altaRapida, cdp, comprobar, entorno, escenario, esperar, js, perfilBD, pestana, pulsar, RAIZ, revisarAqui, soltarFoco, t, tabla, tema, ver, volver } from '../ayudantes.mjs'
+import { trasCarga } from '../navegador.mjs'
 
 escenario('perfil y ajustes', async () => {
   await altaRapida('2026-10-13T19:00:00')
@@ -58,8 +59,13 @@ escenario('ajustes a fondo: letra, tema, cada interruptor, descansos, cafeína y
   entorno.archivoParaElegir = copia
   await pulsar('Recuperar una copia')
   await ver(/Recuperar/)
-  await pulsar(/^Recuperar$/)
-  await ver('Copia recuperada', 8000)
+  // Al recuperarla, la app avisa y se recarga sola: se espera a la recarga (si no, cae en el escenario siguiente).
+  await trasCarga(cdp, () => js(`
+    sessionStorage.removeItem('__e2e_aviso')
+    new MutationObserver((_, o) => { if (document.body.innerText.includes('Copia recuperada')) { sessionStorage.setItem('__e2e_aviso', '1'); o.disconnect() } })
+      .observe(document.body, { childList: true, subtree: true, characterData: true })
+    void __t.pulsar(/^Recuperar$/)`), 'recuperar la copia')
+  comprobar(await js(`return sessionStorage.getItem('__e2e_aviso')`) === '1', 'No salió «Copia recuperada» antes de recargar')
   entorno.archivoParaElegir = null
   comprobar((await tabla('perfil'))[0]?.nombre === 'Copiado', 'La copia recuperada no sustituye los datos')
   // Vuelta a claro y letra normal para lo siguiente.

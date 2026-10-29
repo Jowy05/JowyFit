@@ -4,7 +4,8 @@ import { db, TABLAS, type NombreTabla } from './db'
 import { ajustesPorDefecto, guardarPerfil, perfilPorDefecto } from './repos'
 import { cargarPropios } from './acciones/propios'
 import type { Medicion, Perfil } from './tipos'
-import { comprobarCabecera, TIPOS_FOTO, validarDatos, versionNecesaria, type RefArchivo } from './validarCopia'
+import { comprobarCabecera, esHora, fechaValida, TIPOS_FOTO, validarDatos, versionNecesaria, type RefArchivo } from './validarCopia'
+import { fechaDeCampo } from '../dominio/fechas'
 import { t } from '../i18n'
 
 type Fila = Record<string, unknown>
@@ -62,18 +63,25 @@ export function nombreCopia(fecha = new Date(), existentes?: Iterable<string>): 
   return nombre
 }
 
-/** Vuelve a hacer Blob una foto de la copia. El tipo ya viene comprobado (solo imágenes); si falta el archivo, nada. */
-function revivir(v: unknown, archivos: Record<string, Uint8Array>): unknown {
+/**
+ * Vuelve a hacer Blob una foto de la copia. El tipo ya viene comprobado (solo imágenes); si falta el archivo, nada.
+ * Un mismo archivo da un solo Blob (`hechos`), aunque lo usen muchas filas.
+ */
+function revivir(v: unknown, archivos: Record<string, Uint8Array>, hechos: Map<string, Blob>): unknown {
   if (v && typeof v === 'object' && '__archivo' in (v as Fila)) {
     const r = v as RefArchivo
     const bytes = Object.prototype.hasOwnProperty.call(archivos, r.__archivo) ? archivos[r.__archivo] : undefined
-    return bytes && (TIPOS_FOTO as readonly string[]).includes(r.tipo) ? new Blob([bytes as BlobPart], { type: r.tipo }) : undefined
+    if (!bytes || !(TIPOS_FOTO as readonly string[]).includes(r.tipo)) return undefined
+    const clave = `${r.__archivo}|${r.tipo}`
+    const blob = hechos.get(clave) ?? new Blob([bytes as BlobPart], { type: r.tipo })
+    hechos.set(clave, blob)
+    return blob
   }
-  if (Array.isArray(v)) return v.map(x => revivir(x, archivos))
+  if (Array.isArray(v)) return v.map(x => revivir(x, archivos, hechos))
   if (v && typeof v === 'object') {
     const out: Fila = {}
     for (const [k, x] of Object.entries(v)) {
-      const r = revivir(x, archivos)
+      const r = revivir(x, archivos, hechos)
       if (r !== undefined) Object.defineProperty(out, k, { value: r, enumerable: true, writable: true, configurable: true })
     }
     return out
@@ -93,40 +101,47 @@ function leerJSON(texto: string): unknown {
 const MB = 1024 * 1024
 export const LIMITES_ZIP = { archivo: 400 * MB, json: 50 * MB, foto: 30 * MB, total: 300 * MB, entradas: 20_000 }
 
-/** Abre el zip en dos pasos: primero solo datos.json; luego solo las fotos que usa, con su tamaño comprobado. */
-function abrirZip(bytes: Uint8Array): { json: string; leerArchivos: (usados: Set<string>) => Record<string, Uint8Array> } {
+/**
+ * Abre el zip en dos pasos: primero solo datos.json; luego solo las fotos que usa, con su tamaño comprobado.
+ * Un nombre repetido dentro del zip lo daña: se medía solo la última entrada y se descomprimían todas.
+ */
+function abrirZip(bytes: Uint8Array): { json: string; leerArchivos: (usos: Map<string, number>) => Record<string, Uint8Array> } {
   const tamanos = new Map<string, number>()
   let entradas = 0
+  let repetido = false
   let ar: Record<string, Uint8Array>
   try {
     ar = unzipSync(bytes, {
       filter: f => {
         entradas++
+        if (tamanos.has(f.name)) repetido = true
         tamanos.set(f.name, f.originalSize)
-        return f.name === 'datos.json' && f.originalSize <= LIMITES_ZIP.json
+        return !repetido && f.name === 'datos.json' && f.originalSize <= LIMITES_ZIP.json
       },
     })
   } catch {
     throw new Error(t('El archivo está dañado (no se puede descomprimir)'))
   }
+  if (repetido) throw new Error(t('El archivo está dañado (no se puede descomprimir)'))
   if (entradas > LIMITES_ZIP.entradas) throw new Error(t('El archivo no es una copia de JowyFit (tiene demasiados archivos dentro)'))
   if ((tamanos.get('datos.json') ?? 0) > LIMITES_ZIP.json) throw new Error(t('La copia es demasiado grande para abrirla'))
   const json = ar['datos.json']
   if (!json) throw new Error(t('El archivo no es una copia de JowyFit'))
   return {
     json: strFromU8(json),
-    leerArchivos: usados => {
+    // Cada foto cuenta tantas veces como filas la usan: es lo que ocupará en la base del móvil.
+    leerArchivos: usos => {
       let total = 0
-      for (const n of usados) {
+      for (const [n, veces] of usos) {
         const tam = tamanos.get(n)
         if (tam == null) continue // falta: esa foto se queda fuera
         if (tam > LIMITES_ZIP.foto) throw new Error(t('La copia tiene una foto demasiado grande'))
-        total += tam
+        total += tam * veces
       }
       if (total > LIMITES_ZIP.total) throw new Error(t('La copia es demasiado grande para abrirla'))
-      if (!usados.size) return {}
+      if (!usos.size) return {}
       try {
-        return unzipSync(bytes, { filter: f => usados.has(f.name) && f.name !== 'datos.json' })
+        return unzipSync(bytes, { filter: f => usos.has(f.name) && f.name !== 'datos.json' })
       } catch {
         throw new Error(t('El archivo está dañado (no se puede descomprimir)'))
       }
@@ -161,7 +176,8 @@ export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
 
 async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<string, Uint8Array>) {
   const filas = {} as Record<NombreTabla, Fila[]>
-  for (const tb of TABLAS) filas[tb] = (datos[tb] ?? []).map(f => revivir(f, archivos) as Fila)
+  const hechos = new Map<string, Blob>()
+  for (const tb of TABLAS) filas[tb] = (datos[tb] ?? []).map(f => revivir(f, archivos, hechos) as Fila)
   // Fotos cuyo archivo falta o no es una imagen: fuera (la pantalla de fotos falla con una foto sin imagen).
   filas.fotos = filas.fotos.filter(f => f.imagen instanceof Blob)
   // Lo que falte del perfil y de los ajustes (copias de versiones viejas) se completa con lo de siempre.
@@ -201,7 +217,8 @@ function soloNumeros<T extends Record<string, unknown>>(o: T): Partial<Record<ke
 }
 const dosCifras = (n: number) => String(n).padStart(2, '0')
 const ahoraLocal = (d = new Date()) => `${d.getFullYear()}-${dosCifras(d.getMonth() + 1)}-${dosCifras(d.getDate())}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}`
-const hora = (v: unknown): string | undefined => (typeof v === 'string' && /^\d{1,2}:\d{2}$/.test(v.trim()) ? v.trim().padStart(5, '0') : undefined)
+// Con las mismas reglas que la copia completa: si no, lo importado aquí luego no dejaría recuperar la copia.
+const hora = (v: unknown): string | undefined => (typeof v === 'string' && esHora(v.trim()) ? v.trim().padStart(5, '0') : undefined)
 
 async function importarPerfilSencillo(v: unknown) {
   // Formato libre: comprobado que es un objeto, cada campo se mira uno a uno antes de usarlo.
@@ -212,7 +229,7 @@ async function importarPerfilSencillo(v: unknown) {
   const p = o.perfil ?? {}
   const log = o.logistica ?? {}
   const cambios: Partial<Perfil> = {}
-  if (p.nacimiento && /^\d{4}-\d{2}-\d{2}$/.test(p.nacimiento)) cambios.nacimiento = p.nacimiento
+  if (typeof p.nacimiento === 'string' && fechaDeCampo(p.nacimiento) && fechaValida(p.nacimiento)) cambios.nacimiento = p.nacimiento
   if (p.sexo === 'hombre' || p.sexo === 'mujer') cambios.sexo = p.sexo
   if (typeof p.altura_cm === 'number' && p.altura_cm > 0) cambios.alturaCm = p.altura_cm
   if (Array.isArray(p.preocupaciones)) cambios.prioridades = p.preocupaciones.filter((x: unknown) => typeof x === 'string')
@@ -231,8 +248,8 @@ async function importarPerfilSencillo(v: unknown) {
     // Una fecha que no es fecha («AAAA-MM-DD» de la plantilla) se descarta.
     let fecha: string
     if (m.fecha == null) fecha = ahoraLocal()
-    else if (typeof m.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(m.fecha)) fecha = `${m.fecha}T08:00`
-    else if (typeof m.fecha === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(m.fecha)) fecha = m.fecha.slice(0, 16)
+    else if (typeof m.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(m.fecha) && fechaValida(m.fecha)) fecha = `${m.fecha}T08:00`
+    else if (typeof m.fecha === 'string' && fechaValida(m.fecha.slice(0, 16))) fecha = m.fecha.slice(0, 16)
     else continue
     const med: Medicion = { fecha, origen: m.origen === 'cinta_metrica' ? 'cinta' : String(m.origen ?? '').includes('bascula') ? 'casa' : 'manual' }
     const peso = numero(m.peso_kg)

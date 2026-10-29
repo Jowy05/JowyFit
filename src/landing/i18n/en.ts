@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-8-1.cab': "<b>Version 0.8.1</b> · October 29, 2026",
+  'nov.0-8-1.texto': "Security: rigged backups (photos repeated thousands of times, duplicate files, impossible numbers or dates) are rejected without touching your data; a mistyped date no longer leaves a backup you can’t restore; nonsense data from Open Food Facts is discarded; very long names no longer spill off the PDF; and the Android app is stricter about what code it lets run.",
   'nov.0-8-0.cab': "<b>Version 0.8.0</b> · October 29, 2026",
   'nov.0-8-0.texto': "Your routine, made for you: seven goals, more work on the areas you pick, and whatever you don’t want to do, left out. Log any aches in three taps, and every Sunday a 20-second check-in adjusts your next workouts (with “Undo”). Plus: an in-order routine so you never miss a workout, a 15-minute minimum workout, senior mode from 65, steps and cardio that build up little by little, and a new PDF page with your routine and your health.",
   'nov.0-7-1.cab': "<b>Version 0.7.1</b> · October 24, 2026",

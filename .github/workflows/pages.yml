@@ -7,10 +7,9 @@ on:
     branches: [prod]
   workflow_dispatch:
 
+# Por defecto solo leer; los permisos de publicar van únicamente en el trabajo que publica (no donde corre npm).
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -21,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -41,6 +42,9 @@ jobs:
   publicar:
     needs: compilar
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.despliegue.outputs.page_url }}

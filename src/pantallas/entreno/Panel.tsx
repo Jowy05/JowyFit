@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { guardarSesion } from '../../datos/acciones/entreno'
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
-import { indiceActual, saltar } from '../../dominio/sesion'
+import { indiceActual, saltar, TOPE_SERIE } from '../../dominio/sesion'
 import { duracion } from '../../dominio/fechas'
 import { kg, textoSerie } from '../../dominio/formato'
 import { cx, estilo, Ico, Stepper } from '../../ui/componentes'
@@ -63,7 +63,7 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
     <div className="panel">
       {e.registro === 'tiempo' ? (
         <div className="pn-row">
-          <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}><span className="lbl ux-pn-lbl">{falta === 'reps' ? t('Pon aquí los segundos') : t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={crono != null ? segundosCrono : seg} paso={5} min={5} onCambio={v => { setSeg(v); setFalta(null) }} etiqueta={t('Segundos')} /></div>
+          <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}><span className="lbl ux-pn-lbl">{falta === 'reps' ? t('Pon aquí los segundos') : t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={crono != null ? segundosCrono : seg} paso={5} min={5} max={TOPE_SERIE.segundos} onCambio={v => { setSeg(v); setFalta(null) }} etiqueta={t('Segundos')} /></div>
           <div className="pn-f"><span className="lbl ux-pn-lbl">{t('Cronómetro')}</span>
             <button className={cx('btn', crono != null ? 'badf' : 'gry')} style={{ minHeight: 60 }} onClick={() => { if (crono == null) { setCrono(Date.now()); setAhora(Date.now()) } else { setSeg(segundosCrono); setCrono(null) } }}>
               <Ico n={crono != null ? 'pause' : 'play'} b />{crono != null ? t('Parar') : t('Empezar')}
@@ -75,12 +75,12 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
           {conPeso && (
             <div className={cx('pn-f w', falta === 'peso' && 'ux-falta')}>
               <span className="lbl ux-pn-lbl">{falta === 'peso' ? t('Pon aquí los kg') : etiquetaPeso(e)}</span>
-              <Stepper className="tall" valor={peso} lista={lista} paso={2.5} onCambio={v => { setPeso(v); setFalta(null) }} etiqueta={t('Peso')} />
+              <Stepper className="tall" valor={peso} lista={lista} paso={2.5} min={-TOPE_SERIE.peso} max={TOPE_SERIE.peso} onCambio={v => { setPeso(v); setFalta(null) }} etiqueta={t('Peso')} />
             </div>
           )}
           <div className={cx('pn-f', !conPeso && 'w', falta === 'reps' && 'ux-falta')}>
             <span className="lbl ux-pn-lbl">{falta === 'reps' ? (e.registro === 'cardio' ? t('Pon los minutos') : t('Pon las que has hecho')) : etiquetaReps(e)}</span>
-            <Stepper className="tall" valor={reps} paso={1} min={1} onCambio={v => { setReps(v); setFalta(null) }} etiqueta={e.registro === 'cardio' ? t('Minutos') : t('Repeticiones')} />
+            <Stepper className="tall" valor={reps} paso={1} min={1} max={TOPE_SERIE.reps} onCambio={v => { setReps(v); setFalta(null) }} etiqueta={e.registro === 'cardio' ? t('Minutos') : t('Repeticiones')} />
           </div>
         </div>
       )}

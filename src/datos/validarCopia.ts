@@ -2,6 +2,7 @@
 // un objeto o un id 2^53 dejan la app en blanco). Si algo no cuadra se rechaza entera, sin borrar nada.
 import { imagenOFF } from '../dominio/comida'
 import { TABLAS, type NombreTabla } from './db'
+import { TOPE_SERIE } from '../dominio/sesion'
 import { t, tk } from '../i18n'
 
 type Fila = Record<string, unknown>
@@ -30,13 +31,25 @@ const texto = (max: number): Regla => (v, d) => (typeof v === 'string' ? (v.leng
 const corto = texto(LIMITES.corto)
 const nombre = texto(LIMITES.nombre)
 const nota = texto(LIMITES.nota)
-const fecha: Regla = (v, d) => (typeof v === 'string' && v.length <= 40 && /^\d{4}-\d{2}-\d{2}/.test(v) ? v : mal(d, t('no es una fecha')))
-const hora: Regla = (v, d) => (typeof v === 'string' && /^\d{1,2}:\d{2}$/.test(v) ? v : mal(d, t('no es una hora')))
+/** Fecha (AAAA-MM-DD) que existe, entre 1900 y 2100, con o sin hora detrás («2026-10-13T07:00», ISO con zona). */
+export function fechaValida(v: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?)?$/.exec(v)
+  if (!m) return false
+  const [a, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const f = new Date(Date.UTC(a, mes - 1, dia))
+  return a >= 1900 && a <= 2100 && f.getUTCMonth() === mes - 1 && f.getUTCDate() === dia
+}
+const fecha: Regla = (v, d) => (typeof v === 'string' && v.length <= 40 && fechaValida(v) ? v : mal(d, t('no es una fecha')))
+/** «5:30» o «05:30», de 0:00 a 23:59. */
+export const esHora = (v: string) => /^([01]?\d|2[0-3]):[0-5]\d$/.test(v)
+const hora: Regla = (v, d) => (typeof v === 'string' && esHora(v) ? v : mal(d, t('no es una hora')))
 const num: Regla = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : mal(d, t('no es un número')))
 const ent = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : mal(d, t('no es un número válido')))
 const bool: Regla = (v, d) => (typeof v === 'boolean' ? v : mal(d, t('no es sí/no')))
 const nulo = (r: Regla): Regla => (v, d) => (v === null ? null : r(v, d))
 const constante = (x: string): Regla => (v, d) => (v === x ? v : mal(d, t('no es el esperado')))
+/** Un número que se lleva al tope más cercano si se sale (para valores que la app pudo guardar antes de tener tope). */
+const acotado = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : mal(d, t('no es un número')))
 const rango = (min: number, max: number): Regla => (v, d) => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : mal(d, t('número fuera de lo normal')))
 /** Uno de los valores que usa la app (si no, la pantalla no sabe qué pintar y falla). */
 const uno = (...valores: string[]): Regla => (v, d) => (typeof v === 'string' && valores.includes(v) ? v : mal(d, t('valor desconocido')))
@@ -189,8 +202,11 @@ const REVISION = obj({
 })
 
 const SERIE = obj({
-  n: req(num), peso: req(nulo(num)), reps: req(nulo(num)), segundos: opc(nulo(num)), rpe: req(nulo(num)), calentamiento: req(bool), hecha: req(bool),
-  ts: opc(num), nota: opc(nota), record: opc(bool),
+  // Números absurdos (1e300) se recortan a los topes del entreno: la gráfica de fuerza y el PDF se quedaban sin memoria,
+  // y rechazar la copia entera dejaba sin recuperar la de quien tecleó un cero de más.
+  n: req(num), peso: req(nulo(acotado(-TOPE_SERIE.peso, TOPE_SERIE.peso))), reps: req(nulo(acotado(0, TOPE_SERIE.reps))),
+  segundos: opc(nulo(acotado(0, TOPE_SERIE.segundos))), rpe: req(nulo(acotado(0, 10))),
+  calentamiento: req(bool), hecha: req(bool), ts: opc(num), nota: opc(nota), record: opc(bool),
 })
 const EJ_SESION = obj({
   uid: req(texto(200)), ejercicio: req(texto(200)), planificado: req(texto(200)), motivo: opc(uno('ocupado', 'cambio')), estado: req(uno('pendiente', 'curso', 'hecho', 'saltado')), series: req(lista(SERIE, 100)),
@@ -280,7 +296,8 @@ export function comprobarCabecera(obj: unknown): asserts obj is { app: 'JowyFit'
  * Comprueba todos los datos de la copia. Devuelve las tablas limpias (sin campos desconocidos ni fotos de tipo raro)
  * y los archivos del zip que hacen falta. Lanza `CopiaNoValida` si algo no cuadra.
  */
-export function validarDatos(datos: unknown): { tablas: Record<NombreTabla, Fila[]>; archivos: Set<string> } {
+/** Las tablas limpias y cuántas filas usan cada archivo de imagen (para medir lo que ocupará de verdad). */
+export function validarDatos(datos: unknown): { tablas: Record<NombreTabla, Fila[]>; archivos: Map<string, number> } {
   if (!esObjeto(datos)) throw new CopiaNoValida(t('La copia está dañada: no tiene datos'))
   if (!TABLAS.some(tb => Array.isArray(datos[tb]))) throw new CopiaNoValida(t('La copia está dañada: no tiene ninguna tabla de JowyFit'))
   const tablas = {} as Record<NombreTabla, Fila[]>
@@ -299,11 +316,17 @@ export function validarDatos(datos: unknown): { tablas: Record<NombreTabla, Fila
   if (tablas.ajustes.length > 1) throw new CopiaNoValida(t('La copia está dañada ({tabla})', { tabla: t(NOMBRE_TABLA.ajustes) }))
   // Las fotos sin imagen válida (tipo raro o archivo que falta) no se restauran: la pantalla de fotos falla con ellas.
   tablas.fotos = tablas.fotos.filter(f => f.imagen !== undefined)
-  const archivos = new Set<string>()
+  // Dos tarjetas con la misma clave (la misma zona o la misma letra) se pisan en pantalla: fuera las repetidas.
+  for (const p of tablas.perfil) if (Array.isArray(p.dolores)) p.dolores = (p.dolores as Fila[]).filter((d, i, ds) => ds.findIndex(x => x.zona === d.zona) === i)
+  for (const [i, r] of tablas.rutinas.entries()) {
+    const letras = (r.dias as Fila[]).map(d => d.letra)
+    if (new Set(letras).size !== letras.length) mal(`${t(NOMBRE_TABLA.rutinas)} ${i + 1} › dias`, t('días repetidos'))
+  }
+  const archivos = new Map<string, number>()
   const buscar = (v: unknown) => {
     if (Array.isArray(v)) { v.forEach(buscar); return }
     if (!esObjeto(v)) return
-    if (typeof v.__archivo === 'string' && typeof v.tipo === 'string') { archivos.add(v.__archivo); return }
+    if (typeof v.__archivo === 'string' && typeof v.tipo === 'string') { archivos.set(v.__archivo, (archivos.get(v.__archivo) ?? 0) + 1); return }
     Object.values(v).forEach(buscar)
   }
   buscar(tablas)

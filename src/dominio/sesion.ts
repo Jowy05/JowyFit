@@ -3,6 +3,12 @@ import type { Bloque, DiaRutina, EjercicioSesion, Serie, Sesion, TipoRegistro } 
 import { hoyISO } from './fechas'
 import { esRecord } from './progresion'
 
+/**
+ * Lo más que se puede apuntar en una serie. Los mismos topes en los contadores del entreno y en las copias: con un
+ * número absurdo la gráfica de fuerza y el PDF se quedaban sin memoria. Peso negativo = asistencia.
+ */
+export const TOPE_SERIE = { peso: 2000, reps: 10_000, segundos: 86_400 } as const
+
 export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: Sesion['version']; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }> }): Sesion {
   const ahora = o.ahora ?? Date.now()
   const bloques = dia.bloques.filter(b => !(o.version === 'corta' && b.fueraEnCorta))

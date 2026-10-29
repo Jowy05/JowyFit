@@ -44,12 +44,13 @@ function appComoIndex(activo: boolean): Plugin {
   }
 }
 
-// CSP al compilar: solo la app, el wasm del escáner y Open Food Facts (sin píxeles espía); scripts en línea por sha256.
-// El APK lleva 'unsafe-inline': en los WebView viejos Capacitor mete su puente como <script> en línea (JSInjector).
-export function cspPara(html: string, android: boolean): string {
+// CSP al compilar: solo la app, el wasm del escáner y Open Food Facts (sin píxeles espía); scripts en línea por sha256,
+// también en el APK. Capacitor 8 mete su puente con addDocumentStartJavaScript y, en los WebView viejos, justo tras
+// <head>, delante de esta CSP (en una <meta> solo cuenta para lo que va detrás): no hace falta 'unsafe-inline'.
+export function cspPara(html: string): string {
   const huellas = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
     .map(m => `'sha256-${createHash('sha256').update(m[1] ?? '', 'utf8').digest('base64')}'`)
-  const script = ["'self'", "'wasm-unsafe-eval'", ...(android ? ["'unsafe-inline'"] : huellas)]
+  const script = ["'self'", "'wasm-unsafe-eval'", ...huellas]
   return [
     "default-src 'self'",
     `script-src ${script.join(' ')}`,
@@ -65,7 +66,7 @@ export function cspPara(html: string, android: boolean): string {
     "form-action 'none'",
   ].join('; ')
 }
-function politicaSeguridad(android: boolean): Plugin {
+function politicaSeguridad(): Plugin {
   return {
     name: 'politica-seguridad',
     apply: 'build',
@@ -74,7 +75,7 @@ function politicaSeguridad(android: boolean): Plugin {
       handler(html) {
         if (/http-equiv=["']Content-Security-Policy/i.test(html)) return html
         // Lo primero del <head>: la política solo vale para lo que viene detrás.
-        return html.replace(/<head>/i, `<head>\n    <meta http-equiv="Content-Security-Policy" content="${cspPara(html, android)}" />`)
+        return html.replace(/<head>/i, `<head>\n    <meta http-equiv="Content-Security-Policy" content="${cspPara(html)}" />`)
       },
     },
   }
@@ -88,7 +89,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     quitarFuentesViejas(),
     appComoIndex(mode === 'android'),
-    politicaSeguridad(mode === 'android'),
+    politicaSeguridad(),
     VitePWA({
       registerType: 'autoUpdate',
       // Se registra a mano en main.tsx: solo en la versión web (en el APK todo va dentro y no hace falta).

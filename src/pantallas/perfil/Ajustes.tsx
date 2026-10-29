@@ -2,7 +2,8 @@
 // lo técnico (entreno, comida, pasos, permisos) plegado en «Más ajustes»; «Borrar todo», al final.
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import paquete from '../../../package.json'
+// Solo la versión: con el import entero, todo package.json (scripts y dependencias) acababa en la web.
+import { version } from '../../../package.json'
 import { guardarAjustes, guardarPerfil, leerPerfil } from '../../datos/repos'
 import { regenerarRutina } from '../../datos/acciones/rutina'
 import { guardarAvisos, reprogramarNotificaciones } from '../../datos/acciones/avisos'
@@ -283,7 +284,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
             <Ico n="caret-right" className="car" />
           </button>
         </div>
-        <p className="small muted mt8 center">{t('JowyFit {version} · {n} ejercicios', { version: paquete.version, n: catalogo ? miles(catalogo.ejercicios.length) : '—' })}</p>
+        <p className="small muted mt8 center">{t('JowyFit {version} · {n} ejercicios', { version, n: catalogo ? miles(catalogo.ejercicios.length) : '—' })}</p>
 
         {/* Borrar todo: al final y aparte. */}
         <div className="list aju-borrar">

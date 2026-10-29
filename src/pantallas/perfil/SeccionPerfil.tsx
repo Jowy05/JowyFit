@@ -6,7 +6,7 @@ import { PERIMETROS } from '../../dominio/medidas'
 import { guardarPerfil } from '../../datos/repos'
 import type { Bascula, Dia, Perfil } from '../../datos/tipos'
 import { kg, num } from '../../dominio/formato'
-import { DIAS_CORTOS, edad, fechaCorta } from '../../dominio/fechas'
+import { DIAS_CORTOS, edad, fechaCorta, fechaDeCampo } from '../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, FilaInterruptor, Ico, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type ClaveSeccion, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -102,13 +102,22 @@ function Grupo({ titulo, children, ayuda }: { titulo: ReactNode; children: React
 }
 
 // PER-02 · Datos personales
+/**
+ * El campo guarda lo que se teclea y el perfil solo cambia con una fecha válida: en el PC el año pasa por «0002…»
+ * mientras se escribe, y si el campo volviera atrás no dejaría escribirlo.
+ */
+function FechaNacimiento({ valor, guardar }: { valor: string; guardar: (v: string) => void }) {
+  const [texto, setTexto] = useState(valor)
+  return <input className="inp" type="date" value={texto} onChange={e => { setTexto(e.target.value); if (fechaDeCampo(e.target.value)) guardar(e.target.value) }} />
+}
+
 function Datos({ p, guardar }: Props) {
   return (
     <div className="fields mt16">
       <label><span className="lbl fl">{t('Nombre')}</span><Texto valor={p.nombre} max={LARGO.nombre} onGuardar={v => guardar({ nombre: v.trim() })} placeholder={t('¿Cómo te llamamos?')} /></label>
       <label>
         <span className="lbl fl">{t('Fecha de nacimiento')}</span>
-        <input className="inp" type="date" value={p.nacimiento} onChange={e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) guardar({ nacimiento: e.target.value }) }} />
+        <FechaNacimiento valor={p.nacimiento} guardar={v => guardar({ nacimiento: v })} />
         <small className="small muted mt4" style={{ display: 'block' }}>{t('Tienes {n} años', { n: edad(p.nacimiento) })}</small>
       </label>
       <Grupo titulo={t('Sexo')} ayuda={t('Solo se usa en las fórmulas de gasto y grasa.')}>

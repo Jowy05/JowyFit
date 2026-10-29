@@ -10,6 +10,8 @@ type PdfLib = typeof import('pdf-lib')
 export const MM = 72 / 25.4
 export const ANCHO_A4 = 210
 export const ALTO_A4 = 297
+/** Lo mínimo que se deja hasta el borde derecho de la hoja (mm). */
+const MARGEN_SEGURO = 8
 
 /**
  * Tamaños de letra del informe (pt): siempre uno de estos, nada por debajo de 6,5.
@@ -176,7 +178,9 @@ export function partirRico(m: Medidor, trozos: Trozo[], w: number, tam: number):
   const lineas: LineaRica[] = []
   let actual: LineaRica = { trozos: [], ancho: 0 }
   const hueco = m.ancho(' ', tam)
-  for (const p of palabras) {
+  for (const palabra of palabras) {
+    // Una palabra más ancha que la línea (80 letras sin espacios) se corta con «…»: si no, se salía del A4.
+    const p = m.ancho(palabra.t, tam, palabra.peso) > w ? { ...palabra, t: m.cortar(palabra.t, w, tam, palabra.peso) } : palabra
     const wp = m.ancho(p.t, tam, p.peso)
     const sep = actual.trozos.length && p.espacio ? hueco : 0
     if (actual.trozos.length && actual.ancho + sep + wp > w) {
@@ -307,9 +311,12 @@ export class Lienzo extends Medidor {
 
   /** Texto con su línea base en `y`. Devuelve el ancho en mm. */
   texto(x: number, y: number, s: string, o: OpcTexto = {}): number {
-    const t = textoPdf(s)
-    if (!t) return 0
     const tam = o.tam ?? TAM.cuerpo, peso = o.peso ?? 'normal', esp = o.espaciado ?? 0
+    // Red de seguridad: un texto que empieza en x nunca pasa del borde de la hoja (un nombre de 80 letras sin espacios).
+    const sitio = ANCHO_A4 - MARGEN_SEGURO - x
+    const limpio = textoPdf(s)
+    const t = !o.anc && !esp && this.ancho(limpio, tam, peso) > sitio ? this.cortar(limpio, sitio, tam, peso) : limpio
+    if (!t) return 0
     const w = this.ancho(t, tam, peso, esp)
     const x0 = o.anc === 'middle' ? x - w / 2 : o.anc === 'end' ? x - w : x
     if (esp) this.pagina.pushOperators(this.lib.setCharacterSpacing(esp))

@@ -419,6 +419,7 @@ export default {
   'no es un texto': 'no és un text',
   'no es una fecha': 'no és una data',
   'no es una hora': 'no és una hora',
+  'días repetidos': 'dies repetits',
   'no es un número': 'no és un número',
   'no es un número válido': 'no és un número vàlid',
   'no es sí/no': 'no és sí/no',

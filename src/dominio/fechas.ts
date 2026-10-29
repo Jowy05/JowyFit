@@ -44,13 +44,18 @@ export const MESES_CORTOS: Doce = N.mesesCortos
 const dos = (n: number) => String(n).padStart(2, '0')
 
 export function aISO(d: Date): string {
-  return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`
+  return `${String(d.getFullYear()).padStart(4, '0')}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`
 }
 export function deISO(s: string): Date {
   const [a, m, d] = s.slice(0, 10).split('-').map(Number)
   return new Date(a!, (m ?? 1) - 1, d ?? 1)
 }
 export const hoyISO = (ahora = new Date()) => aISO(ahora)
+/**
+ * ¿Vale lo que da un campo de fecha? En el PC se puede teclear un año de 5 cifras («20261-01-01») y esa fecha luego
+ * no deja recuperar la copia: solo AAAA-MM-DD entre 1900 y 2100.
+ */
+export const fechaDeCampo = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= '1900-01-01' && v <= '2100-12-31'
 
 /** 0 = lunes … 6 = domingo */
 export function diaSemana(d: Date): Dia {

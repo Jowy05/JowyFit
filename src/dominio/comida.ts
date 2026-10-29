@@ -113,6 +113,11 @@ const n = (v: unknown): number | null => {
 
 }
 const r1 = (v: number | null) => (v == null ? null : Math.round(v * 10) / 10)
+/**
+ * Lo que no es creíble, fuera (null): Open Food Facts lo edita cualquiera y un 1e308 se volvía Infinity al multiplicar,
+ * que luego no dejaba recuperar la copia. Y nada negativo, que restaría del día.
+ */
+const creible = (v: number | null, max: number) => (v != null && v >= 0 && v <= max ? v : null)
 
 /**
  * La imagen de un producto solo se pinta si es https de Open Food Facts (images.openfoodfacts.org…). Cualquier otra
@@ -133,15 +138,17 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
   const p = json?.product
   if (!p || json?.status === 0) return null
   const nu = p.nutriments ?? {}
-  let kcal100 = n(nu['energy-kcal_100g'])
-  if (kcal100 == null) { const kj = n(nu['energy-kj_100g'] ?? nu['energy_100g']); if (kj != null) kcal100 = kj / 4.184 }
-  const racionG = n(p.serving_quantity)
-  let kcalRacion = n(nu['energy-kcal_serving'])
+  // Por 100 g: como mucho 900 kcal (grasa pura), 100 g de cada cosa y 5 g de cafeína; raciones de hasta 5 kg.
+  const g100 = (k: string) => creible(n(nu[k]), 100)
+  let kcal100 = creible(n(nu['energy-kcal_100g']), 900)
+  if (kcal100 == null) { const kj = creible(n(nu['energy-kj_100g'] ?? nu['energy_100g']), 3800); if (kj != null) kcal100 = kj / 4.184 }
+  const racionG = creible(n(p.serving_quantity), 5000)
+  let kcalRacion = creible(n(nu['energy-kcal_serving']), 45_000)
   if (kcalRacion == null && kcal100 != null && racionG) kcalRacion = (kcal100 * racionG) / 100
-  let protRacion = n(nu['proteins_serving'])
-  const prot100 = n(nu['proteins_100g'])
+  let protRacion = creible(n(nu['proteins_serving']), 5000)
+  const prot100 = g100('proteins_100g')
   if (protRacion == null && prot100 != null && racionG) protRacion = (prot100 * racionG) / 100
-  const caf = n(nu['caffeine_100g'])
+  const caf = creible(n(nu['caffeine_100g']), 5)
   const txt = (v: unknown) => (typeof v === 'string' ? v : '')
   const nombre = (txt(p.product_name_es) || txt(p.product_name) || txt(p.generic_name_es)).trim()
   return {
@@ -152,10 +159,10 @@ export function leerOFF(codigo: string, json: { status?: number; product?: Produ
     imagen: imagenOFF(p.image_front_small_url) ?? imagenOFF(p.image_front_url),
     kcal100: kcal100 == null ? null : Math.round(kcal100),
     proteina100: r1(prot100),
-    hidratos100: r1(n(nu['carbohydrates_100g'])),
-    grasas100: r1(n(nu['fat_100g'])),
-    azucares100: r1(n(nu['sugars_100g'])),
-    sal100: r1(n(nu['salt_100g'])),
+    hidratos100: r1(g100('carbohydrates_100g')),
+    grasas100: r1(g100('fat_100g')),
+    azucares100: r1(g100('sugars_100g')),
+    sal100: r1(g100('salt_100g')),
     // OFF guarda la cafeína en g/100 g: la pasamos a mg/100 g.
     cafeina100: caf == null ? null : Math.round(caf * 1000),
     racionG: racionG == null ? null : Math.round(racionG),

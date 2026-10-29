@@ -2,7 +2,8 @@
 // Android lo guarda en Documentos/JowyFit y deja compartirlo; iPhone abre Compartir (si no puede, se descarga); el ordenador lo descarga.
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import paquete from '../../../package.json'
+// Solo la versión: con el import entero, todo package.json (scripts y dependencias) acababa en la web.
+import { version } from '../../../package.json'
 import { datosInforme, periodoInforme } from '../../informe/calculo/leer'
 import { guardarAjustes } from '../../datos/repos'
 import type { PeriodoInforme, SeccionesInforme } from '../../informe/calculo/tipos'
@@ -100,7 +101,7 @@ export function HojaInforme() {
     setCreando(true); setError(null); setHecho(null); setPendiente(false)
     try {
       const [inf, pdf] = await Promise.all([datosInforme(periodo, new Date(), sec), import('../../informe/pdf')])
-      const bytes = await pdf.crearPdf(inf, { version: paquete.version })
+      const bytes = await pdf.crearPdf(inf, { version })
       const h: Hecho = { nombre: pdf.nombrePdf(inf.rango), bytes, titulo: inf.cabecera.tituloPdf }
       setHecho(h)
       await entregar(h)

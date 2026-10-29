@@ -62,7 +62,7 @@ describe('seguridad · Content-Security-Policy de la compilación', () => {
   const app = fs.readFileSync(path.join(RAIZ, 'app.html'), 'utf8')
   const valor = (csp: string, dir: string) => csp.split('; ').find(d => d.startsWith(`${dir} `))?.slice(dir.length + 1) ?? ''
   it('index.html: los scripts en línea van con su huella sha256 y no se permite cualquiera', () => {
-    const csp = cspPara(index, false)
+    const csp = cspPara(index)
     const scripts = valor(csp, 'script-src')
     const enLinea = [...index.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
     expect(enLinea.length).toBeGreaterThanOrEqual(2)
@@ -72,17 +72,15 @@ describe('seguridad · Content-Security-Policy de la compilación', () => {
     expect(scripts).toContain("'wasm-unsafe-eval'")
   })
   it('las imágenes y las conexiones solo a la app y a Open Food Facts', () => {
-    const csp = cspPara(app, false)
+    const csp = cspPara(app)
     expect(valor(csp, 'img-src')).toBe("'self' data: blob: https://images.openfoodfacts.org https://static.openfoodfacts.org")
     expect(valor(csp, 'connect-src')).toBe("'self' https://world.openfoodfacts.org")
     expect(valor(csp, 'object-src')).toBe("'none'")
     expect(valor(csp, 'form-action')).toBe("'none'")
     expect(csp).not.toMatch(/googleapis|gstatic|\*/)
   })
-  it('en el APK se deja el script en línea (puente de Capacitor en WebView viejos), lo demás igual', () => {
-    const csp = cspPara(app, true)
-    expect(valor(csp, 'script-src')).toBe("'self' 'wasm-unsafe-eval' 'unsafe-inline'")
-    expect(valor(csp, 'img-src')).toBe(valor(cspPara(app, false), 'img-src'))
+  it('la misma política en la web y en el APK: nunca «unsafe-inline» en los scripts (antes el APK lo llevaba)', () => {
+    expect(valor(cspPara(app), 'script-src')).toBe("'self' 'wasm-unsafe-eval'")
   })
 })
 

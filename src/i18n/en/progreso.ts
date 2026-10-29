@@ -439,4 +439,5 @@ export default {
   'Apuntar cardio': 'Log cardio',
   'Lo que haces fuera de las pesas.': 'What you do outside of weights.',
   '¿Qué has hecho?': 'What did you do?',
+  'Revisa la fecha': 'Check the date',
 } satisfies Diccionario

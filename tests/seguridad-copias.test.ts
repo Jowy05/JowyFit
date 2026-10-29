@@ -1,6 +1,7 @@
 // Seguridad de las copias (.jowyfit): cada ataque de la auditoría (copias manipuladas) tiene aquí su prueba.
 // Antes todas estas copias se restauraban; ahora se rechazan enteras sin tocar nada (o se limpian).
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import zlib from 'node:zlib'
 import { strToU8, zipSync } from 'fflate'
 import { db, TABLAS } from '../src/datos/db'
 import { borrarTodosLosDatos, exportar, importar, LIMITES_ZIP } from '../src/datos/copias'
@@ -197,6 +198,70 @@ describe('seguridad · zip bomba y archivos raros', () => {
   ] as const) {
     it(`${nombre} se rechaza bien`, async () => { await rechazada(bytes as Uint8Array, /dañado|no es una copia|perfil/) })
   }
+})
+
+/** Zip hecho a mano, con entradas repetidas (el mismo nombre dos veces) y sus tamaños de verdad. */
+function zipConRepetidas(entradas: { nombre: string; datos: Uint8Array }[]): Uint8Array {
+  const locales: Buffer[] = [], central: Buffer[] = []
+  let desde = 0
+  for (const e of entradas) {
+    const c = zlib.deflateRawSync(e.datos), crc = zlib.crc32(e.datos), n = Buffer.from(e.nombre)
+    const l = Buffer.alloc(30)
+    l.writeUInt32LE(0x04034b50, 0); l.writeUInt16LE(20, 4); l.writeUInt16LE(8, 8); l.writeUInt32LE(crc, 14); l.writeUInt32LE(c.length, 18); l.writeUInt32LE(e.datos.length, 22); l.writeUInt16LE(n.length, 26)
+    const h = Buffer.alloc(46)
+    h.writeUInt32LE(0x02014b50, 0); h.writeUInt16LE(20, 4); h.writeUInt16LE(20, 6); h.writeUInt16LE(8, 10); h.writeUInt32LE(crc, 16); h.writeUInt32LE(c.length, 20); h.writeUInt32LE(e.datos.length, 24); h.writeUInt16LE(n.length, 28); h.writeUInt32LE(desde, 42)
+    locales.push(l, n, c); central.push(h, n); desde += 30 + n.length + c.length
+  }
+  const cd = Buffer.concat(central), fin = Buffer.alloc(22)
+  fin.writeUInt32LE(0x06054b50, 0); fin.writeUInt16LE(entradas.length, 8); fin.writeUInt16LE(entradas.length, 10); fin.writeUInt32LE(cd.length, 12); fin.writeUInt32LE(desde, 16)
+  return new Uint8Array(Buffer.concat([...locales, cd, fin]))
+}
+
+describe('seguridad · pasada de la 0.8.0', () => {
+  beforeEach(sembrar)
+  const foto = (n = 'a') => ({ fecha: '2026-10-01T08:00', pose: 'frente', imagen: { __archivo: `archivos/${n}.jpg`, tipo: 'image/jpeg' } })
+  it('una foto pequeña usada por cientos de filas cuenta tantas veces como filas (antes: KB de zip, GB en el móvil)', async () => {
+    const fotos = Array.from({ length: 400 }, () => foto())
+    await rechazada(zipSync({ 'datos.json': json(copia({ perfil: [perfil()], fotos })), 'archivos/a.jpg': new Uint8Array(MB) }, { level: 9 }), /demasiado grande/)
+  })
+  it('las filas que comparten foto entran con un solo Blob', async () => {
+    await importar(zipSync({ 'datos.json': json(copia({ perfil: [perfil()], fotos: [foto(), foto()] })), 'archivos/a.jpg': strToU8('jpeg') }))
+    expect((await db.fotos.toArray()).map(f => f.imagen.size)).toEqual([4, 4])
+  })
+  it('un nombre repetido dentro del zip lo daña (antes la foto grande pasaba con el tamaño de la pequeña)', async () => {
+    const datos = json(copia({ perfil: [perfil()], fotos: [foto()] }))
+    await rechazada(zipConRepetidas([{ nombre: 'datos.json', datos }, { nombre: 'archivos/a.jpg', datos: new Uint8Array(40 * MB) }, { nombre: 'archivos/a.jpg', datos: strToU8('x') }]), /dañado/)
+    await rechazada(zipConRepetidas([{ nombre: 'datos.json', datos }, { nombre: 'datos.json', datos }]), /dañado/)
+  })
+  it('series con números absurdos (1e300) se recortan al tope: rompían la gráfica de fuerza y el PDF', async () => {
+    const ses = (serie: Record<string, unknown>) => ({ ...sesion(1), ejercicios: [{ uid: 'b', ejercicio: 'x', planificado: 'x', estado: 'hecho', repsMin: 8, repsMax: 12, rpe: 8, descanso: 90, registro: 'peso', series: [{ n: 1, peso: 40, reps: 8, rpe: 8, calentamiento: false, hecha: true, ...serie }] }] })
+    const serie = async () => (await db.sesiones.toArray())[0]!.ejercicios[0]!.series[0]!
+    await importar(json(copia({ perfil: [perfil()], sesiones: [ses({ peso: 1e300, reps: 12_000, rpe: 11, segundos: 1e9 })] })))
+    expect(await serie()).toMatchObject({ peso: 2000, reps: 10_000, rpe: 10, segundos: 86_400 })
+    await importar(json(copia({ perfil: [perfil()], sesiones: [ses({ peso: -25 })] }))) // asistida: sigue igual
+    expect((await serie()).peso).toBe(-25)
+    await rechazada(json(copia({ perfil: [perfil()], sesiones: [ses({ peso: 'mucho' })] })))
+  })
+  it('el perfil sencillo (JSON a mano) no guarda horas ni fechas que luego no dejarían recuperar la copia', async () => {
+    await importar(json({ perfil: { nacimiento: '1985-02-30' }, logistica: { vuelta_casa: { coche: '7:75', andando: '25:00' } }, mediciones: [{ fecha: '2026-13-01', peso_kg: 80 }] }))
+    const p = (await db.perfil.get('yo'))!
+    expect(p.nacimiento).not.toBe('1985-02-30')
+    expect(p.horaLimite.coche).not.toBe('07:75')
+    expect((await db.mediciones.toArray()).some(m => m.fecha.startsWith('2026-13'))).toBe(false)
+  })
+  it('fechas y horas imposibles se rechazan; las de siempre entran', async () => {
+    for (const fecha of ['2026-99-99basura', '0000-00-00', '1000-01-01', '2026-02-30', '2026-10-13 07:00']) await rechazada(json(copia({ perfil: [perfil()], mediciones: [{ fecha, origen: 'casa', pesoKg: 80 }] })))
+    await rechazada(json(copia({ perfil: [perfil({ horaEntreno: '99:99' })] })))
+    await importar(json(copia({ perfil: [perfil({ creado: '2026-10-01T10:00:00.000Z', horaEntreno: '5:30' })], mediciones: [{ fecha: '2026-10-13T07:00', origen: 'casa', pesoKg: 80 }, { fecha: '2026-10-14', origen: 'casa', pesoKg: 79 }] })))
+    expect(await db.mediciones.count()).toBe(2)
+  })
+  it('molestias repetidas de la misma zona se quedan en una; días con la misma letra se rechazan', async () => {
+    const dolor = { zona: 'rodillas', cuanto: 'poco', cuando: 'aveces', desde: 'dias', inicio: '2026-10-01' }
+    await importar(json(copia({ perfil: [perfil({ dolores: [dolor, { ...dolor, cuanto: 'mucho' }, dolor] })] })))
+    expect((await db.perfil.get('yo'))!.dolores).toEqual([dolor])
+    const dia = { letra: 'A', nombre: 'A', dia: 1, opcional: false, bloques: [] }
+    await rechazada(json(copia({ perfil: [perfil()], rutinas: [{ creada: '2026-10-01', activa: true, estructura: 'x', porque: [], calibracion: false, gimnasioId: null, dias: [dia, dia] }] })))
+  })
 })
 
 describe('seguridad · las copias buenas siguen entrando igual', () => {

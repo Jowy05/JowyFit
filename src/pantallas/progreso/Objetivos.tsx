@@ -6,7 +6,7 @@ import { leerMediciones, leerMeta, leerMetas, sesionesHechas, valorActualMeta } 
 import type { Guardado, Medicion, Meta, Perfil, Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { capital, kg, num } from '../../dominio/formato'
-import { fechaCorta, hoyISO, mesAnio } from '../../dominio/fechas'
+import { fechaCorta, hoyISO, mesAnio, fechaDeCampo } from '../../dominio/fechas'
 import { ejerciciosHechos, faltaMeta, grasaActual, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../dominio/tendencias'
 import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -176,6 +176,8 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
   // Una meta nueva no tiene id: un doble toque crearía dos.
   const guardar = unaVez(async () => {
     if (tipo === 'ejercicio' && !ej) { aviso(t('Elige un ejercicio')); return }
+    // Se comprueba al guardar, no al teclear: en el PC el año pasa por «0002…» mientras se escribe.
+    if (fecha && !fechaDeCampo(fecha)) { aviso(t('Revisa la fecha')); return }
     const mismoValor = meta && meta.tipo === tipo && (tipo !== 'ejercicio' || meta.ejercicio === ej)
     const inicio = mismoValor ? meta.inicio : (await valorActualMeta(tipo, ej, perfil)) ?? undefined
     const nueva: Meta = {

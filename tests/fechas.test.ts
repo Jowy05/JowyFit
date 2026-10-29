@@ -3,6 +3,7 @@
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import {
+  fechaDeCampo,
   DIAS, DIAS_CORTOS, MESES, MESES_CORTOS, aISO, deISO, diaSemana, diasEntre, duracion, edad, fechaCorta, fechaLarga, formatoHora,
   horaActual, horaDe, hoyISO, lunesDe, minutosDe, numeroSemana, proximoAviso, saludo, semanaDe, sumarDias,
 } from '../src/dominio/fechas'
@@ -211,5 +212,18 @@ describe('proximoAviso: los recordatorios cuentan desde la última vez', () => {
     expect(hora(proximoAviso('2026-10-10', 7, '20:00', new Date(2026, 9, 17, 21, 0)))).toBe('2026-10-24 20:00')
     expect(hora(proximoAviso('2026-10-10', 7, '20:00', new Date(2026, 9, 17, 19, 0)))).toBe('2026-10-17 20:00')
     expect(hora(proximoAviso('2026-09-01', 14, '19:30', new Date(2026, 9, 24, 12, 0)))).toBe('2026-10-27 19:30')
+  })
+})
+
+describe('fechaDeCampo: lo que se acepta de un campo de fecha', () => {
+  it('AAAA-MM-DD entre 1900 y 2100; un año de 5 cifras tecleado en el PC, no', () => {
+    expect(fechaDeCampo('2026-10-29')).toBe(true)
+    expect(fechaDeCampo('20261-01-01')).toBe(false)
+    expect(fechaDeCampo('275760-01-01')).toBe(false)
+    expect(fechaDeCampo('1899-12-31')).toBe(false)
+    expect(fechaDeCampo('')).toBe(false)
+  })
+  it('aISO rellena los años de menos de 4 cifras', () => {
+    expect(aISO(new Date(999, 0, 5))).toBe('0999-01-05')
   })
 })

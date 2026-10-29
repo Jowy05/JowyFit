@@ -404,12 +404,14 @@ export function ejeRedondo(valores: number[], marcasDeseadas = 3): { min: number
   const bruto = (hi - lo) / Math.max(1, marcasDeseadas - 1)
   const pot = 10 ** Math.floor(Math.log10(bruto))
   const paso = ([1, 2, 2.5, 5, 10].map(f => f * pot).find(p => p >= bruto - 1e-12) ?? 10 * pot)
-  const redondo = (x: number) => Math.round(x * 1e9) / 1e9
+  // Con valores enormes x × 1e9 deja de ser finito: entonces se queda como está.
+  const redondo = (x: number) => (Number.isFinite(x * 1e9) ? Math.round(x * 1e9) / 1e9 : x)
   const min = redondo(Math.floor(lo / paso + 1e-9) * paso)
   let max = redondo(Math.ceil(hi / paso - 1e-9) * paso)
   if (max <= min) max = redondo(min + paso)
   const marcas: number[] = []
-  for (let v = min; v <= max + paso / 2; v = redondo(v + paso)) marcas.push(v)
+  // Tope de marcas: con números absurdos el paso no avanza (v + paso === v) y el bucle no acababa.
+  for (let v = min; v <= max + paso / 2 && marcas.length < 50; v = redondo(v + paso)) marcas.push(v)
   let decimales = 0
   while (decimales < 4 && Math.abs(Math.round(paso * 10 ** decimales) - paso * 10 ** decimales) > 1e-6) decimales++
   return { min, max, paso, marcas, decimales }

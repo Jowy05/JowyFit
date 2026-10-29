@@ -65,6 +65,11 @@ describe('Open Food Facts', () => {
     expect(p.kcal100).toBe(500)
     expect(porRacion(p)).toMatchObject({ kcal: 500, proteina: 7, base: '100g' })
   })
+  it('números que no son creíbles (1e308, negativos) se descartan: no llegan a Infinity ni restan del día', () => {
+    const p = leerOFF('3', { status: 1, product: { product_name: 'Raro', serving_quantity: 1e308, nutriments: { 'energy-kcal_100g': 1e308, proteins_100g: -5, carbohydrates_100g: 1e308, caffeine_100g: 1e308, fat_100g: 12 } } })!
+    expect(p).toMatchObject({ kcal100: null, proteina100: null, hidratos100: null, cafeina100: null, racionG: null, kcalRacion: null, grasas100: 12 })
+    expect(Object.values(p).every(v => typeof v !== 'number' || Number.isFinite(v))).toBe(true)
+  })
   it('pasa la cafeína a mg', () => {
     const p = leerOFF('2', { status: 1, product: { product_name: 'Energética', serving_quantity: 500, nutriments: { 'energy-kcal_100g': 46, proteins_100g: 0, caffeine_100g: 0.032 } } })!
     expect(p.cafeina100).toBe(32)

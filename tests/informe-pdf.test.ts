@@ -295,6 +295,12 @@ describe('crearPdf', () => {
     }
     expect(textos).toBeGreaterThan(300)
   })
+  it('un nombre de 80 letras sin espacios se corta con «…» en vez de salirse de la hoja', async () => {
+    const largo = 'W'.repeat(80)
+    const { pdf } = await pdfDe('mes', historial(45), undefined, { perfil: { ...PERFIL, nombre: largo } })
+    expect(pdf.texto).not.toContain(largo)
+    expect(pdf.texto).toMatch(/W{10,}…/)
+  })
 })
 
 describe('nombre del archivo', () => {

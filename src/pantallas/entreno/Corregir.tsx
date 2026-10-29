@@ -8,6 +8,7 @@ import { pesosPara } from '../../dominio/pesos'
 import { cx, Ico, Stepper } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio } from '../../datos/hooks'
+import { TOPE_SERIE } from '../../dominio/sesion'
 import { t } from '../../i18n'
 
 const conPesoReg = (e: EjercicioSesion) => e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
@@ -43,10 +44,10 @@ export function FormCorregir({ s, idx, k, className, onCerrar }: { s: Sesion; id
       <p className="ux-corr-t"><Ico n="pencil-simple" b />{serie.calentamiento || num < 1 ? t('Corregir el calentamiento') : t('Corregir la serie {n}', { n: num })}</p>
       <div className="pn-row">
         {e.registro === 'tiempo' ? (
-          <div className="pn-f w"><span className="lbl ux-pn-lbl">{t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={seg} paso={5} min={5} onCambio={setSeg} etiqueta={t('Segundos')} /></div>
+          <div className="pn-f w"><span className="lbl ux-pn-lbl">{t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={seg} paso={5} min={5} max={TOPE_SERIE.segundos} onCambio={setSeg} etiqueta={t('Segundos')} /></div>
         ) : <>
-          {conPeso && <div className="pn-f w"><span className="lbl ux-pn-lbl">{etiquetaPeso(e)}</span><Stepper className="tall" valor={peso} lista={lista} paso={2.5} onCambio={setPeso} etiqueta={t('Peso')} /></div>}
-          <div className={cx('pn-f', !conPeso && 'w')}><span className="lbl ux-pn-lbl">{etiquetaReps(e)}</span><Stepper className="tall" valor={reps} paso={1} min={1} onCambio={setReps} etiqueta={e.registro === 'cardio' ? t('Minutos') : t('Repeticiones')} /></div>
+          {conPeso && <div className="pn-f w"><span className="lbl ux-pn-lbl">{etiquetaPeso(e)}</span><Stepper className="tall" valor={peso} lista={lista} paso={2.5} min={-TOPE_SERIE.peso} max={TOPE_SERIE.peso} onCambio={setPeso} etiqueta={t('Peso')} /></div>}
+          <div className={cx('pn-f', !conPeso && 'w')}><span className="lbl ux-pn-lbl">{etiquetaReps(e)}</span><Stepper className="tall" valor={reps} paso={1} min={1} max={TOPE_SERIE.reps} onCambio={setReps} etiqueta={e.registro === 'cardio' ? t('Minutos') : t('Repeticiones')} /></div>
         </>}
       </div>
       <div className="pn-main">

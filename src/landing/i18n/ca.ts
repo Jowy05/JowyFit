@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-8-1.cab': "<b>Versió 0.8.1</b> · 29 d’octubre del 2026",
+  'nov.0-8-1.texto': "Seguretat: les còpies de seguretat trampa (fotos repetides milers de vegades, arxius duplicats, números o dates impossibles) es rebutgen sense tocar les teves dades; una data mal escrita ja no deixa una còpia que no es pot recuperar; les dades absurdes d’Open Food Facts es descarten; els noms molt llargs ja no surten del PDF; i l’app d’Android és més estricta amb el codi que deixa executar.",
   'nov.0-8-0.cab': "<b>Versió 0.8.0</b> · 29 d’octubre del 2026",
   'nov.0-8-0.texto': "La teva rutina, a mida: set objectius, més feina a les zones que triïs i fora el que no vulguis fer. Apunta les teves molèsties amb tres tocs i, cada diumenge, una revisió de 20 segons ajusta els propers entrenaments (amb «Desfer»). A més: rutina en ordre per no perdre cap entrenament, sessió mínima de 15 minuts, mode gent gran a partir dels 65, passos i cardio que pugen a poc a poc i una pàgina nova al PDF amb la teva rutina i la teva salut.",
   'nov.0-7-1.cab': "<b>Versió 0.7.1</b> · 24 d’octubre del 2026",

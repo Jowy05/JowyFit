@@ -439,4 +439,5 @@ export default {
   'Apuntar cardio': 'Apuntar cardio',
   'Lo que haces fuera de las pesas.': 'El que fas fora de les peses.',
   '¿Qué has hecho?': 'Què has fet?',
+  'Revisa la fecha': 'Revisa la data',
 } satisfies Diccionario

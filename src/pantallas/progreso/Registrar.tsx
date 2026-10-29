@@ -5,7 +5,7 @@ import { leerMediciones } from '../../datos/consultas'
 import { apuntarMedicion } from '../../datos/acciones/cuerpo'
 import type { Bascula, Medicion, OrigenMedicion } from '../../datos/tipos'
 import { leerNumero, num } from '../../dominio/formato'
-import { fechaCorta, horaActual, hoyISO } from '../../dominio/fechas'
+import { fechaCorta, horaActual, hoyISO, fechaDeCampo } from '../../dominio/fechas'
 import { ultimoValor, type PuntoFecha } from '../../dominio/tendencias'
 import { Cab, Chip, cx, Ico, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -102,6 +102,8 @@ export function Registrar() {
     const bascula: Bascula = {}
     for (const c of CAMPOS_BASCULA) { const n = leerNumero(bas[c.k]); if (n != null) bascula[c.k] = n }
     const peso = pesoAGuardar
+    // Se comprueba al guardar, no al teclear: en el PC el año pasa por «0002…» mientras se escribe.
+    if (!fechaDeCampo(fecha)) { aviso(t('Revisa la fecha')); return }
     if (peso == null && !Object.keys(perimetros).length && !Object.keys(bascula).length) {
       aviso(t('Pon al menos una medida para guardar'))
       return
@@ -149,7 +151,7 @@ export function Registrar() {
 
   return (
     <Pantalla>
-      <Cab atras crumb={t('Cuerpo')} titulo={t('Registrar medidas')} sub={fecha === hoy ? t('Hoy') : t('Del {fecha}', { fecha: fechaCorta(fecha) })} />
+      <Cab atras crumb={t('Cuerpo')} titulo={t('Registrar medidas')} sub={fecha === hoy ? t('Hoy') : fechaDeCampo(fecha) ? t('Del {fecha}', { fecha: fechaCorta(fecha) }) : undefined} />
       <div className="pg">
         <p className="note plain"><Ico n="hand-pointing" /><span>{t('Apunta solo lo que te hayas medido hoy.')}</span></p>
 
@@ -204,7 +206,7 @@ export function Registrar() {
 
             <p className="lbl fl mt16">{t('Fecha')}</p>
             <label className="date-row">
-              <input type="date" value={fecha} max={hoy} onChange={e => e.target.value && setFecha(e.target.value)} aria-label={t('Fecha')}
+              <input type="date" value={fecha} max={hoy} onChange={e => setFecha(e.target.value)} aria-label={t('Fecha')}
                 style={{ border: 0, background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none' }} />
               {fecha === hoy && <span>{t('Hoy')}</span>}
             </label>

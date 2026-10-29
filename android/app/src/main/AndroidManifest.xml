@@ -37,7 +37,7 @@
     <!-- Temporizador de descanso: alarma exacta sin pedir permiso (app de uso personal, fuera de Google Play). -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <!-- Solo se leen los pasos: fuera el resto de permisos de salud que declara el plugin. -->
+    <!-- Solo se leen pasos, peso y grasa (los que se dejan más abajo): fuera el resto de permisos de salud del plugin. -->
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" tools:node="remove" />

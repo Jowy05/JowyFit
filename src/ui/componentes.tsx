@@ -1,9 +1,11 @@
 // Componentes comunes con el aspecto del mockup «4 · Ficha».
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import type { Ejercicio } from '../catalogo/tipos'
 import { imagen, miniatura } from '../catalogo/catalogo'
 import { siguiente } from '../dominio/pesos'
 import { useNav } from '../app/nav'
+import { useCerrarConAtras } from './capas'
 import { t } from '../i18n'
 import { leerNumero, num } from '../dominio/formato'
 
@@ -212,6 +214,31 @@ export function Hoja({ titulo, sub, children, className, cerrar = true, etiqueta
       )}
       {children}
     </div>
+  )
+}
+
+/**
+ * Hoja inferior sobre el marco de la app, fuera de la navegación de hojas (que en el alta y en «Algo ha ido mal» no
+ * está, y que con la pantalla debajo desplazándose se iría con el scroll). «Atrás», la X y el fondo la cierran.
+ * `cabecera` sustituye al título de texto (y entonces `etiqueta` da el nombre al lector de pantalla).
+ */
+export function HojaSuelta({ titulo, sub, cabecera, etiqueta, onCerrar, children }: {
+  titulo?: string; sub?: ReactNode; cabecera?: ReactNode; etiqueta?: string; onCerrar: () => void; children: ReactNode
+}) {
+  useCerrarConAtras(true, onCerrar)
+  return createPortal(
+    <>
+      <div className="backdrop" onClick={onCerrar} />
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={etiqueta ?? titulo}>
+        <div className="grab" />
+        <div className="sh-h">
+          {cabecera ?? <div className="grow"><h2>{titulo}</h2>{sub && <p className="sub">{sub}</p>}</div>}
+          <button type="button" className="ib" aria-label={t('Cerrar')} onClick={onCerrar}><Ico n="x" /></button>
+        </div>
+        {children}
+      </div>
+    </>,
+    document.querySelector('.app') ?? document.body,
   )
 }
 

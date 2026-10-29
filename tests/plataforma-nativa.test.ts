@@ -8,7 +8,7 @@ const health = vi.hoisted(() => ({
   readSamples: vi.fn(),
 }))
 vi.mock('@capgo/capacitor-health', () => ({ Health: health }))
-const fsNativo = vi.hoisted(() => ({ readFile: vi.fn() }))
+const fsNativo = vi.hoisted(() => ({ readFile: vi.fn(), deleteFile: vi.fn() }))
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: fsNativo, Directory: { Documents: 'DOCUMENTS' } }))
 const detector = vi.hoisted(() => ({ lecturas: [] as string[][] }))
 vi.mock('barcode-detector/ponyfill', () => ({
@@ -16,7 +16,7 @@ vi.mock('barcode-detector/ponyfill', () => ({
   BarcodeDetector: class { async detect() { return (detector.lecturas.shift() ?? []).map(rawValue => ({ rawValue })) } },
 }))
 
-import { hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, prepararSonido } from '../src/plataforma'
+import { borrarCopiaGuardada, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, prepararSonido } from '../src/plataforma'
 import { abrirCamara } from '../src/plataforma/escanerWeb'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
@@ -49,6 +49,19 @@ describe('copias guardadas en Documentos (Android)', () => {
     fsNativo.readFile.mockResolvedValue({ data: btoa(String.fromCharCode(80, 75, 3, 4)) })
     expect([...await leerCopiaGuardada('jowyfit-2026-10-13.jowyfit')]).toEqual([80, 75, 3, 4])
     expect(fsNativo.readFile.mock.calls[0]![0]).toMatchObject({ path: 'JowyFit/jowyfit-2026-10-13.jowyfit', directory: 'DOCUMENTS' })
+  })
+  it('borra una copia de la carpeta; un nombre con carpetas no sale de Documentos/JowyFit', async () => {
+    fsNativo.deleteFile.mockResolvedValue(undefined)
+    await borrarCopiaGuardada('jowyfit-auto-2026-10-13-1900-cifrada.jowyfit')
+    expect(fsNativo.deleteFile.mock.calls[0]![0]).toEqual({ path: 'JowyFit/jowyfit-auto-2026-10-13-1900-cifrada.jowyfit', directory: 'DOCUMENTS' })
+    // Una copia renombrada a mano («(1)», espacios) se sigue pudiendo leer.
+    fsNativo.readFile.mockResolvedValue({ data: btoa('PK') })
+    await leerCopiaGuardada('jowyfit-2026-10-13 (1).jowyfit')
+    for (const malo of ['../perfil.jowyfit', 'otra/carpeta.jowyfit', '..\\x.jowyfit', 'sub\\x.jowyfit', 'datos.json', '..jowyfit']) {
+      await expect(borrarCopiaGuardada(malo)).rejects.toThrow(/no válido/)
+      await expect(leerCopiaGuardada(malo)).rejects.toThrow(/no válido/)
+    }
+    expect(fsNativo.deleteFile).toHaveBeenCalledTimes(1)
   })
 })
 

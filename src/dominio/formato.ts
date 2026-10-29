@@ -88,3 +88,12 @@ export function textoSerieEnCurso(x: Serie, e: EjercicioSesion): string {
   const p = e.registro === 'asistido' ? t('asist. {n} kg', { n: kg(Math.abs(x.peso)) }) : `${kg(x.peso)} kg`
   return `${p} × ${x.hecha ? x.reps : objetivo}`
 }
+
+/** El texto de un error para enseñarlo en un aviso. */
+export const mensajeDe = (e: unknown): string => String((e as Error)?.message ?? e)
+
+/** Lo que ocupa un archivo: «820 KB» o «27,7 MB». */
+export function tamanoArchivo(bytes: number): string {
+  const MB = 1024 * 1024
+  return bytes >= MB ? `${num(bytes / MB, 1)} MB` : `${miles(Math.max(1, Math.round(bytes / 1024)))} KB`
+}

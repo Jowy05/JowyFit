@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-9-0.cab': "<b>Versió 0.9.0</b> · 29 d’octubre del 2026",
+  'nov.0-9-0.texto': "Còpies amb contrasenya: activa-ho a Configuració → Còpia de seguretat i totes les teves còpies noves, també la setmanal, van xifrades; sense la contrasenya ningú no les pot obrir. La còpia setmanal ja no s’acumula: es desen les 4 últimes (o les 8, o totes), i les altres còpies del mòbil es poden esborrar amb la paperera. En canviar de mòbil, recuperes la còpia amb la seva contrasenya i es queda posada.",
   'nov.0-8-1.cab': "<b>Versió 0.8.1</b> · 29 d’octubre del 2026",
   'nov.0-8-1.texto': "Seguretat: les còpies de seguretat trampa (fotos repetides milers de vegades, arxius duplicats, números o dates impossibles) es rebutgen sense tocar les teves dades; una data mal escrita ja no deixa una còpia que no es pot recuperar; les dades absurdes d’Open Food Facts es descarten; els noms molt llargs ja no surten del PDF; i l’app d’Android és més estricta amb el codi que deixa executar.",
   'nov.0-8-0.cab': "<b>Versió 0.8.0</b> · 29 d’octubre del 2026",

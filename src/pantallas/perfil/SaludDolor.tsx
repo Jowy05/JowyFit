@@ -1,13 +1,11 @@
 // Salud con botones y dibujos: urgencias que bloquean la rutina, «¿Te duele algo?» (cuadrícula y tres toques por zona)
 // y las condiciones como casillas. Se usan en el alta, en Perfil → Salud, en Generar y en «Me encuentro mal».
 import { useCallback, useState } from 'react'
-import { createPortal } from 'react-dom'
 import type { CondicionSalud, Dolor, Perfil, Urgencia, ZonaDolor } from '../../datos/tipos'
 import { imagenMusculo } from '../../catalogo/catalogo'
 import { CONDICIONES, doloresDe, efectoDolor, URGENCIAS, ZONAS_DOLOR, zonaDolor } from '../../dominio/salud'
 import { hoyISO } from '../../dominio/fechas'
-import { Chip, cx, Ico } from '../../ui/componentes'
-import { useCerrarConAtras } from '../../ui/capas'
+import { Chip, cx, HojaSuelta, Ico } from '../../ui/componentes'
 import { t, tk } from '../../i18n'
 
 type PerfilSalud = Pick<Perfil, 'urgencias' | 'dolores' | 'zonasSensibles' | 'creado' | 'condicionesSalud'>
@@ -89,7 +87,6 @@ export function Dolores({ p, cambia }: Props) {
   const [pestana, setPestana] = useState<'art' | 'mus' | 'otr'>('art')
   const [abierta, setAbierta] = useState<ZonaDolor | null>(null)
   const cerrar = useCallback(() => setAbierta(null), [])
-  useCerrarConAtras(!!abierta, cerrar)
   const dolores = doloresDe(p)
   const guardar = (d: Dolor | null, zona: ZonaDolor) => {
     const resto = dolores.filter(x => x.zona !== zona)
@@ -138,29 +135,22 @@ function EditorDolor({ zona, actual, onGuardar, onCerrar }: { zona: ZonaDolor; a
       <div className="chips eq">{(Object.keys(ops) as Dolor[K][]).map(v => <Chip key={v} on={d[k] === v} onClick={() => setD(x => ({ ...x, [k]: v }))}>{t(ops[v])}</Chip>)}</div>
     </div>
   )
-  return createPortal(
-    <>
-      <div className="backdrop" onClick={onCerrar} />
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={z ? t(z.t) : zona}>
-        <div className="grab" />
-        <div className="sh-h">
-          <div className="grow g2-zh"><span className="th"><DibujoZona zona={zona} /></span><div><h2>{z ? t(z.t) : zona}</h2><p className="sub">{t('Tres toques y listo')}</p></div></div>
-          <button className="ib" aria-label={t('Cerrar')} onClick={onCerrar}><Ico n="x" /></button>
-        </div>
-        {pregunta('cuanto', t('¿Cuánto te duele?'), CUANTO_TXT)}
-        {pregunta('cuando', t('¿Cuándo?'), CUANDO_TXT)}
-        {pregunta('desde', t('¿Desde cuándo?'), DESDE_TXT)}
-        <div className="sec">
-          <span className="lbl">{t('Qué hará tu rutina')}</span>
-          <p className={cx('note mt8', efecto.tono)}><Ico n={efecto.tono === 'bad' ? 'warning' : 'info'} /><span>{efecto.texto}</span></p>
-        </div>
-        <div className="btns mt16">
-          {actual && <button className="btn gry sm" onClick={() => onGuardar(null)}>{t('Ya no me duele')}</button>}
-          <button className="btn sm" onClick={() => onGuardar(d)}>{t('Guardar')}</button>
-        </div>
+  const nombre = z ? t(z.t) : zona
+  return (
+    <HojaSuelta etiqueta={nombre} onCerrar={onCerrar}
+      cabecera={<div className="grow g2-zh"><span className="th"><DibujoZona zona={zona} /></span><div><h2>{nombre}</h2><p className="sub">{t('Tres toques y listo')}</p></div></div>}>
+      {pregunta('cuanto', t('¿Cuánto te duele?'), CUANTO_TXT)}
+      {pregunta('cuando', t('¿Cuándo?'), CUANDO_TXT)}
+      {pregunta('desde', t('¿Desde cuándo?'), DESDE_TXT)}
+      <div className="sec">
+        <span className="lbl">{t('Qué hará tu rutina')}</span>
+        <p className={cx('note mt8', efecto.tono)}><Ico n={efecto.tono === 'bad' ? 'warning' : 'info'} /><span>{efecto.texto}</span></p>
       </div>
-    </>,
-    document.querySelector('.app') ?? document.body,
+      <div className="btns mt16">
+        {actual && <button className="btn gry sm" onClick={() => onGuardar(null)}>{t('Ya no me duele')}</button>}
+        <button className="btn sm" onClick={() => onGuardar(d)}>{t('Guardar')}</button>
+      </div>
+    </HojaSuelta>
   )
 }
 

@@ -71,6 +71,10 @@ describe('seguridad · Content-Security-Policy de la compilación', () => {
     expect(scripts).not.toContain("'unsafe-eval'")
     expect(scripts).toContain("'wasm-unsafe-eval'")
   })
+  it('un index.html con saltos de línea de Windows (CRLF) da la misma huella: el navegador los cambia por LF', () => {
+    const lf = '<head></head><script>\nuno()\n</script>'
+    expect(cspPara(lf.replace(/\n/g, '\r\n'))).toBe(cspPara(lf))
+  })
   it('las imágenes y las conexiones solo a la app y a Open Food Facts', () => {
     const csp = cspPara(app)
     expect(valor(csp, 'img-src')).toBe("'self' data: blob: https://images.openfoodfacts.org https://static.openfoodfacts.org")

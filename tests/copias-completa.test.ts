@@ -6,7 +6,8 @@ import path from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { strToU8, unzipSync, zipSync, strFromU8 } from 'fflate'
 import { db, TABLAS } from '../src/datos/db'
-import { exportar, importar, nombreCopia } from '../src/datos/copias'
+import { exportar, importar } from '../src/datos/copias'
+import { nombreCopia } from '../src/dominio/copias'
 import { ajustesPorDefecto, leerAjustes, perfilPorDefecto } from '../src/datos/repos'
 import { sugerenciaPara, gastoDelDia } from '../src/datos/consultas'
 import type {
@@ -32,7 +33,7 @@ const perfil: Required<Perfil> = {
 }
 const ajustes: Required<Ajustes> = {
   ...ajustesPorDefecto(), gimnasioActivo: 1, kcalManual: 2300, proteinaManual: 150, fuentePasos: 'auto', fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'],
-  ultimaCopia: '2026-10-12T10:00:00.000Z', ultimoAjusteEnergia: '2026-10-01', recolocadas: [{ fecha: '2026-10-17', letra: 'C', desde: '2026-10-16' }],
+  copiasAuto: 8, ultimaCopia: '2026-10-12T10:00:00.000Z', ultimoAjusteEnergia: '2026-10-01', recolocadas: [{ fecha: '2026-10-17', letra: 'C', desde: '2026-10-16' }],
   inicio: '2026-10-13', semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28',
   noti: { ...ajustesPorDefecto().noti, revision: true, revisionHora: '18:30' },
   informe: { periodo: 'semana', secciones: { entrenos: true, comida: false, cuerpo: true, pasos: false, detalle: true } },

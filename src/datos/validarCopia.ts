@@ -3,6 +3,7 @@
 import { imagenOFF } from '../dominio/comida'
 import { TABLAS, type NombreTabla } from './db'
 import { TOPE_SERIE } from '../dominio/sesion'
+import { OPCIONES_COPIAS_AUTO } from '../dominio/copias'
 import { t, tk } from '../i18n'
 
 type Fila = Record<string, unknown>
@@ -55,6 +56,8 @@ const rango = (min: number, max: number): Regla => (v, d) => (typeof v === 'numb
 const uno = (...valores: string[]): Regla => (v, d) => (typeof v === 'string' && valores.includes(v) ? v : mal(d, t('valor desconocido')))
 /** Igual, pero un valor desconocido se quita (y se usa el de siempre): para el perfil y los ajustes. */
 const unoO = (...valores: string[]): Regla => v => (typeof v === 'string' && valores.includes(v) ? v : undefined)
+/** Igual con números. */
+const numO = (...valores: number[]): Regla => v => (typeof v === 'number' && valores.includes(v) ? v : undefined)
 /** id de las tablas que lo generan solas (y referencias a ellas: rutinaId, gimnasioId…). */
 const id = ent(1, ID_MAX)
 const dia = ent(0, 6)
@@ -149,7 +152,7 @@ const AJUSTES = obj({
     dormir: opc(bool), pesarse: opc(bool), pesarseHora: opc(hora), batido: opc(bool), batidoHora: opc(hora), creatina: opc(bool), creatinaHora: opc(hora),
     copia: opc(bool), fotos: opc(bool), domingo: opc(bool), revision: opc(bool), revisionHora: opc(hora),
   })),
-  copiaAuto: opc(bool), ultimaCopia: opc(nulo(fecha)), ultimoAjusteEnergia: opc(nulo(fecha)),
+  copiaAuto: opc(bool), copiasAuto: opc(numO(...OPCIONES_COPIAS_AUTO)), ultimaCopia: opc(nulo(fecha)), ultimoAjusteEnergia: opc(nulo(fecha)),
   recolocadas: opc(lista(obj({ fecha: req(fecha), letra: req(corto), desde: req(fecha) }), 1000)),
   inicio: opc(nulo(fecha)), semanaSuave: opc(nulo(fecha)), suavePospuesta: opc(nulo(fecha)),
   informe: opc(obj({

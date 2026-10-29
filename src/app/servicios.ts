@@ -1,13 +1,13 @@
 // Tareas que corren mientras la app está abierta: recordatorios, pasos y copia automática.
-import { exportar, nombreCopia } from '../datos/copias'
 import { guardarLecturasBascula, guardarPasosAuto, subirMovimiento } from '../datos/acciones/cuerpo'
 import { reprogramarNotificaciones } from '../datos/acciones/avisos'
 import { reponerAvisoDescanso } from '../datos/acciones/entreno'
+import { copiaAutomatica } from './copias'
 import { buscarPendientes } from '../datos/acciones/comida'
 import { leerMediciones } from '../datos/consultas'
-import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
+import { guardarAjustes, leerAjustes } from '../datos/repos'
 import { hoyISO, sumarDias } from '../dominio/fechas'
-import { alVolverAPrimerPlano, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud } from '../plataforma'
+import { alVolverAPrimerPlano, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { decimal, miles } from '../dominio/formato'
 import { t, tn } from '../i18n'
@@ -92,51 +92,6 @@ export async function comprobarSalud(): Promise<string[]> {
       : t('No hay pesadas en Health Connect de los últimos 30 días.'))
   }
   return lineas
-}
-
-/** Nombre libre para una copia nueva en Documentos/JowyFit: con la hora y, si ya existe, con «-2», «-3»… */
-async function nombreCopiaLibre(fecha = new Date()): Promise<string> {
-  const existentes = esNativo() ? (await copiasGuardadas()).map(c => c.nombre) : []
-  return nombreCopia(fecha, existentes)
-}
-
-/** Copia automática semanal en Documentos/JowyFit (Android). */
-export async function copiaAutomatica(): Promise<boolean> {
-  const a = await leerAjustes()
-  if (!a.copiaAuto || !esNativo()) return false
-  if (a.ultimaCopia && Date.now() - new Date(a.ultimaCopia).getTime() < 7 * 86_400_000) return false
-  if (!(await leerPerfil())?.altaCompleta) return false
-  try {
-    await guardarArchivo(await nombreCopiaLibre(), await exportar())
-    await guardarAjustes({ ultimaCopia: new Date().toISOString() })
-    await reprogramarNotificaciones()
-    return true
-  } catch { return false }
-}
-
-/** Hace la copia y devuelve el nombre del archivo (el que sale en el aviso: lleva la hora y, si hace falta, «-2»). */
-export async function hacerCopiaAhora(): Promise<string> {
-  const bytes = await exportar()
-  const nombre = await nombreCopiaLibre()
-  await guardarArchivo(nombre, bytes, 'application/zip')
-  await guardarAjustes({ ultimaCopia: new Date().toISOString() })
-  await reprogramarNotificaciones()
-  return nombre
-}
-
-export type CopiaPreparada = { nombre: string; bytes: Uint8Array }
-/**
- * Web de Apple: se guarda con el menú Compartir o, si no comparte archivos, se descarga. Si Safari no deja abrirlo
- * (tardó tras el toque), devuelve 'sin-gesto' con la copia hecha para el siguiente toque. La fecha solo se apunta si se guardó.
- */
-export async function copiaCompartiendo(lista?: CopiaPreparada): Promise<{ resultado: 'compartido' | 'descargado' | 'cancelado' | 'sin-gesto'; copia: CopiaPreparada }> {
-  const copia = lista ?? { nombre: nombreCopia(), bytes: await exportar() }
-  const r = await compartirArchivo(copia.nombre, copia.bytes, 'application/zip')
-  if (r === 'cancelado' || r === 'sin-gesto') return { resultado: r, copia }
-  if (r === 'no-se-puede') await guardarArchivo(copia.nombre, copia.bytes, 'application/zip')
-  await guardarAjustes({ ultimaCopia: new Date().toISOString() })
-  await reprogramarNotificaciones()
-  return { resultado: r === 'compartido' ? 'compartido' : 'descargado', copia }
 }
 
 let arrancado = false

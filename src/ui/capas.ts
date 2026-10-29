@@ -1,5 +1,5 @@
-// Capas que se pintan fuera de la navegación (la hoja de los tres toques de una molestia): el botón atrás del móvil
-// las cierra primero, en vez de salir de la pantalla y perder lo que había a medias.
+// Capas que se pintan fuera de la navegación (HojaSuelta: los tres toques de una molestia, la contraseña de las
+// copias): el botón atrás del móvil las cierra primero, en vez de salir de la pantalla y perder lo que había a medias.
 import { useEffect } from 'react'
 
 const abiertas: (() => void)[] = []

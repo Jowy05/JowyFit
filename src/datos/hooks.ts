@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
+import { leerClaveCopias } from './claveCopias'
 import { ajustesPorDefecto, gimnasioActivo, perfilPorDefecto, rutinaActiva } from './repos'
 import { leerMediciones, sesionesEntre } from './consultas'
 import { colaDe, DIAS_COLA, enCola, letrasCola, type Cola } from '../dominio/cola'
@@ -28,6 +29,14 @@ export function useAjustes(): Ajustes {
   const a = useLiveQuery(() => db.ajustes.get('app'), [])
   // Mismo objeto mientras no cambien los ajustes: se puede usar como dependencia.
   return useMemo(() => (a ? { ...ajustesPorDefecto(), ...a, noti: { ...ajustesPorDefecto().noti, ...a.noti } } : ajustesPorDefecto()), [a])
+}
+
+/**
+ * ¿Las copias llevan contraseña? undefined mientras se mira; 'rota' si la guardada no se puede leer (disco lleno, la
+ * clave no viajó con el móvil…): así Ajustes no se cae y deja quitarla o poner otra.
+ */
+export function useCopiasConContrasena(): boolean | 'rota' | undefined {
+  return useLiveQuery(() => leerClaveCopias().then(c => !!c, () => 'rota' as const), [])
 }
 
 export function useGimnasios(): Guardado<Gimnasio>[] {

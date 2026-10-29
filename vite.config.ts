@@ -49,7 +49,8 @@ function appComoIndex(activo: boolean): Plugin {
 // <head>, delante de esta CSP (en una <meta> solo cuenta para lo que va detrás): no hace falta 'unsafe-inline'.
 export function cspPara(html: string): string {
   const huellas = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
-    .map(m => `'sha256-${createHash('sha256').update(m[1] ?? '', 'utf8').digest('base64')}'`)
+    // El navegador cambia los CRLF por LF antes de calcular la huella: aquí también (un index.html con CRLF la rompía).
+    .map(m => `'sha256-${createHash('sha256').update((m[1] ?? '').replace(/\r\n?/g, '\n'), 'utf8').digest('base64')}'`)
   const script = ["'self'", "'wasm-unsafe-eval'", ...huellas]
   return [
     "default-src 'self'",

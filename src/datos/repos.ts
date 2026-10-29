@@ -2,6 +2,7 @@
 import { dispositivoApple } from '../plataforma'
 import { db } from './db'
 import type { Ajustes, Gimnasio, Guardado, MarcaEjercicio, Perfil, Plantilla, Rutina } from './tipos'
+import { COPIAS_AUTO } from '../dominio/copias'
 import { t, tk } from '../i18n'
 
 export function perfilPorDefecto(): Perfil {
@@ -81,6 +82,7 @@ export function ajustesPorDefecto(): Ajustes {
       revisionHora: '19:00',
     },
     copiaAuto: true,
+    copiasAuto: COPIAS_AUTO,
     ultimaCopia: null,
     ultimoAjusteEnergia: null,
     recolocadas: [],

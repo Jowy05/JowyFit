@@ -43,3 +43,10 @@
 
 /* Perfil: el objetivo en la cabecera puede ser largo («Perder grasa y ganar músculo»). */
 .prof .tag{white-space:normal;height:auto;min-height:22px;padding:3px 7px;line-height:1.2}
+
+/* Ajustes: copias guardadas (candado, «auto», papelera) y la contraseña. */
+.copia-guardada .tx b .ph{vertical-align:-.12em;margin-right:2px}
+.copia-guardada .tx b .tag{margin-left:6px;vertical-align:1px}
+.copia-guardada .ib{color:var(--muted)}
+.copia-guardada .ib.badf{background:var(--bad);color:#fff}
+.quitar-clave{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}

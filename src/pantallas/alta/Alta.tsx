@@ -5,12 +5,13 @@ import { gimnasioNuevo, guardarPerfil, leerPerfil, perfilPorDefecto } from '../.
 import { leerMediciones } from '../../datos/consultas'
 import { completarAlta } from '../../datos/acciones/alta'
 import { importar } from '../../datos/copias'
+import { useCopiaCifrada } from '../../ui/HojaCopiaCifrada'
 import type { Gimnasio, Medicion, Perfil, Rutina, Sexo } from '../../datos/tipos'
 import { TODAS_LAS_CLAVES } from '../../catalogo/clasificacion'
 import { primerEntrenoDesde } from '../../dominio/semana'
 import { enCola, letrasCola } from '../../dominio/cola'
 import { DIAS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
-import { capital, decimal, enLista, leerNumero } from '../../dominio/formato'
+import { capital, decimal, enLista, leerNumero, mensajeDe } from '../../dominio/formato'
 import { PERIMETROS, type Perimetro } from '../../dominio/medidas'
 import { elegirArchivo } from '../../plataforma'
 import { cx, Elegir, FilaInterruptor, Ico, LARGO } from '../../ui/componentes'
@@ -121,12 +122,9 @@ export function Alta() {
   const sig = () => { if (fallo(paso)) { setIntento(true); return } ir(Math.min(TOTAL, paso + 1)) }
   const atras = () => ir(Math.max(1, paso - 1))
 
-  const importarCopia = async () => {
-    const f = await elegirArchivo()
-    if (!f) return
+  const trasImportar = async (tipo: 'copia' | 'perfil') => {
+    if (tipo === 'copia') { aviso(t('Copia restaurada')); return } // la app se recarga sola al ver el perfil
     try {
-      const tipo = await importar(f.bytes)
-      if (tipo === 'copia') { aviso(t('Copia restaurada')); return } // la app se recarga sola al ver el perfil
       const guardado = await leerPerfil()
       if (guardado) {
         setP({ ...guardado, altaCompleta: false })
@@ -142,8 +140,17 @@ export function Alta() {
       aviso(t('Datos importados: revísalos y sigue'))
       ir(PASO.sobreTi)
     } catch (e) {
-      aviso(t('No se pudo importar: {error}', { error: String((e as Error).message ?? e) }))
+      aviso(t('No se pudo importar: {error}', { error: mensajeDe(e) }))
     }
+  }
+  const cifrada = useCopiaCifrada(tipo => void trasImportar(tipo))
+  const importarCopia = async () => {
+    const f = await elegirArchivo()
+    if (!f) return
+    // Con contraseña, la pide su hoja y luego sigue aquí.
+    if (cifrada.abrir(f, false)) return
+    try { await trasImportar(await importar(f.bytes)) }
+    catch (e) { aviso(t('No se pudo importar: {error}', { error: mensajeDe(e) })) }
   }
 
   const terminar = useCallback(async () => {
@@ -212,6 +219,7 @@ export function Alta() {
           </div>
         </div>
       </div>
+      {cifrada.hoja}
     </section>
   )
 

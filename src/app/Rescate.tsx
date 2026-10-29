@@ -3,8 +3,10 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react'
 import { borrarTodosLosDatos, importar } from '../datos/copias'
 import { elegirArchivo } from '../plataforma'
-import { hacerCopiaAhora } from './servicios'
+import { useCopiaCifrada } from '../ui/HojaCopiaCifrada'
+import { hacerCopiaAhora } from './copias'
 import { recortar } from '../ui/componentes'
+import { mensajeDe } from '../dominio/formato'
 import { t } from '../i18n'
 
 type Nivel = 'app' | 'pantalla' | 'hoja'
@@ -47,11 +49,18 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
   const [archivo, setArchivo] = useState<Uint8Array | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  const recuperada = () => {
+    setMensaje(t('Copia recuperada. Abriendo la app…'))
+    window.setTimeout(() => location.reload(), 700)
+  }
+  const cifrada = useCopiaCifrada(recuperada)
 
   const elegir = async () => {
     setMensaje(null)
     const f = await elegirArchivo()
     if (!f) return
+    // Con contraseña, su hoja la pide y avisa de lo que se cambia.
+    if (cifrada.abrir(f)) return
     setArchivo(f.bytes)
     setPaso('copia')
   }
@@ -60,10 +69,9 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
     setOcupado(true)
     try {
       await importar(archivo)
-      setMensaje(t('Copia recuperada. Abriendo la app…'))
-      window.setTimeout(() => location.reload(), 700)
+      recuperada()
     } catch (e) {
-      setMensaje(t('No se pudo recuperar: {error}', { error: String((e as Error)?.message ?? e) }))
+      setMensaje(t('No se pudo recuperar: {error}', { error: mensajeDe(e) }))
       setOcupado(false)
       setPaso('nada')
     }
@@ -74,7 +82,7 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
       const nombre = await hacerCopiaAhora()
       setMensaje(t('Copia guardada: {nombre}', { nombre }))
     } catch (e) {
-      setMensaje(t('No se pudo hacer la copia: {error}', { error: String((e as Error)?.message ?? e) }))
+      setMensaje(t('No se pudo hacer la copia: {error}', { error: mensajeDe(e) }))
     } finally { setOcupado(false) }
   }
   const borrar = async () => {
@@ -115,6 +123,7 @@ export function PantallaRescate({ detalle, enApp = true, alVolver = () => locati
         </div>
       </div>
       {detalle && <p className="small muted mt16" style={{ wordBreak: 'break-word' }}>{t('Detalle: {detalle}', { detalle: recortar(detalle, 200) })}</p>}
+      {cifrada.hoja}
     </div>
   )
   // Fuera de la app (fallo de todo) hace falta el marco con el fondo y la letra de la app.

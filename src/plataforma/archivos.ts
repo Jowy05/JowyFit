@@ -1,5 +1,6 @@
 // Archivos: guardar, compartir y elegir (copias e informe), copias en Documentos y fotos.
 import { esNativo, esWebApple } from './dispositivo'
+import { t } from '../i18n'
 
 function aBase64(bytes: Uint8Array): string {
   let s = ''
@@ -63,21 +64,38 @@ export async function compartirNativo(nombre: string, bytes: Uint8Array, titulo:
   }
 }
 
+export type CopiaGuardada = { nombre: string; fecha: number; tam: number }
+export type ArchivoElegido = { nombre: string; bytes: Uint8Array }
+
 /** Lista las copias guardadas en Documentos/JowyFit (solo Android). */
-export async function copiasGuardadas(): Promise<{ nombre: string; fecha: number; tam: number }[]> {
+export async function copiasGuardadas(): Promise<CopiaGuardada[]> {
   if (!esNativo()) return []
   try {
     const { Filesystem, Directory } = await import('@capacitor/filesystem')
     const r = await Filesystem.readdir({ path: 'JowyFit', directory: Directory.Documents })
-    return r.files.filter(f => f.name.endsWith('.jowyfit')).map(f => ({ nombre: f.name, fecha: Number(f.mtime ?? 0), tam: Number(f.size ?? 0) })).sort((a, b) => b.fecha - a.fecha)
+    return r.files.filter(f => f.name.endsWith('.jowyfit')).map(f => ({ nombre: f.name, fecha: Number(f.mtime ?? 0), tam: Number(f.size ?? 0) })).sort((a, b) => b.fecha - a.fecha || b.nombre.localeCompare(a.nombre))
   } catch { return [] }
 }
 
+/** Solo un nombre de copia, sin carpetas: nada de «../» que se salga de Documentos/JowyFit. */
+function rutaCopia(nombre: string): string {
+  if (/[/\\]|\.\./.test(nombre) || !nombre.endsWith('.jowyfit')) throw new Error(t('Nombre de copia no válido'))
+  return `JowyFit/${nombre}`
+}
+
 export async function leerCopiaGuardada(nombre: string): Promise<Uint8Array> {
+  const ruta = rutaCopia(nombre)
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
-  const r = await Filesystem.readFile({ path: `JowyFit/${nombre}`, directory: Directory.Documents })
+  const r = await Filesystem.readFile({ path: ruta, directory: Directory.Documents })
   const bin = atob(typeof r.data === 'string' ? r.data : await (r.data as Blob).text())
   return Uint8Array.from(bin, c => c.charCodeAt(0))
+}
+
+/** Borra una copia de Documentos/JowyFit. Ahí no hay papelera: no se puede deshacer. */
+export async function borrarCopiaGuardada(nombre: string): Promise<void> {
+  const ruta = rutaCopia(nombre)
+  const { Filesystem, Directory } = await import('@capacitor/filesystem')
+  await Filesystem.deleteFile({ path: ruta, directory: Directory.Documents })
 }
 
 /**
@@ -99,7 +117,7 @@ function pedirArchivo(preparar: (i: HTMLInputElement) => void): Promise<File | n
   })
 }
 
-export async function elegirArchivo(aceptar = '.jowyfit,.json,application/json,application/zip'): Promise<{ nombre: string; bytes: Uint8Array } | null> {
+export async function elegirArchivo(aceptar = '.jowyfit,.json,application/json,application/zip'): Promise<ArchivoElegido | null> {
   // Ni el selector de Android ni Archivos de iPhone conocen «.jowyfit»: con el filtro la copia sale en gris.
   // Allí se deja elegir cualquier archivo; al importar se comprueba que sea una copia.
   const f = await pedirArchivo(i => { i.accept = esNativo() || esWebApple() ? '' : aceptar })

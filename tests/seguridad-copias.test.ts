@@ -287,7 +287,7 @@ describe('seguridad · la copia automática ya no pisa la de hoy', () => {
       return { ...m, esNativo: () => true, guardarArchivo: async (n: string, b: Uint8Array) => { guardados[n] = b; return n }, copiasGuardadas: async () => Object.keys(guardados).map(nombre => ({ nombre, fecha: 0, tam: 0 })) }
     })
     try {
-      const { hacerCopiaAhora, copiaAutomatica } = await import('../src/app/servicios')
+      const { hacerCopiaAhora, copiaAutomatica } = await import('../src/app/copias')
       const { importar: imp } = await import('../src/datos/copias')
       await hacerCopiaAhora()
       const [primera] = Object.keys(guardados)
@@ -297,7 +297,7 @@ describe('seguridad · la copia automática ya no pisa la de hoy', () => {
       expect(await copiaAutomatica()).toBe(true)
       expect(Object.keys(guardados)).toHaveLength(2)
       expect(guardados[primera!]).toBe(buena)
-      expect(Object.keys(guardados)[1]).toMatch(/^jowyfit-\d{4}-\d{2}-\d{2}-\d{4}(-\d+)?\.jowyfit$/)
+      expect(Object.keys(guardados)[1]).toMatch(/^jowyfit-auto-\d{4}-\d{2}-\d{2}-\d{4}(-\d+)?\.jowyfit$/)
     } finally {
       vi.doUnmock('../src/plataforma')
       vi.resetModules()

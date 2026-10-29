@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-9-0.cab': "<b>Version 0.9.0</b> · October 29, 2026",
+  'nov.0-9-0.texto': "Password-protected backups: turn it on in Settings → Backup and all your new backups, including the weekly one, are encrypted; without the password nobody can open them. The weekly backup no longer piles up: the last 4 are kept (or 8, or all), and other backups on the phone can be deleted with the bin. When you switch phones, you restore the backup with its password and it stays set.",
   'nov.0-8-1.cab': "<b>Version 0.8.1</b> · October 29, 2026",
   'nov.0-8-1.texto': "Security: rigged backups (photos repeated thousands of times, duplicate files, impossible numbers or dates) are rejected without touching your data; a mistyped date no longer leaves a backup you can’t restore; nonsense data from Open Food Facts is discarded; very long names no longer spill off the PDF; and the Android app is stricter about what code it lets run.",
   'nov.0-8-0.cab': "<b>Version 0.8.0</b> · October 29, 2026",

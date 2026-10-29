@@ -1,4 +1,5 @@
 // Modelo de datos de JowyFit. Todo se guarda en el móvil (IndexedDB).
+import type { CopiasAuto } from '../dominio/copias'
 
 export type Sexo = 'hombre' | 'mujer'
 export type TipoObjetivo = 'salud' | 'perder' | 'recomposicion' | 'musculo' | 'fuerza' | 'estetica' | 'peso'
@@ -389,6 +390,8 @@ export type Ajustes = {
     revisionHora?: string
   }
   copiaAuto: boolean
+  /** Copias automáticas que se guardan (las más nuevas; 0 = todas). */
+  copiasAuto: CopiasAuto
   ultimaCopia: string | null
   ultimoAjusteEnergia: string | null
   /** Sesiones perdidas que se pasaron a otro día. */

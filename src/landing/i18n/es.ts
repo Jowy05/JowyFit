@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-9-0.cab': "<b>Versión 0.9.0</b> · 29 de octubre de 2026",
+  'nov.0-9-0.texto': "Copias con contraseña: actívalo en Ajustes → Copia de seguridad y todas tus copias nuevas, también la semanal, van cifradas; sin la contraseña nadie puede abrirlas. La copia semanal ya no se acumula: se guardan las 4 últimas (o las 8, o todas), y las demás copias del móvil se pueden borrar con la papelera. Al cambiar de móvil, recuperas la copia con su contraseña y se queda puesta.",
   'nov.0-8-1.cab': "<b>Versión 0.8.1</b> · 29 de octubre de 2026",
   'nov.0-8-1.texto': "Seguridad: las copias de seguridad trampa (fotos repetidas miles de veces, archivos duplicados, números o fechas imposibles) se rechazan sin tocar tus datos; una fecha mal tecleada ya no deja una copia que no se puede recuperar; los datos absurdos de Open Food Facts se descartan; los nombres muy largos ya no se salen del PDF; y la app de Android es más estricta con el código que deja ejecutar.",
   'nov.0-8-0.cab': "<b>Versión 0.8.0</b> · 29 de octubre de 2026",

@@ -62,6 +62,35 @@ test('recuperar desde Ajustes', async ({ page, jf }) => {
   await jf.ver(/Buenas|Hoy te toca|descansas/, 15000)
 })
 
+test('con contraseña: la copia sale cifrada y se recupera desde Ajustes con la contraseña', async ({ page, jf }) => {
+  await conAlgo(jf)
+  await jf.pulsarSel('button[aria-label="Proteger con contraseña"]')
+  await jf.escribir('.sheet input[name="contrasena"]', 'mesa azul 7')
+  await jf.escribir('.sheet input[name="repetida"]', 'mesa azul 7')
+  await jf.pulsar(/^Poner contraseña$/, '.sheet')
+  await jf.ver('Contraseña puesta')
+  await jf.pulsar('Hacer copia ahora')
+  await jf.ver('Copia hecha')
+  const c = (await jf.registro()).compartido!
+  expect(c.nombre).toMatch(/-cifrada\.jowyfit$/)
+  const bytes = Buffer.from(c.b64, 'base64')
+  expect(bytes.subarray(0, 17).toString()).toBe('JOWYFIT-CIFRADA-1')
+  const fc = page.waitForEvent('filechooser')
+  await jf.pulsar('Recuperar una copia')
+  await (await fc).setFiles(jf.archivo('recuperar-' + c.nombre, bytes))
+  await jf.ver('Esta copia tiene contraseña')
+  await jf.escribir('.sheet input', 'mesa azul 8')
+  await jf.pulsar(/^Abrir$/, '.sheet')
+  await jf.ver('No es esta contraseña', 10000)
+  await jf.escribir('.sheet input', 'mesa azul 7')
+  await jf.pulsar(/^Abrir$/, '.sheet')
+  await jf.ver('Contraseña correcta.', 10000)
+  const recarga = page.waitForEvent('load')
+  await jf.pulsar(/^Recuperar$/, '.sheet')
+  await recarga
+  await jf.ver(/Buenas|Hoy te toca|descansas/, 15000)
+})
+
 test.describe('Safari no deja abrir el menú Compartir a la primera', () => {
   test.use({ compartir: 'sin-gesto-una-vez' })
   test('queda lista y se guarda con otro toque', async ({ jf }) => {

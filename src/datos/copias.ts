@@ -4,6 +4,8 @@ import { db, TABLAS, type NombreTabla } from './db'
 import { ajustesPorDefecto, guardarPerfil, perfilPorDefecto } from './repos'
 import { cargarPropios } from './acciones/propios'
 import type { Medicion, Perfil } from './tipos'
+import { cifrar, descifrar, esCifrada, EXTRA_CIFRADO, type ClaveCopias } from './cifrado'
+import { guardarClaveCopias, leerClaveCopias, quitarContrasena } from './claveCopias'
 import { comprobarCabecera, esHora, fechaValida, TIPOS_FOTO, validarDatos, versionNecesaria, type RefArchivo } from './validarCopia'
 import { fechaDeCampo } from '../dominio/fechas'
 import { t } from '../i18n'
@@ -51,16 +53,13 @@ export async function exportar(): Promise<Uint8Array> {
 }
 
 /**
- * Nombre del archivo de la copia, con la fecha y la hora: dos copias del mismo día no se pisan.
- * Si ya existe uno con ese nombre (dos en el mismo minuto), se añade «-2», «-3»…
+ * La copia que se guarda: cifrada si hay contraseña puesta. Si la contraseña guardada no se puede leer, no sale una
+ * copia sin ella sin avisar: falla con lo que hay que hacer.
  */
-export function nombreCopia(fecha = new Date(), existentes?: Iterable<string>): string {
-  const d = (n: number) => String(n).padStart(2, '0')
-  const base = `jowyfit-${fecha.getFullYear()}-${d(fecha.getMonth() + 1)}-${d(fecha.getDate())}-${d(fecha.getHours())}${d(fecha.getMinutes())}`
-  const usados = new Set(existentes ?? [])
-  let nombre = `${base}.jowyfit`
-  for (let i = 2; usados.has(nombre); i++) nombre = `${base}-${i}.jowyfit`
-  return nombre
+export async function exportarCopia(): Promise<{ bytes: Uint8Array; cifrada: boolean }> {
+  const clave = await leerClaveCopias().catch(() => { throw new Error(t('La contraseña de tus copias no se puede usar: quítala o ponla otra vez en Ajustes')) })
+  const zip = await exportar()
+  return clave ? { bytes: await cifrar(zip, clave), cifrada: true } : { bytes: zip, cifrada: false }
 }
 
 /**
@@ -149,10 +148,14 @@ function abrirZip(bytes: Uint8Array): { json: string; leerArchivos: (usos: Map<s
   }
 }
 
+/** La copia lleva contraseña: hay que abrirla antes con `abrirCifrada`. */
+export class PideContrasena extends Error {}
+
 /** Restaura una copia completa (sustituye todo) o importa un perfil en formato JSON sencillo. */
 export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
   if (!bytes || !bytes.length) throw new Error(t('El archivo está vacío'))
   if (bytes.length > LIMITES_ZIP.archivo) throw new Error(t('El archivo es demasiado grande para ser una copia de JowyFit'))
+  if (esCifrada(bytes)) throw new PideContrasena(t('Esta copia tiene contraseña'))
   const esZip = bytes[0] === 0x50 && bytes[1] === 0x4b
   if (!esZip) {
     if (bytes.length > LIMITES_ZIP.json) throw new Error(t('El archivo es demasiado grande para ser una copia de JowyFit'))
@@ -172,6 +175,29 @@ export async function importar(bytes: Uint8Array): Promise<'copia' | 'perfil'> {
   const { tablas, archivos } = validarDatos(obj.datos)
   await restaurar(tablas, zip.leerArchivos(archivos))
   return 'copia'
+}
+
+/** Abre una copia con contraseña (lanza `ContrasenaMala` si no es). Devuelve el zip y su clave. */
+export async function abrirCifrada(bytes: Uint8Array, contrasena: string): Promise<{ zip: Uint8Array; clave: ClaveCopias }> {
+  if (bytes.length > LIMITES_ZIP.archivo + EXTRA_CIFRADO) throw new Error(t('El archivo es demasiado grande para ser una copia de JowyFit'))
+  return descifrar(bytes, contrasena)
+}
+
+/**
+ * Recupera una copia ya abierta con su contraseña, que se queda puesta para las copias siguientes. La clave se pone
+ * antes: si no se pudiera guardar, no se cambia nada (y no salen copias sin contraseña sin que nadie lo sepa). Si la
+ * copia no entra, vuelve la clave de antes.
+ */
+export async function recuperarCifrada(zip: Uint8Array, clave: ClaveCopias): Promise<'copia' | 'perfil'> {
+  const antes = await leerClaveCopias()
+  await guardarClaveCopias(clave)
+  try {
+    return await importar(zip)
+  } catch (e) {
+    // Lo que importa es por qué no entró la copia: si volver a la clave de antes falla, no tapa ese error.
+    await (antes ? guardarClaveCopias(antes) : quitarContrasena()).catch(() => undefined)
+    throw e
+  }
 }
 
 async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<string, Uint8Array>) {
@@ -205,6 +231,7 @@ export async function borrarTodosLosDatos(): Promise<void> {
     await db.transaction('rw', TABLAS.map(tb => db.table(tb)), async () => { for (const tb of TABLAS) await db.table(tb).clear() })
   }
   try { localStorage.clear() } catch { /* nada */ }
+  await quitarContrasena().catch(() => undefined)
 }
 
 /** Formato del perfil sencillo (un JSON escrito a mano): perfil + mediciones + logística + objetivos. */

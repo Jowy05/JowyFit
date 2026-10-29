@@ -6,7 +6,7 @@ import { esNativo } from './dispositivo'
  * «dormir» y «pesarse» son el primero de una serie (uno por entreno o por día de pesaje).
  * El del descanso sirve también para el calentamiento: va por su propio canal, con vibración, para que llegue al reloj.
  */
-export const ID_AVISO = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700, descanso: 9001 } as const
+export const ID_AVISO = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700, revision: 800, descanso: 9001 } as const
 
 export type Aviso = { id: number; titulo: string; texto: string; cuando: Date; repetirCada?: 'day' | 'week' }
 
@@ -65,4 +65,12 @@ export function cancelar(ids: number[]): Promise<void> {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
     await LocalNotifications.cancel({ notifications: ids.map(id => ({ id })) })
   })
+}
+
+/** Al tocar un aviso: `fn` recibe su id (para abrir lo suyo). Devuelve cómo dejar de escuchar. */
+export async function alTocarAviso(fn: (id: number) => void): Promise<() => void> {
+  if (!esNativo()) return () => {}
+  const { LocalNotifications } = await import('@capacitor/local-notifications')
+  const h = await LocalNotifications.addListener('localNotificationActionPerformed', a => fn(a.notification.id))
+  return () => { void h.remove() }
 }

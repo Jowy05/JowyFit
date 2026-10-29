@@ -1,7 +1,7 @@
 // Lecturas de la base para las pantallas (que nunca leen db directamente): las de una tabla, arriba, y las que
 // combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
-import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
+import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
 import { ejercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { pesosPara } from '../dominio/pesos'
@@ -12,6 +12,7 @@ import { objetivos } from '../dominio/calculos'
 import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
 import { grasaActual, hitosDominadas, pesoMaximo, seriesDe, ultimoValor } from '../dominio/tendencias'
 import { kg } from '../dominio/formato'
+import { hayPasos } from '../dominio/cardio'
 import { t } from '../i18n'
 
 // ── De una tabla ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -28,6 +29,19 @@ export const contarComidas = (): Promise<number> => db.comidas.count()
 
 export const pasosDelDia = (fecha: string): Promise<PasosDia | undefined> => db.pasos.get(fecha)
 export const pasosEntre = (desde: string, hasta: string): Promise<PasosDia[]> => db.pasos.where('fecha').between(desde, hasta, true, true).toArray()
+/** Media de pasos de los últimos `dias` días con algo apuntado (null si no hay nada). */
+export async function mediaPasos(dias: number): Promise<number | null> {
+  const hoy = hoyISO()
+  const l = (await pasosEntre(sumarDias(hoy, -dias), sumarDias(hoy, -1))).filter(d => d.pasos > 0)
+  return l.length ? l.reduce((a, d) => a + d.pasos, 0) / l.length : null
+}
+/** Minutos de cardio apuntados entre dos fechas (los de fuera del gimnasio y los de los entrenos hechos). */
+export async function minutosCardio(desde: string, hasta: string): Promise<{ fecha: string; tipo: string; min: number }[]> {
+  const fuera = (await pasosEntre(desde, hasta)).flatMap(d => (d.cardio ?? []).map(c => ({ fecha: d.fecha, tipo: c.tipo as string, min: c.min })))
+  const gimnasio = (await db.sesiones.where('fecha').between(desde, hasta, true, true).toArray()).filter(s => s.estado === 'hecha')
+    .flatMap(s => s.ejercicios.filter(e => e.registro === 'cardio').map(e => ({ fecha: s.fecha, tipo: e.ejercicio, min: e.series.filter(x => x.hecha).reduce((a, x) => a + (x.reps ?? 0), 0) })))
+  return [...fuera, ...gimnasio].filter(x => x.min > 0)
+}
 
 export const suplementosDelDia = (fecha: string): Promise<DiaSuplementos | undefined> => db.suplementos.get(fecha)
 
@@ -59,6 +73,8 @@ export const productoEnMisComidas = async (codigo: string): Promise<boolean> => 
 export const leerGimnasio = (id: number): Promise<Guardado<Gimnasio> | undefined> => db.gimnasios.get(id)
 export const leerRutina = (id: number): Promise<Guardado<Rutina> | undefined> => db.rutinas.get(id)
 export const leerPropio = (id: string): Promise<EjercicioPropio | undefined> => db.propios.get(id)
+/** Revisiones semanales, de la más antigua a la más reciente. */
+export const leerRevisiones = (): Promise<Guardado<Revision>[]> => db.revisiones.orderBy('fecha').toArray()
 /** Ejercicios marcados como odiados o que duelen. */
 export const contarEvitados = (): Promise<number> => db.marcas.filter(m => !!m.odiado || !!m.duele).count()
 
@@ -79,6 +95,11 @@ export async function contarEntrenosDeRutina(rutinaId: number): Promise<number> 
   return (await sesionesHechasDeRutina(rutinaId)).filter(s => s.letra !== 'L').length
 }
 
+/** Letras de la rutina ya hechas al menos una vez: la semana de prueba se cierra cuando están todas (§4.12). */
+export async function letrasHechasDeRutina(rutinaId: number): Promise<Set<string>> {
+  return new Set((await sesionesHechasDeRutina(rutinaId)).filter(s => s.letra !== 'L').map(s => s.letra))
+}
+
 /** Cuántos entrenos (hechos) tienen este ejercicio: para explicar al borrarlo que se quedan. */
 export async function entrenosCon(id: string): Promise<number> {
   return (await sesionesHechas()).filter(s => s.ejercicios.some(e => e.ejercicio === id && e.series.some(x => x.hecha))).length
@@ -96,8 +117,9 @@ export async function ultimasSeries(id: string, excluir?: number): Promise<Serie
 export async function sugerenciaPara(id: string, objetivo: { repsMin: number; repsMax: number; rpe: number }, g?: Gimnasio | null, excluir?: number, sesiones?: Sesion[], referencias?: Record<string, string>): Promise<Sugerencia> {
   const e = ejercicio(id)
   const reg = e ? tipoRegistro(e) : 'peso'
-  // Las semanas suaves no cuentan: si no, tras la descarga se partiría del peso rebajado.
-  const todas = (sesiones ?? (await sesionesHechas())).filter(x => !x.suave)
+  // Las semanas suaves y los ejercicios rebajados por una molestia no cuentan: si no, se partiría del peso rebajado
+  // (y la rebaja de la molestia se volvería a aplicar encima en cada entreno).
+  const todas = (sesiones ?? (await sesionesHechas())).filter(x => !x.suave).map(sinRebajados)
   const hist = historialEn(todas, id, excluir)
   const ultimas = hist[0]?.series ?? null
   const lista = pesosPara(e?.material ?? null, reg, g)
@@ -123,13 +145,26 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
   return s
 }
 
+const sinRebajados = (s: Sesion): Sesion => (s.ejercicios.some(e => e.cargaPct) ? { ...s, ejercicios: s.ejercicios.filter(e => !e.cargaPct) } : s)
+
 /** Sugerencias de todo un día leyendo las sesiones una sola vez, no una por ejercicio. */
 export async function sugerenciasDia(dia: DiaRutina, g?: Gimnasio | null): Promise<Map<string, Sugerencia>> {
   const m = new Map<string, Sugerencia>()
   const sesiones = await sesionesHechas()
   const refs = (await db.perfil.get('yo'))?.referencias ?? {}
-  for (const b of dia.bloques) m.set(b.ejercicio, await sugerenciaPara(b.ejercicio, bloqueObjetivo(b), g, undefined, sesiones, refs))
+  for (const b of dia.bloques) {
+    const s = await sugerenciaPara(b.ejercicio, bloqueObjetivo(b), g, undefined, sesiones, refs)
+    m.set(b.ejercicio, conCargaRebajada(s, b, g))
+  }
   return m
+}
+
+/** Bloque suavizado por una molestia (revisión semanal): el peso que toca, rebajado al más cercano que exista. */
+function conCargaRebajada(s: Sugerencia, b: DiaRutina['bloques'][number], g?: Gimnasio | null): Sugerencia {
+  if (!b.cargaPct || b.cargaPct >= 1 || s.peso == null || s.peso <= 0) return s
+  const e = ejercicio(b.ejercicio)
+  const peso = pesoReinicio(s.peso, pesosPara(e?.material ?? null, e ? tipoRegistro(e) : 'peso', g), b.cargaPct)
+  return peso < s.peso ? { ...s, peso, texto: t('Más suave por tu molestia: {peso} kg', { peso: kg(peso) }) } : s
 }
 
 export async function comidasDe(fecha: string): Promise<Guardado<Comida>[]> {
@@ -173,11 +208,14 @@ export async function gastoDelDia(p: Perfil, fecha: string): Promise<GastoDia | 
 }
 
 /** Objetivo de kcal y proteína (automático o el que puso el usuario). */
-export async function objetivosEnergia(p: Perfil): Promise<{ kcal: number; proteina: number; basal: number; gasto: number; peso: number | null }> {
+export type ObjetivosEnergia = ReturnType<typeof objetivos> & { peso: number | null; recomendado: number; manual: boolean }
+
+/** El objetivo del día: el recomendado (con su desglose) o el que puso el usuario a mano. */
+export async function objetivosEnergia(p: Perfil): Promise<ObjetivosEnergia> {
   const a = await db.ajustes.get('app')
   const peso = await pesoActual()
-  const o = objetivos({ pesoKg: peso ?? 75, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, entrenosSemana: p.diasFijos.length })
-  return { ...o, kcal: a?.kcalManual ?? o.kcal, proteina: a?.proteinaManual ?? o.proteina, peso }
+  const o = objetivos({ pesoKg: peso ?? 75, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, extra: p.objetivosExtra, entrenosSemana: p.diasFijos.length, pasos: p.pasosObjetivo })
+  return { ...o, kcal: a?.kcalManual ?? o.kcal, proteina: a?.proteinaManual ?? o.proteina, peso, recomendado: o.kcal, manual: a?.kcalManual != null }
 }
 
 /** Valor actual de una meta (null si no se puede saber). */
@@ -203,7 +241,7 @@ export async function valorActualMeta(tipo: Meta['tipo'], ejercicioId: string | 
 export async function datosSemana(lunes: string, p: Perfil) {
   const domingo = sumarDias(lunes, 6)
   const [sesiones, mediciones, comidas, pasos, energia] = await Promise.all([
-    sesionesHechas(), leerMediciones(), comidasEntre(sumarDias(lunes, -21), domingo), pasosEntre(sumarDias(lunes, -7), domingo), objetivosEnergia(p),
+    sesionesHechas(), leerMediciones(), comidasEntre(sumarDias(lunes, -21), domingo), pasosEntre(sumarDias(lunes, -7), domingo).then(l => l.filter(hayPasos)), objetivosEnergia(p),
   ])
   return { sesiones, mediciones, comidas, pasos, energia }
 }

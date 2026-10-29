@@ -1,6 +1,6 @@
 // Escrituras del entreno: la sesión en curso, sus descansos (con el aviso del móvil) y el final.
 import { db } from '../db'
-import type { Serie, Sesion } from '../tipos'
+import type { DiaRutina, Perfil, Serie, Sesion } from '../tipos'
 import { gimnasioActivo, leerAjustes, leerPerfil, rutinaActiva } from '../repos'
 import { historialDe, sugerenciasDia } from '../consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
@@ -9,7 +9,10 @@ import { pesoReinicio, seriesSuave } from '../../dominio/descarga'
 import { pesosPara } from '../../dominio/pesos'
 import { esRecord } from '../../dominio/progresion'
 import { apuntarSerie, corregirSerie, crearSesion, indiceActual, recortarACorta } from '../../dominio/sesion'
-import { hoyISO, lunesDe } from '../../dominio/fechas'
+import { diaMinimo } from '../../dominio/cola'
+import { deISO, diaSemana, hoyISO, lunesDe, sumarDias } from '../../dominio/fechas'
+import { patronGenerador } from '../../dominio/generador'
+import { ZONA_DE_PATRON } from '../../dominio/volumen'
 import { cancelar, ID_AVISO, programar } from '../../plataforma'
 import { t } from '../../i18n'
 
@@ -36,8 +39,17 @@ export async function guardarSesion(s: Sesion) {
   await db.sesiones.put(s)
 }
 
+const PIERNA = new Set(['piernas', 'gluteo', 'gemelos'])
+
+/** La víspera de su deporte (un partido, por ejemplo), la pierna va suave: una serie menos y esfuerzo cómodo. */
+function piernaSuaveSiManana(d: DiaRutina, p: Perfil | undefined, hoy: string): DiaRutina {
+  if (p?.diaDeporte == null || p.diaDeporte !== diaSemana(deISO(sumarDias(hoy, 1)))) return d
+  const esPierna = (id: string) => { const e = ejercicio(id); return !!e && PIERNA.has(ZONA_DE_PATRON[patronGenerador(e)] ?? '') }
+  return { ...d, bloques: d.bloques.map(b => (esPierna(b.ejercicio) ? { ...b, series: seriesSuave(b.series), rpe: Math.min(b.rpe, 7) } : b)) }
+}
+
 /** Crea el entreno en curso desde la rutina activa (o uno libre). Si ya hay uno en curso, devuelve ese. */
-export async function iniciarEntreno(o: { letra?: string; version?: 'normal' | 'corta'; horaLimite?: string; libre?: boolean }): Promise<number> {
+export async function iniciarEntreno(o: { letra?: string; version?: Sesion['version']; horaLimite?: string; libre?: boolean }): Promise<number> {
   const ya = await db.sesiones.where('estado').equals('curso').first()
   if (ya?.id) return ya.id
   const g = await gimnasioActivo()
@@ -48,10 +60,13 @@ export async function iniciarEntreno(o: { letra?: string; version?: 'normal' | '
   if (o.libre || !r) {
     s = { fecha: hoyISO(), rutinaId: r?.id ?? null, letra: 'L', nombre: t('Entreno libre'), gimnasioId: g?.id ?? null, inicio: Date.now(), horaLimite, version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
   } else {
-    const base = r.dias.find(d => d.letra === o.letra) ?? r.dias[0]!
-    // Semana suave aceptada en Inicio: mismos ejercicios, 1 serie menos y −10 % de peso.
+    const elegido = r.dias.find(d => d.letra === o.letra) ?? r.dias[0]!
+    // Sesión mínima: lo más importante de la que toca, a 2 series.
+    const base = piernaSuaveSiManana(o.version === 'minima' ? diaMinimo(elegido) : elegido, perfil, hoyISO())
+    // Semana suave aceptada en Inicio: mismos ejercicios, 1 serie menos, −10 % de peso y esfuerzo cómodo (RPE ≤ 7:
+    // la descarga baja el cansancio, no solo el peso; §4.9).
     const suave = !r.calibracion && (await leerAjustes()).semanaSuave === lunesDe(hoyISO())
-    const dia = suave ? { ...base, bloques: base.bloques.map(b => ({ ...b, series: seriesSuave(b.series) })) } : base
+    const dia = suave ? { ...base, bloques: base.bloques.map(b => ({ ...b, series: seriesSuave(b.series), rpe: Math.min(b.rpe, 7) })) } : base
     const sug = await sugerenciasDia(base, g)
     const pesoDe = (id: string, peso: number | null) => {
       if (!suave || peso == null || peso <= 0) return peso

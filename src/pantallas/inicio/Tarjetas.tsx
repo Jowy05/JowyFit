@@ -1,18 +1,19 @@
-// INI-01 · Tarjetas de Inicio que salen solo a veces: semana suave, «¿Voy bien?», pendientes de hoy y tu progreso.
+// INI-01 · Tarjetas de Inicio que salen solo a veces: semana suave, «¿Voy bien?», pendientes de hoy, tu progreso y el cardio.
 import { useEffect, useState, type ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { guardarAjustes } from '../../datos/repos'
-import { datosSemana, leerMetas, sesionesHechas } from '../../datos/consultas'
-import type { Rutina } from '../../datos/tipos'
+import { datosSemana, leerMetas, minutosCardio, sesionesHechas } from '../../datos/consultas'
+import type { Rutina, TipoCardio } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
-import { deISO, diaSemana, fechaCorta, hoyISO, lunesDe, semanaDe } from '../../dominio/fechas'
+import { DIAS, deISO, diaSemana, fechaCorta, hoyISO, lunesDe, semanaDe } from '../../dominio/fechas'
+import { nombreCardio, TIPOS_CARDIO } from '../../dominio/cardio'
 import { propuestaDescarga } from '../../dominio/descarga'
 import { racha } from '../../dominio/semana'
 import { resumenSemana } from '../../dominio/resumen'
 import { recordsEn, subidas } from '../../dominio/tendencias'
 import { kg } from '../../dominio/formato'
 import { batidoDe, esBatido } from '../../dominio/comida'
-import { cx, Ico, Seccion, useUnaVez } from '../../ui/componentes'
+import { Barra, cx, Ico, Seccion, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
@@ -197,5 +198,23 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
         <button className="card rot-it on" key={it.k} onClick={it.ir} style={{ textAlign: 'left' }}>{it.el}</button>
       </div>
     </Seccion>
+  )
+}
+
+/** «Cardio esta semana» en «Hoy en números»: minutos de lunes a hoy (gimnasio y fuera) frente a la meta. Toca para apuntar. */
+export function CardioSemana({ meta }: { meta: number }) {
+  const nav = useNav()
+  const hoy = hoyISO()
+  const hechos = useLiveQuery(() => minutosCardio(lunesDe(hoy), hoy), [hoy]) ?? []
+  const total = hechos.reduce((a, x) => a + x.min, 0)
+  const nombre = (tipo: string) => (TIPOS_CARDIO.some(c => c.v === tipo) ? nombreCardio(tipo as TipoCardio) : nombreEjercicio(tipo))
+  const lista = hechos.slice(0, 3).map(x => t('{tipo} el {dia} ({n})', { tipo: nombre(x.tipo), dia: DIAS[diaSemana(deISO(x.fecha))]!, n: x.min }))
+  return (
+    <button className="card kpi span2" onClick={() => nav.hoja('hoja-cardio', { fecha: hoy })}>
+      <div className="row jb"><span className="lbl">{t('Cardio esta semana')}</span><span className="small muted">{total >= meta ? t('Hecho') : t('faltan {n} min', { n: meta - total })}</span></div>
+      <p className="k">{total}<small>/ {meta} min</small></p>
+      <div className="mt8"><Barra v={total} total={meta} tono="go" gruesa /></div>
+      <p className="d">{lista.length ? lista.join(' · ') : t('Toca para apuntar el que hagas fuera del gimnasio.')}</p>
+    </button>
   )
 }

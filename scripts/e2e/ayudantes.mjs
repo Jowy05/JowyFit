@@ -118,6 +118,11 @@ export async function alta(o = {}) {
   }
   await ver('Tu rutina está lista', 15000)
   await pulsar('Ir a Inicio')
+  // Las altas nuevas van en orden (la cola); los escenarios de siempre son de días fijos: se cambia salvo con `cola`.
+  if (o.cola) { await ver('Te toca', 8000); return }
+  const [p] = await tabla('perfil')
+  await meter('perfil', [{ ...p, modoRutina: 'dias' }])
+  await recargar()
   await ver('Hoy te toca', 8000).catch(() => ver(/descansas|no entrenaste|Próximo/, 3000))
 }
 /** En la primera sesión el peso empieza vacío: sube el stepper hasta tener un peso. */

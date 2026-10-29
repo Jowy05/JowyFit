@@ -433,4 +433,10 @@ export default {
   'Con qué te has medido': 'What you measured with',
   'Fecha': 'Date',
   'Pon al menos una medida para poder guardar.': 'Enter at least one measurement to save.',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  'Apuntado: {min} min de {tipo}': 'Logged: {min} min of {tipo}',
+  'Apuntar cardio': 'Log cardio',
+  'Lo que haces fuera de las pesas.': 'What you do outside of weights.',
+  '¿Qué has hecho?': 'What did you do?',
 } satisfies Diccionario

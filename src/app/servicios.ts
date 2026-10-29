@@ -1,6 +1,6 @@
 // Tareas que corren mientras la app está abierta: recordatorios, pasos y copia automática.
 import { exportar, nombreCopia } from '../datos/copias'
-import { guardarLecturasBascula, guardarPasosAuto } from '../datos/acciones/cuerpo'
+import { guardarLecturasBascula, guardarPasosAuto, subirMovimiento } from '../datos/acciones/cuerpo'
 import { reprogramarNotificaciones } from '../datos/acciones/avisos'
 import { reponerAvisoDescanso } from '../datos/acciones/entreno'
 import { buscarPendientes } from '../datos/acciones/comida'
@@ -146,7 +146,7 @@ export function arrancarServicios(): () => void {
   // Los escaneados sin conexión se buscan al abrir la app, al volver a ella y en cuanto vuelve la cobertura.
   const pendientes = () => { if (navigator.onLine) void buscarPendientes().catch(() => {}) }
   const tarea = () => {
-    void sincronizarPasos(); void sincronizarBascula(); void reponerAvisoDescanso(); pendientes()
+    void sincronizarPasos(); void sincronizarBascula(); void reponerAvisoDescanso(); void subirMovimiento(); pendientes()
     // La copia automática va antes que los avisos: el de la copia cuenta desde ella.
     void copiaAutomatica().finally(() => { void reprogramarNotificaciones() })
   }

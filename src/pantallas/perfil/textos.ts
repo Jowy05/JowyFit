@@ -1,12 +1,12 @@
 // Textos compartidos por las pantallas de Perfil (etiquetas de cada opción y lista de secciones).
 // Van marcados con tk(): se calculan al importar, antes de cargar el idioma; se traducen al pintarlos con t(x).
-import type { Dia, Nivel, Perfil, Reps, TipoObjetivo, Trabajo, Zona } from '../../datos/tipos'
+import type { Dia, Nivel, Perfil, Reps, Trabajo, Zona } from '../../datos/tipos'
 import type { ClaveSeccion } from '../../app/nav'
 import { DIAS_ABREV } from '../../dominio/fechas'
 import { capital } from '../../dominio/formato'
 import { idioma, t, tc, tk } from '../../i18n'
 
-export const OBJETIVO_TXT: Record<TipoObjetivo, string> = { recomposicion: tk('Perder grasa y ganar músculo'), perder: tk('Perder peso'), fuerza: tk('Ganar fuerza') }
+export { NOMBRE_OBJETIVO as OBJETIVO_TXT } from '../../dominio/objetivos'
 export const NIVEL_TXT: Record<Nivel, string> = { empiezo: tk('Empiezo'), vuelvo: tk('Vuelvo tras un parón'), intermedio: tk('Intermedio'), avanzado: tk('Avanzado') }
 export const PREFERENCIA_TXT: Record<Perfil['preferencia'], string> = { maquinas: tk('Máquinas y poleas'), libre: tk('Peso libre'), mezcla: tk('Mezcla') }
 export const REPS_TXT: Record<Reps, string> = { pesadas: tk('Pocas y pesadas'), moderadas: tk('Moderadas'), mezcla: tk('Mezcla') }
@@ -35,11 +35,15 @@ export const SECCIONES: { s: ClaveSeccion; t: string; ico: string; mas?: boolean
   // «Horario» se pinta con contexto (tituloSeccion): en Progreso la misma palabra es la hora de un entreno.
   { s: 'horario', t: 'Horario', ico: 'calendar-blank' },
   { s: 'salud', t: tk('Salud y molestias'), ico: 'first-aid' },
+  { s: 'movimiento', t: tk('Pasos y cardio'), ico: 'person-simple-walk' },
   { s: 'preferencias', t: tk('Preferencias de entreno'), ico: 'sliders-horizontal' },
   { s: 'experiencia', t: tk('Tu nivel'), ico: 'medal', mas: true },
   { s: 'seguimiento', t: tk('Pesarte y fotos'), ico: 'chart-line-up', mas: true },
   { s: 'alimentacion', t: tk('Suplementos'), ico: 'fork-knife', mas: true },
   { s: 'vida', t: tk('Tu trabajo'), ico: 'armchair', mas: true },
+  { s: 'sueno', t: tk('Sueño'), ico: 'moon', mas: true },
+  { s: 'deportes', t: tk('Deportes que haces'), ico: 'soccer-ball', mas: true },
+  { s: 'calorias', t: tk('Calorías al día'), ico: 'flame', mas: true },
 ]
 
 /** Título de una sección del perfil en el idioma de la app. */

@@ -1,9 +1,11 @@
-// Escrituras del cuerpo: mediciones (también las de Health Connect), pasos, fotos y metas.
+// Escrituras del cuerpo: mediciones (también las de Health Connect), pasos y cardio, fotos y metas.
 import { db } from '../db'
-import type { Foto, Guardado, Medicion, Meta } from '../tipos'
-import { guardarAjustes } from '../repos'
+import type { Foto, Guardado, Medicion, Meta, TipoCardio } from '../tipos'
+import { guardarAjustes, leerPerfil } from '../repos'
 import type { grasaTardia } from '../../dominio/bascula'
 import { PASOS_POR_KM } from '../../dominio/tendencias'
+import { CARDIO_INICIO, metaMovimiento } from '../../dominio/cardio'
+import { diasEntre, edad, hoyISO, sumarDias } from '../../dominio/fechas'
 import { reprogramarNotificaciones } from './avisos'
 
 /** Guarda una medición y devuelve cómo deshacerlo. */
@@ -47,7 +49,7 @@ export async function guardarLecturasBascula(nuevas: Medicion[], tardias: Return
 export async function guardarPasos(fecha: string, pasos: number) {
   await db.transaction('rw', db.pasos, async () => {
     const prev = await db.pasos.get(fecha)
-    await db.pasos.put({ fecha, pasos: Math.max(0, Math.round(pasos)), fuente: 'manual', troteKm: prev?.troteKm })
+    await db.pasos.put({ ...prev, fecha, pasos: Math.max(0, Math.round(pasos)), fuente: 'manual', troteKm: prev?.troteKm })
   })
 }
 
@@ -55,7 +57,17 @@ export async function guardarPasos(fecha: string, pasos: number) {
 export async function sumarTrote(fecha: string, pasos: number, km: number): Promise<() => void> {
   const prev = await db.transaction('rw', db.pasos, async () => {
     const prev = await db.pasos.get(fecha)
-    await db.pasos.put({ fecha, pasos: (prev?.pasos ?? 0) + pasos, fuente: prev?.fuente ?? 'manual', troteKm: Math.round(((prev?.troteKm ?? 0) + km) * 10) / 10 })
+    await db.pasos.put({ ...prev, fecha, pasos: (prev?.pasos ?? 0) + pasos, fuente: prev?.fuente ?? 'manual', troteKm: Math.round(((prev?.troteKm ?? 0) + km) * 10) / 10 })
+    return prev
+  })
+  return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)) }
+}
+
+/** Minutos de cardio fuera del gimnasio (caminar, bici…). No suma pasos: los pasos no son minutos de cardio. */
+export async function apuntarCardio(fecha: string, tipo: TipoCardio, min: number): Promise<() => void> {
+  const prev = await db.transaction('rw', db.pasos, async () => {
+    const prev = await db.pasos.get(fecha)
+    await db.pasos.put({ ...(prev ?? { fecha, pasos: 0, fuente: 'manual' as const }), cardio: [...(prev?.cardio ?? []), { tipo, min: Math.max(1, Math.round(min)) }] })
     return prev
   })
   return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)) }
@@ -67,7 +79,7 @@ export async function guardarPasosAuto(dias: Record<string, number>) {
     for (const [fecha, pasos] of Object.entries(dias)) {
       const prev = await db.pasos.get(fecha)
       const trote = prev?.troteKm ? Math.round(prev.troteKm * PASOS_POR_KM) : 0
-      await db.pasos.put({ fecha, pasos: pasos + trote, fuente: 'auto', troteKm: prev?.troteKm })
+      await db.pasos.put({ ...prev, fecha, pasos: pasos + trote, fuente: 'auto', troteKm: prev?.troteKm })
     }
   })
 }
@@ -92,4 +104,20 @@ export async function borrarMeta(m: Guardado<Meta>): Promise<() => void> {
   const copia = { ...m }
   await db.metas.delete(m.id)
   return () => { void db.metas.put(copia) }
+}
+
+/**
+ * La subida poco a poco (al abrir la app): cada 2 semanas desde `progresoMovimiento`, +1.000 pasos y +15 min de
+ * cardio hasta lo bueno para su edad. Solo si la meta ya se tocó en Perfil → Pasos y cardio.
+ */
+export async function subirMovimiento(hoy = hoyISO()): Promise<void> {
+  await db.transaction('rw', db.perfil, async () => {
+    const p = await leerPerfil()
+    if (!p?.progresoMovimiento) return
+    const semanas = Math.floor(diasEntre(p.progresoMovimiento, hoy) / 7)
+    if (semanas < 2) return
+    const meta = metaMovimiento({ pasos: p.pasosObjetivo, cardio: p.cardioMin ?? CARDIO_INICIO, edad: edad(p.nacimiento), semanas })
+    const escalones = Math.floor(semanas / 2)
+    await db.perfil.put({ ...p, pasosObjetivo: meta.pasos, cardioMin: meta.cardio, progresoMovimiento: sumarDias(p.progresoMovimiento, escalones * 14) })
+  })
 }

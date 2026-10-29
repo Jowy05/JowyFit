@@ -2,7 +2,7 @@
 // también con datos raros.
 process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
-import { basalMifflin, cinturaAltura, epley, grasaMarina, imc, objetivos, DEFICIT, FACTOR_ACTIVIDAD, gastoDiario, kcalEntreno } from '../src/dominio/calculos'
+import { ajusteKcal, basalMifflin, cinturaAltura, epley, grasaMarina, imc, objetivos, AJUSTE_KCAL, FACTOR_ACTIVIDAD, gastoDiario, kcalEntreno } from '../src/dominio/calculos'
 import { kg, num } from '../src/dominio/formato'
 
 describe('cálculos', () => {
@@ -37,19 +37,37 @@ describe('cálculos de energía y cuerpo', () => {
     expect(kcalEntreno(5, 80, 30)).toBe(200)
     expect(kcalEntreno(5, 80, 0)).toBe(0)
   })
-  it('objetivos: déficit según el objetivo, kcal de 50 en 50 y proteína de 5 en 5', () => {
+  it('objetivos: ajuste según el objetivo, kcal de 50 en 50 y proteína de 5 en 5', () => {
     const base = { pesoKg: 79.1, alturaCm: 177, edad: 21, sexo: 'hombre' as const, trabajo: 'sentado' as const, entrenosSemana: 3 }
     const r = objetivos({ ...base, objetivo: 'recomposicion' })
     const f = objetivos({ ...base, objetivo: 'fuerza' })
     const p = objetivos({ ...base, objetivo: 'perder' })
-    expect(f.kcal - r.kcal).toBe(350)
-    expect(DEFICIT.perder).toBe(500)
+    const s = objetivos({ ...base, objetivo: 'salud' })
+    expect(AJUSTE_KCAL).toMatchObject({ perder: -300, recomposicion: -200, musculo: 200, peso: 300 })
+    expect(f.kcal - r.kcal).toBe(200)
+    expect(s.kcal).toBe(f.kcal) // salud y fuerza: lo que gastas
+    expect(p.kcal - s.kcal).toBe(-300)
+    expect(r.ajuste).toBe(-200)
     expect(r.kcal % 50).toBe(0)
     expect(r.proteina % 5).toBe(0)
     expect(p.proteina).toBe(160) // 2 g/kg al perder
     expect(r.proteina).toBe(140) // 1,8 g/kg
     expect(r.basal).toBe(Math.round(basalMifflin(79.1, 177, 21, 'hombre')))
     expect(objetivos({ ...base, objetivo: 'fuerza', entrenosSemana: 0 }).gasto).toBe(Math.round(gastoDiario(basalMifflin(79.1, 177, 21, 'hombre'), 'sentado')))
+  })
+  it('objetivos: un objetivo extra pone su ajuste si el principal no cambia nada; nunca por debajo del reposo', () => {
+    const base = { pesoKg: 79.1, alturaCm: 177, edad: 21, sexo: 'hombre' as const, trabajo: 'sentado' as const, entrenosSemana: 3 }
+    expect(ajusteKcal('salud', ['perder'])).toBe(-300)
+    expect(ajusteKcal('musculo', ['perder'])).toBe(200)
+    expect(objetivos({ ...base, objetivo: 'salud', extra: ['perder'] }).kcal).toBe(objetivos({ ...base, objetivo: 'perder' }).kcal)
+    const pequena = objetivos({ pesoKg: 45, alturaCm: 150, edad: 80, sexo: 'mujer', trabajo: 'sentado', objetivo: 'perder', entrenosSemana: 0 })
+    expect(pequena.kcal).toBeGreaterThanOrEqual(pequena.basal)
+  })
+  it('objetivos: los pasos por encima de 5.000 suman gasto (0,5 kcal por kg y km)', () => {
+    const base = { pesoKg: 80, alturaCm: 180, edad: 30, sexo: 'hombre' as const, trabajo: 'sentado' as const, objetivo: 'salud' as const, entrenosSemana: 0 }
+    expect(objetivos({ ...base, pasos: 5000 }).desglose.pasos).toBe(0)
+    // 5.000 pasos de más × 0,747 m = 3,7 km → 0,5 × 80 × 3,7 ≈ 149 kcal.
+    expect(objetivos({ ...base, pasos: 10_000 }).desglose.pasos).toBe(149)
   })
   it('mujer: −161 en el basal y cadera en la grasa', () => {
     expect(basalMifflin(60, 165, 30, 'mujer')).toBeCloseTo(600 + 1031.25 - 150 - 161)

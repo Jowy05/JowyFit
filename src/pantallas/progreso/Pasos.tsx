@@ -7,6 +7,7 @@ import { guardarAjustes, guardarPerfil } from '../../datos/repos'
 import { num } from '../../dominio/formato'
 import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../dominio/fechas'
 import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../dominio/tendencias'
+import { hayPasos } from '../../dominio/cardio'
 import { capacidades, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
 import { sincronizarPasos } from '../../app/servicios'
 import { Anillo, Cab, Chip, cx, estilo, Hoja, Ico, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
@@ -25,7 +26,7 @@ export function Pasos() {
   const ajustes = useAjustes()
   const hoy = hoyISO()
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(hoy, i - 6))
-  const registros = useLiveQuery(() => pasosEntre(dias[0]!, hoy), [hoy]) ?? []
+  const registros = useLiveQuery(async () => (await pasosEntre(dias[0]!, hoy)).filter(hayPasos), [hoy]) ?? []
   const [hc, setHc] = useState(false)
   const [conectando, setConectando] = useState(false)
   const [editaObjetivo, setEditaObjetivo] = useState(false)

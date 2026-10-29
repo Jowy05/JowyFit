@@ -34,7 +34,7 @@ describe('completarAlta', () => {
     expect(await db.gimnasios.count()).toBe(1)
     expect(perfil.alturaCm).toBe(178)
     expect(await db.mediciones.count()).toBe(1)
-    expect(rutina.calibracion).toBe(true)
+    expect(rutina?.calibracion).toBe(true)
     const g = (await db.gimnasios.toArray())[0]!
     expect((await db.rutinas.toArray()).map(r => r.gimnasioId)).toEqual([g.id])
     const a = await leerAjustes()

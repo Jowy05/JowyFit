@@ -1,7 +1,7 @@
 // SES-10 · Fin del entreno
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { contarEntrenosDeRutina, leerSesion, sesionesHechas } from '../../datos/consultas'
+import { letrasHechasDeRutina, leerSesion, sesionesHechas } from '../../datos/consultas'
 import { historialEn } from '../../dominio/progresion'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { resumen } from '../../dominio/sesion'
@@ -49,8 +49,10 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   }, [s?.id]) ?? []
   const calibCompleta = useLiveQuery(async () => {
     if (!r?.calibracion || !s) return false
-    const hechas = (await contarEntrenosDeRutina(r.id)) + (s.letra !== 'L' ? 1 : 0)
-    return hechas >= r.dias.filter(d => !d.opcional).length
+    // Cada entreno de la rutina hecho al menos una vez (hacer dos veces el mismo no la cierra).
+    const letras = await letrasHechasDeRutina(r.id)
+    letras.add(s.letra)
+    return r.dias.filter(d => !d.opcional).every(d => letras.has(d.letra))
   }, [r?.id, s?.id])
 
   if (!s) return <Pantalla full><div className="cargando">…</div></Pantalla>

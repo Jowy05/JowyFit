@@ -1,11 +1,12 @@
 // Comida: franjas por hora, raciones P/N/G, lectura de Open Food Facts, picoteo y cafeína.
-import type { Comida, Franja, Medicion, Plantilla, Producto } from '../datos/tipos'
+import type { Comida, Franja, Medicion, Plantilla, Producto, TipoObjetivo } from '../datos/tipos'
 import { t, tc, tk } from '../i18n'
 import { propio } from './claves'
 import { minutosDe } from './fechas'
 import { leerNumero } from './formato'
 import { consejoQuincenal, tipoConsejo } from './resumen'
 import { datosQuincena as numerosQuincena } from './tendencias'
+import { subirPesoEsBueno } from './objetivos'
 
 /** Las franjas en orden, con su icono; el nombre sale de nombreFranja(). */
 export const FRANJAS: { v: Franja; icono: string }[] = [
@@ -238,7 +239,7 @@ export function ordenarPlantillas(ps: Plantilla[]): Plantilla[] {
 type Quincena = { consejo: string; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
 
 /** Consejo quincenal (14 días frente a los 14 anteriores) con tono y etiqueta. Los números salen de `tendencias.datosQuincena`, la misma cuenta que usa Progreso. */
-export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas: Comida[]; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }): Quincena {
+export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas: Comida[]; objetivoProteina: number; objetivo: TipoObjetivo }): Quincena {
   const base = numerosQuincena({ domingo: o.hoy, mediciones: o.mediciones, comidas: o.comidas })
   const r1 = (v: number | null) => (v == null ? null : Math.round(v * 10) / 10)
   const cinturaDelta = r1(base.cinturaDelta)
@@ -251,7 +252,7 @@ export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas:
   // Por el tipo de consejo y no por su frase, que cambia con el idioma. Va bien si baja la cintura, si está todo
   // estable sin picoteo o, con «fuerza», si no toca «come un poco más».
   const tipo = tipoConsejo(datos)
-  const bien = (cinturaDelta ?? 0) < -0.3 || tipo === 'estable' || (o.objetivo === 'fuerza' && tipo !== 'peso-estable')
+  const bien = (cinturaDelta ?? 0) < -0.3 || tipo === 'estable' || (subirPesoEsBueno(o.objetivo) && tipo !== 'peso-estable')
   return { consejo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? t('Vas bien') : t('Un ajuste'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
 }
 

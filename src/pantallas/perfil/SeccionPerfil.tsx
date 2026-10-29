@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { contarEvitados, leerMetas, medicionesPorFecha } from '../../datos/consultas'
 import { PERIMETROS } from '../../dominio/medidas'
 import { guardarPerfil } from '../../datos/repos'
-import type { Bascula, Dia, Perfil, Zona } from '../../datos/tipos'
+import type { Bascula, Dia, Perfil } from '../../datos/tipos'
 import { kg, num } from '../../dominio/formato'
 import { DIAS_CORTOS, edad, fechaCorta } from '../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, FilaInterruptor, Ico, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
@@ -13,14 +13,18 @@ import { useAviso } from '../../ui/aviso'
 import { usePerfilCargado } from '../../datos/hooks'
 import { guardarPerfilYAvisos } from '../../datos/acciones/avisos'
 import { Horarios } from './Horarios'
-import { NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, tituloSeccion, TRABAJO_TXT, ZONAS_PRIORIDAD, ZONAS_SENSIBLES } from './textos'
+import { Afinar, ElegirObjetivo } from './ObjetivoAfinar'
+import { Condiciones, Dolores, Urgencias } from './SaludDolor'
+import { Calorias, Deportes, ExperienciaPrevia, Movimiento, Sueno } from './SeccionesExtra'
+import { rutinaBloqueada } from '../../dominio/salud'
+import { NIVEL_TXT, PREFERENCIA_TXT, REFERENCIAS, REPS_TXT, SECCIONES, tituloSeccion, TRABAJO_TXT } from './textos'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
 type Props = { p: Perfil; guardar: (c: Partial<Perfil>) => void }
 
 /** Secciones cuyos cambios afectan a la rutina: al final se ofrece regenerarla. */
-const AFECTAN_RUTINA: ClaveSeccion[] = ['horario', 'objetivos', 'preferencias', 'salud']
+const AFECTAN_RUTINA: ClaveSeccion[] = ['horario', 'objetivos', 'preferencias', 'salud', 'experiencia']
 
 const alternar = <T,>(lista: T[], v: T): T[] => (lista.includes(v) ? lista.filter(x => x !== v) : [...lista, v])
 
@@ -60,6 +64,10 @@ export function SeccionPerfil({ ruta }: { ruta: Ruta<'seccion-perfil'> }) {
     alimentacion: <Alimentacion p={p} guardar={guardar} />,
     vida: <Vida p={p} guardar={guardar} />,
     seguimiento: <Seguimiento p={p} guardar={c => { void guardarPerfilYAvisos(c) }} />,
+    movimiento: <Movimiento p={p} guardar={guardar} />,
+    calorias: <Calorias p={p} guardar={guardar} />,
+    sueno: <Sueno p={p} guardar={guardar} />,
+    deportes: <Deportes p={p} guardar={guardar} />,
   }
 
   return (
@@ -193,13 +201,10 @@ function Objetivos({ p, guardar }: Props) {
   const sugerencias = SUGERENCIAS.filter(x => !p.prioridades.some(y => y.toLowerCase() === x.toLowerCase()))
   return (
     <>
-      <span className="lbl fl mt16">{t('Tipo')}</span>
-      <div className="opts">
-        {([['recomposicion', t('Perder grasa y ganar músculo · recomendado')], ['perder', t('Déficit algo mayor y más proteína')], ['fuerza', t('Comer lo justo para subir los pesos')]] as const).map(([v, d]) => (
-          <button key={v} className={cx('opt-c', p.objetivo === v && 'on')} aria-pressed={p.objetivo === v} onClick={() => guardar({ objetivo: v })}>
-            <span className="rad" /><span className="tx"><b>{t(OBJETIVO_TXT[v])}</b><small>{d}</small></span>
-          </button>
-        ))}
+      <ElegirObjetivo p={p} cambia={guardar} />
+      <div className="sec">
+        <div className="sec-h"><h2>{t('Afinar')}</h2></div>
+        <Afinar p={p} cambia={guardar} />
       </div>
 
       <div className="sec">
@@ -225,11 +230,6 @@ function Objetivos({ p, guardar }: Props) {
       </div>
 
       <div className="sec">
-        <div className="sec-h"><h2>{t('Zonas a priorizar')}</h2></div>
-        <Elegir opciones={ZONAS_PRIORIDAD.map(z => ({ v: z.v, t: t(z.t) }))} valor={p.zonasPrioridad} onCambio={z => guardar({ zonasPrioridad: alternar(p.zonasPrioridad, z) })} />
-      </div>
-
-      <div className="sec">
         <div className="list">
           <button className="it" onClick={() => nav.ir('objetivos', undefined, 'pro')}>
             <span className="ico"><Ico n="flag-checkered" /></span>
@@ -248,10 +248,21 @@ function Salud({ p, guardar }: Props) {
   const evitados = useLiveQuery(contarEvitados, []) ?? 0
   return (
     <>
+      <div className="sec">
+        <div className="sec-h"><h2>{t('Antes de entrenar')}</h2></div>
+        <p className="small muted">{t('¿Te pasa algo de esto? Ahora, o al hacer esfuerzo en las últimas semanas.')}</p>
+        <Urgencias valor={p.urgencias ?? []} onCambio={u => guardar({ urgencias: u })} />
+        {rutinaBloqueada(p) && <p className="note bad mt8"><Ico n="first-aid" /><span>{t('Mientras esté marcado, no te proponemos rutina. Desmárcalo cuando tu médico te dé el visto bueno.')}</span></p>}
+      </div>
+      <div className="sec">
+        <div className="sec-h"><h2>{t('Molestias y dolores')}</h2></div>
+        <Dolores p={p} cambia={guardar} />
+      </div>
+      <div className="sec">
+        <div className="sec-h"><h2>{t('¿Tienes algo de esto?')}</h2><span className="lbl">{t('(opcional)')}</span></div>
+        <Condiciones p={p} cambia={guardar} />
+      </div>
       <div className="fields mt16">
-        <Grupo titulo={t('Zonas sensibles')} ayuda={t('Se evitan los ejercicios que cargan estas zonas.')}>
-          <Elegir opciones={ZONAS_SENSIBLES.map(z => ({ v: z.v, t: t(z.t) }))} valor={p.zonasSensibles} onCambio={(z: Zona) => guardar({ zonasSensibles: alternar(p.zonasSensibles, z) })} />
-        </Grupo>
         <label><span className="lbl fl">{t('Lesiones o molestias')}</span><Texto area valor={p.lesiones} onGuardar={v => guardar({ lesiones: v })} placeholder={t('Por ejemplo: me molesta el hombro derecho en el press')} /></label>
         <label><span className="lbl fl">{t('Condiciones médicas o indicaciones del médico')}</span><Texto area valor={p.condiciones} onGuardar={v => guardar({ condiciones: v })} placeholder={t('Opcional')} /></label>
       </div>
@@ -276,6 +287,7 @@ function Experiencia({ p, guardar }: Props) {
           <Elegir opciones={(Object.keys(NIVEL_TXT) as Perfil['nivel'][]).map(v => ({ v, t: t(NIVEL_TXT[v]) }))} valor={p.nivel} onCambio={v => guardar({ nivel: v })} />
         </Grupo>
       </div>
+      <ExperienciaPrevia p={p} guardar={guardar} />
       <div className="sec">
         <div className="sec-h"><h2>{t('Pesos de referencia')}</h2><span className="lbl">{t('opcional')}</span></div>
         <p className="small muted">{t('Lo último que moviste con buena técnica, por ejemplo «40 kg × 8».')}</p>

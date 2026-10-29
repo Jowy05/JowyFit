@@ -17,6 +17,7 @@ import { destacado, tablaResumen, tonoProteinaDia } from './resumen'
 import { entrenosInforme, fuerzaInforme } from './entrenos'
 import { comidaInforme, pasosInforme } from './comidaPasos'
 import { tuDiaInforme } from './dia'
+import { rutinaSaludInforme } from './rutinaSalud'
 
 function detalleEntrenos(c: Ctx): DetalleEntreno[] {
   return c.enPeriodo.map(s => {
@@ -124,5 +125,6 @@ export function calcularInforme(e: EntradaInforme): Informe {
     pasos: secciones.pasos ? pasosD : null,
     tuDia: r.unDia ? tuDiaInforme(c) : null,
     detalleEntrenos: secciones.detalle && secciones.entrenos && c.enPeriodo.length ? detalleEntrenos(c) : null,
+    rutinaSalud: !r.unDia && secciones.entrenos ? rutinaSaludInforme(e.perfil, e.revisiones ?? [], c) : null,
   }
 }

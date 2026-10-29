@@ -1,7 +1,9 @@
 // Escrituras de la rutina y los gimnasios.
 import { db } from '../db'
 import type { Ajustes, Gimnasio, MaquinaPropia, Rutina } from '../tipos'
-import { gimnasioNuevo, guardarAjustes, leerAjustes } from '../repos'
+import { gimnasioActivo, gimnasioNuevo, guardarAjustes, leerAjustes, leerPerfil, rutinaActiva } from '../repos'
+import { catalogoCargado } from '../../catalogo/catalogo'
+import { generarRutina } from '../../dominio/generador'
 
 /** Fecha de «la saltamos esta semana»: la sesión perdida no se pasa a ningún día. */
 export const SIN_DIA = '0000-00-00'
@@ -55,4 +57,20 @@ export async function guardarMaquinaPropia(gymId: number, m: MaquinaPropia): Pro
     await db.gimnasios.put({ ...g, propias, material })
     return true
   })
+}
+
+/**
+ * Rehace la rutina con el perfil de ahora (al quitar o poner el modo mayor desde Ajustes). Conserva si va en semana de
+ * prueba; los pesos y el historial no se tocan (salen de los entrenos hechos).
+ */
+export async function regenerarRutina(): Promise<boolean> {
+  const c = catalogoCargado()
+  const [perfil, g, actual, a, marcas] = await Promise.all([leerPerfil(), gimnasioActivo(), rutinaActiva(), leerAjustes(), db.marcas.toArray()])
+  if (!c || !perfil) return false
+  const nueva = generarRutina({
+    perfil, gimnasio: g ?? null, marcas: new Map(marcas.map(m => [m.id, m])), ejercicios: c.ejercicios, calibracion: actual?.calibracion ?? false,
+    descansos: { compuesto: a.descansoCompuesto, aislamiento: a.descansoAislamiento },
+  })
+  await activarRutina(nueva)
+  return true
 }

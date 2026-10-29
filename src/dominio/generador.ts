@@ -1,10 +1,14 @@
 // Generador automático de rutina. Lógica pura: recibe perfil, gimnasio, marcas y catálogo.
 // Los nombres de los días y las frases del «por qué» salen en el idioma de la app al crear la rutina (se guardan así).
 import type { Ejercicio } from '../catalogo/tipos'
-import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, ZONA_EVITAR, ZONA_SEGURA, type Patron } from '../catalogo/clasificacion'
+import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, type Patron } from '../catalogo/clasificacion'
+import { NOMBRE_NO_QUIERO, quitadoPor } from '../catalogo/grupos'
 import type { Bloque, Dia, DiaRutina, Gimnasio, MarcaEjercicio, Perfil, Rutina } from '../datos/tipos'
 import { DIAS } from './fechas'
 import { propio } from './claves'
+import { juegoDe, NOMBRE_OBJETIVO, PARAMETROS, rpeMaximo } from './objetivos'
+import { restricciones, resumenSalud, type Restricciones } from './salud'
+import { seriesEjercicio, seriesSemana, ZONA_DE_PATRON, type ZonaVolumen } from './volumen'
 import { t, tk, tn } from '../i18n'
 
 type Papel = 'principal' | 'secundario' | 'accesorio' | 'core'
@@ -68,6 +72,18 @@ type EntradaGenerador = {
   evitar?: Set<string>
 }
 
+/** Lo que se calcula una vez por rutina a partir del perfil: salud, series por zona y huecos sin cubrir. */
+type Contexto = { salud: Restricciones; series: Map<ZonaVolumen, number>; sinCubrir: Set<Patron> }
+const contextos = new WeakMap<EntradaGenerador, Contexto>()
+function contexto(x: EntradaGenerador): Contexto {
+  let c = contextos.get(x)
+  if (!c) { c = { salud: restricciones(x.perfil), series: new Map(), sinCubrir: new Set() }; contextos.set(x, c) }
+  return c
+}
+
+/** Modo mayor: máquinas, sentado o con apoyo (NSCA 2019). */
+const CON_APOYO = (e: Ejercicio) => ES_MAQUINA(e) || /(seated|supported|machine|chair|incline-bench|box)/.test(e.id)
+
 const RANGO_HABITUAL = new Map(HABITUALES.map((id, i) => [id, i]))
 
 function disponible(e: Ejercicio, material: Set<string> | null): boolean {
@@ -127,10 +143,10 @@ export function mismoMovimiento(a: Ejercicio, b: Ejercicio): boolean {
 }
 
 /** Ejercicios aptos para este perfil y gimnasio, agrupados por patrón (una sola pasada por el catálogo). */
-function aptosPorPatron(x: EntradaGenerador, material: Set<string> | null): Map<Patron, Ejercicio[]> {
+function aptosPorPatron(x: EntradaGenerador, material: Set<string> | null, conNoQuiero = true): Map<Patron, Ejercicio[]> {
   const m = new Map<Patron, Ejercicio[]>()
   for (const e of x.ejercicios) {
-    if (!apto(e, x, material)) continue
+    if (!apto(e, x, material, conNoQuiero)) continue
     const p = patronDe(e)
     const l = m.get(p)
     if (l) l.push(e)
@@ -139,26 +155,33 @@ function aptosPorPatron(x: EntradaGenerador, material: Set<string> | null): Map<
   return m
 }
 
-function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null): boolean {
+/**
+ * ¿Puede salir en la rutina? Filtros duros, en este orden (§4.5): material, «¿Qué no quieres hacer?», molestias y
+ * condiciones de salud, «no me gusta» o «me duele», nivel y modo mayor. `conNoQuiero: false` mira si un hueco se
+ * queda vacío solo por lo que no se quiere hacer.
+ */
+function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null, conNoQuiero = true): boolean {
   if (e.categoria !== 'strength') return false
   if (!disponible(e, material)) return false
+  if (conNoQuiero && quitadoPor(e, x.perfil.noQuiero)) return false
   const m = x.marcas.get(e.id)
   if (m?.odiado || m?.duele) return false
-  // Uno propio solo si el usuario lo deja; RepDB no lo conoce, así que no hay etiquetas de zona ni dificultad que mirar.
+  // Las molestias y condiciones valen también para los propios: sin etiquetas de RepDB que digan que cuidan una zona,
+  // quedan fuera si la cargan (todas las reglas de salud quitan, nunca añaden).
+  if (contexto(x).salud.fuera(e)) return false
+  // Uno propio solo si el usuario lo deja; RepDB no lo conoce, así que no hay dificultad que mirar.
   if (e.propio) return e.propio.rutinaAuto
-  for (const z of x.perfil.zonasSensibles) {
-    const etiqueta = propio(ZONA_SEGURA, z)
-    if (etiqueta && !e.etiquetas.includes(etiqueta)) return false
-  }
-  if ((x.perfil.nivel === 'empiezo' || x.perfil.nivel === 'vuelvo') && e.dificultad === 'advanced') return false
+  const novato = x.perfil.nivel === 'empiezo' || x.perfil.nivel === 'vuelvo'
+  if ((novato || x.perfil.modoMayor?.activo) && e.dificultad === 'advanced') return false
   return true
 }
 
 function puntuar(e: Ejercicio, h: Hueco, x: EntradaGenerador, usadosOtros: Set<string>): number {
   let s = 0
   const m = x.marcas.get(e.id)
-  // Codo y muñeca no tienen etiqueta en RepDB: lo que más los carga solo sale si no queda otra cosa.
-  if (x.perfil.zonasSensibles.some(z => propio(ZONA_EVITAR, z)?.test(e.id))) s -= 1000
+  // Una molestia leve resta: se elige otro si lo hay (la dolorida penaliza, la lesionada excluye).
+  s -= contexto(x).salud.penaliza(e)
+  if (x.perfil.modoMayor?.activo && CON_APOYO(e)) s += 12
   if (m?.favorito) s += 30
   const r = RANGO_HABITUAL.get(e.id)
   if (r != null) s += 22 - r * 0.15
@@ -214,30 +237,47 @@ function seriesYReps(h: Hueco, x: EntradaGenerador, e: Ejercicio): Pick<Bloque, 
   return { ...r, descanso: descansoAjustado(r.descanso, x.descansos) }
 }
 
+/**
+ * Series, repeticiones, esfuerzo y descanso de un ejercicio según su papel y el objetivo (§4.2 y §4.6). Las series
+ * salen del volumen de su zona; el esfuerzo nunca pasa del suelo de margen (RIR ≥ 1, o ≥ 2 en quien empieza, vuelve o
+ * va en modo mayor) ni de lo que piden las molestias y condiciones.
+ */
 function seriesYRepsBase(h: Hueco, x: EntradaGenerador, e: Ejercicio): Pick<Bloque, 'series' | 'repsMin' | 'repsMax' | 'rpe' | 'descanso'> {
-  const reps = x.perfil.reps
-  const rpeBase = x.calibracion ? 7 : x.perfil.nivel === 'empiezo' ? 7 : 8
-  const reg = tipoRegistro(e)
-  const extra = prioriza(x.perfil, h.patron) ? 1 : 0
-  if (reg === 'tiempo') return { series: 3, repsMin: 30, repsMax: 45, rpe: rpeBase, descanso: 60 }
+  const juego = juegoDe(x.perfil.objetivo)
+  const par = PARAMETROS[juego]
+  const mayor = !!x.perfil.modoMayor?.activo
+  const salud = contexto(x).salud
+  const tope = Math.min(rpeMaximo(x.perfil), salud.rpeMax ?? 10)
+  const rpe = (base: number) => (x.calibracion ? 7 : Math.min(base, tope))
+  const zona = ZONA_DE_PATRON[h.patron]
+  const series = (zona && contexto(x).series.get(zona)) || 3
+  // «Pocas y pesadas» o «Moderadas» mueven el rango del objetivo dos repeticiones (salvo en fuerza, que ya es bajo).
+  const mover = juego === 'fuerza' ? 0 : x.perfil.reps === 'pesadas' ? -2 : x.perfil.reps === 'moderadas' ? 2 : 0
+  const rango = ([a, b]: [number, number]): [number, number] => (mayor ? [Math.max(a, 8), Math.max(b, 12)] : [Math.max(3, a + mover), Math.max(5, b + mover)])
+  if (tipoRegistro(e) === 'tiempo') return { series: Math.min(series, 3), repsMin: 20, repsMax: Math.min(45, salud.maxIsometrico ?? 45), rpe: rpe(par.rpeAccesorio), descanso: 60 }
+  // Modo mayor: descansos largos, «hasta estar sin mareo» (NSCA 2019).
+  const descanso = (d: number) => (mayor ? Math.max(d, 120) : d)
   switch (h.papel) {
-    case 'principal':
-      return { series: 3 + extra, repsMin: reps === 'pesadas' ? 5 : reps === 'moderadas' ? 8 : 6, repsMax: reps === 'pesadas' ? 8 : reps === 'moderadas' ? 12 : 10, rpe: rpeBase, descanso: 150 }
-    case 'secundario':
-      return { series: 3 + extra, repsMin: reps === 'pesadas' ? 6 : 8, repsMax: reps === 'pesadas' ? 10 : 12, rpe: rpeBase, descanso: 120 }
-    case 'accesorio':
-      return { series: 3 + extra, repsMin: reps === 'pesadas' ? 8 : 10, repsMax: reps === 'pesadas' ? 12 : 15, rpe: rpeBase, descanso: 75 }
+    case 'principal': {
+      const [a, b] = rango(par.repsPrincipal)
+      return { series, repsMin: a, repsMax: b, rpe: rpe(par.rpePrincipal), descanso: descanso(juego === 'fuerza' ? 180 : 150) }
+    }
+    case 'secundario': {
+      const [a, b] = rango([Math.max(6, par.repsPrincipal[0]), Math.max(10, par.repsPrincipal[1])])
+      return { series, repsMin: a, repsMax: b, rpe: rpe(par.rpePrincipal), descanso: descanso(120) }
+    }
+    case 'accesorio': {
+      const [a, b] = rango(par.repsAccesorio)
+      return { series, repsMin: a, repsMax: b, rpe: rpe(par.rpeAccesorio), descanso: descanso(75) }
+    }
     case 'core':
-      return { series: 3, repsMin: 10, repsMax: 15, rpe: rpeBase, descanso: 60 }
+      return { series: Math.min(series, 3), repsMin: 10, repsMax: 15, rpe: rpe(8), descanso: 60 }
   }
 }
 
-const ZONA_PATRON: Record<string, Patron[]> = {
-  brazos: ['biceps', 'triceps'], pecho: ['empuje-h', 'pecho-aisl'], espalda: ['tiron-h', 'tiron-v'], hombros: ['empuje-v', 'hombro-lat', 'hombro-post'],
-  piernas: ['rodilla', 'cadera', 'cuadriceps', 'femoral'], gluteo: ['cadera', 'gluteo'], abdomen: ['core'],
-}
 function prioriza(p: Perfil, patronH: Patron): boolean {
-  return p.zonasPrioridad.some(z => propio(ZONA_PATRON, z)?.includes(patronH))
+  const zona = ZONA_DE_PATRON[patronH]
+  return !!zona && p.zonasPrioridad.includes(zona)
 }
 
 let contador = 0
@@ -321,7 +361,7 @@ const RESPALDO: Partial<Record<Patron, Patron[]>> = {
 /** Minutos válidos (un perfil a medias puede traer 0, negativos o NaN). */
 const minutosValidos = (m: number, porDefecto: number) => (Number.isFinite(m) && m > 0 ? m : porDefecto)
 
-function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejercicio[]>, usados: Set<string>, dia: Dia | null, opcional: boolean): DiaRutina {
+function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejercicio[]>, usados: Set<string>, dia: Dia | null, opcional: boolean, sinNoQuiero?: Map<Patron, Ejercicio[]>): DiaRutina {
   const bloques: Bloque[] = []
   const prioridades = new Map<string, number>()
   const delDia = new Set<string>()
@@ -330,7 +370,8 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejerc
   // Copia de los huecos: las plantillas (p. ej. EXTRA) son compartidas y no se deben modificar.
   const huecos = pl.huecos
     .filter(h => !(h.patron === 'core' && !x.perfil.core && !x.perfil.zonasPrioridad.includes('abdomen')))
-    .map(h => ({ ...h, par: x.perfil.superseries ? h.par : undefined }))
+    // Modo mayor: sin superseries, que suben el esfuerzo percibido (Zhang 2025).
+    .map(h => ({ ...h, par: x.perfil.superseries && !x.perfil.modoMayor?.activo ? h.par : undefined }))
   const elegidosDia: Ejercicio[] = []
   // Libre = no está ya en el día ni es otra variante de un movimiento que ya está («Peso Muerto Rumano»
   // y «Peso Muerto Rumano con Mancuernas» el mismo día parecía un error).
@@ -348,7 +389,11 @@ function generarDia(pl: Plantilla, x: EntradaGenerador, aptos: Map<Patron, Ejerc
       }
       if (libres.length) break
     }
-    if (!libres.length) continue
+    if (!libres.length) {
+      // Vacío solo por «¿Qué no quieres hacer?»: se apunta para avisar y dejar elegir.
+      if (sinNoQuiero && [h.patron, ...(RESPALDO[h.patron] ?? [])].some(p => sinNoQuiero.get(p)?.length)) contexto(x).sinCubrir.add(h.patron)
+      continue
+    }
     // El mejor por puntuación (y por id a igualdad), puntuando cada candidato una sola vez.
     let elegido = libres[0]!, mejor = -Infinity
     for (const e of libres) {
@@ -406,14 +451,30 @@ const NOMBRE_ZONA: Record<string, string> = {
 /** Zona del perfil en el idioma de la app (lo que no es una zona conocida sale tal cual). */
 export const nombreZona = (z: string) => { const k = propio(NOMBRE_ZONA, z); return k ? t(k) : z }
 
+/** Series de cada ejercicio: las de su zona a la semana, repartidas entre los ejercicios de esa zona (§4.3). */
+function repartirSeries(x: EntradaGenerador, dias: Plantilla[], sesiones: number) {
+  const veces = new Map<ZonaVolumen, number>()
+  for (const d of dias) for (const h of d.huecos) {
+    const z = ZONA_DE_PATRON[h.patron]
+    if (z) veces.set(z, (veces.get(z) ?? 0) + 1)
+  }
+  const series = contexto(x).series
+  for (const [zona, n] of veces) {
+    const semana = seriesSemana(zona, x.perfil, { sesiones, prueba: !!x.calibracion })
+    series.set(zona, seriesEjercicio(semana, n, (x.perfil.zonasMucho ?? []).includes(zona) && x.perfil.zonasPrioridad.includes(zona)))
+  }
+}
+
 export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   const material = x.gimnasio ? new Set(x.gimnasio.material) : null
   // Sin repetidos ni valores fuera de 0-6 (un perfil editado a mano o importado puede traerlos).
   const fijos = [...new Set(x.perfil.diasFijos)].filter(d => Number.isInteger(d) && d >= 0 && d <= 6).sort((a, b) => a - b)
   const { estructura, dias } = plantillas(fijos.length || 3)
+  repartirSeries(x, dias, fijos.length || 3)
   const usados = new Set<string>()
   const aptos = aptosPorPatron(x, material)
-  const salida: DiaRutina[] = dias.map((pl, i) => generarDia(pl, x, aptos, usados, fijos[i] ?? null, false))
+  const sinNoQuiero = x.perfil.noQuiero?.length ? aptosPorPatron(x, material, false) : undefined
+  const salida: DiaRutina[] = dias.map((pl, i) => generarDia(pl, x, aptos, usados, fijos[i] ?? null, false, sinNoQuiero))
   const opcionales = [...new Set(x.perfil.diasOpcionales)].filter(d => Number.isInteger(d) && d >= 0 && d <= 6 && !fijos.includes(d))
   if (opcionales.length) salida.push(generarDia(EXTRA(), x, aptos, usados, opcionales[0]!, true))
 
@@ -427,10 +488,15 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
       : tn(n, '{n} día → cuerpo completo: cada músculo se trabaja {n} vez por semana sin acumular cansancio.', '{n} días → cuerpo completo: cada músculo se trabaja {n} veces por semana sin acumular cansancio.'))
   } else if (n <= 5) porque.push(t('{n} días → torso y pierna alternos: cada músculo dos veces por semana.', { n }))
   else porque.push(t('{n} días → empuje, tirón y pierna dos veces por semana.', { n }))
-  if (x.perfil.zonasPrioridad.length) porque.push(t('Prioridad en {zonas} → una serie más en esos ejercicios.', { zonas: x.perfil.zonasPrioridad.map(nombreZona).join(', ') }))
-  if (x.perfil.superseries) porque.push(t('Brazos y hombros en «dos seguidos» (dos ejercicios sin descanso entre ellos) para que quepa todo en el tiempo.'))
+  const objetivo = x.perfil.objetivo ?? 'salud'
+  porque.push(t('Objetivo «{objetivo}» → {reps} repeticiones en los ejercicios grandes.', { objetivo: t(NOMBRE_OBJETIVO[objetivo]).toLowerCase(), reps: PARAMETROS[juegoDe(objetivo)].repsPrincipal.join('-') }))
+  if (x.perfil.zonasPrioridad.length) porque.push(t('Más trabajo en {zonas} → más series a la semana en esos ejercicios.', { zonas: x.perfil.zonasPrioridad.map(nombreZona).join(', ') }))
+  if (x.perfil.modoMayor?.activo) porque.push(t('Modo mayor → máquinas o con apoyo, siempre con 2 repeticiones de margen, descansos largos y equilibrio al final.'))
+  else if (x.perfil.superseries) porque.push(t('Brazos y hombros en «dos seguidos» (dos ejercicios sin descanso entre ellos) para que quepa todo en el tiempo.'))
   porque.push(t('Sesiones de {normal} min como mucho, con versión corta de ~{corta} min si vas con prisa.', { normal: x.perfil.minutosNormal, corta: x.perfil.minutosCorta }))
-  if (x.perfil.zonasSensibles.length) porque.push(t('Solo ejercicios que cuidan: {zonas}.', { zonas: x.perfil.zonasSensibles.map(nombreZona).join(', ') }))
+  const salud = resumenSalud(x.perfil)
+  if (salud) porque.push(t('Cuidando: {zonas}.', { zonas: salud.toLowerCase() }))
+  if (x.perfil.noQuiero?.length) porque.push(t('Sin lo que no quieres hacer: {grupos}.', { grupos: x.perfil.noQuiero.map(g => t(NOMBRE_NO_QUIERO[g])).join(', ').toLowerCase() }))
   const evitados = [...x.marcas.values()].filter(m => m.odiado || m.duele).length
   if (evitados) porque.push(tn(evitados, '{n} ejercicio que no te gusta o te duele, fuera.', '{n} ejercicios que no te gustan o te duelen, fuera.'))
   if (opcionales.length) porque.push(t('{dia} opcional: brazos, hombros y core.', { dia: `${DIAS[opcionales[0]!]![0]!.toUpperCase()}${DIAS[opcionales[0]!]!.slice(1)}` }))
@@ -443,6 +509,9 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
     calibracion: !!x.calibracion,
     gimnasioId: x.gimnasio?.id ?? null,
     dias: salida,
+    // Modo mayor: un bloque de equilibrio de 5-10 min al final (Sherrington 2019; OMS 2020).
+    ...(x.perfil.modoMayor?.activo ? { equilibrio: 6 } : {}),
+    ...(contexto(x).sinCubrir.size ? { sinCubrir: [...contexto(x).sinCubrir] } : {}),
   }
 }
 

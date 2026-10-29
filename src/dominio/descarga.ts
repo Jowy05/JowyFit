@@ -38,8 +38,8 @@ export function estancado(hechos: { series: Serie[] }[]): boolean {
  * Peso para volver a empezar tras un estancamiento (o en la semana suave): −10 %, al peso que exista más cercano
  * por debajo del actual (redondear siempre hacia abajo llevaría 55 kg a 47,5, un −14 %).
  */
-export function pesoReinicio(peso: number, lista: number[]): number {
-  const objetivo = peso * 0.9
+export function pesoReinicio(peso: number, lista: number[], factor = 0.9): number {
+  const objetivo = peso * factor
   const menores = lista.length ? lista.filter(v => v > 0 && v < peso - 1e-9) : []
   const p = lista.length
     ? (menores.length ? menores.reduce((m, v) => (Math.abs(v - objetivo) < Math.abs(m - objetivo) ? v : m)) : peso)

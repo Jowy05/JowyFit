@@ -148,7 +148,7 @@ describe('crearPdf', () => {
 
   it('Último mes con todo marcado: resumen, entrenos, fuerza y comida-cuerpo-pasos', async () => {
     const { pdf } = await pdfDe('mes')
-    expect(pdf.paginas).toBe(4)
+    expect(pdf.paginas).toBe(5)
     expect(pdf.textos[0]).toContain('Informe de progreso')
     expect(pdf.textos[0]).toContain('Último mes · 21 sep – 20 oct 2026')
     expect(pdf.textos[0]).toContain('Resumen del periodo')
@@ -159,7 +159,11 @@ describe('crearPdf', () => {
     expect(pdf.textos[2]).toContain('Tu mejor serie en cada ejercicio')
     expect(pdf.textos[3]).toContain('Comida')
     expect(pdf.textos[3]).toContain('Pasos y gasto')
-    pdf.textos.forEach((t, i) => expect(t).toContain(`Página ${i + 1} de 4`))
+    expect(pdf.textos[4]).toContain('Perfil y objetivo')
+    expect(pdf.textos[4]).toContain('Revisiones')
+    expect(pdf.textos[4]).toContain('Molestias y dolores')
+    expect(pdf.textos[4]).toContain('Tus datos son tuyos'.toUpperCase())
+    pdf.textos.forEach((t, i) => expect(t).toContain(`Página ${i + 1} de 5`))
     expect(pdf.texto).toContain('Tus datos solo están en tu móvil')
   })
 
@@ -167,7 +171,7 @@ describe('crearPdf', () => {
     const h = historial(45)
     expect((await pdfDe('mes', h, NINGUNA)).pdf.paginas).toBe(1)
     const ent = (await pdfDe('mes', h, { ...NINGUNA, entrenos: true })).pdf
-    expect(ent.paginas).toBe(3)
+    expect(ent.paginas).toBe(4)
     expect(ent.texto).not.toContain('Pasos y gasto')
     const com = (await pdfDe('mes', h, { ...NINGUNA, comida: true })).pdf
     expect(com.paginas).toBe(2)

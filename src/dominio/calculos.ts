@@ -47,16 +47,41 @@ export function kcalEntreno(met: number, pesoKg: number, minutos: number): numbe
   return met * pesoKg * (minutos / 60)
 }
 
-export const DEFICIT: Record<TipoObjetivo, number> = { recomposicion: 350, perder: 500, fuerza: 0 }
+/**
+ * Lo que cada objetivo suma o resta al gasto (kcal/día). Elección nuestra, aprobada por el usuario: un déficit suave
+ * para perder grasa sin perder fuerza y un superávit pequeño para ganar músculo o peso.
+ */
+export const AJUSTE_KCAL: Record<TipoObjetivo, number> = { salud: 0, perder: -300, recomposicion: -200, musculo: 200, fuerza: 0, estetica: 0, peso: 300 }
 
-/** Objetivo de kcal orientativo (redondeado a 50) y de proteína (g, redondeada a 5). */
-export function objetivos(p: { pesoKg: number; alturaCm: number; edad: number; sexo: Perfil['sexo']; trabajo: Trabajo; objetivo: TipoObjetivo; entrenosSemana: number }) {
+/** El ajuste del objetivo principal o, si no cambia nada, el del primer objetivo extra que sí lo hace. */
+export function ajusteKcal(objetivo: TipoObjetivo, extra: TipoObjetivo[] = []): number {
+  const principal = AJUSTE_KCAL[objetivo] ?? 0
+  if (principal) return principal
+  for (const o of extra) if (AJUSTE_KCAL[o]) return AJUSTE_KCAL[o]
+  return 0
+}
+
+/** Pasos que ya cuenta el factor de «sentado»: solo se suman los que pasan de aquí. */
+const PASOS_BASE = 5000
+
+/**
+ * Objetivo de kcal orientativo (redondeado a 50) y de proteína (g, redondeada a 5), con su desglose:
+ * reposo (Mifflin-St Jeor) + día a día + pasos + entreno ± el objetivo. Nunca por debajo del gasto en reposo.
+ */
+export function objetivos(p: { pesoKg: number; alturaCm: number; edad: number; sexo: Perfil['sexo']; trabajo: Trabajo; objetivo: TipoObjetivo; extra?: TipoObjetivo[]; entrenosSemana: number; pasos?: number }) {
   const basal = basalMifflin(p.pesoKg, p.alturaCm, p.edad, p.sexo)
-  const gasto = gastoDiario(basal, p.trabajo)
+  const diaADia = gastoDiario(basal, p.trabajo) - basal
+  // Andar: ~0,5 kcal por kg y km, con la zancada según la altura (la misma cuenta que los pasos del día).
+  const pasos = p.pasos && p.pasos > PASOS_BASE ? (0.5 * p.pesoKg * (p.pasos - PASOS_BASE) * (p.alturaCm / 100) * 0.415) / 1000 : 0
   // Media diaria del entreno (~300 kcal por sesión), contada a la mitad para no pasarse.
   const entreno = (p.entrenosSemana * 300) / 7 / 2
-  const kcal = Math.round((gasto + entreno - DEFICIT[p.objetivo]) / 50) * 50
+  const gasto = basal + diaADia + pasos + entreno
+  const ajuste = ajusteKcal(p.objetivo, p.extra)
+  const kcal = Math.max(Math.ceil(basal / 50) * 50, Math.round((gasto + ajuste) / 50) * 50)
   const gramosKg = p.objetivo === 'perder' ? 2.0 : 1.8
   const proteina = Math.round((p.pesoKg * gramosKg) / 5) * 5
-  return { basal: Math.round(basal), gasto: Math.round(gasto + entreno), kcal, proteina }
+  return {
+    basal: Math.round(basal), gasto: Math.round(gasto), kcal, proteina, ajuste,
+    desglose: { basal: Math.round(basal), diaADia: Math.round(diaADia), pasos: Math.round(pasos), entreno: Math.round(entreno) },
+  }
 }

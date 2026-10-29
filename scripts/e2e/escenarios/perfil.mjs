@@ -100,8 +100,9 @@ escenario('perfil a fondo: cada sección de la ficha cambia el perfil guardado',
   await seccion('Peso y medidas')
   // Objetivos: otro objetivo y una zona a reforzar.
   await seccion('Objetivos')
-  await pulsar('Ganar fuerza')
-  await js(`[...document.querySelectorAll('.screen .chips .chip')].find(c => /pecho/i.test(c.innerText))?.click()`)
+  // La tarjeta del objetivo (no el chip de «¿Algo más?», que dice lo mismo) y una zona de «Afinar».
+  await pulsar('Ganar fuerza', '.opts')
+  await js(`[...document.querySelectorAll('.screen button.mq')].find(c => /pecho/i.test(c.innerText))?.click()`)
   await esperar(300)
   p = await perfilBD()
   comprobar(p.objetivo === 'fuerza' && JSON.stringify(p.zonasPrioridad) !== JSON.stringify(p0.zonasPrioridad), 'Objetivos no se guardan: ' + JSON.stringify([p.objetivo, p.zonasPrioridad]))
@@ -116,11 +117,14 @@ escenario('perfil a fondo: cada sección de la ficha cambia el perfil guardado',
   comprobar(p.transporte === 'coche' && p.horaEntreno === '06:15', 'Horario no se guarda: ' + JSON.stringify([p.transporte, p.horaEntreno]))
   // Salud: una zona sensible y las lesiones (se guardan al salir del campo).
   await seccion('Salud y molestias')
-  await js(`document.querySelector('.screen .chips .chip').click()`)
+  // Una molestia con sus tres toques (la hoja de la zona) y el texto libre.
+  await js(`[...document.querySelectorAll('.screen button.mq')].find(b => /hombros/i.test(b.innerText))?.click()`)
+  await pulsar(/^Regular$/, '.sheet')
+  await pulsar(/^Guardar$/, '.sheet')
   await t('escribir', 'textarea[placeholder^="Por ejemplo"]', 'Hombro derecho')
   await soltarFoco()
   p = await perfilBD()
-  comprobar(p.zonasSensibles.length !== p0.zonasSensibles.length && p.lesiones === 'Hombro derecho', 'Salud no se guarda: ' + JSON.stringify([p.zonasSensibles, p.lesiones]))
+  comprobar(p.dolores?.some(d => d.zona === 'hombros' && d.cuanto === 'regular') && p.lesiones === 'Hombro derecho', 'Salud no se guarda: ' + JSON.stringify([p.dolores, p.lesiones]))
   // Preferencias: dos seguidos y abdominales.
   await seccion('Preferencias de entreno')
   await t('pulsarSel', '[role=switch][aria-label="Dos seguidos"]')

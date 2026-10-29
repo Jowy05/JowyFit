@@ -12,6 +12,7 @@ import { paginaEntrenos, paginaFuerza, paginaMeses } from './paginas/entrenos'
 import { paginaComidaCuerpoPasos } from './paginas/comidaCuerpoPasos'
 import { paginaAnexo } from './paginas/anexo'
 import { paginaTuDia } from './paginas/tuDia'
+import { paginaRutinaSalud } from './paginas/rutinaSalud'
 
 /** Nombre del archivo: JowyFit-informe-<periodo>-<AAAA-MM-DD>.pdf, con el periodo en el idioma de la app (sin el nombre de la persona). */
 export const nombrePdf = (r: Pick<RangoInforme, 'periodo' | 'hoy'>) => t('JowyFit-informe-{periodo}-{fecha}.pdf', { periodo: archivoPeriodo(r.periodo), fecha: r.hoy })
@@ -57,6 +58,7 @@ async function dibujar(lib: typeof import('pdf-lib'), inf: Informe, o: OpcionesP
     if (meses && inf.fuerza) paginaMeses(maq, meses, true, !!inf.cuerpo)
     if (inf.comida || inf.cuerpo || inf.pasos) paginaComidaCuerpoPasos(maq)
     if (meses && !inf.fuerza) paginaMeses(maq, meses, false, true)
+    if (inf.rutinaSalud) paginaRutinaSalud(maq, inf.rutinaSalud)
   }
   paginaAnexo(maq)
   maq.pies()

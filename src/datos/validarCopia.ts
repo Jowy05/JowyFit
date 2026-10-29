@@ -106,19 +106,26 @@ const archivo: Regla = (v, d) => {
 }
 
 const REGISTRO = uno('peso', 'mancuerna', 'asistido', 'corporal', 'tiempo', 'cardio')
+const ZONA_DOLOR = uno('cuello', 'hombros', 'codos', 'munecas', 'manos', 'lumbar', 'caderas', 'rodillas', 'tobillos', 'pies', 'pecho', 'espalda', 'brazo', 'abdomen', 'gluteo', 'muslo', 'isquio', 'gemelo', 'cabeza', 'estomago', 'hormigueo', 'cansancio', 'fiebre')
 const FRANJA = uno('desayuno', 'comida', 'merienda', 'cena')
 const macros = { hidratos: opc(num), azucares: opc(num), grasas: opc(num), sal: opc(num) }
 
 const PERFIL = obj({
   id: req(constante('yo')), creado: opc(fecha), altaCompleta: req(bool), nombre: opc(nombre), nacimiento: opc(fecha), sexo: opc(unoO('hombre', 'mujer')), alturaCm: opc(rango(0, 300)),
-  objetivo: opc(unoO('recomposicion', 'perder', 'fuerza')), prioridades: opc(lista(nombre, 100)), zonasPrioridad: opc(lista(corto, 50)), nivel: opc(unoO('empiezo', 'vuelvo', 'intermedio', 'avanzado')), referencias: opc(dic(texto(200))),
+  objetivo: opc(unoO('salud', 'perder', 'recomposicion', 'musculo', 'fuerza', 'estetica', 'peso')), objetivosExtra: opc(lista(unoO('salud', 'perder', 'recomposicion', 'musculo', 'fuerza', 'estetica', 'peso'), 6)), prioridades: opc(lista(nombre, 100)), zonasPrioridad: opc(lista(corto, 50)), zonasMucho: opc(lista(corto, 50)), nivel: opc(unoO('empiezo', 'vuelvo', 'intermedio', 'avanzado')), referencias: opc(dic(texto(200))),
   diasFijos: opc(lista(dia, 7)), diasOpcionales: opc(lista(dia, 7)), horaEntreno: opc(hora), transporte: opc(unoO('coche', 'andando')),
   horaLimite: opc(obj({ coche: req(hora), andando: req(hora) })), minutosNormal: opc(rango(0, 600)), minutosCorta: opc(rango(0, 600)), horaDormir: opc(hora), enAyunas: opc(bool),
   sesionPerdida: opc(unoO('sabado', 'saltar')), zonasSensibles: opc(lista(unoO('rodilla', 'lumbar', 'hombro', 'muneca', 'codo'), 50)), lesiones: opc(nota), condiciones: opc(nota),
+  urgencias: opc(lista(unoO('pecho', 'mareo', 'aire', 'palpitaciones'), 10)),
+  dolores: opc(lista(obj({ zona: req(ZONA_DOLOR), cuanto: req(uno('poco', 'regular', 'mucho')), cuando: req(uno('siempre', 'fuerza', 'aveces')), desde: req(uno('dias', 'semanas', 'meses')), inicio: req(fecha) }), 50)),
+  condicionesSalud: opc(lista(unoO('tension', 'osteoporosis', 'diabetes', 'protesis', 'anticoagulantes', 'asma', 'embarazo'), 20)),
+  noQuiero: opc(lista(unoO('cardio', 'corporal', 'maquinas', 'libre', 'poleas', 'suelo'), 10)),
+  modoMayor: opc(obj({ activo: req(bool), propuesto: opc(fecha), rechazado: opc(fecha) })), modoRutina: opc(unoO('cola', 'dias')),
   preferencia: opc(unoO('maquinas', 'libre', 'mezcla')), reps: opc(unoO('pesadas', 'moderadas', 'mezcla')),
   superseries: opc(bool), alFallo: opc(bool), core: opc(bool), cardio: opc(unoO('nada', 'pasos', 'trote')), comidasDia: opc(rango(0, 20)), franjasHambre: opc(lista(nombre, 50)),
   bebidas: opc(lista(nombre, 100)), suplementos: opc(lista(nombre, 100)), dosisSuplementos: opc(dic(texto(200))),
-  batido: opc(obj({ proteina: req(num), kcal: req(num) })), trabajo: opc(unoO('sentado', 'depie', 'fisico')), pasosObjetivo: opc(rango(0, 200_000)), diasPesaje: opc(lista(dia, 7)), fotosCadaSemanas: opc(rango(0, 520)),
+  batido: opc(obj({ proteina: req(num), kcal: req(num) })), trabajo: opc(unoO('sentado', 'depie', 'fisico')), pasosObjetivo: opc(rango(0, 200_000)), cardioMin: opc(rango(0, 10_000)), cardioTipos: opc(lista(unoO('caminar', 'bici', 'eliptica', 'nadar', 'correr'), 10)), cardioCuando: opc(unoO('despues', 'otro')), progresoMovimiento: opc(fecha),
+  sueno: opc(unoO('poco', 'normal', 'mucho')), deportes: opc(lista(corto, 20)), diaDeporte: opc(nulo(dia)), experienciaPrevia: opc(unoO('nunca', 'hace-anos', 'hace-meses', 'ahora')), diasPesaje: opc(lista(dia, 7)), fotosCadaSemanas: opc(rango(0, 520)),
 })
 
 const AJUSTES = obj({
@@ -127,7 +134,7 @@ const AJUSTES = obj({
   cafeinaLimite: opc(num), cafeinaHoraTope: opc(hora), fuentePasos: opc(unoO('auto', 'manual')), fuenteBascula: opc(unoO('auto', 'manual')), hcIgnorados: opc(lista(texto(300))),
   noti: opc(obj({
     dormir: opc(bool), pesarse: opc(bool), pesarseHora: opc(hora), batido: opc(bool), batidoHora: opc(hora), creatina: opc(bool), creatinaHora: opc(hora),
-    copia: opc(bool), fotos: opc(bool), domingo: opc(bool),
+    copia: opc(bool), fotos: opc(bool), domingo: opc(bool), revision: opc(bool), revisionHora: opc(hora),
   })),
   copiaAuto: opc(bool), ultimaCopia: opc(nulo(fecha)), ultimoAjusteEnergia: opc(nulo(fecha)),
   recolocadas: opc(lista(obj({ fecha: req(fecha), letra: req(corto), desde: req(fecha) }), 1000)),
@@ -167,10 +174,18 @@ const MARCA = obj({ id: req(texto(200)), favorito: opc(bool), odiado: opc(bool),
 const BLOQUE = obj({
   uid: req(texto(200)), ejercicio: req(texto(200)), alternativas: req(lista(texto(200), 50)), series: req(ent(0, 50)), repsMin: req(rango(0, 10_000)), repsMax: req(rango(0, 10_000)),
   rpe: req(rango(0, 10)), descanso: req(rango(0, 36_000)), superserie: opc(texto(200)), fueraEnCorta: opc(bool), registro: req(REGISTRO),
+  cargaPct: opc(rango(0.1, 1)),
 })
 const RUTINA = obj({
   id: opc(id), creada: req(fecha), activa: req(bool), estructura: req(nombre), porque: req(lista(nombre, 100)), calibracion: req(bool), gimnasioId: req(nulo(id)),
   dias: req(lista(obj({ letra: req(corto), nombre: req(nombre), dia: req(nulo(dia)), opcional: req(bool), bloques: req(lista(BLOQUE, 100)) }), 14)),
+  equilibrio: opc(rango(0, 120)), sinCubrir: opc(lista(corto, 50)),
+})
+
+const CAMBIO = obj({ uid: req(texto(200)), letra: req(corto), zona: req(ZONA_DOLOR), antes: req(BLOQUE), despues: req(BLOQUE), deshecho: opc(bool), vuelta: opc(bool) })
+const REVISION = obj({
+  id: opc(id), fecha: req(fecha), estado: req(uno('bien', 'molestia', 'lesion', 'seguimiento')),
+  respuestas: req(lista(obj({ zona: req(ZONA_DOLOR), va: req(uno('mejor', 'igual', 'peor', 'ya')) }), 50)), cambios: req(lista(CAMBIO, 200)),
 })
 
 const SERIE = obj({
@@ -180,11 +195,11 @@ const SERIE = obj({
 const EJ_SESION = obj({
   uid: req(texto(200)), ejercicio: req(texto(200)), planificado: req(texto(200)), motivo: opc(uno('ocupado', 'cambio')), estado: req(uno('pendiente', 'curso', 'hecho', 'saltado')), series: req(lista(SERIE, 100)),
   inicio: opc(num), fin: opc(num), repsMin: req(rango(0, 10_000)), repsMax: req(rango(0, 10_000)), rpe: req(rango(0, 10)), descanso: req(rango(0, 36_000)), superserie: opc(texto(200)),
-  registro: req(REGISTRO),
+  registro: req(REGISTRO), cargaPct: opc(rango(0.1, 1)),
 })
 const SESION = obj({
   id: opc(id), fecha: req(fecha), rutinaId: req(nulo(id)), letra: req(corto), nombre: req(nombre), gimnasioId: req(nulo(id)), inicio: req(num), fin: opc(num),
-  horaLimite: opc(hora), version: req(uno('normal', 'corta')), estado: req(uno('curso', 'hecha', 'cancelada')), ejercicios: req(lista(EJ_SESION, 200)), descansoHasta: opc(num), descansoTotal: opc(num),
+  horaLimite: opc(hora), version: req(uno('normal', 'corta', 'minima')), estado: req(uno('curso', 'hecha', 'cancelada')), ejercicios: req(lista(EJ_SESION, 200)), descansoHasta: opc(num), descansoTotal: opc(num),
   respuestas: opc(obj({ minutosReales: opc(num), descansos: opc(uno('cortos', 'bien', 'largos')), molestia: opc(nota), ocupado: opc(nota), nota: opc(nota) })),
   calibracion: req(bool), suave: opc(bool),
 })
@@ -204,7 +219,10 @@ const PRODUCTO = obj({
   hidratos100: opc(nulo(num)), grasas100: opc(nulo(num)), azucares100: opc(nulo(num)), sal100: opc(nulo(num)), cafeina100: opc(nulo(num)),
   racionG: opc(nulo(num)), kcalRacion: opc(nulo(num)), proteinaRacion: opc(nulo(num)), guardado: req(fecha), pendiente: opc(bool), manual: opc(bool),
 })
-const PASOS = obj({ fecha: req(fecha), pasos: req(num), fuente: req(uno('auto', 'manual')), troteKm: opc(num) })
+const PASOS = obj({
+  fecha: req(fecha), pasos: req(num), fuente: req(uno('auto', 'manual')), troteKm: opc(num),
+  cardio: opc(lista(obj({ tipo: req(uno('caminar', 'bici', 'eliptica', 'nadar', 'correr')), min: req(rango(0, 1440)) }), 50)),
+})
 const SUPLEMENTOS = obj({ fecha: req(fecha), tomados: req(lista(nombre, 100)) })
 const META = obj({
   id: opc(id), tipo: req(uno('cintura', 'ejercicio', 'dominadas', 'grasa', 'peso', 'libre')), titulo: req(nombre), objetivo: req(num), unidad: req(texto(100)), fecha: opc(fecha), ejercicio: opc(texto(200)),
@@ -213,17 +231,42 @@ const META = obj({
 
 const ESQUEMA: Record<NombreTabla, Regla> = {
   perfil: PERFIL, ajustes: AJUSTES, mediciones: MEDICION, fotos: FOTO, gimnasios: GIMNASIO, marcas: MARCA, rutinas: RUTINA, sesiones: SESION,
-  comidas: COMIDA, plantillas: PLANTILLA, productos: PRODUCTO, pasos: PASOS, suplementos: SUPLEMENTOS, metas: META, propios: PROPIO,
+  comidas: COMIDA, plantillas: PLANTILLA, productos: PRODUCTO, pasos: PASOS, suplementos: SUPLEMENTOS, metas: META, propios: PROPIO, revisiones: REVISION,
 }
 // Con tk(): se traducen al usarlos (validarDatos), no al importar.
 const NOMBRE_TABLA: Record<NombreTabla, string> = {
   perfil: tk('perfil'), ajustes: tk('ajustes'), mediciones: tk('medidas'), fotos: tk('fotos'), gimnasios: tk('gimnasios'), marcas: tk('notas de ejercicios'), rutinas: tk('rutinas'),
   sesiones: tk('entrenos'), comidas: tk('comidas'), plantillas: tk('mis comidas'), productos: tk('productos'), pasos: tk('pasos'), suplementos: tk('suplementos'), metas: tk('metas'),
-  propios: tk('tus ejercicios'),
+  propios: tk('tus ejercicios'), revisiones: tk('revisiones'),
 }
 
-/** Versión del formato de la copia que entiende esta app (2: trae ejercicios propios). */
-export const VERSION_COPIA = 2
+/** Versión del formato de la copia que entiende esta app (2: ejercicios propios; 3: generador v2, salud y revisiones). */
+export const VERSION_COPIA = 3
+
+const OBJETIVOS_V1 = ['recomposicion', 'perder', 'fuerza']
+const CAMPOS_V3 = ['objetivosExtra', 'zonasMucho', 'urgencias', 'dolores', 'condicionesSalud', 'noQuiero', 'modoMayor', 'modoRutina', 'cardioMin', 'cardioTipos', 'cardioCuando', 'progresoMovimiento', 'sueno', 'deportes', 'diaDeporte', 'experienciaPrevia']
+const filas = (datos: Record<string, unknown[]>, tabla: string) => (datos[tabla] ?? []) as Fila[]
+const filasDe = (x: unknown) => (Array.isArray(x) ? (x as Fila[]) : [])
+/** Lo que una copia de la versión 2 no entiende (fuera del perfil): sesión mínima, cardio, equilibrio, peso rebajado. */
+function datosV3(datos: Record<string, unknown[]>): boolean {
+  const noti = (filas(datos, 'ajustes')[0]?.noti ?? {}) as Fila
+  return !!filas(datos, 'revisiones').length
+    || filas(datos, 'sesiones').some(s => s.version === 'minima' || filasDe(s.ejercicios).some(e => e.cargaPct != null))
+    || filas(datos, 'pasos').some(p => filasDe(p.cardio).length > 0)
+    || filas(datos, 'rutinas').some(r => r.equilibrio != null || r.sinCubrir != null || filasDe(r.dias).some(d => filasDe(d.bloques).some(b => b.cargaPct != null)))
+    || noti.revision !== undefined || noti.revisionHora !== undefined
+}
+
+/**
+ * La versión más baja que entiende estos datos: una app anterior pide actualizar en vez de perder sin avisar lo que
+ * no conoce (los ejercicios propios, las molestias, las revisiones…).
+ */
+export function versionNecesaria(datos: Record<string, unknown[]>): number {
+  const perfil = filas(datos, 'perfil')[0]
+  const v3 = datosV3(datos) || (!!perfil && (CAMPOS_V3.some(k => perfil[k] !== undefined) || !OBJETIVOS_V1.includes(String(perfil.objetivo))))
+  if (v3) return 3
+  return datos.propios?.length ? 2 : 1
+}
 
 /** Comprueba la cabecera (app y versión). */
 export function comprobarCabecera(obj: unknown): asserts obj is { app: 'JowyFit'; version: number; datos: unknown } {

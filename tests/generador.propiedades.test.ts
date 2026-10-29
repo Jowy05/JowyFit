@@ -6,6 +6,8 @@ import { ajustarATiempo, bloqueNuevo, duracionDia, generarRutina, plantillas } f
 import { gimnasioNuevo } from '../src/datos/repos'
 import type { Bloque, Dia, MarcaEjercicio, Perfil, Rutina, Zona } from '../src/datos/tipos'
 import { ejercicio } from '../src/catalogo/catalogo'
+import { patron } from '../src/catalogo/clasificacion'
+import { restricciones } from '../src/dominio/salud'
 
 const GIMNASIOS: Record<string, string[] | null> = {
   'sin gimnasio (material típico)': null,
@@ -46,10 +48,12 @@ function comprobar(r: Omit<Rutina, 'id'>, perfil: Perfil, material: string[] | n
         const m = marcas.get(id)
         expect(!!(m?.odiado || m?.duele), `${etiqueta}: ${id} evitado`).toBe(false)
         if (mat) expect(e.material === null || mat.has(e.material), `${etiqueta}: ${id} sin material`).toBe(true)
-        for (const z of perfil.zonasSensibles) {
-          const etq = { rodilla: 'knee_safe', lumbar: 'lower_back_safe', hombro: 'shoulder_safe' }[z as string]
-          if (etq) expect(e.etiquetas, `${etiqueta}: ${id} no cuida ${z}`).toContain(etq)
-        }
+        // Con una zona sensible, lo que la carga tiene que cuidarla (lo que no la toca, como un press con rodilla, vale).
+        expect(restricciones(perfil).fuera(e), `${etiqueta}: ${id} no cuida ${perfil.zonasSensibles.join(', ')}`).toBeNull()
+        const p = patron(e)
+        if (perfil.zonasSensibles.includes('rodilla') && ['rodilla', 'cuadriceps'].includes(p)) expect(e.etiquetas, `${etiqueta}: ${id} carga la rodilla`).toContain('knee_safe')
+        if (perfil.zonasSensibles.includes('lumbar') && ['cadera', 'lumbar'].includes(p)) expect(e.etiquetas, `${etiqueta}: ${id} carga la lumbar`).toContain('lower_back_safe')
+        if (perfil.zonasSensibles.includes('hombro') && ['empuje-v', 'empuje-h', 'hombro-lat'].includes(p)) expect(e.etiquetas, `${etiqueta}: ${id} carga el hombro`).toContain('shoulder_safe')
       }
       if (b.superserie) {
         const c = d.bloques.find(o => o.uid === b.superserie)

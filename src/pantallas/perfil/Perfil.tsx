@@ -12,7 +12,9 @@ import { Cab, cx, Ico, Pantalla } from '../../ui/componentes'
 import { useNav, type ClaveSeccion } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { usePerfil } from '../../datos/hooks'
-import { diasTxt, enFrase, iniciales, tituloSeccion, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REPS_TXT, SECCIONES, TRABAJO_TXT, ZONAS_SENSIBLES } from './textos'
+import { diasTxt, enFrase, iniciales, tituloSeccion, NIVEL_TXT, OBJETIVO_TXT, PREFERENCIA_TXT, REPS_TXT, SECCIONES, TRABAJO_TXT } from './textos'
+import { CompletaFicha } from './SeccionesExtra'
+import { resumenSalud } from '../../dominio/salud'
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -73,7 +75,7 @@ export function Perfil() {
         <div className="sec">
           <div className="sec-h"><h2>{t('Tus números')}</h2></div>
           <div className="grid2 nums">
-            <button className="card kpi span2 per-obj" onClick={() => nav.ir('energia', undefined, 'com')}>
+            <button className="card kpi span2 per-obj" onClick={() => nav.ir('seccion-perfil', { s: 'calorias' })}>
               <span className="row jb"><span className="lbl">{t('Tu objetivo al día')}</span><Ico n="caret-right" className="car" /></span>
               <p className="k">{n ? num(n.kcal, 0) : '—'}<small>kcal</small>{n && <><span className="per-y">{t('y')}</span>{n.proteina}<small>{t('g de proteína')}</small></>}</p>
               <p className="d">{t('Lo que te conviene comer cada día. Toca para ver por qué.')}</p>
@@ -107,6 +109,7 @@ export function Perfil() {
           </details>
         </div>
 
+        <CompletaFicha p={p} />
         <div className="sec">
           <div className="sec-h"><h2>{t('Tu ficha')}</h2><span className="lbl">{t('toca para cambiar')}</span></div>
           <div className="list">
@@ -168,12 +171,17 @@ function resumen(s: ClaveSeccion, p: TPerfil, n: Numeros | undefined): string {
       return partes.length ? partes.join(' · ') : t('Sin medidas todavía')
     }
     case 'objetivos':
-      return [t(OBJETIVO_TXT[p.objetivo]), ...p.prioridades.slice(0, 2).map(x => t(x))].join(' · ')
-    case 'salud': {
-      const zonas = ZONAS_SENSIBLES.filter(z => p.zonasSensibles.includes(z.v)).map(z => t(z.t).toLowerCase())
-      const les = p.lesiones.trim() ? t('con lesiones apuntadas') : t('sin lesiones')
-      return zonas.length ? t('{lesiones} · sensible: {zonas}', { lesiones: capital(les), zonas: zonas.join(', ') }) : capital(les)
-    }
+      return [p.objetivo, ...(p.objetivosExtra ?? [])].map(o => t(OBJETIVO_TXT[o])).join(' · ')
+    case 'salud':
+      return resumenSalud(p) || (p.lesiones.trim() ? capital(t('con lesiones apuntadas')) : capital(t('sin lesiones')))
+    case 'movimiento':
+      return p.cardioMin !== undefined ? t('{pasos} pasos · {min} min a la semana', { pasos: num(p.pasosObjetivo, 0), min: p.cardioMin }) : t('1 pregunta')
+    case 'calorias':
+      return n ? t('{n} kcal al día', { n: num(n.kcal, 0) }) : '—'
+    case 'sueno':
+      return p.sueno === 'poco' ? t('Menos de 6 horas') : p.sueno === 'normal' ? t('6 o 7 horas') : p.sueno === 'mucho' ? t('8 horas o más') : t('1 pregunta')
+    case 'deportes':
+      return p.deportes === undefined ? t('1 pregunta') : p.deportes.length ? p.deportes.map(d => t(d)).join(' · ') : t('Ninguno')
     case 'experiencia': {
       const refs = Object.values(p.referencias).filter(v => v.trim()).length
       return `${t(NIVEL_TXT[p.nivel])}${refs ? ` · ${tn(refs, '{n} peso apuntado', '{n} pesos apuntados')}` : ''}`

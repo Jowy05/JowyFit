@@ -292,4 +292,18 @@ export default {
   // Semana suave (dominio/descarga.ts)
   '{n} ejercicios llevan {sesiones} sesiones sin mejorar ({lista}…)': "{n} exercises haven't improved in {sesiones} workouts ({lista}…)",
   'Llevas {n} semanas seguidas entrenando': "You've trained {n} weeks in a row",
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  'Mínima': 'Minimum',
+  'El primer ejercicio, a 2 series': 'The first exercise, 2 sets',
+  'Los {n} primeros, a 2 series': 'The first {n}, 2 sets each',
+  'Parado: me encontraba mal': "Stopped: I wasn't feeling well",
+  'Vale. Si no se te pasa, para y descansa': "OK. If it doesn't pass, stop and rest",
+  'Ahora, o al hacer esfuerzo.': 'Now, or during effort.',
+  'Parar el entreno': 'Stop the workout',
+  'No, ninguna': 'No, none',
+  'Desmarcado. Lo que hiciste está guardado': 'Unchecked. What you did is saved',
+  'Me encuentro mal': "I don't feel well",
+  'Mareo, pecho, falta de aire…': 'Dizziness, chest, shortness of breath…',
+  'Desmarcado': 'Unchecked',
 } satisfies Diccionario

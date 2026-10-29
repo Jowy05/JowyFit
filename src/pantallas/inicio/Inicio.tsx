@@ -1,18 +1,21 @@
 // INI-01 · Inicio
+import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { comidasDe, gastoDelDia, hayEntrenoHecho, objetivosEnergia, pasosDelDia, sesionesEntre } from '../../datos/consultas'
 import { totalesComida } from '../../dominio/comida'
 import { basalHastaAhora } from '../../dominio/energia'
 import { DIAS, DIAS_ABREV, DIAS_CORTOS, deISO, diaMes, diaSemana, formatoHora, hoyISO, numeroSemana, saludo, semanaDe, sumarDias } from '../../dominio/fechas'
-import { estadoSemana, tarjetaHoy, type EstadoDia } from '../../dominio/semana'
+import { estadoSemana, tarjetaCola, tarjetaHoy, type EstadoDia } from '../../dominio/semana'
 import { capital, num } from '../../dominio/formato'
+import { proponerModoMayor } from '../../dominio/modoMayor'
+import { rutinaBloqueada } from '../../dominio/salud'
 import { nombreEntreno } from '../../dominio/nombres'
 import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, LARGO, recortar } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
+import { useAjustes, useCola, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { TarjetaHoy } from './TarjetaHoy'
-import { Pendientes, SemanaSuave, TuProgreso, VoyBien } from './Tarjetas'
+import { CardioSemana, Pendientes, SemanaSuave, TuProgreso, VoyBien } from './Tarjetas'
 import { PrimerosPasos, usePrimerosPasos } from './PrimerosPasos'
 import { t, tc } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -41,9 +44,12 @@ export function Inicio() {
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
   // Lo que gastas hoy: en reposo y por ejercicio (pasos + entreno). Se recalcula al cambiar pasos, entrenos o medidas.
   const gasto = useLiveQuery(() => gastoDelDia(perfil, hoy), [perfil, hoy])
-  const semana = estadoSemana(rutina, sesiones, hoy, ajustes.recolocadas)
+  // undefined mientras carga: no se pinta la tarjeta por días para cambiarla al momento por la de la cola.
+  const cola = useCola(hoy)
+  // En cola los días de la semana solo recuerdan: un día sin entrenar no se pierde, la cola espera.
+  const semana = estadoSemana(rutina, sesiones, hoy, ajustes.recolocadas).map(e => (cola !== null && (e.estado === 'perdido' || e.estado === 'movido') ? { ...e, estado: 'descanso' as const } : e))
   const proxSemana = estadoSemana(rutina, sesiones, sumarDias(dias[6]!, 1), ajustes.recolocadas).find(d => d.estado === 'plan')
-  const tarjeta = tarjetaHoy(rutina, semana, hoy, !!enCurso, perfil.sesionPerdida === 'sabado', proxSemana)
+  const tarjeta = cola ? tarjetaCola(cola, semana, hoy, !!enCurso) : tarjetaHoy(rutina, semana, hoy, !!enCurso, perfil.sesionPerdida === 'sabado', proxSemana)
   const tot = totalesComida(comidas)
   const d = deISO(hoy)
   // Antes del primer entreno también es la semana 1.
@@ -51,6 +57,13 @@ export function Inicio() {
   // Mientras se ve la guía «Primeros pasos» no salen «Pendientes de hoy» ni la tarjeta de pasos (dos listas casi iguales).
   const guia = usePrimerosPasos(tarjeta)
   const conGuia = guia !== null
+
+  // Desde los 65, el modo mayor se propone una vez con la rutina ya hecha (también a quien ya la tenía); con
+  // «Ahora no» no vuelve hasta dentro de un año. La hoja no se cierra sin elegir, para no salir en cada visita.
+  const proponer = !!rutina && !enCurso && !rutinaBloqueada(perfil) && proponerModoMayor(perfil, hoy)
+  // Solo depende de `proponer`: `nav` cambia al abrir la hoja y, con él, el efecto la volvería a abrir sin parar.
+  const hayHoja = !!nav.estado.hoja
+  useEffect(() => { if (proponer && !hayHoja) nav.hoja('hoja-modo-mayor', { rehacer: true }) }, [proponer])
 
   const describe = (e: EstadoDia) => {
     const nom = `${capital(DIAS[diaSemana(deISO(e.fecha))]!)} ${deISO(e.fecha).getDate()}`
@@ -84,17 +97,19 @@ export function Inicio() {
           <span><Ico n="check" b className="okc" />{t('Hecho')}</span>
           <span><Ico n="circle" b className="blue" />{t('Plan')}</span>
           <span><Ico n="circle-dashed" />{t('Opcional')}</span>
-          <span><Ico n="x" b className="badc" />{t('Perdido')}</span>
-          <span><Ico n="minus" b />{t('Descanso')}</span>
+          {!cola && <span><Ico n="x" b className="badc" />{t('Perdido')}</span>}
+          {cola && <span><Ico n="minus" b />{t('Sin entreno')}</span>}
+          {!cola && <span><Ico n="minus" b />{t('Descanso')}</span>}
         </p>
       </Cab>
 
       <div className="pg">
         <SemanaSuave rutina={rutina ?? null} />
 
-        <Seccion tour="hoy" titulo={t('Hoy te toca')} accion={tarjeta.tipo === 'hoy' ? t('Ver día') : undefined} onAccion={() => tarjeta.tipo === 'hoy' && nav.ir('detalle-dia', { letra: tarjeta.dia.letra }, 'rut')}>
-          <TarjetaHoy tar={tarjeta} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre == null ? undefined : recortar(gym.nombre, LARGO.nombre)} />
-        </Seccion>
+        {cola !== undefined && <Seccion tour="hoy" titulo={cola ? t('Te toca') : t('Hoy te toca')} accion={cola ? t('Ver la cola') : tarjeta.tipo === 'hoy' ? t('Ver día') : undefined}
+          onAccion={() => (cola ? nav.pestana('rut') : tarjeta.tipo === 'hoy' && nav.ir('detalle-dia', { letra: tarjeta.dia.letra }, 'rut'))}>
+          <TarjetaHoy tar={tarjeta} cola={cola} rutina={rutina ?? null} enCurso={enCurso ?? null} gym={gym?.nombre == null ? undefined : recortar(gym.nombre, LARGO.nombre)} />
+        </Seccion>}
 
         {/* El domingo, «¿Voy bien?» justo debajo de «Hoy te toca», donde se ve sin bajar. */}
         {diaSemana(d) === 6 && <VoyBien rutina={rutina ?? null} />}
@@ -155,6 +170,7 @@ export function Inicio() {
                 </button>
               </>
             )}
+            {!!perfil.cardioMin && <CardioSemana meta={perfil.cardioMin} />}
             {tot.cafeina > 0 && (
               <div className="card kpi span2 row">
                 <span className="ico"><Ico n="coffee" /></span>

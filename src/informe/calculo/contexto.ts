@@ -7,7 +7,7 @@ import { grasaPorMedidas, hechasAsc, logros, subidas, ultimoValor, type Logro, t
 import type { CatalogoInforme, EntradaInforme, RangoInforme } from './tipos'
 import { diasDe, entre } from './comun'
 
-type PerfilInforme = Pick<Perfil, 'nombre' | 'nacimiento' | 'sexo' | 'alturaCm' | 'objetivo' | 'pasosObjetivo' | 'diasFijos' | 'trabajo'>
+type PerfilInforme = Pick<Perfil, 'nombre' | 'nacimiento' | 'sexo' | 'alturaCm' | 'objetivo' | 'objetivosExtra' | 'pasosObjetivo' | 'diasFijos' | 'trabajo'>
 const PERFIL_VACIO: PerfilInforme = { nombre: '', nacimiento: '', sexo: 'hombre', alturaCm: 0, objetivo: 'recomposicion', pasosObjetivo: 10_000, diasFijos: [], trabajo: 'sentado' }
 
 const CATALOGO_VACIO: CatalogoInforme = { nombre: id => id, patron: () => undefined, met: () => undefined }
@@ -47,7 +47,7 @@ export function edadEn(nacimiento: string, fecha: string): number | null {
 
 /** Objetivo de kcal y proteína como `objetivosEnergia`, pero con el peso de la fecha del informe. */
 export function objetivosInforme(p: PerfilInforme, a: Ajustes | null | undefined, peso: number | null, fecha: string): { kcal: number; proteina: number } {
-  const o = objetivos({ pesoKg: peso ?? 75, alturaCm: p.alturaCm, edad: edadEn(p.nacimiento, fecha) ?? 30, sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, entrenosSemana: p.diasFijos.length })
+  const o = objetivos({ pesoKg: peso ?? 75, alturaCm: p.alturaCm, edad: edadEn(p.nacimiento, fecha) ?? 30, sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, extra: p.objetivosExtra, entrenosSemana: p.diasFijos.length, pasos: p.pasosObjetivo })
   return { kcal: a?.kcalManual ?? o.kcal, proteina: a?.proteinaManual ?? o.proteina }
 }
 

@@ -44,6 +44,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'hoja-herramientas'> }) 
           await guardar(nueva); nav.hoja(null); aviso(t('Serie quitada'), () => void guardar(antes))
         }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>{t('Quitar una serie')}</b></span></button>}
         <button className="it" onClick={async () => { const antes = s; await guardarSesion(saltar(s, idx)); nav.hoja(null); aviso(t('Saltado: lo verás en la lista'), () => void guardarSesion(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>{t('Saltar este ejercicio')}</b><small>{t('Puedes recuperarlo desde la lista')}</small></span></button>
+        <button className="it" onClick={() => nav.hoja('hoja-me-encuentro-mal')}><span className="ico badc"><Ico n="first-aid" /></span><span className="tx"><b>{t('Me encuentro mal')}</b><small>{t('Mareo, pecho, falta de aire…')}</small></span><Ico n="caret-right" className="car" /></button>
       </div>
       <details className="fold mt16">
         <summary><Ico n="dots-three-circle" className="blue" />{t('Otras opciones')}<Ico n="caret-down" /></summary>

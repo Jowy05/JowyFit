@@ -100,4 +100,10 @@ export default {
   'Avisa cuando toca la siguiente serie (también en el reloj)': "Lets you know when it's time for the next set (on your watch too)",
   'Recordatorios': 'Reminders',
   'Dormir, pesarse, suplementos, copias…': 'Sleep, weigh-ins, supplements, backups…',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  '¿Qué tal tus molestias?': 'How are your aches?',
+  'Revisión de la semana: 20 segundos.': 'Weekly check-in: 20 seconds.',
+  'Más suave por tu molestia: {peso} kg': 'Lighter because of your pain: {peso} kg',
+  'revisiones': 'check-ins',
 } satisfies Diccionario

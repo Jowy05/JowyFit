@@ -292,4 +292,18 @@ export default {
   // Semana suave (dominio/descarga.ts)
   '{n} ejercicios llevan {sesiones} sesiones sin mejorar ({lista}…)': '{n} exercicis porten {sesiones} sessions sense millorar ({lista}…)',
   'Llevas {n} semanas seguidas entrenando': 'Portes {n} setmanes seguides entrenant',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  'Mínima': 'Mínima',
+  'El primer ejercicio, a 2 series': 'El primer exercici, a 2 sèries',
+  'Los {n} primeros, a 2 series': 'Els {n} primers, a 2 sèries',
+  'Parado: me encontraba mal': 'Aturat: em trobava malament',
+  'Vale. Si no se te pasa, para y descansa': "D'acord. Si no se't passa, para i descansa",
+  'Ahora, o al hacer esfuerzo.': 'Ara, o en fer esforç.',
+  'Parar el entreno': "Aturar l'entrenament",
+  'No, ninguna': 'No, cap',
+  'Desmarcado. Lo que hiciste está guardado': 'Desmarcat. El que vas fer està desat',
+  'Me encuentro mal': 'Em trobo malament',
+  'Mareo, pecho, falta de aire…': "Mareig, pit, falta d'aire…",
+  'Desmarcado': 'Desmarcat',
 } satisfies Diccionario

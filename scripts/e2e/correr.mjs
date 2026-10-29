@@ -68,7 +68,7 @@ await movil(390, 844)
 
 // ---------- escenarios ----------
 // Una zona tras otra; cada archivo registra los suyos con escenario().
-for (const zona of ['alta', 'inicio', 'entreno', 'rutina', 'comida', 'progreso', 'perfil', 'copias', 'informe', 'tutorial', 'visual', 'idioma']) await import(`./escenarios/${zona}.mjs`)
+for (const zona of ['alta', 'inicio', 'entreno', 'rutina', 'generador', 'comida', 'progreso', 'perfil', 'copias', 'informe', 'tutorial', 'visual', 'idioma']) await import(`./escenarios/${zona}.mjs`)
 
 // ---------- ejecución ----------
 await cdp.enviar('Performance.enable').catch(() => {})

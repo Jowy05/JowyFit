@@ -51,6 +51,7 @@ export const PANTALLAS: { [C in CodigoPantalla]: P<C> } = {
   'seccion-perfil': perezosa(() => import('../pantallas/perfil/SeccionPerfil').then(m => m.SeccionPerfil)),
   ajustes: perezosa(() => import('../pantallas/perfil/Ajustes').then(m => m.Ajustes)),
   creditos: perezosa(() => import('../pantallas/perfil/Creditos').then(m => m.Creditos)),
+  revision: perezosa(() => import('../pantallas/perfil/Revision').then(m => m.Revision)),
 }
 
 export const HOJAS: { [C in CodigoHoja]: P<C> } = {
@@ -60,6 +61,8 @@ export const HOJAS: { [C in CodigoHoja]: P<C> } = {
   'hoja-lista': perezosa(() => import('../pantallas/entreno/HojaLista').then(m => m.HojaLista)),
   'hoja-salir-entreno': perezosa(() => import('../pantallas/entreno/HojaSalirEntreno').then(m => m.HojaSalirEntreno)),
   'hoja-herramientas': perezosa(() => import('../pantallas/entreno/HojasEntreno').then(m => m.HojaHerramientas)),
+  'hoja-me-encuentro-mal': perezosa(() => import('../pantallas/entreno/HojaMeEncuentroMal').then(m => m.HojaMeEncuentroMal)),
+  'hoja-urgencia': perezosa(() => import('../pantallas/entreno/HojaMeEncuentroMal').then(m => m.HojaUrgencia)),
   'hoja-discos': perezosa(() => import('../pantallas/entreno/HojasEntreno').then(m => m.HojaDiscos)),
   'hoja-calentamiento': perezosa(() => import('../pantallas/entreno/HojasEntreno').then(m => m.HojaCalentamiento)),
   'hoja-instrucciones': perezosa(() => import('../pantallas/entreno/HojasEntreno').then(m => m.HojaInstrucciones)),
@@ -76,4 +79,8 @@ export const HOJAS: { [C in CodigoHoja]: P<C> } = {
   'hoja-confirmar': HojaConfirmar,
   'hoja-informe': perezosa(() => import('../pantallas/perfil/HojaInforme').then(m => m.HojaInforme)),
   'hoja-oferta-tutorial': HojaOfertaTutorial,
+  'hoja-no-quiero': perezosa(() => import('../pantallas/rutina/HojasGenerar').then(m => m.HojaNoQuiero)),
+  'hoja-modo-mayor': perezosa(() => import('../pantallas/rutina/HojasGenerar').then(m => m.HojaModoMayor)),
+  'hoja-cardio': perezosa(() => import('../pantallas/progreso/HojaCardio').then(m => m.HojaCardio)),
+  'hoja-pregunta': perezosa(() => import('../pantallas/perfil/Revision').then(m => m.HojaPregunta)),
 }

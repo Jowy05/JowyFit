@@ -9,6 +9,7 @@ import { t, tk } from '../../i18n'
 import type { Cambio, ControlPeso, CuerpoInforme, Evaluacion, MetaInforme, PuntoCuerpo, ResumenInforme, SerieCuerpo, TonoInforme, ZonaCuerpo } from './tipos'
 import { dia10, entre, r1 } from './comun'
 import { edadEn, leerCintura, leerGrasaBascula, leerPeso, nombreDe, type Ctx } from './contexto'
+import { subirPesoEsBueno } from '../../dominio/objetivos'
 
 const ZONAS_IMC = { cortes: [18.5, 25] as [number, number], escala: [10, 40] as [number, number], marcas: [10, 15, 18.5, 25, 30, 35, 40] }
 const ZONAS_CA = { cortes: [0.4, 0.5] as [number, number], escala: [0.3, 0.8] as [number, number], marcas: [0.3, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8] }
@@ -21,7 +22,7 @@ const zonaDe = (v: number, [a, b]: [number, number]) => (v < a ? 'bajo' : v < b 
 export function evaluarCuerpo(delta: number, objetivo: Perfil['objetivo'], campo: 'peso' | 'grasa' | 'cintura'): Evaluacion {
   const d = r1(delta)
   // Cambios de menos de 0,2 (kg, puntos o cm) son el ruido de la báscula o de la cinta: «Estable» (como en «Tu día», §5.7).
-  if (campo === 'peso' && objetivo === 'fuerza') return { texto: d >= 0.2 ? t('Sube') : d <= -0.2 ? t('Baja') : t('Estable'), tono: 'gris' }
+  if (campo === 'peso' && subirPesoEsBueno(objetivo)) return { texto: d >= 0.2 ? t('Sube') : d <= -0.2 ? t('Baja') : t('Estable'), tono: 'gris' }
   if (d <= -0.2) return { texto: t('Baja: bien'), tono: 'ok' }
   if (d > 0.3) return { texto: t('Sube: ojo'), tono: 'warn' }
   return { texto: t('Estable'), tono: 'gris' }

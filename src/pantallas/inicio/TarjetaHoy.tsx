@@ -3,12 +3,15 @@ import type { ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { recolocarSesion, SIN_DIA } from '../../datos/acciones/rutina'
 import { sugerenciasDia } from '../../datos/consultas'
-import type { DiaRutina, Guardado, Rutina, Sesion } from '../../datos/tipos'
+import type { DiaRutina, Guardado, Perfil, Rutina, Sesion } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { indiceActual } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, fechaCorta, formatoHora } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
 import type { Tarjeta } from '../../dominio/semana'
+import type { Cola } from '../../dominio/cola'
+import { nombreCardio } from '../../dominio/cardio'
+import { rutinaBloqueada } from '../../dominio/salud'
 import { capital, kg } from '../../dominio/formato'
 import type { Sugerencia } from '../../dominio/progresion'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -17,18 +20,20 @@ import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useGimnasio, usePerfil } from '../../datos/hooks'
 import { idioma, t } from '../../i18n'
+import { tr } from '../../i18n/jsx'
 
 /** La palabra que da el movimiento: «Curl» de «Curl de Bíceps…»; en inglés va al final («Dumbbell Bicep Curl»). */
 const palabraClave = (nombre?: string) => String(idioma() === 'en' ? nombre?.split(' ').at(-1) : nombre?.split(' ')[0])
 
-export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: Tarjeta<Guardado<Sesion>>; rutina: Rutina | null; enCurso: Sesion | null; gym?: string }) {
+export function TarjetaHoy({ tar, cola, rutina, enCurso, gym }: { tar: Tarjeta<Guardado<Sesion>>; cola: Cola | null; rutina: Rutina | null; enCurso: Sesion | null; gym?: string }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
   const g = useGimnasio()
   const dia = tar.tipo === 'hoy' || tar.tipo === 'opcional' ? tar.dia : null
   const sug = useLiveQuery(() => (dia ? sugerenciasDia(dia, g) : Promise.resolve(undefined)), [dia, g])
-  const empezar = (version: 'normal' | 'corta') => dia && nav.hoja('hoja-empezar', { letra: dia.letra, version })
+  const empezar = (version: 'normal' | 'minima') => dia && nav.hoja('hoja-empezar', { letra: dia.letra, version })
+  const cardio = cardioAlAcabar(perfil, rutina)
 
   if (tar.tipo === 'curso' && enCurso) {
     const idx = indiceActual(enCurso)
@@ -42,6 +47,17 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: Tarjeta<Guardad
         {/* «Restaurar» no hace nada si la app se cerró a mitad del entreno: abrirEntreno lo abre igualmente. */}
         <div className="pd"><button className="btn xl" onClick={() => nav.abrirEntreno()}><Ico n="play" b />{t('Continuar')}</button></div>
       </div>
+    )
+  }
+  // Con una señal de «Antes de entrenar» marcada no se propone entreno (Generar tampoco hace rutina).
+  if (rutinaBloqueada(perfil) && (tar.tipo === 'hoy' || tar.tipo === 'opcional' || tar.tipo === 'sin')) {
+    return (
+      <div className="card today"><div className="pd empty">
+        <span className="empty-ic bad"><Ico n="first-aid" /></span>
+        <h3 className="h3">{t('Hoy no entrenes')}</h3>
+        <p className="muted">{t('Marcaste una señal de «Antes de entrenar». Desmárcala en Perfil → Salud cuando tu médico te dé el visto bueno.')}</p>
+        <button className="btn gry sm mt12" onClick={() => nav.ir('seccion-perfil', { s: 'salud' }, 'per')}>{t('Ir a Salud')}</button>
+      </div></div>
     )
   }
   if (tar.tipo === 'sin') {
@@ -61,17 +77,24 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: Tarjeta<Guardad
         {/* La explicación de la semana de prueba sale dentro del entreno; aquí basta la etiqueta. Sin «Día A»: la letra no dice nada. */}
         <div className="today-hero">
           <Ico n="barbell" className="today-bg" />
-          <div className="row">{rutina?.calibracion && <span className="tag blue">{t('Semana de prueba')}</span>}<span className="tag">{capital(DIAS[diaSemana(new Date())]!)} · {formatoHora(perfil.horaEntreno)}</span></div>
+          <div className="row">
+            {rutina?.calibracion && <span className="tag blue">{t('Semana de prueba')}</span>}
+            {cola
+              ? <span className="tag blue"><Ico n="queue" b />{t('{n}.ª de {total} esta semana', { n: cola.hechasSemana + 1, total: cola.porSemana })}</span>
+              : <span className="tag">{capital(DIAS[diaSemana(new Date())]!)} · {formatoHora(perfil.horaEntreno)}</span>}
+          </div>
           <h3>{nombreEntreno(d)}</h3>
           <p className="today-meta">
             <span><Ico n="clock" />~{Math.round(duracionDia(d.bloques) / 60)} min</span>
             {gym && <span><Ico n="map-pin" />{gym}</span>}
           </p>
+          {cola && <EnCola cola={cola} />}
         </div>
-        <FilasDia dia={d} sug={sug} />
+        <FilasDia dia={d} sug={sug} equilibrio={rutina?.equilibrio} cardio={cardio} />
         <div className="pd today-act">
-          {/* La versión corta se elige en la hoja «Empezar». */}
+          {/* La versión corta se elige en la hoja «Empezar»; la mínima, también aquí para quien va justo. */}
           <button className="btn xl" onClick={() => empezar('normal')}><Ico n="play" b />{t('Empezar rutina')}</button>
+          {cola && <div className="g2-min"><button className="lnk" onClick={() => empezar('minima')}>{t('¿Poco tiempo? Sesión mínima de 15 min')}</button></div>}
         </div>
       </div>
     )
@@ -119,7 +142,9 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: Tarjeta<Guardad
           <span className="ico big okb"><Ico n="check-circle" /></span>
           <div className="grow"><h3 className="h3">{t('Entreno de hoy hecho.')}</h3><p className="muted">{t('{nombre} · {n} ejercicios', { nombre: tar.sesion.nombre, n: tar.sesion.ejercicios.filter(e => e.estado === 'hecho').length })}</p></div>
         </div>
-        {tar.proximo?.dia && <div className="spec mt12"><p><span>{t('Próximo')}</span><b>{capital(DIAS[diaSemana(deISO(tar.proximo.fecha))]!)} · {nombreEntreno(tar.proximo.dia)}</b></p></div>}
+        {cola
+          ? <div className="spec mt12"><p><span>{t('Próximo')}</span><b>{nombreEntreno(cola.siguiente)}</b></p></div>
+          : tar.proximo?.dia && <div className="spec mt12"><p><span>{t('Próximo')}</span><b>{capital(DIAS[diaSemana(deISO(tar.proximo.fecha))]!)} · {nombreEntreno(tar.proximo.dia)}</b></p></div>}
         <button className="btn gry sm mt12" onClick={() => nav.ir('detalle-entreno', { id: tar.sesion.id }, 'pro')}>{t('Ver el entreno')}</button>
       </div></div>
     )
@@ -142,8 +167,30 @@ export function TarjetaHoy({ tar, rutina, enCurso, gym }: { tar: Tarjeta<Guardad
   )
 }
 
+/** «La última: B, el miércoles. Después: A.» */
+function EnCola({ cola }: { cola: Cola }) {
+  const { ultima, despues } = cola
+  if (!ultima?.dia && !despues[0]) return null
+  return (
+    <p className="g2-last">
+      {ultima?.dia && tr('La última: <b>{nombre}</b>, el {dia}.', { nombre: nombreEntreno(ultima.dia), dia: DIAS[diaSemana(deISO(ultima.fecha))]!, b: x => <b>{x}</b> })}
+      {ultima?.dia && despues[0] && ' '}
+      {despues[0] && tr('Después: <b>{nombre}</b>.', { nombre: nombreEntreno(despues[0]), b: x => <b>{x}</b> })}
+    </p>
+  )
+}
+
+/** «Y al acabar: 20 min de bici o caminar», si el cardio va después de las pesas (lo de la semana entre los entrenos). */
+function cardioAlAcabar(p: Perfil, r: Rutina | null): string | null {
+  const entrenos = r?.dias.filter(d => !d.opcional).length ?? 0
+  if (p.cardioCuando !== 'despues' || !p.cardioMin || !entrenos) return null
+  const min = Math.max(5, Math.round(p.cardioMin / entrenos / 5) * 5)
+  const tipos = (p.cardioTipos?.length ? p.cardioTipos : ['caminar' as const]).slice(0, 2).map(x => nombreCardio(x).toLowerCase())
+  return t('{n} min de {tipos}', { n: min, tipos: tipos.join(t(' o ')) })
+}
+
 /** Hasta 4 ejercicios del día con el peso que toca; el resto, en una línea. */
-function FilasDia({ dia, sug }: { dia: DiaRutina; sug?: Map<string, Sugerencia> }) {
+function FilasDia({ dia, sug, equilibrio, cardio }: { dia: DiaRutina; sug?: Map<string, Sugerencia>; equilibrio?: number; cardio?: string | null }) {
   const filas: ReactElement[] = []
   const vistos = new Set<string>()
   const bloques = dia.bloques
@@ -176,6 +223,8 @@ function FilasDia({ dia, sug }: { dia: DiaRutina; sug?: Map<string, Sugerencia> 
     <div className="exl">
       {filas}
       {resto.length > 0 && <p className="exmore">+ {resto.map(b => `${ejercicio(b.ejercicio)?.nombre} · ${b.series} × ${b.repsMin}-${b.repsMax}`).join(' · ')}</p>}
+      {equilibrio != null && <p className="exmore">{t('+ Equilibrio junto a la pared · {n} min', { n: equilibrio })}</p>}
+      {cardio && <p className="g2-cardio"><Ico n="bicycle" /><span>{tr('Y al acabar: <b>{que}</b>', { que: cardio, b: x => <b>{x}</b> })}</span></p>}
     </div>
   )
 }

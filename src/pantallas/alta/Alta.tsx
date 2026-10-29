@@ -5,9 +5,10 @@ import { gimnasioNuevo, guardarPerfil, leerPerfil, perfilPorDefecto } from '../.
 import { leerMediciones } from '../../datos/consultas'
 import { completarAlta } from '../../datos/acciones/alta'
 import { importar } from '../../datos/copias'
-import type { Gimnasio, Medicion, Perfil, Rutina, Sexo, Zona } from '../../datos/tipos'
+import type { Gimnasio, Medicion, Perfil, Rutina, Sexo } from '../../datos/tipos'
 import { TODAS_LAS_CLAVES } from '../../catalogo/clasificacion'
 import { primerEntrenoDesde } from '../../dominio/semana'
+import { enCola, letrasCola } from '../../dominio/cola'
 import { DIAS, deISO, diaSemana, edad, formatoHora, horaActual, hoyISO, minutosDe, sumarDias } from '../../dominio/fechas'
 import { capital, decimal, enLista, leerNumero } from '../../dominio/formato'
 import { PERIMETROS, type Perimetro } from '../../dominio/medidas'
@@ -18,6 +19,9 @@ import { guardarLetra, letraGuardada, type Letra } from '../../ui/tema'
 import { CatalogoMaterial, ejerciciosDisponibles, PesosGimnasio } from '../rutina/CatalogoMaterial'
 import { HorariosAlta } from '../perfil/Horarios'
 import { FechaFacil } from './FechaFacil'
+import { Afinar, ElegirObjetivo } from '../perfil/ObjetivoAfinar'
+import { Dolores, Urgencias } from '../perfil/SaludDolor'
+import { rutinaBloqueada } from '../../dominio/salud'
 import { Medir } from './Medir'
 // Los minutos de cada día salen del mismo cálculo que usa Mi plan, para que digan lo mismo.
 import { minutosDia } from '../../dominio/rutina'
@@ -31,7 +35,7 @@ const PASO = { bienvenida: 1, sobreTi: 2, objetivo: 3, entrenar: 4, horarios: 5,
 const TOTAL = 8
 
 // Los nombres de las zonas, marcados con tk(): se traducen al pintarlos.
-const ZONA_TXT: Record<string, string> = { brazos: tk('brazos'), pecho: tk('pecho'), espalda: tk('espalda'), hombros: tk('hombros'), piernas: tk('piernas'), gluteo: tk('glúteo'), abdomen: tk('abdomen') }
+const ZONA_TXT: Record<string, string> = { brazos: tk('brazos'), pecho: tk('pecho'), espalda: tk('espalda'), hombros: tk('hombros'), piernas: tk('piernas'), gluteo: tk('glúteo'), abdomen: tk('abdomen'), gemelos: tk('gemelos') }
 
 type Datos = { nacimiento: string; sexo: Sexo | null; altura: string; peso: string }
 type Medidas = Record<Perimetro, string>
@@ -60,15 +64,18 @@ function falloSobreTi(d: Datos): Fallo | null {
   return null
 }
 
-/** «Tu primer entreno: martes a las 5:30 · Cuerpo completo A», con la rutina recién hecha. */
-function primerEntreno(r: Omit<Rutina, 'id'>, hora: string, hoy: string): { cuando: string; nombre: string } | null {
+/**
+ * «Tu primer entreno: martes a las 5:30 · Cuerpo completo A», con la rutina recién hecha. En cola, el día es el del
+ * primer entreno fijo y el entreno, el primero de la cola (la A), sea el día que sea.
+ */
+function primerEntreno(r: Omit<Rutina, 'id'>, hora: string, hoy: string, cola: boolean): { cuando: string; nombre: string } | null {
   const d = primerEntrenoDesde(r as Rutina, hoy)
   if (!d) return null
   const h = formatoHora(hora)
   const cuando = d.fecha === hoy
     ? (minutosDe(horaActual()) <= minutosDe(hora) ? t('hoy a las {hora}', { hora: h }) : t('hoy mismo, cuando puedas'))
     : d.fecha === sumarDias(hoy, 1) ? t('mañana a las {hora}', { hora: h }) : t('{dia} a las {hora}', { dia: DIAS[diaSemana(deISO(d.fecha))]!, hora: h })
-  return { cuando, nombre: nombreEntreno(d.dia) }
+  return { cuando, nombre: nombreEntreno(cola ? letrasCola(r)[0] ?? d.dia : d.dia) }
 }
 
 export function Alta() {
@@ -76,7 +83,8 @@ export function Alta() {
   const [paso, setPaso] = useState<number>(PASO.bienvenida)
   // Días y hora empiezan vacíos: un horario ya puesto se acepta sin leerlo. El nivel empieza en «Empiezo»: si alguien
   // no lo cambia, lo peor que pasa es una rutina más suave, que la semana de prueba ajusta igualmente.
-  const [p, setP] = useState<Perfil>(() => ({ ...perfilPorDefecto(), nivel: 'empiezo', superseries: true, diasFijos: [], diasOpcionales: [], horaEntreno: '' }))
+  // Las altas nuevas van en cola (toca la siguiente, sea el día que sea): los días quedan para los recordatorios.
+  const [p, setP] = useState<Perfil>(() => ({ ...perfilPorDefecto(), nivel: 'empiezo', superseries: true, diasFijos: [], diasOpcionales: [], horaEntreno: '', modoRutina: 'cola' }))
   // Fecha, sexo, altura y peso empiezan vacíos: rellenos, quien no lee los deja falsos y salen mal las calorías y la proteína.
   const [datos, setDatos] = useState<Datos>({ nacimiento: '', sexo: null, altura: '', peso: '' })
   const [medidas, setMedidas] = useState<Medidas>(SIN_MEDIDAS)
@@ -85,7 +93,7 @@ export function Alta() {
   const [gymModo, setGymModo] = useState<'completo' | 'yo'>('completo')
   const [intento, setIntento] = useState(false)
   const [letra, setLetra] = useState<Letra>(letraGuardada())
-  const [resumen, setResumen] = useState<{ tipo: string; estructura: string; dias: { t: string; d: string }[]; primero: { cuando: string; nombre: string } | null } | null>(null)
+  const [resumen, setResumen] = useState<{ tipo: string; estructura: string; dias: { t: string; d: string }[]; primero: { cuando: string; nombre: string } | null; sinRutina?: boolean } | null>(null)
   const cambia = (c: Partial<Perfil>) => setP(x => ({ ...x, ...c }))
   const dato = (c: Partial<Datos>) => setDatos(x => ({ ...x, ...c }))
   const material = gymModo === 'completo' ? [...TODAS_LAS_CLAVES] : gym.material
@@ -150,6 +158,7 @@ export function Alta() {
       perfil: { ...p, nacimiento: datos.nacimiento, sexo: datos.sexo ?? p.sexo, alturaCm: Math.round(leerNumero(datos.altura) ?? p.alturaCm), altaCompleta: false },
       medicion, medicionCambiada: firma(peso, medidas) !== importado, hoy,
     })
+    if (!rutina) { setResumen({ tipo: '', estructura: '', dias: [], primero: null, sinRutina: true }); return }
     const dias = [...rutina.dias].sort((a, b) => Number(a.opcional) - Number(b.opcional) || (a.dia ?? 9) - (b.dia ?? 9))
     const fijos = rutina.dias.filter(d => !d.opcional)
     const extra = rutina.dias.find(d => d.opcional)
@@ -161,15 +170,15 @@ export function Alta() {
       estructura: extra
         ? t('{dias} + {dia} si puedes · ~{min} min', { dias: diasTxt, dia: extra.dia != null ? DIAS[extra.dia] : t('otro'), min: minMax })
         : t('{dias} · ~{min} min', { dias: diasTxt, min: minMax }),
-      // El nombre del día de la semana en vez de las letras A, B, C, que no dicen nada.
+      // El nombre del día de la semana en vez de las letras A, B, C, que no dicen nada; en cola, el del entreno.
       dias: dias.map(d => {
-        const nombre = d.dia != null ? capital(DIAS[d.dia]) : t('Cuando puedas')
+        const nombre = enCola(perfil) && !d.opcional ? nombreEntreno(d) : d.dia != null ? capital(DIAS[d.dia]) : t('Cuando puedas')
         return {
           t: d.opcional ? t('{dia} (si puedes)', { dia: nombre }) : nombre,
           d: t('{n} ejercicios · ~{min} min', { n: d.bloques.length, min: minutosDia(d) }),
         }
       }),
-      primero: primerEntreno(rutina, perfil.horaEntreno, hoy),
+      primero: primerEntreno(rutina, perfil.horaEntreno, hoy, enCola(perfil)),
     })
   }, [gym, gymModo, p, datos, medidas, importado])
 
@@ -207,8 +216,10 @@ export function Alta() {
   )
 
   if (paso === PASO.lista) return (
-    <Paso n={TOTAL} titulo={resumen ? t('Tu rutina está lista') : t('Creando tu rutina…')} sinAtras pie={resumen ? <button className="btn xl" onClick={fin}>{t('Ir a Inicio')} <Ico n="arrow-right" b /></button> : null}>
-      {!resumen ? <Generando onListo={terminar} p={p} /> : (
+    <Paso n={TOTAL} titulo={resumen?.sinRutina ? t('Todo listo') : resumen ? t('Tu rutina está lista') : t('Creando tu rutina…')} sinAtras pie={resumen ? <button className="btn xl" onClick={fin}>{t('Ir a Inicio')} <Ico n="arrow-right" b /></button> : null}>
+      {!resumen ? <Generando onListo={terminar} p={p} /> : resumen.sinRutina ? (
+        <p className="note bad mt16"><Ico n="first-aid" /><span>{t('Por lo que has marcado, hoy no entrenes y consulta con tu médico. Cuando te dé el visto bueno, desmárcalo en Perfil → Salud y crea tu rutina.')}</span></p>
+      ) : (
         <>
           {resumen.primero && (
             <p className="note ok mt16 alta-primero"><Ico n="calendar-check" /><span>{tr('Tu primer entreno: {cuando} · {nombre}', { cuando: <b>{resumen.primero.cuando}</b>, nombre: resumen.primero.nombre })}</span></p>
@@ -272,17 +283,10 @@ export function Alta() {
       </>) },
     [PASO.objetivo]: { t: t('Tu objetivo'), d: t('Lo puedes cambiar cuando quieras.'), c: (
       <>
-        <div className="opts mt16">
-          {([['recomposicion', t('Perder grasa y ganar músculo'), t('El peso es lo de menos: menos barriga y más fuerza.'), t('Recomendado')], ['perder', t('Perder peso'), t('Déficit algo mayor y más proteína.'), ''], ['fuerza', t('Ganar fuerza'), t('Comer lo justo para subir de peso en los ejercicios.'), '']] as const).map(([v, nombre, d, tag]) => (
-            <button key={v} className={cx('opt-c', p.objetivo === v && 'on')} aria-pressed={p.objetivo === v} onClick={() => cambia({ objetivo: v })}>
-              <span className="rad" /><span className="tx"><b>{nombre} {tag && <span className="tag ok">{tag}</span>}</b><small>{d}</small></span>
-            </button>
-          ))}
-        </div>
+        <ElegirObjetivo p={p} cambia={cambia} />
         <div className="alta-sep">
-          <p className="lbl fl">{t('Zonas a priorizar')} <span className="hint">{t('(opcional)')}</span></p>
-          <p className="small muted" style={{ marginBottom: 8 }}>{t('Si no eliges ninguna, se trabaja todo el cuerpo por igual.')}</p>
-          <Elegir opciones={Object.keys(ZONA_TXT).map(z => ({ v: z, t: capital(t(ZONA_TXT[z]!)) }))} valor={p.zonasPrioridad} onCambio={z => cambia({ zonasPrioridad: p.zonasPrioridad.includes(z) ? p.zonasPrioridad.filter(x => x !== z) : [...p.zonasPrioridad, z] })} />
+          <p className="lbl fl">{t('Afinar')} <span className="hint">{t('(opcional)')}</span></p>
+          <Afinar p={p} cambia={cambia} />
         </div>
       </>) },
     [PASO.entrenar]: { t: t('Cómo te gusta entrenar'), c: (
@@ -302,7 +306,13 @@ export function Alta() {
     [PASO.horarios]: { t: t('Tus horarios'), d: t('Qué días y a qué hora vas al gimnasio.'), c: <HorariosAlta p={p} cambia={cambia} faltaDias={!!mal('dias')} faltaHora={!!mal('hora')} /> },
     [PASO.salud]: { t: t('Salud'), d: t('Para no proponerte ejercicios que no te convienen. Si no te molesta nada, sigue.'), c: (
       <div className="fields mt16">
-        <div><span className="lbl fl">{t('¿Te molesta alguna zona?')} <span className="hint">{t('(opcional)')}</span></span><Elegir opciones={[{ v: 'rodilla', t: t('Rodilla') }, { v: 'lumbar', t: t('Lumbar (espalda baja)') }, { v: 'hombro', t: t('Hombro') }, { v: 'muneca', t: t('Muñeca') }, { v: 'codo', t: t('Codo') }] as { v: Zona; t: string }[]} valor={p.zonasSensibles} onCambio={z => cambia({ zonasSensibles: p.zonasSensibles.includes(z) ? p.zonasSensibles.filter(x => x !== z) : [...p.zonasSensibles, z] })} /></div>
+        <div><span className="lbl fl">{t('¿Te pasa algo de esto?')}</span><p className="small muted">{t('Ahora, o al hacer esfuerzo en las últimas semanas.')}</p>
+          <Urgencias valor={p.urgencias ?? []} onCambio={u => cambia({ urgencias: u })} />
+          {rutinaBloqueada(p) && <p className="note bad mt8"><Ico n="first-aid" /><span>{t('Hoy no entrenes. Puedes terminar el alta, pero no te propondremos rutina hasta que lo desmarques en Perfil → Salud, cuando tu médico te dé el visto bueno.')}</span></p>}
+        </div>
+        <div><span className="lbl fl">{t('¿Te duele algo?')} <span className="hint">{t('(opcional)')}</span></span><p className="small muted">{t('Toca lo que te duela o te moleste. Si no te duele nada, sigue.')}</p>
+          <Dolores p={p} cambia={cambia} />
+        </div>
         <label><span className="lbl fl">{t('Lesiones o molestias')} <span className="hint">{t('(opcional)')}</span></span><textarea className="inp" maxLength={LARGO.nota} value={p.lesiones} onChange={e => cambia({ lesiones: e.target.value })} placeholder={t('Por ejemplo: me duele la rodilla al bajar escaleras')} /></label>
         <p className="note plain"><Ico n="first-aid" /><span>{tr('Si un ejercicio te duele, márcalo con «Me duele» en su ficha y no volverá a salir. <b>Esto no es consejo médico.</b>', { b: x => <b>{x}</b> })}</span></p>
       </div>) },

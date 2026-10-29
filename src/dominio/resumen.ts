@@ -3,6 +3,8 @@ import type { Comida, Medicion, PasosDia, Sesion } from '../datos/tipos'
 import { semanaDe, sumarDias } from './fechas'
 import { num } from './formato'
 import { t, tn } from '../i18n'
+import { subirPesoEsBueno } from './objetivos'
+import type { TipoObjetivo } from '../datos/tipos'
 
 export type Resumen = {
   semaforo: 'verde' | 'ambar' | 'rojo'
@@ -123,7 +125,7 @@ export function resumenSemana(o: {
   }
 }
 
-type DatosConsejo = { cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null; objetivoProteina: number; objetivo: 'recomposicion' | 'perder' | 'fuerza' }
+type DatosConsejo = { cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null; objetivoProteina: number; objetivo: TipoObjetivo }
 type TipoConsejo = 'faltan-datos' | 'proteina' | 'sube-peso' | 'peso-estable' | 'baja-cintura' | 'menos-picoteo' | 'recorta-cenas' | 'estable-picoteo' | 'estable'
 
 /** Qué consejo toca, sin depender del idioma (para decidir el tono sin mirar la frase). */
@@ -132,7 +134,7 @@ export function tipoConsejo(o: DatosConsejo): TipoConsejo {
   if (o.proteinaMedia != null && o.proteinaMedia < o.objetivoProteina * 0.8) return 'proteina'
   const bajaCintura = (o.cinturaDelta ?? 0) < -0.3
   const subePeso = (o.pesoDelta ?? 0) > 0.4
-  if (o.objetivo === 'fuerza') return subePeso ? 'sube-peso' : 'peso-estable'
+  if (subirPesoEsBueno(o.objetivo)) return subePeso ? 'sube-peso' : 'peso-estable'
   if (bajaCintura) return 'baja-cintura'
   if (subePeso || (o.cinturaDelta ?? 0) > 0.3) return o.picoteoDias >= 2 ? 'menos-picoteo' : 'recorta-cenas'
   return o.picoteoDias >= 2 ? 'estable-picoteo' : 'estable'

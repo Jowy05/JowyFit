@@ -105,7 +105,7 @@ describe('propiedades de la progresión (muchas combinaciones)', () => {
   const objetivos = [{ repsMin: 5, repsMax: 8, rpe: 8 }, { repsMin: 8, repsMax: 12, rpe: 8 }, { repsMin: 10, repsMax: 15, rpe: 7 }]
   const rpes: (number | null)[] = [null, 6, 7, 8, 8.5, 9, 9.5, 10]
 
-  it('nunca sube si el esfuerzo fue alto (≥ 9) · nunca baja si se completó el rango · sube solo un peso que existe', () => {
+  it('nunca sube si costó más de un punto por encima de lo previsto · nunca baja si se completó el rango · sube solo un peso que existe', () => {
     let casos = 0
     for (const [nombre, lista] of Object.entries(listas)) for (const o of objetivos) for (const rpe of rpes) {
       for (const idx of [0, 1, Math.floor(lista.length / 2), lista.length - 2, lista.length - 1]) {
@@ -118,7 +118,7 @@ describe('propiedades de la progresión (muchas combinaciones)', () => {
           expect(s.peso, et).not.toBeNull()
           expect(Number.isFinite(s.peso!), et).toBe(true)
           expect(lista.includes(s.peso!), `${et}: ${s.peso} no está en la lista`).toBe(true)
-          if (rpe != null && rpe >= 9) expect(s.peso!, `${et}: subió con esfuerzo alto`).toBeLessThanOrEqual(peso)
+          if (rpe != null && rpe > o.rpe + 1) expect(s.peso!, `${et}: subió con esfuerzo alto`).toBeLessThanOrEqual(peso)
           if (s.accion === 'subir') expect(s.peso!, et).toBeGreaterThan(peso)
           if (s.accion === 'bajar') expect(s.peso!, et).toBeLessThan(peso)
           if (s.accion === 'mantener') expect(s.peso!, et).toBe(peso)
@@ -245,8 +245,13 @@ describe('progresión', () => {
     expect(s.accion).toBe('subir')
     expect(s.peso).toBe(47.5)
   })
-  it('salto doble si costó muy poco', () => {
-    expect(sugerir([serie(40, 8, 5), serie(40, 8, 6)], obj, 'peso', lista).peso).toBe(45)
+  it('aunque costara muy poco, sube un solo escalón (sin saltos dobles)', () => {
+    expect(sugerir([serie(40, 8, 5), serie(40, 8, 6)], obj, 'peso', lista).peso).toBe(42.5)
+  })
+  it('sube con un punto por encima de lo previsto; con más, mantiene', () => {
+    const o = { ...obj, rpe: 8 }
+    expect(sugerir([serie(40, o.repsMax, 9)], o, 'peso', lista).accion).toBe('subir')
+    expect(sugerir([serie(40, o.repsMax, 9.5)], o, 'peso', lista).accion).toBe('mantener')
   })
   it('mantiene si no llega al tope', () => expect(sugerir([serie(45, 8), serie(45, 7), serie(45, 6)], obj, 'peso', lista).accion).toBe('mantener'))
   it('baja si se queda muy corto', () => {
@@ -344,8 +349,8 @@ describe('progresión: lo que faltaba', () => {
   it('en el peso más alto que hay: busca más reps', () => {
     expect(sugerir([s(50, 12), s(50, 12)], obj, 'peso', [40, 45, 50])).toMatchObject({ accion: 'mantener', peso: 50, reps: 12 })
   })
-  it('muy fácil (esfuerzo ≤ 6): salto doble', () => {
-    expect(sugerir([s(40, 12, { rpe: 6 }), s(40, 12, { rpe: 6 })], obj, 'peso', [40, 42.5, 45, 47.5]).peso).toBe(45)
+  it('muy fácil (esfuerzo ≤ 6): un escalón, como siempre', () => {
+    expect(sugerir([s(40, 12, { rpe: 6 }), s(40, 12, { rpe: 6 })], obj, 'peso', [40, 42.5, 45, 47.5]).peso).toBe(42.5)
   })
   it('costó demasiado pero no hay peso menor: mantener', () => {
     expect(sugerir([s(40, 5, { rpe: 10 })], obj, 'peso', [40, 45])).toMatchObject({ accion: 'mantener', peso: 40 })

@@ -301,4 +301,9 @@ export default {
   'Borrar producto': 'Delete product',
   'Fuente: Open Food Facts · licencia ODbL': 'Source: Open Food Facts · ODbL license',
   'Apuntado a mano': 'Logged by hand',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  'comes lo que gastas.': 'you eat what you burn.',
+  'un poco más de lo que gastas, para construir músculo.': 'a bit more than you burn, to build muscle.',
+  'un poco más de lo que gastas, para subir de peso con músculo.': 'a bit more than you burn, to gain weight with muscle.',
 } satisfies Diccionario

@@ -1,13 +1,14 @@
 // RUT-01 · Mi plan
 import { useLiveQuery } from 'dexie-react-hooks'
-import { contarEntrenosDeRutina, sesionDeHoy } from '../../datos/consultas'
+import { letrasHechasDeRutina, sesionDeHoy } from '../../datos/consultas'
 import { deISO, diaSemana, hoyISO, numeroSemana } from '../../dominio/fechas'
 import { cx, Ico, Pantalla, useUnaVez, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
-import { useAjustes, useRutina, useSesionEnCurso } from '../../datos/hooks'
+import { useAjustes, useCola, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { useAviso } from '../../ui/aviso'
 import { abrevDia, listaDias, nombreDia, seriesTxt, tituloDia } from './comun'
 import { CabRutina } from './CabRutina'
+import { ListaCola, ModoRutina } from './Cola'
 import { duracionPlan, filas, minutosDia } from '../../dominio/rutina'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { capital } from '../../dominio/formato'
@@ -23,12 +24,14 @@ export function MiPlan() {
   const aviso = useAviso()
   const r = useRutina()
   const a = useAjustes()
+  const p = usePerfil()
   const enCurso = useSesionEnCurso()
   const hoy = hoyISO()
+  const cola = useCola(hoy)
   const ds = diaSemana(deISO(hoy))
   const crumb = a.inicio ? t('Semana {n}', { n: Math.max(1, numeroSemana(a.inicio, hoy)) }) : undefined
   // Entrenos de calibración que cuentan: los de esta rutina y no libres (igual que en el fin del entreno).
-  const sesiones = useLiveQuery(async () => (r ? contarEntrenosDeRutina(r.id) : 0), [r?.id]) ?? 0
+  const letrasHechas = useLiveQuery(async () => (r ? letrasHechasDeRutina(r.id) : new Set<string>()), [r?.id]) ?? new Set<string>()
   const unaVez = useUnaVez()
 
   // Si hoy ya se entrenó, la tarjeta de hoy lo dice: con «Empezar rutina» parecería que no se guardó.
@@ -52,7 +55,7 @@ export function MiPlan() {
     await iniciarEntreno({ libre: true })
     nav.completa('entreno')
   })
-  const faltan = Math.max(0, fijos.length - sesiones)
+  const faltan = fijos.filter(d => !letrasHechas.has(d.letra)).length
   const conDia = fijos.filter(d => d.dia != null).map(d => d.dia!)
   // «Dos seguidos» (superserie) se explica la primera vez que sale en la pantalla.
   let ssVista = false
@@ -75,10 +78,12 @@ export function MiPlan() {
               <p><span>{t('Duración')}</span><b>{duracionPlan(r)}</b></p>
             </div>
           </div>
+          <ModoRutina />
           {r.calibracion && <p className="note warn mt8"><Ico n="gauge" /><span><b>{t('Esta semana, pesos cómodos.')}</b> {faltan > 0 ? tn(faltan, 'Después de {n} entreno más te propongo la rutina definitiva con tus tiempos reales.', 'Después de {n} entrenos más te propongo la rutina definitiva con tus tiempos reales.') : t('Al guardar el próximo entreno te propongo la rutina definitiva con tus tiempos reales.')}</span></p>}
         </div>
 
-        <div className="sec">
+        {cola && <ListaCola cola={cola} r={r} p={p} />}
+        {cola === null && <div className="sec">
           <div className="sec-h"><h2>{t('Días')}</h2><span className="lbl">{t('Toca uno para verlo')}</span></div>
           {r.dias.map((d, i) => {
             const esHoy = d.dia === ds
@@ -117,7 +122,7 @@ export function MiPlan() {
               </button>
             )
           })}
-        </div>
+        </div>}
 
         <div className="sec">
           <div className="list">

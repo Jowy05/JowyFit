@@ -171,6 +171,11 @@ export class Jf {
     }
     await this.ver('Tu rutina está lista', 20000)
     await this.pulsar('Ir a Inicio')
+    // Las altas nuevas van en orden (la cola); estas pruebas se escribieron por días fijos.
+    await this.ver('Te toca', 8000)
+    const [p] = await this.tabla('perfil')
+    await this.meter('perfil', [{ ...p, modoRutina: 'dias' }])
+    await this.page.reload()
     await this.ver(/Hoy te toca|descansas|no entrenaste|Próximo/, 8000)
   }
   /** En la primera sesión el peso puede empezar vacío: sube el contador hasta tener un peso. */

@@ -35,7 +35,6 @@ export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; re
   const reps = hechas.map(s => (registro === 'tiempo' ? s.segundos : s.reps) ?? 0).map(r => (Number.isFinite(r) ? r : 0))
   const rpes = hechas.map(s => s.rpe).filter(finito)
   const rpeMax = rpes.length ? Math.max(...rpes) : null
-  const rpeMin = rpes.length ? Math.min(...rpes) : null
   const todasArriba = reps.every(r => r >= objetivo.repsMax)
   const algunaCorta = reps.some(r => r < objetivo.repsMin)
   const muyDuro = rpeMax != null && rpeMax >= 9.5
@@ -48,10 +47,12 @@ export function sugerir(ultimas: Serie[] | null, objetivo: { repsMin: number; re
   }
 
   const peso = top.peso
-  if (todasArriba && (rpeMax == null || rpeMax <= 8)) {
-    let nuevo = siguiente(lista, peso, 1)
-    // Si le costó muy poco (esfuerzo ≤ 6), salto doble.
-    if (rpeMin != null && rpeMax != null && rpeMax <= 6) nuevo = siguiente(lista, nuevo, 1)
+  // Se sube al completar el rango salvo que costara más de un punto por encima del esfuerzo previsto (el esfuerzo
+  // apuntado solo frena, nunca acelera). Sin esfuerzo apuntado se supone el previsto: ni fácil ni duro (§4.8).
+  // Antes, con objetivo 8, un 8,5-9 dejaba el ejercicio en «mantener» para siempre.
+  const esfuerzo = rpeMax ?? objetivo.rpe
+  if (todasArriba && esfuerzo <= objetivo.rpe + 1) {
+    const nuevo = siguiente(lista, peso, 1)
     // Ya está en el peso más alto que hay: no se puede subir, se buscan más reps.
     if (nuevo <= peso + 1e-9) return { accion: 'mantener', peso, reps: objetivo.repsMax, ultima, texto: t('Es el peso más alto disponible: busca más reps') }
     return { accion: 'subir', peso: nuevo, reps: objetivo.repsMin, ultima, texto: t('Completaste el rango: toca subir') }

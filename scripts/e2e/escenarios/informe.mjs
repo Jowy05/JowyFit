@@ -38,8 +38,9 @@ escenario('informe en PDF desde Ajustes: elegir días y casillas, crear y descar
   const { leerPdf } = await import('../../leer-pdf.mjs')
   comprobar(new TextDecoder().decode(pdf.bytes.slice(0, 5)) === '%PDF-', 'No es un PDF')
   const leido = await leerPdf(pdf.bytes)
-  comprobar(leido.paginas === 2, `El PDF tiene ${leido.paginas} páginas (resumen y comida)`)
-  for (const t of ['Informe de progreso', 'Último mes · 15 sep – 14 oct 2026', 'Resumen del periodo', 'Comida', 'Batido de proteína', 'Página 1 de 2', 'Página 2 de 2']) comprobar(leido.texto.includes(t), `Falta «${t}» en el PDF`)
+  // Resumen, comida y, con la casilla de entrenos, «Tu rutina y tu salud» (aunque aún no haya entrenos).
+  comprobar(leido.paginas >= 3, `El PDF tiene ${leido.paginas} páginas (resumen, comida y tu rutina y tu salud)`)
+  for (const t of ['Informe de progreso', 'Último mes · 15 sep – 14 oct 2026', 'Resumen del periodo', 'Comida', 'Batido de proteína', 'Perfil y objetivo', 'La rutina que toca', `Página 1 de ${leido.paginas}`]) comprobar(leido.texto.includes(t), `Falta «${t}» en el PDF`)
   comprobar(!leido.texto.includes('Pasos y gasto'), 'Lleva los pasos aunque la casilla está desmarcada')
   await ver('PDF descargado')
   await ver('Descargado.')

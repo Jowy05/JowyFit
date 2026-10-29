@@ -198,10 +198,11 @@ export function Vacio({ icono, titulo, texto, accion, onAccion, mal }: { icono: 
 }
 
 /** Hoja inferior: se monta en la capa de hojas de App. */
-export function Hoja({ titulo, sub, children, className, cerrar = true }: { titulo?: ReactNode; sub?: ReactNode; children: ReactNode; className?: string; cerrar?: boolean }) {
+/** Hoja inferior. `etiqueta`: el nombre para el lector de pantalla cuando no hay título de texto. */
+export function Hoja({ titulo, sub, children, className, cerrar = true, etiqueta }: { titulo?: ReactNode; sub?: ReactNode; children: ReactNode; className?: string; cerrar?: boolean; etiqueta?: string }) {
   const nav = useNav()
   return (
-    <div className={cx('sheet', className)} role="dialog" aria-modal="true">
+    <div className={cx('sheet', className)} role="dialog" aria-modal="true" aria-label={etiqueta ?? (typeof titulo === 'string' ? titulo : undefined)}>
       <div className="grab" />
       {titulo && (
         <div className="sh-h">

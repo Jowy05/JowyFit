@@ -100,4 +100,10 @@ export default {
   'Avisa cuando toca la siguiente serie (también en el reloj)': 'Avisa quan toca la sèrie següent (també al rellotge)',
   'Recordatorios': 'Recordatoris',
   'Dormir, pesarse, suplementos, copias…': 'Dormir, pesar-se, suplements, còpies…',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  '¿Qué tal tus molestias?': 'Com van les teves molèsties?',
+  'Revisión de la semana: 20 segundos.': 'Revisió de la setmana: 20 segons.',
+  'Más suave por tu molestia: {peso} kg': 'Més suau per la teva molèstia: {peso} kg',
+  'revisiones': 'revisions',
 } satisfies Diccionario

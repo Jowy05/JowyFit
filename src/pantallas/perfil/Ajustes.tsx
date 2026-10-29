@@ -1,20 +1,21 @@
-// AJU-01 · Ajustes. Arriba lo de todo el mundo (letra, tema, recordatorios, informe en PDF, copia);
+// AJU-01 · Ajustes. Arriba lo de todo el mundo (letra, tema, recordatorios, tu rutina y tu salud, informe en PDF, copia);
 // lo técnico (entreno, comida, pasos, permisos) plegado en «Más ajustes»; «Borrar todo», al final.
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import paquete from '../../../package.json'
-import { guardarAjustes, leerPerfil } from '../../datos/repos'
+import { guardarAjustes, guardarPerfil, leerPerfil } from '../../datos/repos'
+import { regenerarRutina } from '../../datos/acciones/rutina'
 import { guardarAvisos, reprogramarNotificaciones } from '../../datos/acciones/avisos'
 import { objetivosEnergia } from '../../datos/consultas'
 import type { Ajustes as TAjustes } from '../../datos/tipos'
 import { useCatalogo } from '../../catalogo/catalogo'
-import { duracion } from '../../dominio/fechas'
+import { duracion, hoyISO } from '../../dominio/fechas'
 import { miles, num } from '../../dominio/formato'
 import { capacidades, permisoNotificaciones } from '../../plataforma'
-import { cx, Cab, Elegir, FilaInterruptor, Ico, Interruptor, Pantalla, Stepper } from '../../ui/componentes'
+import { cx, Cab, Elegir, FilaInterruptor, Ico, Interruptor, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, useGimnasio, usePerfil } from '../../datos/hooks'
+import { useAjustes, useGimnasio, usePerfil, useRutina } from '../../datos/hooks'
 import { guardarLetra, guardarTema, letraGuardada, temaGuardado, type Letra, type PreferenciaTema } from '../../ui/tema'
 import { lanzarTutorial } from '../../ui/tutorial/Tutorial'
 import { abrirInstrucciones } from '../instalar/Instalar'
@@ -32,6 +33,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
   const a = useAjustes()
   const p = usePerfil()
   const gym = useGimnasio()
+  const hayRutina = !!useRutina()
   const catalogo = useCatalogo()
   // Qué hace este aparato. En la web de Apple (iPhone, iPad, Mac) no se enseña nada que allí no funcione.
   const cap = capacidades()
@@ -95,6 +97,15 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
 
   const borrarTodo = () => nav.hoja('hoja-confirmar', { titulo: t('¿Borrar todos los datos?'), texto: t('Se borra todo lo que hay en este móvil. Haz antes una copia.'), si: t('Borrar todo'), peligro: true, accion: 'borrar-todo' })
 
+  // El modo mayor se enciende aquí sin preguntar (rehace la rutina); para apagarlo, la hoja pide confirmar.
+  const unaVez = useUnaVez()
+  const cambiarModoMayor = unaVez(async (activo: boolean) => {
+    if (!activo) { nav.hoja('hoja-modo-mayor', { quitar: true }); return }
+    await guardarPerfil({ modoMayor: { activo: true, propuesto: p.modoMayor?.propuesto ?? hoyISO() } })
+    if (hayRutina) await regenerarRutina()
+    aviso(hayRutina ? t('Modo mayor activado: rutina rehecha') : t('Modo mayor activado'))
+  })
+
   const pesarseTxt = p.diasPesaje.length ? t('{dias} a las', { dias: diasTxt(p.diasPesaje) }) : t('A las')
 
   return (
@@ -137,6 +148,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
             <FilaInterruptor titulo={t('Copia de seguridad')} d={t('Si hace una semana de la última')} on={a.noti.copia} onCambio={v => void cambiarNoti({ copia: v })} />
             <FilaInterruptor titulo={t('Foto de progreso')} d={p.fotosCadaSemanas > 0 ? tn(p.fotosCadaSemanas, 'Cada {n} semana', 'Cada {n} semanas') : t('Opcional')} on={a.noti.fotos} onCambio={v => void cambiarNoti({ fotos: v })} />
             <FilaInterruptor titulo={t('Resumen del domingo')} d={t('¿Voy bien? Tu semana en 10 segundos')} on={a.noti.domingo} onCambio={v => void cambiarNoti({ domingo: v })} />
+            <FilaHora titulo={t('Revisión de la semana')} d={t('Los domingos a las')} on={!!a.noti.revision} hora={a.noti.revisionHora ?? '19:00'} c={v => void cambiarNoti({ revision: v })} h={v => void cambiarNoti({ revisionHora: v })} />
           </div>
         ) : (
           <p className="note plain"><Ico n="device-mobile" /><span>{tr('<b>Solo en la app de Android:</b> los recordatorios se ven dentro de la app.', { b: x => <b>{x}</b> })}</span></p>
@@ -158,6 +170,21 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
             </div>
           </>
         )}
+
+        <p className="grp-t">{t('Tu rutina y tu salud')}</p>
+        <div className="list">
+          <button className="it" onClick={() => nav.ir('revision')}>
+            <span className="ico"><Ico n="bandaids" /></span>
+            <span className="tx"><b>{t('Revisión de la semana')}</b><small>{t('Cómo van tus molestias y qué cambia en los próximos entrenos')}</small></span>
+            <Ico n="caret-right" className="car" />
+          </button>
+          <button className="it" onClick={() => nav.hoja('hoja-no-quiero')}>
+            <span className="ico"><Ico n="prohibit" /></span>
+            <span className="tx"><b>{t('Lo que no quieres hacer')}</b><small>{p.noQuiero?.length ? t('{n} fuera de tu rutina', { n: p.noQuiero.length }) : t('Nada: puede salir de todo')}</small></span>
+            <Ico n="caret-right" className="car" />
+          </button>
+          <FilaInterruptor ico="armchair" titulo={t('Modo mayor')} d={t('Máquinas y apoyo, margen de 2 repeticiones y equilibrio')} on={!!p.modoMayor?.activo} onCambio={v => void cambiarModoMayor(v)} />
+        </div>
 
         {/* Informe en PDF arriba, junto a la copia: aquí se busca para enseñar o guardar los datos. */}
         <p className="grp-t">{t('Informe en PDF')}</p>

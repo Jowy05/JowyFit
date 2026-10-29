@@ -22,7 +22,7 @@ function recordsDe(c: Ctx, s: Sesion): RecordSesion[] {
 }
 
 function etiquetasDe(s: Sesion): string[] {
-  return [s.calibracion && t('semana de prueba'), s.suave && t('semana suave'), s.version === 'corta' && t('corta'), s.letra === 'L' && t('libre')].filter((x): x is string => !!x)
+  return [s.calibracion && t('semana de prueba'), s.suave && t('semana suave'), s.version === 'corta' && t('corta'), s.version === 'minima' && t('mínima'), s.letra === 'L' && t('libre')].filter((x): x is string => !!x)
 }
 
 function filaEntreno(c: Ctx, s: Sesion): FilaEntreno {

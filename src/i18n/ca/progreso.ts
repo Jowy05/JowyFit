@@ -433,4 +433,10 @@ export default {
   'Con qué te has medido': "Amb què t'has mesurat",
   'Fecha': 'Data',
   'Pon al menos una medida para poder guardar.': 'Posa almenys una mesura per poder desar.',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  'Apuntado: {min} min de {tipo}': 'Apuntat: {tipo}, {min} min',
+  'Apuntar cardio': 'Apuntar cardio',
+  'Lo que haces fuera de las pesas.': 'El que fas fora de les peses.',
+  '¿Qué has hecho?': 'Què has fet?',
 } satisfies Diccionario

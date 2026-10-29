@@ -2,7 +2,8 @@
 //   tr('Te faltan {cant} de proteína', { cant: <b>30 g</b> })
 //   tr('Toca <b>Hecho</b> al acabar cada serie', { b: s => <b>{s}</b> })
 // {nombre} se cambia por lo que haya en vars (texto, número o JSX); <marca>…</marca> se pinta con la función
-// vars.marca (recibe el texto de dentro, ya traducido). La traducción mueve las piezas de sitio si hace falta.
+// vars.marca (recibe el texto de dentro, ya traducido y con sus {variables} de texto o número puestas:
+// tr('Después: <b>{nombre}</b>', { nombre: 'A', b: s => <b>{s}</b> })). La traducción mueve las piezas si hace falta.
 import { Fragment, type ReactNode } from 'react'
 import { t } from './index'
 
@@ -22,7 +23,11 @@ export function tr(texto: string, vars: VarsJSX = {}): ReactNode {
       partes.push(typeof v === 'function' ? v('') : v)
     } else {
       const f = Object.hasOwn(vars, marca!) ? vars[marca!] : undefined
-      partes.push(typeof f === 'function' ? f(dentro ?? '') : (dentro ?? ''))
+      const texto = (dentro ?? '').replace(/\{(\w+)\}/g, (v, k: string) => {
+        const x = Object.hasOwn(vars, k) ? vars[k] : undefined
+        return typeof x === 'string' || typeof x === 'number' ? String(x) : v
+      })
+      partes.push(typeof f === 'function' ? f(texto) : texto)
     }
     desde = m.index + todo.length
   }

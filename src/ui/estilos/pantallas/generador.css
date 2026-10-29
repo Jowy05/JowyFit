@@ -1,0 +1,88 @@
+/* Generador v2: cuadrículas de dibujos (zonas, dolores, grupos), botones grandes, revisión semanal y cola. */
+.segc{display:flex;gap:4px;padding:3px;border-radius:8px;background:var(--raised)}
+.segc button{flex:1;min-height:42px;border-radius:6px;font-weight:600;font-size:14px;color:var(--muted);text-align:center}
+.segc button.on{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line),var(--card-sh)}
+.g2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.g2-grid .mq{min-height:44px}
+.g2-grid .mq .th{opacity:1;filter:none}
+.g2-grid .mq b{font-size:13.5px;line-height:1.2}
+.g2-grid .mq small{display:block;padding:0 2px;font:600 11.5px/1.2 var(--font-body);color:var(--warn)}
+.g2-grid .mq:not(.on) small{display:none}
+.g2-grid.dim .mq:not(.on) .th{opacity:.55;filter:grayscale(.5)}
+.g2-ic{position:absolute;inset:0;display:grid;place-items:center;background:#fff;color:#7B8794;font-size:44px}
+.g2-ic.tinted{color:var(--blue)}
+.g2-body,.th .g2-body{overflow:visible;position:absolute;inset:8%;width:84%;height:84%}
+.g2-body use{fill:var(--muted)}
+.g2-body circle{fill:var(--warn);stroke:#fff;stroke-width:22}
+.mq.g2-x .ck{display:none}
+.mq.g2-x .g2-out{position:absolute;top:10px;right:10px;display:none;align-items:center;gap:3px;height:22px;padding:0 6px;border-radius:5px;background:var(--bad);color:#fff;font:700 11px var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+.mq.g2-x.on{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+.mq.g2-x.on .th{opacity:.35;filter:grayscale(1)}
+.mq.g2-x.on .g2-out{display:inline-flex}
+.mq.g2-x.on b{text-decoration:line-through;color:var(--muted)}
+.g2-big{display:grid;gap:10px}
+.g2-bb{display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;color:var(--ink);box-shadow:var(--card-sh)}
+.g2-bb>i{flex:none;width:44px;height:44px;padding:10px;border-radius:10px;background:var(--raised);color:var(--blue)}
+.g2-bb .tx b{font-size:17px}
+.g2-bb>i.car,.g2-bb.ok>i.car{width:20px;height:20px;padding:0;background:none;color:var(--muted)}
+.g2-bb .box{flex:none;width:28px;height:28px;border-radius:7px;box-shadow:inset 0 0 0 2px var(--line);display:grid;place-items:center;color:transparent;font-size:16px}
+.g2-bb.on{border-color:var(--bad);background:var(--bad-t);box-shadow:0 0 0 1px var(--bad)}
+.g2-bb.on>i{background:var(--bad);color:#fff}
+.g2-bb.on .box{background:var(--bad);box-shadow:none;color:#fff}
+.g2-bb.ok>i{background:var(--ok-t);color:var(--ok)}
+.g2-bb.ok{border-color:var(--ok)}
+.g2-q{margin-top:16px}
+.g2-q .lbl{display:block;margin-bottom:8px}
+.g2-q .chip{min-height:52px;font-size:15.5px;white-space:normal;line-height:1.15;text-align:center}
+.g2-zh{display:flex;align-items:center;gap:12px}
+.g2-zh .th{width:64px;height:64px;border:1px solid var(--line);background:#fff}
+.g2-zh .th::before{display:none}
+.g2-zh .th img,.g2-rv .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:6%}
+.g2-zr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.g2-zr:first-child{border-top:0}
+.g2-zr>b{flex:1;font-weight:600;font-size:15.5px}
+.g2-zr .segc{flex:none;width:208px}
+.g2-zr .segc button{min-height:40px;font-size:13.5px}
+.g2-rv .rv-h{display:flex;align-items:center;gap:12px}
+.g2-rv .rv-h .th{width:48px;height:48px;background:#fff;border:1px solid var(--line)}
+.g2-rv .rv-h .th::before{display:none}
+.g2-4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.g2-4 .chip{min-height:50px;font-size:15.5px}
+.g2-4 .chip.on[data-v=peor]{background:var(--bad-t);border-color:var(--bad);color:var(--bad)}
+.g2-4 .chip.on[data-v=fin],.g2-4 .chip.on[data-v=mejor]{background:var(--ok-t);border-color:var(--ok);color:var(--ok)}
+.g2-cb{overflow:hidden}
+.g2-cb .cb-h{display:flex;gap:12px;align-items:flex-start;padding:14px}
+.g2-cb .cb-h .tx b{font-size:17px;line-height:1.2}
+.g2-cb ul{list-style:none;margin:0;padding:0 14px 4px}
+.g2-cb li{display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:14.5px}
+.g2-cb li>i{color:var(--blue);margin-top:2px}
+.g2-cb li s{color:var(--muted)}
+.g2-cb .cb-f{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 14px 10px}
+.g2-cb.undone .cb-h,.g2-cb.undone ul{opacity:.45}
+.g2-cb.undone ul{text-decoration:line-through}
+.g2-kc .k{font-size:44px;margin-top:8px}
+.g2-kc .k small{font-size:16px}
+.g2-kc .how{font-size:15px;line-height:1.4;margin-top:8px}
+.g2-sum{font-weight:700}
+.g2-cola .dayc-h .tag{margin-left:auto}
+.g2-cola .dayc .tx small{font-size:13.5px}
+.today-hero .g2-last{position:relative;font-size:14px;color:var(--muted);margin-top:8px}
+.g2-cardio{display:flex;align-items:center;gap:10px;padding:10px 0 4px;font-size:14.5px}
+.g2-cardio>i{color:var(--go);font-size:20px}
+.g2-min{display:flex;justify-content:center;margin-top:-2px}
+.g2-fill{padding:14px}
+.g2-fill .row.jb{align-items:baseline}
+.g2-fill b.mono{font-size:15px}
+.g2-cas .it{align-items:flex-start;min-height:62px;cursor:pointer}
+.g2-cas .casilla{margin-top:2px}
+.g2-cas .it .tx small.efecto{display:none;color:var(--blue);font-weight:500}
+.g2-cas .it.on .tx small.efecto{display:block}
+.casilla{flex:none;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--line);background:var(--surface);color:var(--on-blue);font-size:16px}
+.casilla.on{background:var(--blue);box-shadow:none}
+.g2-stop{display:flex;flex-direction:column;min-height:100%;padding:40px 20px 24px;background:linear-gradient(180deg,var(--bad-t),var(--bg) 55%)}
+.g2-stop .empty-ic{width:72px;height:72px;font-size:38px;border-radius:16px}
+.g2-stop h1{font-size:38px;margin-top:18px;line-height:1.02}
+.g2-stop p.big{font-size:17px;margin-top:12px;line-height:1.4}
+.g2-stop .foot{margin-top:auto;display:grid;gap:8px;padding-top:20px}
+.g2-cas .casilla{margin-top:2px}
+.g2-grid .mq .th img{width:100%;height:100%;object-fit:contain;background:#fff}

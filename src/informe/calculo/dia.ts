@@ -9,6 +9,7 @@ import type { Comparacion, Direccion, FilaHoyNormal, Juicio, TonoInforme, TuDiaI
 import { agrupar, conRpe, dia10, entre, media, mediaEsfuerzo, mediana, minutosSesion, palabraEsfuerzo, pctCambio, r1, serieFuerza, suma, textoDuracion, textoFuerza, textoPct, textoSerie, trabajo, unico, unidadFuerza, valorFuerza } from './comun'
 import { estadosDias, leerCintura, leerGrasaBascula, leerPeso, nombreDe, nombreEnFrase, type Ctx } from './contexto'
 import { filaComida, gastoEnDia, totalDe } from './comidaPasos'
+import { subirPesoEsBueno } from '../../dominio/objetivos'
 
 /** Comparación de «más es mejor» (proteína, pasos) contra lo normal, con un umbral de igualdad en %. */
 function comparar(valor: number | null, normal: number | null, umbralPct: number, unidad: string, f: (v: number) => string = v => num(v, 0)): Comparacion {
@@ -177,7 +178,7 @@ export function compararPeso(valor: number | null, normal: number | null, objeti
   if (valor == null || normal == null) return { valor, normal, diferencia: null, pct: null, direccion: null, juicio: null, tono: 'gris', texto: '', normalTexto }
   const d = r1(valor - normal)
   const direccion: Direccion = Math.abs(d) < 0.2 ? 'igual' : d > 0 ? 'sube' : 'baja'
-  const juicio: Juicio = objetivo === 'fuerza' ? 'neutro' : direccion === 'igual' ? 'igual' : direccion === 'baja' ? 'mejor' : 'peor'
+  const juicio: Juicio = subirPesoEsBueno(objetivo) ? 'neutro' : direccion === 'igual' ? 'igual' : direccion === 'baja' ? 'mejor' : 'peor'
   return { valor, normal, diferencia: d, pct: pctCambio(valor, normal), direccion, juicio, tono: juicio === 'mejor' ? 'ok' : juicio === 'peor' ? 'bad' : juicio === 'igual' ? 'tinta' : 'gris', texto: `${conSigno(d)} kg`, normalTexto }
 }
 

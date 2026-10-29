@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
 import { ajustesPorDefecto, gimnasioActivo, perfilPorDefecto, rutinaActiva } from './repos'
-import { leerMediciones } from './consultas'
+import { leerMediciones, sesionesEntre } from './consultas'
+import { colaDe, DIAS_COLA, enCola, letrasCola, type Cola } from '../dominio/cola'
+import { sumarDias } from '../dominio/fechas'
 import type { Ajustes, Gimnasio, Guardado, MarcaEjercicio, Medicion, Perfil, Rutina, Sesion } from './tipos'
 
 /**
@@ -39,6 +41,16 @@ export function useGimnasio(): Guardado<Gimnasio> | undefined {
 /** undefined = cargando · null = no hay */
 export function useRutina(): Guardado<Rutina> | undefined | null {
   return useLiveQuery(async () => (await rutinaActiva()) ?? null, [])
+}
+
+/** La cola de hoy si la rutina va en orden; null si va por días o no hay rutina; undefined mientras carga. */
+export function useCola(hoy: string): Cola | null | undefined {
+  return useLiveQuery(async () => {
+    const [p, r] = await Promise.all([db.perfil.get('yo'), rutinaActiva()])
+    if (!p || !r || !enCola(p)) return null
+    const sesiones = await sesionesEntre(sumarDias(hoy, -DIAS_COLA), hoy)
+    return colaDe(r, sesiones, hoy, letrasCola(r).length)
+  }, [hoy])
 }
 
 export function useSesionEnCurso(): Guardado<Sesion> | undefined | null {

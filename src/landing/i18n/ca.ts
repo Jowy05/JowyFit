@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-8-0.cab': "<b>Versió 0.8.0</b> · 29 d’octubre del 2026",
+  'nov.0-8-0.texto': "La teva rutina, a mida: set objectius, més feina a les zones que triïs i fora el que no vulguis fer. Apunta les teves molèsties amb tres tocs i, cada diumenge, una revisió de 20 segons ajusta els propers entrenaments (amb «Desfer»). A més: rutina en ordre per no perdre cap entrenament, sessió mínima de 15 minuts, mode gent gran a partir dels 65, passos i cardio que pugen a poc a poc i una pàgina nova al PDF amb la teva rutina i la teva salut.",
   'nov.0-7-1.cab': "<b>Versió 0.7.1</b> · 24 d’octubre del 2026",
   'nov.0-7-1.texto': "Arranjament: els avisos d’«a dormir» de la setmana vinent ja no es perden (amb l’alta el cap de setmana no en sortia cap), i en acabar un entrenament el «pròxim» és de debò el següent.",
   'nov.0-7-0.cab': "<b>Versió 0.7.0</b> · 24 d’octubre del 2026",

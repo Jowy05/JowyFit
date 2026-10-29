@@ -1,7 +1,7 @@
 // Modelo de datos de JowyFit. Todo se guarda en el móvil (IndexedDB).
 
 export type Sexo = 'hombre' | 'mujer'
-export type TipoObjetivo = 'recomposicion' | 'perder' | 'fuerza'
+export type TipoObjetivo = 'salud' | 'perder' | 'recomposicion' | 'musculo' | 'fuerza' | 'estetica' | 'peso'
 export type Nivel = 'empiezo' | 'vuelvo' | 'intermedio' | 'avanzado'
 export type Reps = 'pesadas' | 'moderadas' | 'mezcla'
 export type Cardio = 'nada' | 'pasos' | 'trote'
@@ -9,6 +9,18 @@ export type Transporte = 'coche' | 'andando'
 export type Trabajo = 'sentado' | 'depie' | 'fisico'
 export type Zona = 'rodilla' | 'lumbar' | 'hombro' | 'muneca' | 'codo'
 export type Dia = 0 | 1 | 2 | 3 | 4 | 5 | 6 // 0 = lunes … 6 = domingo
+/** Grupos de ejercicio que se pueden quitar de golpe («¿Qué no quieres hacer?»). */
+export type GrupoNoQuiero = 'cardio' | 'corporal' | 'maquinas' | 'libre' | 'poleas' | 'suelo'
+/** Síntomas que bloquean la rutina hasta que el médico dé el visto bueno. */
+export type Urgencia = 'pecho' | 'mareo' | 'aire' | 'palpitaciones'
+export type CondicionSalud = 'tension' | 'osteoporosis' | 'diabetes' | 'protesis' | 'anticoagulantes' | 'asma' | 'embarazo'
+export type ZonaDolor =
+  | 'cuello' | 'hombros' | 'codos' | 'munecas' | 'manos' | 'lumbar' | 'caderas' | 'rodillas' | 'tobillos' | 'pies'
+  | 'pecho' | 'espalda' | 'brazo' | 'abdomen' | 'gluteo' | 'muslo' | 'isquio' | 'gemelo'
+  | 'cabeza' | 'estomago' | 'hormigueo' | 'cansancio' | 'fiebre'
+/** Una molestia apuntada con sus tres toques; `inicio`, cuándo se apuntó. */
+export type Dolor = { zona: ZonaDolor; cuanto: 'poco' | 'regular' | 'mucho'; cuando: 'siempre' | 'fuerza' | 'aveces'; desde: 'dias' | 'semanas' | 'meses'; inicio: string }
+export type TipoCardio = 'caminar' | 'bici' | 'eliptica' | 'nadar' | 'correr'
 
 /** Fila leída de la base: el id es opcional al crearla, pero lo guardado siempre lo tiene. */
 export type Guardado<T extends { id?: number }> = T & { id: number }
@@ -23,8 +35,12 @@ export type Perfil = {
   alturaCm: number
   // objetivo
   objetivo: TipoObjetivo
+  /** Hasta 2 objetivos más: suman sin cambiar el principal (cardio, calorías, zonas…). */
+  objetivosExtra?: TipoObjetivo[]
   prioridades: string[] // texto libre ordenado: «Quitar barriga», «Press de banca»…
-  zonasPrioridad: string[] // brazos, pecho, espalda, hombros, piernas, gluteo, abdomen
+  zonasPrioridad: string[] // hasta 3: pecho, espalda, hombros, brazos, abdomen, gluteo, piernas, gemelos
+  /** Las de zonasPrioridad con «Mucho más» (las demás son «Un poco más»). */
+  zonasMucho?: string[]
   // experiencia
   nivel: Nivel
   referencias: Record<string, string> // banca: «40 kg × 8»…
@@ -43,6 +59,16 @@ export type Perfil = {
   zonasSensibles: Zona[]
   lesiones: string
   condiciones: string
+  /** Síntomas de urgencia marcados: mientras haya alguno, no hay rutina. */
+  urgencias?: Urgencia[]
+  dolores?: Dolor[]
+  condicionesSalud?: CondicionSalud[]
+  /** Lo que no quiere hacer nunca (filtro duro, como el material que no hay). */
+  noQuiero?: GrupoNoQuiero[]
+  /** Modo mayor: se propone, nunca se impone. `rechazado`: fecha del «Ahora no» (no se insiste hasta que cambie algo). */
+  modoMayor?: { activo: boolean; propuesto?: string; rechazado?: string }
+  /** En orden (toca la siguiente, sea el día que sea) o por días fijos de la semana. */
+  modoRutina?: 'cola' | 'dias'
   preferencia: 'maquinas' | 'libre' | 'mezcla'
   reps: Reps
   superseries: boolean
@@ -60,6 +86,18 @@ export type Perfil = {
   batido?: { proteina: number; kcal: number }
   trabajo: Trabajo
   pasosObjetivo: number
+  /** Minutos de cardio a la semana que toca ahora (sube poco a poco), qué tipo y cuándo. */
+  cardioMin?: number
+  cardioTipos?: TipoCardio[]
+  cardioCuando?: 'despues' | 'otro'
+  /** Lo que se sube poco a poco: desde cuándo (lunes) va la meta de pasos y de cardio actual. */
+  progresoMovimiento?: string
+  // datos extra, opcionales y poco a poco
+  sueno?: 'poco' | 'normal' | 'mucho'
+  deportes?: string[]
+  /** Día de su partido o deporte (no se cargan las piernas la víspera). */
+  diaDeporte?: Dia | null
+  experienciaPrevia?: 'nunca' | 'hace-anos' | 'hace-meses' | 'ahora'
   // seguimiento
   diasPesaje: Dia[]
   fotosCadaSemanas: number
@@ -152,6 +190,8 @@ export type Bloque = {
   superserie?: string // uid del bloque con el que va en superserie (A1/A2)
   fueraEnCorta?: boolean
   registro: TipoRegistro
+  /** Peso rebajado por una molestia (0,8 = −20 %), puesto por la revisión semanal. */
+  cargaPct?: number
 }
 
 export type DiaRutina = {
@@ -171,6 +211,10 @@ export type Rutina = {
   calibracion: boolean
   gimnasioId: number | null
   dias: DiaRutina[]
+  /** Modo mayor: minutos del bloque de equilibrio al final de cada entreno. */
+  equilibrio?: number
+  /** Lo que la rutina no pudo cubrir (grupos quitados sin otro ejercicio posible), para avisar. */
+  sinCubrir?: string[]
 }
 
 export type Serie = {
@@ -201,6 +245,8 @@ export type EjercicioSesion = {
   descanso: number
   superserie?: string
   registro: TipoRegistro
+  /** Se hizo con el peso rebajado por una molestia (revisión semanal): no cuenta para el peso que toca después. */
+  cargaPct?: number
 }
 
 export type Sesion = {
@@ -213,7 +259,7 @@ export type Sesion = {
   inicio: number
   fin?: number
   horaLimite?: string
-  version: 'normal' | 'corta'
+  version: 'normal' | 'corta' | 'minima'
   estado: 'curso' | 'hecha' | 'cancelada'
   ejercicios: EjercicioSesion[]
   /** Fin del descanso en curso (marca de tiempo) y su duración total, para el temporizador. */
@@ -291,7 +337,7 @@ export type Producto = {
   manual?: boolean
 }
 
-export type PasosDia = { fecha: string; pasos: number; fuente: 'auto' | 'manual'; troteKm?: number }
+export type PasosDia = { fecha: string; pasos: number; fuente: 'auto' | 'manual'; troteKm?: number; cardio?: { tipo: TipoCardio; min: number }[] }
 
 export type DiaSuplementos = { fecha: string; tomados: string[] }
 
@@ -338,6 +384,9 @@ export type Ajustes = {
     copia: boolean
     fotos: boolean
     domingo: boolean
+    /** Revisión semanal de molestias: el domingo a la hora de `revisionHora`. */
+    revision?: boolean
+    revisionHora?: string
   }
   copiaAuto: boolean
   ultimaCopia: string | null
@@ -356,3 +405,15 @@ export type Ajustes = {
     secciones: { entrenos: boolean; comida: boolean; cuerpo: boolean; pasos: boolean; detalle: boolean }
   }
 }
+
+/** Revisión semanal: qué tal cada molestia, qué hay de nuevo y qué cambió en los entrenos que quedan. */
+export type Revision = {
+  id?: number
+  fecha: string // AAAA-MM-DD
+  estado: 'bien' | 'molestia' | 'lesion' | 'seguimiento'
+  respuestas: { zona: ZonaDolor; va: 'mejor' | 'igual' | 'peor' | 'ya' }[]
+  cambios: CambioRevision[]
+}
+/** Un cambio en un bloque del plan por una molestia, con el bloque de antes para deshacerlo o volver a lo normal. */
+/** Un cambio de la revisión. `vuelta`: devuelve el bloque hacia lo normal (no suaviza, así que no se «devuelve» otra vez). */
+export type CambioRevision = { uid: string; letra: string; zona: ZonaDolor; antes: Bloque; despues: Bloque; deshecho?: boolean; vuelta?: boolean }

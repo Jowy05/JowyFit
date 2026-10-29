@@ -1,5 +1,5 @@
 // Tipos del informe en PDF: lo que calcula informe/calculo y pinta informe/pdf.
-import type { Ajustes, Comida, DiaSuplementos, Franja, Medicion, Meta, PasosDia, Perfil, Rutina, Sesion } from '../../datos/tipos'
+import type { Ajustes, Comida, DiaSuplementos, Franja, Medicion, Meta, PasosDia, Perfil, Revision, Rutina, Sesion } from '../../datos/tipos'
 import type { EstadoDia } from '../../dominio/semana'
 import type { PuntoFecha, Tono } from '../../dominio/tendencias'
 
@@ -486,6 +486,22 @@ export type Informe = {
   pasos: PasosInforme | null
   tuDia: TuDiaInforme | null
   detalleEntrenos: DetalleEntreno[] | null
+  rutinaSalud: RutinaSaludInforme | null
+}
+
+/** Una fila nombre ↔ valor (perfil, revisiones). */
+export type DatoInforme = { nombre: string; valor: string; tono?: TonoInforme }
+
+/**
+ * «Tu rutina y tu salud»: lo que necesita otra persona (entrenador, médico o un asistente de IA) para entender la
+ * rutina y ajustarla. Va con la casilla de entrenos, en cualquier periodo de más de un día.
+ */
+export type RutinaSaludInforme = {
+  perfil: DatoInforme[]
+  rutina: { subtitulo: string; filas: { entreno: string; ejercicio: string; series: string; peso: string }[] } | null
+  marcas: { ejercicio: string; antes: string; ahora: string; cambio: string; tono: TonoInforme }[]
+  molestias: { zona: string; detalle: string; historial: { fecha: string; va: string; tono: TonoInforme }[]; notas: string[] }[]
+  revisiones: DatoInforme[]
 }
 
 /** Lo que el informe necesita del catálogo de ejercicios (RepDB), para no depender de él aquí. */
@@ -501,6 +517,7 @@ export type TablasInforme = {
   suplementos: DiaSuplementos[]
   pasos: PasosDia[]
   metas: Meta[]
+  revisiones?: Revision[]
 }
 
 export type EntradaInforme = TablasInforme & { periodo: PeriodoInforme; ahora: Date; secciones?: Partial<SeccionesInforme>; catalogo?: CatalogoInforme }

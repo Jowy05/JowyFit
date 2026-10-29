@@ -5,7 +5,7 @@ import { cargarCatalogo } from '../catalogo/catalogo'
 import { cargarIdioma, t, tk } from '../i18n'
 import { leerPerfil, pedirPersistencia, prepararBase } from '../datos/repos'
 import { cargarPropios } from '../datos/acciones/propios'
-import { alPulsarAtras, marcarPlataforma, prepararSonido } from '../plataforma'
+import { alPulsarAtras, alTocarAviso, ID_AVISO, marcarPlataforma, prepararSonido } from '../plataforma'
 import { ProveedorAviso } from '../ui/aviso'
 import { cx, Ico } from '../ui/componentes'
 import { letraGuardada } from '../ui/tema'
@@ -18,6 +18,7 @@ import { arrancarServicios } from './servicios'
 import { alPedirInstrucciones, ensenarAlEmpezar, Instalar, marcarVistas } from '../pantallas/instalar/Instalar'
 import { PantallaRescate, RedSeguridad } from './Rescate'
 import { alLanzarTutorial, marcarTutorialOfrecido, Tutorial, tutorialOfrecido } from '../ui/tutorial/Tutorial'
+import { cerrarCapa } from '../ui/capas'
 
 // Apple: estilos propios (barra de estado de la app instalada). En todas partes: el sonido se abre con el primer
 // toque, para que el pitido de fin de descanso suene en iPhone.
@@ -89,6 +90,7 @@ function Marco() {
   useEffect(() => {
     const manejar = () => {
       if (enTutorial.current) { setTutorial(false); return true }
+      if (cerrarCapa()) return true
       const que = queHaceAtras(estado.current)
       if (que === 'preguntar-entreno') nav.hoja('hoja-salir-entreno')
       else if (que === 'atras') nav.atras()
@@ -108,6 +110,16 @@ function Marco() {
   }, [])
 
   useEffect(() => arrancarServicios(), [])
+
+  // El aviso de la revisión del domingo abre la revisión (los demás, la app tal cual). Se escucha una sola vez:
+  // `nav` cambia en cada paso y volver a apuntarse podría perder el toque que abrió la app.
+  const navActual = useRef(nav)
+  navActual.current = nav
+  useEffect(() => {
+    let quitar = () => {}
+    void alTocarAviso(id => { if (id === ID_AVISO.revision) navActual.current.ir('revision', undefined, 'per') }).then(f => { quitar = f })
+    return () => quitar()
+  }, [])
 
   // La primera vez, con Inicio ya a la vista, se ofrece el tutorial (una sola vez; luego está en Ajustes).
   // En Apple, si están saliendo las instrucciones para instalarla, se espera a que se cierren.

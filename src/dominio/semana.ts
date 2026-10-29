@@ -1,6 +1,7 @@
 // Estado de la semana: qué toca cada día, qué se hizo y qué se perdió.
 import type { DiaRutina, Rutina, Sesion } from '../datos/tipos'
 import { aISO, deISO, diaSemana, lunesDe, semanaDe, sumarDias } from './fechas'
+import type { Cola } from './cola'
 
 export type Recolocada = { fecha: string; letra: string; desde: string }
 
@@ -86,6 +87,18 @@ export function tarjetaHoy<S extends Sesion>(r: Rutina | null | undefined, seman
   if (h.estado === 'plan' && h.dia) return { tipo: 'hoy', dia: h.dia }
   if (h.estado === 'opcional' && h.dia) return { tipo: 'opcional', dia: h.dia }
   return { tipo: 'descanso', proximo }
+}
+
+/**
+ * La tarjeta en cola: toca la siguiente sea el día que sea. Con las de la semana ya hechas, la siguiente sale como
+ * extra opcional; si hoy ya se entrenó, «hecho».
+ */
+export function tarjetaCola<S extends Sesion>(cola: Cola, semana: EstadoDia<S>[], hoy: string, enCurso: boolean): Tarjeta<S> {
+  if (enCurso) return { tipo: 'curso' }
+  const h = semana.find(d => d.fecha === hoy)
+  if (h?.estado === 'hecho' && h.sesion) return { tipo: 'hecho', sesion: h.sesion }
+  if (cola.hechasSemana >= cola.porSemana) return { tipo: 'opcional', dia: cola.siguiente }
+  return { tipo: 'hoy', dia: cola.siguiente }
 }
 
 /** Semanas seguidas (hasta la anterior) cumpliendo todos los días fijos. */

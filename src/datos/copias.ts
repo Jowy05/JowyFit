@@ -4,10 +4,9 @@ import { db, TABLAS, type NombreTabla } from './db'
 import { ajustesPorDefecto, guardarPerfil, perfilPorDefecto } from './repos'
 import { cargarPropios } from './acciones/propios'
 import type { Medicion, Perfil } from './tipos'
-import { comprobarCabecera, TIPOS_FOTO, validarDatos, VERSION_COPIA, type RefArchivo } from './validarCopia'
+import { comprobarCabecera, TIPOS_FOTO, validarDatos, versionNecesaria, type RefArchivo } from './validarCopia'
 import { t } from '../i18n'
 
-const VERSION = VERSION_COPIA
 type Fila = Record<string, unknown>
 
 async function blobAU8(b: Blob): Promise<Uint8Array> {
@@ -45,7 +44,7 @@ export async function exportar(): Promise<Uint8Array> {
     }
   }
   // Con ejercicios propios, versión 2: una app anterior avisa de que hay que actualizar en vez de perderlos sin decir nada.
-  const version = datos.propios?.length ? VERSION : 1
+  const version = versionNecesaria(datos)
   const json = JSON.stringify({ app: 'JowyFit', version, creada: new Date().toISOString(), datos })
   return zipSync({ 'datos.json': strToU8(json), ...archivos }, { level: 6 })
 }

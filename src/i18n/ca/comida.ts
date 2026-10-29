@@ -301,4 +301,9 @@ export default {
   'Borrar producto': 'Esborrar el producte',
   'Fuente: Open Food Facts · licencia ODbL': 'Font: Open Food Facts · llicència ODbL',
   'Apuntado a mano': 'Apuntat a mà',
+
+  // Generador v2: objetivos, salud y molestias, revisión semanal, cola, cardio y la página del PDF
+  'comes lo que gastas.': 'menges el que gastes.',
+  'un poco más de lo que gastas, para construir músculo.': 'una mica més del que gastes, per construir múscul.',
+  'un poco más de lo que gastas, para subir de peso con músculo.': 'una mica més del que gastes, per pujar de pes amb múscul.',
 } satisfies Diccionario

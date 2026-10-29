@@ -259,11 +259,12 @@ describe('comida, medidas y energía', () => {
     const p = { ...perfilPorDefecto(), alturaCm: 177 }
     const auto = await objetivosEnergia(p)
     expect(auto.peso).toBeNull()
-    expect(auto.kcal).toBe(objetivos({ pesoKg: 75, alturaCm: 177, edad: edad(p.nacimiento), sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, entrenosSemana: 3 }).kcal)
+    expect(auto.kcal).toBe(objetivos({ pesoKg: 75, alturaCm: 177, edad: edad(p.nacimiento), sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, entrenosSemana: 3, pasos: p.pasosObjetivo }).kcal)
+    expect(auto).toMatchObject({ recomendado: auto.kcal, manual: false })
     await guardarAjustes({ kcalManual: 2300, proteinaManual: 160 })
     await db.mediciones.add({ fecha: '2026-10-13T07:00', origen: 'casa', pesoKg: 80 })
     const manual = await objetivosEnergia(p)
-    expect(manual).toMatchObject({ kcal: 2300, proteina: 160, peso: 80 })
+    expect(manual).toMatchObject({ kcal: 2300, proteina: 160, peso: 80, manual: true })
     await guardarAjustes({ kcalManual: null, proteinaManual: null })
     expect((await objetivosEnergia(p)).proteina).toBe(145) // 80 × 1,8 → 144 → 145
   })

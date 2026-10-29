@@ -6,7 +6,7 @@ import type { Franja, Meta } from '../datos/tipos'
 export type Pestana = 'ini' | 'rut' | 'com' | 'pro' | 'per'
 
 /** Secciones de Perfil que se abren como pantalla (los textos de cada una están en pantallas/perfil/textos). */
-export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento'
+export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento' | 'movimiento' | 'calorias' | 'sueno' | 'deportes'
 
 /** Datos que lleva cada pantalla y cada hoja (`undefined`: ninguno). Las hojas empiezan por «hoja-». */
 export type Rutas = {
@@ -39,12 +39,16 @@ export type Rutas = {
   'seccion-perfil': { s: ClaveSeccion }
   ajustes: { seccion: 'datos' | 'comida' } | undefined
   creditos: undefined
+  /** Revisión semanal de molestias (desde Ajustes o el aviso del domingo). */
+  revision: undefined
   'hoja-peso': undefined
-  'hoja-empezar': { letra: string; version?: 'normal' | 'corta' }
+  'hoja-empezar': { letra: string; version?: 'normal' | 'corta' | 'minima' }
   'hoja-ocupado': { idx: number }
   'hoja-lista': undefined
   'hoja-salir-entreno': undefined
   'hoja-herramientas': { idx: number }
+  'hoja-me-encuentro-mal': undefined
+  'hoja-urgencia': { guardado: boolean }
   'hoja-discos': { idx: number }
   'hoja-calentamiento': { idx: number }
   'hoja-instrucciones': { id: string }
@@ -62,6 +66,10 @@ export type Rutas = {
   'hoja-confirmar': DatosConfirmar
   'hoja-informe': undefined
   'hoja-oferta-tutorial': undefined
+  'hoja-no-quiero': undefined
+  'hoja-modo-mayor': { quitar?: boolean; rehacer?: boolean } | undefined
+  'hoja-cardio': { fecha?: string } | undefined
+  'hoja-pregunta': undefined
 }
 
 /** Para qué se elige el ejercicio; `q`, lo que sale ya escrito en la búsqueda. */

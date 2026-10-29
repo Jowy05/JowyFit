@@ -1,5 +1,5 @@
 // RUT-03 · Generar rutina (también la rutina definitiva tras la semana de prueba)
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { sesionesHechasDeRutina } from '../../datos/consultas'
 import { activarRutina } from '../../datos/acciones/rutina'
@@ -10,14 +10,21 @@ import { cambiosRutina, generarRutina, nombreZona, rutinaDefinitiva, tiemposReal
 import { Cab, FilaInterruptor, Ico, Pantalla, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, useGimnasio, useMarcas, usePerfil, useRutina } from '../../datos/hooks'
+import { useAjustes, useGimnasio, useMarcas, usePerfil, usePerfilCargado, useRutina } from '../../datos/hooks'
+import { guardarPerfil } from '../../datos/repos'
+import { NOMBRE_NO_QUIERO } from '../../catalogo/grupos'
+import { NOMBRE_PATRON } from '../../catalogo/clasificacion'
+import { proponerModoMayor } from '../../dominio/modoMayor'
+import { resumenSalud, rutinaBloqueada } from '../../dominio/salud'
+import { hoyISO } from '../../dominio/fechas'
+import { BloqueoUrgencia } from '../perfil/SaludDolor'
 import { abrevDia, listaDias, tituloDia } from './comun'
 import { filas, minutosDia } from '../../dominio/rutina'
 import { capital } from '../../dominio/formato'
 import { t, tk, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
+import { NOMBRE_OBJETIVO } from '../../dominio/objetivos'
 
-const OBJETIVO = { recomposicion: tk('Perder grasa y ganar músculo'), perder: tk('Perder peso'), fuerza: tk('Ganar fuerza') }
 const GUSTOS = { maquinas: tk('Máquinas y poleas'), libre: tk('Peso libre'), mezcla: tk('Mezcla') }
 
 export function Generar({ ruta }: { ruta: Ruta<'generar-rutina'> }) {
@@ -36,6 +43,14 @@ export function Generar({ ruta }: { ruta: Ruta<'generar-rutina'> }) {
   // Semana de prueba: la primera rutina siempre; al rehacerla, se mantiene si la actual aún estaba en prueba. Se puede cambiar.
   const [conPrueba, setConPrueba] = useState<boolean | null>(null)
   const prueba = !definitiva && (conPrueba ?? (!actual || actual.calibracion))
+  // Al generar: primero la propuesta del modo mayor (si toca) y después «¿Qué no quieres hacer?» (la primera vez).
+  const cargado = usePerfilCargado()
+  useEffect(() => {
+    if (!cargado || definitiva || rutinaBloqueada(cargado)) return
+    if (proponerModoMayor(cargado, hoyISO())) nav.hoja('hoja-modo-mayor')
+    else if (cargado.noQuiero === undefined) nav.hoja('hoja-no-quiero')
+  }, [cargado?.modoMayor, cargado?.noQuiero === undefined, definitiva])
+  const [sinCubrirVisto, setSinCubrirVisto] = useState(false)
 
   // actual?.id va en las dependencias: la rutina activa llega después del primer cálculo.
   const propuesta = useMemo<Omit<Rutina, 'id'> | null>(() => {
@@ -73,6 +88,12 @@ export function Generar({ ruta }: { ruta: Ruta<'generar-rutina'> }) {
   const enMaquina = propuesta ? propuesta.dias.flatMap(d => d.bloques).filter(b => { const e = ejercicio(b.ejercicio); return e && ES_MAQUINA(e) }).length : 0
   const total = propuesta ? propuesta.dias.flatMap(d => d.bloques).length : 0
 
+  if (rutinaBloqueada(perfil)) return (
+    <Pantalla><BloqueoUrgencia onEquivocado={() => void guardarPerfil({ urgencias: [] })} /></Pantalla>
+  )
+  const objetivos = [perfil.objetivo, ...(perfil.objetivosExtra ?? [])].map(o => t(NOMBRE_OBJETIVO[o]))
+  const sinCubrir = !sinCubrirVisto ? propuesta?.sinCubrir ?? [] : []
+
   return (
     <Pantalla>
       <Cab atras crumb={t('Mi plan')} titulo={definitiva ? t('Tu rutina definitiva') : actual ? t('Rutina nueva') : t('Crear tu rutina')} sub={definitiva ? t('Ajustada a tus tiempos reales de la semana de prueba.') : actual ? t('Mírala con calma: tu rutina actual no cambia hasta que pulses «Usar esta rutina».') : t('Revisa tus datos, mira la propuesta y decide.')} />
@@ -84,13 +105,27 @@ export function Generar({ ruta }: { ruta: Ruta<'generar-rutina'> }) {
             <p onClick={() => nav.ir('seccion-perfil', { s: 'horario' })}><span>{t('Día extra')}</span><b>{capital(listaDias(perfil.diasOpcionales)) || t('Ninguno')}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('seccion-perfil', { s: 'horario' })}><span>{t('Tiempo')}</span><b>{t('{min} min · con prisa {corta}', { min: perfil.minutosNormal, corta: perfil.minutosCorta })}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('gimnasios')}><span>{t('Gimnasio')}</span><b>{g ? `${g.nombre} · ${g.material.length}` : t('Sin gimnasio')}<Ico n="pencil-simple" className="pen" /></b></p>
-            <p onClick={() => nav.ir('seccion-perfil', { s: 'objetivos' })}><span>{t('Objetivo')}</span><b>{t(OBJETIVO[perfil.objetivo])}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'objetivos' })}><span>{t('Objetivo')}</span><b className="ux-rut-wrap">{objetivos.join(' · ')}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('seccion-perfil', { s: 'objetivos' })}><span>{t('Reforzar')}</span><b>{perfil.zonasPrioridad.map(nombreZona).join(' · ') || t('Equilibrado')}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('seccion-perfil', { s: 'preferencias' })}><span>{t('Gustos')}</span><b>{t(GUSTOS[perfil.preferencia])}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.ir('seccion-perfil', { s: 'salud' })}><span>{t('Molestias')}</span><b className="ux-rut-wrap">{resumenSalud(perfil) || t('Ninguna')}<Ico n="pencil-simple" className="pen" /></b></p>
+            <p onClick={() => nav.hoja('hoja-no-quiero')}><span>{t('No quieres')}</span><b className="ux-rut-wrap">{perfil.noQuiero?.length ? perfil.noQuiero.map(g => t(NOMBRE_NO_QUIERO[g])).join(' · ') : t('Nada')}<Ico n="pencil-simple" className="pen" /></b></p>
             <p onClick={() => nav.ir('biblioteca', { filtro: 'evitados' })}><span>{t('Evitar')}</span><b>{evitados.length ? tn(evitados.length, '{n} ejercicio', '{n} ejercicios') : t('Nada')}<Ico n="pencil-simple" className="pen" /></b></p>
           </div></div>
         </div>
 
+        {sinCubrir.length > 0 && (
+          <div className="note warn mt12">
+            <Ico n="warning-circle" />
+            <span>
+              {t('Sin {grupos} no queda ningún ejercicio para: {huecos}.', { grupos: (perfil.noQuiero ?? []).map(g => t(NOMBRE_NO_QUIERO[g]).toLowerCase()).join(', '), huecos: sinCubrir.map(h => t(NOMBRE_PATRON[h as keyof typeof NOMBRE_PATRON] ?? h).toLowerCase()).join(', ') })}
+              <span className="btns mt8">
+                {(perfil.noQuiero ?? []).map(g => <button key={g} className="btn sm" onClick={() => void guardarPerfil({ noQuiero: (perfil.noQuiero ?? []).filter(x => x !== g) })}>{t('Volver a poner {grupo}', { grupo: t(NOMBRE_NO_QUIERO[g]).toLowerCase() })}</button>)}
+                <button className="btn gry sm" onClick={() => setSinCubrirVisto(true)}>{t('Seguir sin él')}</button>
+              </span>
+            </span>
+          </div>
+        )}
         {propuesta && (
           <div className="sec">
             <div className="sec-h"><h2><span className="stepn">2</span>{t('Propuesta')}</h2><span className="tag blue">{t('Variante {n} de 3', { n: variante + 1 })}</span></div>

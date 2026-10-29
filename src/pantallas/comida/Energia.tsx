@@ -10,14 +10,19 @@ import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
 import { t, tk } from '../../i18n'
+import type { TipoObjetivo } from '../../datos/tipos'
 
 // Marcados con tk(): se traducen al pintarlos.
 const TRABAJO = { sentado: tk('trabajo sentado'), depie: tk('de pie'), fisico: tk('trabajo físico') } as const
-const POR_QUE = {
+const POR_QUE: Record<TipoObjetivo, string> = {
+  salud: tk('comes lo que gastas.'),
   recomposicion: tk('así pierdes grasa poco a poco sin perder fuerza.'),
   perder: tk('así bajas grasa a buen ritmo.'),
+  musculo: tk('un poco más de lo que gastas, para construir músculo.'),
   fuerza: tk('comes lo que gastas para ganar fuerza sin coger grasa.'),
-} as const
+  estetica: tk('comes lo que gastas.'),
+  peso: tk('un poco más de lo que gastas, para subir de peso con músculo.'),
+}
 
 export function Energia() {
   const nav = useNav()
@@ -43,7 +48,7 @@ export function Energia() {
             <span><b className="mono okc">{e.proteina}</b> {t('g de proteína')}</span>
           </p>
           <p className="small mt8">
-            <b>{t('Por qué:')}</b> {manual ? t('lo has puesto tú a mano.') : e.gasto - e.kcal > 0 ? t('{n} kcal menos de lo que gastas: {porque}', { n: e.gasto - e.kcal, porque: t(POR_QUE[perfil.objetivo]) }) : t(POR_QUE[perfil.objetivo])}
+            <b>{t('Por qué:')}</b> {manual ? t('lo has puesto tú a mano.') : e.gasto - e.kcal > 0 ? t('{n} kcal menos de lo que gastas: {porque}', { n: e.gasto - e.kcal, porque: t(POR_QUE[perfil.objetivo] ?? POR_QUE.salud) }) : t(POR_QUE[perfil.objetivo] ?? POR_QUE.salud)}
           </p>
           <p className="small muted mt4">{t('Es orientativo: lo que más importa es llegar a la proteína.')}</p>
         </div>

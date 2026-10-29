@@ -3,7 +3,7 @@ import type { Bloque, DiaRutina, EjercicioSesion, Serie, Sesion, TipoRegistro } 
 import { hoyISO } from './fechas'
 import { esRecord } from './progresion'
 
-export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: 'normal' | 'corta'; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }> }): Sesion {
+export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: Sesion['version']; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }> }): Sesion {
   const ahora = o.ahora ?? Date.now()
   const bloques = dia.bloques.filter(b => !(o.version === 'corta' && b.fueraEnCorta))
   const ejercicios = bloques.map(b => desdeBloque(b, o.sugerencias?.get(b.ejercicio)))
@@ -48,6 +48,7 @@ export function desdeBloque(b: Bloque, sug?: { peso: number | null; reps: number
     descanso: b.descanso,
     superserie: b.superserie,
     registro: b.registro,
+    ...(b.cargaPct && b.cargaPct < 1 ? { cargaPct: b.cargaPct } : {}),
   }
 }
 

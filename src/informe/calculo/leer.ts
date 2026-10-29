@@ -3,13 +3,14 @@ import { db } from '../../datos/db'
 import { rutinaActiva } from '../../datos/repos'
 import { cargarCatalogo, ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { patron } from '../../catalogo/clasificacion'
+import { hayPasos } from '../../dominio/cardio'
 import type { CatalogoInforme, Informe, PeriodoInforme, RangoInforme, SeccionesInforme, TablasInforme } from './tipos'
 import { hayDatosEn, primerDato, rangoInforme } from './periodo'
 import { calcularInforme } from './index'
 
 /** Todo lo que necesita el informe, leído de una vez. */
 export async function tablasInforme(): Promise<TablasInforme> {
-  const [perfil, ajustes, mediciones, sesiones, rutina, comidas, suplementos, pasos, metas] = await Promise.all([
+  const [perfil, ajustes, mediciones, sesiones, rutina, comidas, suplementos, pasos, metas, revisiones] = await Promise.all([
     db.perfil.get('yo'),
     db.ajustes.get('app'),
     db.mediciones.toArray(),
@@ -19,8 +20,10 @@ export async function tablasInforme(): Promise<TablasInforme> {
     db.suplementos.toArray(),
     db.pasos.toArray(),
     db.metas.toArray(),
+    db.revisiones.toArray(),
   ])
-  return { perfil, ajustes, mediciones, sesiones, rutina: rutina ?? null, comidas, suplementos, pasos, metas }
+  // Los días que solo traen cardio (sin pasos) no cuentan como días de 0 pasos.
+  return { perfil, ajustes, mediciones, sesiones, rutina: rutina ?? null, comidas, suplementos, pasos: pasos.filter(hayPasos), metas, revisiones }
 }
 
 /** Nombres, grupos y MET de los ejercicios (RepDB). Sin catálogo (sin conexión la primera vez), el informe sale igual con lo que haya. */

@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-8-0.cab': "<b>Versión 0.8.0</b> · 29 de octubre de 2026",
+  'nov.0-8-0.texto': "Tu rutina, a tu medida: siete objetivos, más trabajo en las zonas que elijas y fuera lo que no quieras hacer. Apunta tus molestias con tres toques y, cada domingo, una revisión de 20 segundos ajusta los próximos entrenos (con «Deshacer»). Además: rutina en orden para no perder ningún entreno, sesión mínima de 15 minutos, modo mayor desde los 65, pasos y cardio que suben poco a poco y una página nueva en el PDF con tu rutina y tu salud.",
   'nov.0-7-1.cab': "<b>Versión 0.7.1</b> · 24 de octubre de 2026",
   'nov.0-7-1.texto': "Arreglo: los avisos de «a dormir» de la semana que viene ya no se pierden (con el alta en fin de semana no salía ninguno), y al acabar un entreno el «próximo» es de verdad el siguiente.",
   'nov.0-7-0.cab': "<b>Versión 0.7.0</b> · 24 de octubre de 2026",

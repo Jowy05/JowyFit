@@ -585,4 +585,6 @@ export default {
   'Descansos más largos, hasta estar sin mareo.': "Longer rests, until you're not dizzy.",
   'Lo quitas cuando quieras en Ajustes.': 'Turn it off anytime in Settings.',
   'Sí, probarlo': 'Yes, try it',
+  'Encendido: apuntas las repeticiones de cada pierna o brazo.': 'On: you log the reps for each leg or arm.',
+  'Apagado: los dos lados a la vez.': 'Off: both sides at once.',
 } satisfies Diccionario

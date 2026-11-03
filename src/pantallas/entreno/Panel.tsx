@@ -2,32 +2,32 @@
 import { useEffect, useRef, useState } from 'react'
 import { guardarSesion } from '../../datos/acciones/entreno'
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
-import { nombreEjercicio } from '../../catalogo/catalogo'
-import { indiceActual, saltar, TOPE_SERIE } from '../../dominio/sesion'
+import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
+import { datosDeCampos, indiceActual, saltar, TOPE_SERIE, type CamposSerie as Campos, type DatosSerie } from '../../dominio/sesion'
 import { duracion } from '../../dominio/fechas'
-import { kg, textoSerie } from '../../dominio/formato'
+import { textoSerie, textoSerieEnCurso } from '../../dominio/formato'
 import { cx, estilo, Ico, Stepper } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { etiquetaPeso, etiquetaReps } from './Corregir'
+import { CamposSerie, camposDe, comoSeApunta } from './CamposSerie'
 import { t, tk } from '../../i18n'
 
 const AYUDA_RPE: Record<number, string> = { 6: tk('6 = te quedaban 4 reps'), 7: tk('7 = te quedaban 3 reps'), 8: tk('8 = te quedaban 2 reps'), 9: tk('9 = te quedaba 1 rep'), 10: tk('10 = no podías ni una más') }
 
-const conPesoDe = (e: EjercicioSesion) => e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
-
-type Datos = Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>
-
 export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, total, onSaltar, onMas }: {
   s: Sesion; idx: number; e: EjercicioSesion; serie: Serie; lista: number[]; ultimaHecha?: Serie
-  onHecho: (d: Datos) => Promise<void>
+  onHecho: (d: DatosSerie) => Promise<void>
   resto: number; total: number; onSaltar: () => void; onMas: () => void
 }) {
   const nav = useNav()
   const aviso = useAviso()
-  const [peso, setPeso] = useState<number | null>(serie.peso)
-  const [reps, setReps] = useState<number>(serie.reps ?? e.repsMin)
-  const [seg, setSeg] = useState<number>(serie.segundos ?? e.repsMin)
+  const como = comoSeApunta(e, ejercicio(e.ejercicio))
+  // Sin peso (primera vez: «? kg») o sin reps, «Hecho» no guarda: la serie quedaría con peso vacío y el volumen en 0.
+  // Los asistidos valen con 0 o negativo (solo falta si está vacío); los corporales solo llevan el lastre, si se pone.
+  const [falta, setFalta] = useState<'peso' | 'reps' | null>(null)
+  const [v, setV] = useState<Campos>(() => ({ ...camposDe(serie, e), segundos: serie.segundos ?? e.repsMin }))
+  const cambiar = (c: Partial<Campos>) => { setV(x => ({ ...x, ...c })); setFalta(null) }
+  const setSeg = (segundos: number) => cambiar({ segundos })
   // El esfuerzo empieza vacío: solo se guarda si se marca.
   const [rpe, setRpe] = useState<number | null>(serie.calentamiento ? null : serie.rpe ?? null)
   const [crono, setCrono] = useState<number | null>(null)
@@ -37,18 +37,14 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
   const enviado = useRef(false)
   useEffect(() => { if (crono == null) return; const reloj = setInterval(() => setAhora(Date.now()), 250); return () => clearInterval(reloj) }, [crono])
   useEffect(() => () => clearTimeout(pulsado.current), [])
-  const conPeso = conPesoDe(e)
-  const datos = () => ({ peso: conPeso ? peso : null, reps: e.registro === 'tiempo' ? null : reps, segundos: e.registro === 'tiempo' ? seg : null, rpe: serie.calentamiento ? null : rpe })
-  const enviar = (d: Datos) => {
+  const datos = (): DatosSerie => ({ ...datosDeCampos(v, como), rpe: serie.calentamiento ? null : rpe })
+  const enviar = (d: DatosSerie) => {
     if (enviado.current) return
     enviado.current = true
     void onHecho(d).catch(() => { enviado.current = false })
   }
-  // Sin peso (primera vez: «? kg») o sin reps, «Hecho» no guarda: la serie quedaría con peso vacío y el volumen en 0.
-  // Los asistidos valen con 0 o negativo (solo falta si está vacío); los corporales no llevan peso.
-  const [falta, setFalta] = useState<'peso' | 'reps' | null>(null)
   const comprobar = (d: Pick<Serie, 'peso' | 'reps' | 'segundos'>): boolean => {
-    if (conPeso && d.peso == null) { setFalta('peso'); aviso(t('Pon el peso con + o −')); return false }
+    if (como.conPeso && d.peso == null) { setFalta('peso'); aviso(t('Pon el peso con + o −')); return false }
     if (e.registro === 'tiempo' ? !d.segundos || d.segundos <= 0 : d.reps == null || d.reps <= 0) {
       setFalta('reps'); aviso(e.registro === 'tiempo' ? t('Pon los segundos que has aguantado') : e.registro === 'cardio' ? t('Pon los minutos que has hecho') : t('Pon las repeticiones que has hecho'))
       return false
@@ -63,27 +59,14 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
     <div className="panel">
       {e.registro === 'tiempo' ? (
         <div className="pn-row">
-          <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}><span className="lbl ux-pn-lbl">{falta === 'reps' ? t('Pon aquí los segundos') : t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={crono != null ? segundosCrono : seg} paso={5} min={5} max={TOPE_SERIE.segundos} onCambio={v => { setSeg(v); setFalta(null) }} etiqueta={t('Segundos')} /></div>
+          <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}><span className="lbl ux-pn-lbl">{falta === 'reps' ? t('Pon aquí los segundos') : t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={crono != null ? segundosCrono : v.segundos} paso={5} min={5} max={TOPE_SERIE.segundos} onCambio={setSeg} etiqueta={t('Segundos')} /></div>
           <div className="pn-f"><span className="lbl ux-pn-lbl">{t('Cronómetro')}</span>
             <button className={cx('btn', crono != null ? 'badf' : 'gry')} style={{ minHeight: 60 }} onClick={() => { if (crono == null) { setCrono(Date.now()); setAhora(Date.now()) } else { setSeg(segundosCrono); setCrono(null) } }}>
               <Ico n={crono != null ? 'pause' : 'play'} b />{crono != null ? t('Parar') : t('Empezar')}
             </button>
           </div>
         </div>
-      ) : (
-        <div className="pn-row">
-          {conPeso && (
-            <div className={cx('pn-f w', falta === 'peso' && 'ux-falta')}>
-              <span className="lbl ux-pn-lbl">{falta === 'peso' ? t('Pon aquí los kg') : etiquetaPeso(e)}</span>
-              <Stepper className="tall" valor={peso} lista={lista} paso={2.5} min={-TOPE_SERIE.peso} max={TOPE_SERIE.peso} onCambio={v => { setPeso(v); setFalta(null) }} etiqueta={t('Peso')} />
-            </div>
-          )}
-          <div className={cx('pn-f', !conPeso && 'w', falta === 'reps' && 'ux-falta')}>
-            <span className="lbl ux-pn-lbl">{falta === 'reps' ? (e.registro === 'cardio' ? t('Pon los minutos') : t('Pon las que has hecho')) : etiquetaReps(e)}</span>
-            <Stepper className="tall" valor={reps} paso={1} min={1} max={TOPE_SERIE.reps} onCambio={v => { setReps(v); setFalta(null) }} etiqueta={e.registro === 'cardio' ? t('Minutos') : t('Repeticiones')} />
-          </div>
-        </div>
-      )}
+      ) : <CamposSerie e={e} como={como} lista={lista} v={v} cambiar={cambiar} falta={falta} />}
       {!serie.calentamiento && e.registro !== 'cardio' && (
         <div className="pn-eff">
           <span className="lbl ux-pn-lbl">{t('¿Cuánto te ha costado?')} <span className="hint">{t('· opcional · lo ideal: {n}', { n: e.rpe })}</span></span>
@@ -102,8 +85,9 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
           «Igual que la anterior» solo cuando hay una anterior, y dice qué apunta. */}
       {ultimaHecha && (
         <div className="pn-tools">
-          <button className="tb same" onClick={() => enviar({ peso: ultimaHecha.peso, reps: ultimaHecha.reps, segundos: ultimaHecha.segundos ?? null, rpe: serie.calentamiento ? null : ultimaHecha.rpe })}>
-            <Ico n="copy" /><span>{t('Igual que la anterior')} <small className="ux-igual-d">{t('· apunta {valor}', { valor: textoSerie(ultimaHecha, e.registro, 'corto') })}</small></span>
+          {/* Pasa por los mismos contadores: con un lado cada vez quedan los dos lados apuntados, como al tocar «Hecho». */}
+          <button className="tb same" onClick={() => enviar({ ...datosDeCampos(camposDe(ultimaHecha, e), como), rpe: serie.calentamiento ? null : ultimaHecha.rpe })}>
+            <Ico n="copy" /><span>{t('Igual que la anterior')} <small className="ux-igual-d">{t('· apunta {valor}', { valor: textoSerie(ultimaHecha, e.registro, 'corto', e.ejercicio) })}</small></span>
           </button>
         </div>
       )}
@@ -130,6 +114,7 @@ function Descanso({ s, e, serie, resto, total, onSaltar, onMas }: {
   s: Sesion; e: EjercicioSesion; serie: Serie; resto: number; total: number; onSaltar: () => void; onMas: () => void
 }) {
   const nav = useNav()
+  const como = comoSeApunta(e, ejercicio(e.ejercicio))
   const proxima = s.ejercicios[indiceActual(s)]
   const numTrabajo = e.series.filter(x => !x.calentamiento).indexOf(serie) + 1
   return (
@@ -142,7 +127,7 @@ function Descanso({ s, e, serie, resto, total, onSaltar, onMas }: {
           <div className="rest-r">
             <p className="lbl">{t('Próxima')}</p>
             <p className="rest-n">{proxima && proxima.uid !== e.uid ? nombreEjercicio(proxima.ejercicio) : serie.calentamiento ? t('Calentamiento') : t('Serie {n}', { n: numTrabajo })}</p>
-            <p className="mono rest-w">{conPesoDe(e) && serie.peso != null ? `${kg(e.registro === 'asistido' ? Math.abs(serie.peso) : serie.peso)} kg × ${e.repsMin}-${e.repsMax}` : e.registro === 'tiempo' ? `${e.repsMin}-${e.repsMax} s` : t('{n} reps', { n: `${e.repsMin}-${e.repsMax}` })}</p>
+            <p className="mono rest-w">{textoSerieEnCurso({ ...serie, hecha: false }, e, como.porLado)}</p>
             <p className="small muted mt8">{t('¿Te has equivocado? Toca la serie en la lista para corregirla.')}</p>
           </div>
         </div>

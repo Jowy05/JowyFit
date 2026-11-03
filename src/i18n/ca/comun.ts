@@ -106,4 +106,5 @@ export default {
   'Revisión de la semana: 20 segundos.': 'Revisió de la setmana: 20 segons.',
   'Más suave por tu molestia: {peso} kg': 'Més suau per la teva molèstia: {peso} kg',
   'revisiones': 'revisions',
+  'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': "Sense permís per desar a Documents. Dona'l a la configuració del mòbil: Aplicacions → JowyFit → Permisos.",
 } satisfies Diccionario

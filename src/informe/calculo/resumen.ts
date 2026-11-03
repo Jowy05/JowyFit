@@ -24,9 +24,9 @@ function filaPrincipal(c: Ctx): FilaResumen | null {
   const ultimaSuave = c.enPeriodo.filter(s => trabajo(seriesDe(s, id)).length).at(-1)?.suave
   const tono: TonoInforme = a === b ? 'gris' : mejora ? 'ok' : ultimaSuave ? 'gris' : 'bad'
   const ev: Evaluacion = record ? { texto: tc('evaluación', 'Récord'), tono: 'oro' } : a === b ? { texto: t('Igual'), tono: 'gris' } : mejora ? { texto: menos ? t('Menos ayuda') : t('Sube'), tono: 'ok' } : { texto: ultimaSuave ? t('Semana suave') : menos ? t('Más ayuda') : t('Baja'), tono }
-  const f = (v: number) => (u === 'kg' || u === 'asistido' ? kg(v) : num(v, 0))
+  const f = (v: number) => (u === 'kg' || u === 'lastre' || u === 'asistido' ? kg(v) : num(v, 0))
   return {
-    dato: `${nombreDe(c, id)} (${u === 'asistido' ? t('ayuda, kg') : unidadCorta(u)})`,
+    dato: `${nombreDe(c, id)} (${u === 'asistido' ? t('ayuda, kg') : u === 'lastre' ? t('lastre, kg') : unidadCorta(u)})`,
     inicio: pts.length >= 2 ? f(a) : null, ahora: f(b), junto: null,
     cambio: pts.length >= 2 ? cambioDe(b - a, tono, v => f(v)) : null, cambioTexto: null, contra: null, evaluacion: ev,
     nota: pts.length === 1 ? t('Un solo entreno en estos días') : null,

@@ -49,7 +49,7 @@ function filaHoyNormal(c: Ctx, id: string, delDia: Sesion[], antes: Sesion[]): F
     } else {
       juicio = 'igual'
       frase = t('{hoy} · igual que lo normal', { hoy: tf(hoy) })
-      if (unidad === 'kg' && hoy === normal) {
+      if ((unidad === 'kg' || unidad === 'lastre') && hoy === normal) {
         // Mismo peso: se mira si hoy salieron más repeticiones con ese peso que lo normal.
         const repsA = (series: Serie[]) => Math.max(...trabajo(series).filter(x => x.peso === hoy).map(x => x.reps!))
         const repsNormal = mediana(previas.filter(p => p.valor === hoy).map(p => repsA(p.series)))

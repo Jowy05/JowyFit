@@ -1,5 +1,5 @@
 // Tipos del informe en PDF: lo que calcula informe/calculo y pinta informe/pdf.
-import type { Ajustes, Comida, DiaSuplementos, Franja, Medicion, Meta, PasosDia, Perfil, Revision, Rutina, Sesion } from '../../datos/tipos'
+import type { Ajustes, Comida, DiaSuplementos, Franja, Medicion, Meta, PasosDia, Perfil, Revision, Rutina, Sesion, TipoRegistro } from '../../datos/tipos'
 import type { EstadoDia } from '../../dominio/semana'
 import type { PuntoFecha, Tono } from '../../dominio/tendencias'
 
@@ -225,7 +225,8 @@ export type ResumenInforme = {
   lineas: Evaluacion[]
 }
 
-export type RecordSesion = { ejercicio: string; nombre: string; peso: number; reps: number; texto: string }
+/** `marca`: «45 × 8», «lastre 5 kg × 8» o «10 kg × 8 por lado»; `texto`, con el nombre delante. */
+export type RecordSesion = { ejercicio: string; nombre: string; peso: number; reps: number; marca: string; texto: string }
 
 export type FilaEntreno = {
   fecha: string
@@ -301,7 +302,8 @@ export type EntrenosInforme = {
   evolucionEsfuerzo: { puntos: PuntoEsfuerzo[]; agrupado: 'sesion' | 'semana'; mostrar: boolean; objetivo: number | null; nota: string }
 }
 
-export type UnidadFuerza = 'kg' | 'asistido' | 'reps' | 's'
+/** `lastre`: de peso corporal con kilos colgados; se lleva como «kg», pero se dice que es lastre. */
+export type UnidadFuerza = 'kg' | 'lastre' | 'asistido' | 'reps' | 's'
 
 export type PuntoFuerza = { fecha: string; valor: number; record: boolean }
 
@@ -461,12 +463,20 @@ export type TuDiaInforme = {
   cuerpo: string | null
 }
 
-export type DetalleSerie = { n: number; peso: number | null; reps: number | null; segundos: number | null; rpe: number | null; calentamiento: boolean; hecha: boolean; record: boolean; nota: string | null }
+/**
+ * `izq`/`der`: reps de cada lado (solo si salieron distintas); `porLado`: las reps son de cada lado; `km` y `ritmo`
+ * («6:00 min/km», «18 km/h»): del cardio.
+ */
+export type DetalleSerie = {
+  n: number; peso: number | null; reps: number | null; segundos: number | null; rpe: number | null; calentamiento: boolean; hecha: boolean; record: boolean; nota: string | null
+  izq?: number; der?: number; porLado?: boolean; km?: number; ritmo?: string
+}
 export type DetalleEntreno = {
   fecha: string
   /** «mar 20 oct · Cuerpo completo A · 58 min» */
   titulo: string
-  ejercicios: { id: string; nombre: string; saltado: boolean; enVezDe: string | null; motivo: string | null; series: DetalleSerie[] }[]
+  /** `registro`: cómo se apunta (en los de peso corporal, el peso es el lastre; en el cardio, las reps son minutos). */
+  ejercicios: { id: string; nombre: string; saltado: boolean; enVezDe: string | null; motivo: string | null; registro: TipoRegistro; series: DetalleSerie[] }[]
 }
 
 export type Informe = {

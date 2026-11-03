@@ -121,7 +121,9 @@ export async function sugerenciaPara(id: string, objetivo: { repsMin: number; re
   // (y la rebaja de la molestia se volvería a aplicar encima en cada entreno).
   const todas = (sesiones ?? (await sesionesHechas())).filter(x => !x.suave).map(sinRebajados)
   const hist = historialEn(todas, id, excluir)
-  const ultimas = hist[0]?.series ?? null
+  // En los de peso corporal el peso es el lastre: el de un día apuntado con kilos (un propio que antes era «con
+  // peso») no pasa como lastre.
+  const ultimas = hist[0] && reg === 'corporal' && hist[0].registro !== 'corporal' ? hist[0].series.map(x => ({ ...x, peso: null })) : hist[0]?.series ?? null
   const lista = pesosPara(e?.material ?? null, reg, g)
   const s = sugerir(ultimas, objetivo, reg, lista)
   // 3 sesiones con el mismo peso sin mejorar: se baja un 10 % para volver a subir (sin contar la calibración).

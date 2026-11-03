@@ -1,6 +1,6 @@
 // Ayudantes del informe: formatos de número y fecha, el esfuerzo de las series y la fuerza de un ejercicio.
 import type { EjercicioSesion, Serie, Sesion } from '../../datos/tipos'
-import { conSigno, conUnidad, fijo, kg, num } from '../../dominio/formato'
+import { conSigno, conUnidad, fijo, kg, num, textoMarca } from '../../dominio/formato'
 import { DIAS_ABREV, MESES_CORTOS, deISO, diaSemana, fechaCorta, sumarDias } from '../../dominio/fechas'
 import { hechasAsc, pesoMaximo, repsMaximas, seriesDe } from '../../dominio/tendencias'
 import { t, tc, tk } from '../../i18n'
@@ -119,10 +119,15 @@ export function esfuerzoDe(ejs: EjercicioSesion[]): EsfuerzoInforme {
   }
 }
 
-/** Cómo se mide un ejercicio en las gráficas: kg, ayuda (asistidos, menos es mejor), repeticiones o segundos. */
+/**
+ * Cómo se mide un ejercicio en las gráficas: kg (o el lastre, en los de peso corporal), ayuda (asistidos, menos es
+ * mejor), repeticiones o segundos.
+ */
 export function unidadFuerza(sesiones: Sesion[], id: string): UnidadFuerza {
   const series = sesiones.flatMap(s => trabajo(seriesDe(s, id)))
-  if (series.some(x => x.peso != null && x.peso > 0 && (x.reps ?? 0) > 0)) return 'kg'
+  if (series.some(x => x.peso != null && x.peso > 0 && (x.reps ?? 0) > 0)) {
+    return sesiones.some(s => s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal')) ? 'lastre' : 'kg'
+  }
   if (series.some(x => x.peso != null && x.peso < 0)) return 'asistido'
   if (series.some(x => (x.reps ?? 0) > 0)) return 'reps'
   return 's'
@@ -130,7 +135,8 @@ export function unidadFuerza(sesiones: Sesion[], id: string): UnidadFuerza {
 
 /** Valor de un día según la unidad: peso máximo, ayuda mínima (en positivo), reps máximas o segundos máximos. */
 export function valorFuerza(series: Serie[], unidad: UnidadFuerza): number | null {
-  if (unidad === 'kg') { const p = pesoMaximo(series); return p != null && p > 0 ? p : null }
+  // Con lastre solo cuentan los días que se llevó: sin él no hay kilos que comparar.
+  if (unidad === 'kg' || unidad === 'lastre') { const p = pesoMaximo(series); return p != null && p > 0 ? p : null }
   if (unidad === 'asistido') {
     const p = trabajo(series).filter(x => x.peso != null && x.peso < 0).map(x => x.peso!)
     return p.length ? -Math.max(...p) : null
@@ -145,19 +151,24 @@ function serieTop(series: Serie[]): Serie {
   return trabajo(series).reduce((a, b) => ((b.peso ?? -Infinity) > (a.peso ?? -Infinity) || ((b.peso ?? -Infinity) === (a.peso ?? -Infinity) && (b.reps ?? 0) > (a.reps ?? 0)) ? b : a))
 }
 
-/** «55 kg», «ayuda 15 kg», «12 reps», «40 s» */
+/** «55 kg», «lastre 5 kg», «ayuda 15 kg», «12 reps», «40 s» */
 export function textoFuerza(v: number, unidad: UnidadFuerza): string {
   if (unidad === 'kg') return `${kg(v)} kg`
+  if (unidad === 'lastre') return t('lastre {n} kg', { n: kg(v) })
   if (unidad === 'asistido') return t('ayuda {kg} kg', { kg: kg(v) })
   if (unidad === 'reps') return t('{n} reps', { n: num(v, 0) })
   return `${num(v, 0)} s`
 }
 
-/** «55 kg × 6», «12 reps», «40 s», «ayuda 15 kg × 6» */
+/** «55 kg × 6», «lastre 5 kg × 6», «10 kg × 8 por lado», «12 reps», «40 s», «ayuda 15 kg × 6» */
 export function textoSerie(series: Serie[], unidad: UnidadFuerza): string {
-  if (unidad === 'kg' || unidad === 'asistido') {
+  if (unidad === 'kg' || unidad === 'lastre') {
+    const top = serieTop(series.filter(x => x.peso != null && x.peso > 0))
+    return textoMarca({ ...top, lastre: unidad === 'lastre', porLado: top.izq != null })
+  }
+  if (unidad === 'asistido') {
     const top = serieTop(series)
-    return `${unidad === 'kg' ? `${kg(top.peso!)} kg` : t('ayuda {kg} kg', { kg: kg(-top.peso!) })} × ${top.reps}`
+    return `${t('ayuda {kg} kg', { kg: kg(-top.peso!) })} × ${top.reps}`
   }
   return textoFuerza(valorFuerza(series, unidad)!, unidad)
 }

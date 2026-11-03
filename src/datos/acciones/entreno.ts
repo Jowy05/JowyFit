@@ -8,7 +8,7 @@ import { tipoRegistro } from '../../catalogo/clasificacion'
 import { pesoReinicio, seriesSuave } from '../../dominio/descarga'
 import { pesosPara } from '../../dominio/pesos'
 import { esRecord } from '../../dominio/progresion'
-import { apuntarSerie, corregirSerie, crearSesion, indiceActual, recortarACorta } from '../../dominio/sesion'
+import { apuntarSerie, corregirSerie, crearSesion, indiceActual, recortarACorta, type DatosSerie } from '../../dominio/sesion'
 import { diaMinimo } from '../../dominio/cola'
 import { deISO, diaSemana, hoyISO, lunesDe, sumarDias } from '../../dominio/fechas'
 import { patronGenerador } from '../../dominio/generador'
@@ -89,7 +89,7 @@ export async function iniciarEntreno(o: { letra?: string; version?: Sesion['vers
 }
 
 /** «Hecho» en la serie que toca: guarda, programa el aviso del descanso y devuelve el récord si lo es. */
-export async function apuntarHecha(s: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>, previas: Serie[]) {
+export async function apuntarHecha(s: Sesion, idx: number, datos: DatosSerie, previas: Serie[]) {
   const r = apuntarSerie(s, idx, datos, previas)
   if (!r) return null
   const { sesion } = r
@@ -142,7 +142,7 @@ export async function borrarSesion(id: number) {
 }
 
 /** Corrige una serie ya hecha y vuelve a mirar si es récord frente a lo anterior. */
-export async function corregirHecha(s: Sesion, idx: number, k: number, d: Pick<Serie, 'peso' | 'reps' | 'segundos'>) {
+export async function corregirHecha(s: Sesion, idx: number, k: number, d: Omit<DatosSerie, 'rpe'>) {
   const e = s.ejercicios[idx]
   const x = e?.series[k]
   if (!e || !x || !x.hecha) return

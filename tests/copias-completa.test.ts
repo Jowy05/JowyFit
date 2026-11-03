@@ -51,7 +51,7 @@ const marca: Required<MarcaEjercicio> = { id: 'bench-press', favorito: true, odi
 const bloque: Required<Bloque> = { uid: 'b1', ejercicio: 'bench-press', alternativas: ['chest-press-machine'], series: 3, repsMin: 6, repsMax: 10, rpe: 8, descanso: 150, superserie: 'b2', fueraEnCorta: true, registro: 'peso', cargaPct: 0.8 }
 const diaRutina: Required<DiaRutina> = { letra: 'A', nombre: 'Cuerpo completo A', dia: 1, opcional: false, bloques: [bloque, { ...bloque, uid: 'b2', ejercicio: 'seated-cable-row', superserie: 'b1' }] }
 const rutina: Required<Rutina> = { id: 1, creada: '2026-10-13T05:00:00.000Z', activa: true, estructura: 'Cuerpo completo · 3 días', porque: ['3 días'], calibracion: true, gimnasioId: 1, dias: [diaRutina], equilibrio: 6, sinCubrir: ['Poleas'] }
-const serie: Required<Serie> = { n: 1, peso: 40, reps: 8, segundos: null, rpe: 8.5, calentamiento: false, hecha: true, ts: 1_760_000_000_000, nota: 'bien', record: true }
+const serie: Required<Serie> = { n: 1, peso: 40, reps: 8, segundos: null, rpe: 8.5, calentamiento: false, hecha: true, ts: 1_760_000_000_000, nota: 'bien', record: true, izq: 8, der: 9, km: 2.5 }
 const ejSesion: Required<EjercicioSesion> = { uid: 'b1', ejercicio: 'chest-press-machine', planificado: 'bench-press', motivo: 'ocupado', estado: 'hecho', series: [serie, { ...serie, n: 2, record: false, hecha: false, ts: 0 }], inicio: 1, fin: 2, repsMin: 6, repsMax: 10, rpe: 8, descanso: 150, superserie: 'b2', registro: 'peso', cargaPct: 0.8 }
 const sesion: Required<Sesion> = {
   id: 1, fecha: '2026-10-13', rutinaId: 1, letra: 'A', nombre: 'Cuerpo completo A', gimnasioId: 1, inicio: 1_760_000_000_000, fin: 1_760_003_600_000, horaLimite: '06:45',
@@ -64,7 +64,7 @@ const producto: Required<Producto> = { codigo: '8480000123458', nombre: 'Arroz a
 const pasos: Required<PasosDia> = { fecha: '2026-10-13', pasos: 8123, fuente: 'auto', troteKm: 2.5, cardio: [{ tipo: 'bici', min: 20 }] }
 const suple: Required<DiaSuplementos> = { fecha: '2026-10-13', tomados: ['Creatina'] }
 const propio: Required<EjercicioPropio> = {
-  id: 'mio-abc123', nombre: 'Remo con goma elástica', grupo: 'espalda', material: 'otro', registro: 'corporal', foto: imagen('goma'),
+  id: 'mio-abc123', nombre: 'Remo con goma elástica', grupo: 'espalda', material: 'otro', registro: 'corporal', unilateral: true, foto: imagen('goma'),
   notas: 'Goma verde', rutinaAuto: true, creado: '2026-10-20', borrado: '2026-10-22',
 }
 const revision: Required<Revision> = {
@@ -145,8 +145,8 @@ describe('copia completa: cada tabla y cada campo', () => {
     expect(nombres.filter(n => n.startsWith('archivos/'))).toHaveLength(5)
     expect(nombres.some(n => n.endsWith('.png'))).toBe(true)
     const json = JSON.parse(strFromU8(ar['datos.json']!))
-    // Trae revisiones y campos del generador v2: versión 3 (una app anterior pide actualizar en vez de perderlos).
-    expect(json).toMatchObject({ app: 'JowyFit', version: 3 })
+    // Trae reps de cada lado, km y un propio de un lado cada vez: versión 4 (una app anterior pide actualizar en vez de perderlos).
+    expect(json).toMatchObject({ app: 'JowyFit', version: 4 })
     expect(Object.keys(json.datos).sort()).toEqual([...TABLAS].sort())
     // Los Blob van como referencia al archivo, no como «{}».
     expect(json.datos.fotos[0].imagen).toMatchObject({ __archivo: expect.stringMatching(/^archivos\//), tipo: 'image/png' })
@@ -162,7 +162,7 @@ describe('copia completa: cada tabla y cada campo', () => {
   })
   it('fallaba: una copia sin comprimir de una versión más nueva entraba sin avisar', async () => {
     const antes = await instantanea()
-    await expect(importar(copiaJSON({ perfil: [] }, 4))).rejects.toThrow(/versión más nueva/)
+    await expect(importar(copiaJSON({ perfil: [] }, 5))).rejects.toThrow(/versión más nueva/)
     expect(await instantanea()).toEqual(antes)
   })
   it('una copia con un archivo de imagen que falta: la foto se queda fuera y el resto entra sin esa imagen', async () => {

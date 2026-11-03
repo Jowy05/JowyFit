@@ -594,4 +594,6 @@ export default {
   'Revisiones': 'Check-ins',
   'Este PDF solo sale de tu móvil si tú lo compartes. Puedes dárselo a tu entrenador, a tu médico o a un asistente de IA para que ajuste tu rutina.': 'This PDF only leaves your phone if you share it. You can give it to your trainer, your doctor, or an AI assistant so they can adjust your routine.',
   'Tus datos son tuyos': 'Your data is yours',
+  'lastre, kg': 'added weight, kg',
+  '{nombre} (lastre)': '{nombre} (added weight)',
 } satisfies Diccionario

@@ -80,6 +80,40 @@ export function tipoRegistro(e: Ejercicio): TipoRegistro {
   return 'peso'
 }
 
+/**
+ * Se apunta por lado: un brazo o una pierna cada vez (RepDB lo marca; los propios, si el usuario lo dice). Solo los
+ * que van por repeticiones: en los de tiempo (plancha lateral, estiramientos) se apunta lo que aguanta cada lado igual.
+ */
+export function porLado(e: Ejercicio): boolean {
+  const r = tipoRegistro(e)
+  return e.unilateral && r !== 'tiempo' && r !== 'cardio'
+}
+
+// Dominadas, fondos y muscle-ups: los que se hacen con lastre (cinturón o mochila). Las escapulares no.
+const CON_LASTRE = /(?:pull-ups?|chin-ups?|dips|muscle-ups?)$/
+
+/** Peso corporal que admite lastre: kilos que se cuelgan encima (lo contrario de la ayuda de los asistidos). */
+export const admiteLastre = (e: Ejercicio) => !e.propio && tipoRegistro(e) === 'corporal' && CON_LASTRE.test(e.id) && !/scapular/.test(e.id)
+
+/**
+ * Cardio en el que tiene sentido apuntar la distancia, y qué se calcula con ella: andando o corriendo, el ritmo
+ * (min/km); en bici, la velocidad (km/h); en remo, esquí o elíptica, solo los km (su ritmo se mide de otra manera).
+ */
+export type ClaseDistancia = 'pie' | 'rueda' | 'otra'
+const DISTANCIA: Record<string, ClaseDistancia> = {
+  walking: 'pie', running: 'pie', 'treadmill-running': 'pie', 'incline-treadmill-walk': 'pie',
+  cycling: 'rueda', 'stationary-bike': 'rueda', 'air-bike': 'rueda',
+  'rowing-machine': 'otra', 'ski-erg': 'otra', 'elliptical-trainer': 'otra',
+}
+
+/** Por id, para poder sacar el ritmo de una serie ya guardada. Los cardios propios llevan km, pero no se sabe de qué son. */
+export function claseDistancia(id: string): ClaseDistancia | null {
+  if (id.startsWith('mio-')) return 'otra'
+  return Object.prototype.hasOwnProperty.call(DISTANCIA, id) ? DISTANCIA[id]! : null
+}
+
+export const conDistancia = (e: Ejercicio) => tipoRegistro(e) === 'cardio' && claseDistancia(e.id) != null
+
 /** Ejercicios conocidos y fiables: el generador los prefiere a variantes raras. */
 export const HABITUALES: string[] = [
   'squat', 'leg-press', 'smith-machine-squat', 'hack-squat', 'bulgarian-split-squat', 'goblet-squat',

@@ -86,6 +86,13 @@ export function HojaPropio({ ruta }: { ruta: Ruta<'hoja-propio'> }) {
           ))}
         </div>
         {conMancuernas && <p className="pr-hint"><Ico n="info" /><span>{t('Con mancuernas apuntas los kg de cada una.')}</span></p>}
+        {/* Solo con repeticiones: por tiempo o cardio no hay reps por lado que apuntar. */}
+        {(p.registro === 'peso' || p.registro === 'corporal') && (
+          <div className="pr-sw card mt12">
+            <span className="tx"><b>{t('Un lado cada vez')}</b><small>{p.unilateral ? t('Encendido: apuntas las repeticiones de cada pierna o brazo.') : t('Apagado: los dos lados a la vez.')}</small></span>
+            <Interruptor on={!!p.unilateral} onCambio={unilateral => setP(x => ({ ...x, unilateral }))} etiqueta={t('Un lado cada vez')} />
+          </div>
+        )}
       </div>
 
       <details className="fold mt16" open={plegableAbierto} onToggle={e => setPlegableAbierto(e.currentTarget.open)}>

@@ -8,7 +8,7 @@ import { catalogoCargado, ejercicio, nombreMaterial } from '../../catalogo/catal
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import { alternativasDe } from '../../dominio/generador'
 import { irA, sustituir } from '../../dominio/sesion'
-import { kg } from '../../dominio/formato'
+import { kg, textoKilos } from '../../dominio/formato'
 import { cx, Hoja, Ico, Th, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -77,6 +77,8 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'hoja-ocupado'> }) {
     </Hoja>
   )
   const x = ejercicio(alt)!
+  // En los de peso corporal, el peso que viene de su historial es el lastre.
+  const kilos = sug?.peso == null ? null : textoKilos(sug.peso, tipoRegistro(x))
   return (
     <Hoja>
       {abc}
@@ -86,7 +88,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'hoja-ocupado'> }) {
         <div className="grow">
           <b>{x.nombre}</b>
           <div className="spec flat mt4">
-            <p><span>{t('Peso sugerido')}</span><b className="okc">{sug?.peso != null ? `${kg(sug.peso)} kg × ${e.repsMin}-${e.repsMax}` : sug?.accion === 'primera' ? t('Primera vez: cómodo') : t('{n} reps', { n: `${e.repsMin}-${e.repsMax}` })}</b></p>
+            <p><span>{t('Peso sugerido')}</span><b className="okc">{kilos ? `${kilos} × ${e.repsMin}-${e.repsMax}` : sug?.accion === 'primera' ? t('Primera vez: cómodo') : t('{n} reps', { n: `${e.repsMin}-${e.repsMax}` })}</b></p>
             {ajuste?.ajustes && <p><span>{t('Tu ajuste')}</span><b>{ajuste.ajustes}</b></p>}
             <p><span>{t('Material')}</span><b>{nombreMaterial(x.material)}</b></p>
           </div>

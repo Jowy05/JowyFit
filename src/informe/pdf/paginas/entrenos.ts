@@ -112,7 +112,7 @@ export function paginaEntrenos(maq: Maqueta, e: EntrenosInforme): Flujo {
 function celdaDestacado(etiquetas: string[], records: EntrenosInforme['filas'][number]['records']): Celda {
   if (!etiquetas.length && !records.length) return null
   const r0 = records[0]
-  const cola = r0 ? ` ${kg(r0.peso)} × ${r0.reps}${records.length > 1 ? ` ${t('y {n} más', { n: records.length - 1 })}` : ''}` : ''
+  const cola = r0 ? ` ${r0.marca}${records.length > 1 ? ` ${t('y {n} más', { n: records.length - 1 })}` : ''}` : ''
   if (!etiquetas.length) return { t: `${r0!.nombre}${cola}`, estrella: true, partir: true }
   return { dibujar: (l, x, base, w) => {
     let xx = x
@@ -175,7 +175,7 @@ function miniFuerza(l: Lienzo, x: number, y: number, w: number, h: number, g: Gr
   const { inicio, fin } = inf.rango
   const color = l.tono[g.tono]
   // Sin caja (la gráfica ya tiene su rejilla): el nombre, debajo «de 45 a 50 kg» con su flecha y abajo cuántas veces.
-  const titulo = g.unidad === 'asistido' ? t('{nombre} (ayuda)', { nombre: g.nombre }) : g.nombre
+  const titulo = g.unidad === 'asistido' ? t('{nombre} (ayuda)', { nombre: g.nombre }) : g.unidad === 'lastre' ? t('{nombre} (lastre)', { nombre: g.nombre }) : g.nombre
   l.texto(x, y + 4.4, l.cortar(titulo, w, TAM.cuerpo, 'negrita'), { tam: TAM.cuerpo, peso: 'negrita', color: l.c.titulo })
   const ancho = l.flecha(x, y + 8.4, g.direccion, color)
   l.texto(x + ancho + 1, y + 8.4, l.cortar(g.titulo, w - ancho - 1, TAM.peque, 'negrita'), { tam: TAM.peque, peso: 'negrita', color })

@@ -5,9 +5,9 @@ import { guardarSesion } from '../../datos/acciones/entreno'
 import { marcar } from '../../datos/repos'
 import { historialDe, sugerenciaPara } from '../../datos/consultas'
 import { ejercicio, etiqueta, imagen, imagenMaterial, imagenMusculo, nombreMaterial, nombreMusculo, relacionados, useCatalogo } from '../../catalogo/catalogo'
-import { ETIQUETAS_ES, NOMBRE_PATRON, patron, tipoRegistro } from '../../catalogo/clasificacion'
+import { ETIQUETAS_ES, NOMBRE_PATRON, patron, porLado, tipoRegistro } from '../../catalogo/clasificacion'
 import { epley } from '../../dominio/calculos'
-import { kg, num } from '../../dominio/formato'
+import { kg, num, textoMarca } from '../../dominio/formato'
 import { duracion, fechaCorta, hoyISO } from '../../dominio/fechas'
 import { bloqueNuevo } from '../../dominio/generador'
 import { desdeBloque } from '../../dominio/sesion'
@@ -69,6 +69,8 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
     return { x: fechaCorta(h.fecha).replace(' ', '/'), peso: mx, rm, vol: volumen(h.series) }
   })
   const reg = tipoRegistro(e)
+  // De peso corporal, el peso apuntado es el lastre: sin 1RM (no cuenta el cuerpo) y dicho como lastre.
+  const marca = (m: { peso: number | null; reps: number | null }) => textoMarca({ ...m, lastre: reg === 'corporal', porLado: porLado(e) })
   const alternativas = [...(enPlan?.b.alternativas ?? []).map(id => ({ id, t: '' })), ...relacionados(e, catalogo?.ejercicios ?? [], 8).map(x => ({ id: x.id, t: 'Otra' }))]
     .filter((x, i, a) => a.findIndex(y => y.id === x.id) === i).slice(0, 8)
   const prin = musculosComunes(e.principales)
@@ -149,7 +151,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
           {record ? (
             <div className="ach">
               <span className="tro"><Ico n="trophy" b /></span>
-              <span className="tx"><small className="au">{t('Tu mejor serie')}</small><b className="mono">{kg(record.peso)} kg × {record.reps}</b><small>{t('Podrías con unos {n} kg una sola vez', { n: num(record.e1rm, 0) })}</small></span>
+              <span className="tx"><small className="au">{t('Tu mejor serie')}</small><b className="mono">{marca(record)}</b>{reg !== 'corporal' && <small>{t('Podrías con unos {n} kg una sola vez', { n: num(record.e1rm, 0) })}</small>}</span>
               {primero && record.peso > primero.peso && <span className="end">+{kg(record.peso - primero.peso)} kg<br />{t('desde el inicio')}</span>}
             </div>
           ) : <p className="note plain"><Ico n="info" /><span>{reg === 'corporal' || reg === 'tiempo' ? t('Aquí verás tus mejores marcas cuando lo hagas.') : t('Aún no lo has hecho. La primera vez, elige un peso cómodo: que te sobren 3 o 4 repeticiones.')}</span></p>}
@@ -157,13 +159,13 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
             <div className="card pd mt8">
               <div className="chips eq">
                 <Chip on={graf === 'peso'} onClick={() => setGraf('peso')}>{t('Peso')}</Chip>
-                <Chip on={graf === 'rm'} onClick={() => setGraf('rm')}>{t('Máx. estimado')}</Chip>
+                {reg !== 'corporal' && <Chip on={graf === 'rm'} onClick={() => setGraf('rm')}>{t('Máx. estimado')}</Chip>}
                 <Chip on={graf === 'vol'} onClick={() => setGraf('vol')}>{t('Kilos totales')}</Chip>
               </div>
               <div className="mt12">
                 {graf === 'vol' ? <Barras puntos={puntos.map(p => ({ x: p.x, y: p.vol }))} /> : <Linea puntos={puntos.map(p => ({ x: p.x, y: graf === 'peso' ? p.peso : p.rm }))} />}
               </div>
-              {sug && sug.peso != null && <p className="nextload"><Ico n="trend-up" b /><span>{tr('La próxima vez: {carga} · {texto}', { carga: <b className="mono">{kg(sug.peso)} kg × {sug.reps}</b>, texto: sug.texto.toLowerCase() })}</span></p>}
+              {sug && sug.peso != null && <p className="nextload"><Ico n="trend-up" b /><span>{tr('La próxima vez: {carga} · {texto}', { carga: <b className="mono">{marca(sug)}</b>, texto: sug.texto.toLowerCase() })}</span></p>}
             </div>
           )}
           {hist.length > 0 && (

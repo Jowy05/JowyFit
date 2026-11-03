@@ -1,6 +1,7 @@
 // Ayudantes para escribir y leer datos en pantalla: números con la coma o el punto del idioma, series y textos.
 import type { EjercicioSesion, Serie, TipoRegistro } from '../datos/tipos'
 import { idioma, regionNumeros, t, tc } from '../i18n'
+import { claseDistancia, type ClaseDistancia } from '../catalogo/clasificacion'
 
 /** Redondea a 1 decimal con la coma o el punto del idioma (en inglés, punto decimal y coma de miles). */
 export function num(n: number | null | undefined, decimales = 1): string {
@@ -59,34 +60,81 @@ export function enLista(xs: string[]): string {
 /** Primera letra en mayúscula: «martes» → «Martes». */
 export const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+/** Las repeticiones de una serie: «8», «8 por lado» o, si un lado hizo distinto, «8 izq. · 7 der.». */
+export function textoReps(x: Pick<Serie, 'reps' | 'izq' | 'der'>, porLado = false): string {
+  if (x.izq != null && x.der != null && x.izq !== x.der) return t('{izq} izq. · {der} der.', { izq: x.izq, der: x.der })
+  const n = String(x.izq ?? x.reps ?? 0)
+  return porLado || x.izq != null ? t('{n} por lado', { n }) : n
+}
+
+/** Minutos de una serie de cardio (van en `reps`; las de antes podían ir en segundos). */
+export const minutosCardio = (x: Pick<Serie, 'reps' | 'segundos'>) => (x.segundos ? x.segundos / 60 : x.reps ?? 0)
+
+/**
+ * Ritmo de un cardio con distancia: andando o corriendo, «6:00 min/km»; en bici, «18 km/h». Null si no tiene sentido
+ * (remo, elíptica, sin km o sin minutos).
+ */
+export function ritmo(min: number, km: number | null | undefined, clase: ClaseDistancia | null): string | null {
+  if (!(min > 0) || km == null || !(km > 0) || (clase !== 'pie' && clase !== 'rueda')) return null
+  if (clase === 'rueda') return `${num(km / (min / 60), 1)} km/h`
+  const s = Math.round((min * 60) / km)
+  // Más de una hora por km no es andar: un km mal apuntado.
+  if (s >= 3600) return null
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min/km`
+}
+
+/** Distancia y ritmo de una serie de cardio: « · 5 km · 6:00 min/km» (vacío sin km). */
+function conKm(x: Serie, id: string | undefined, conRitmo: boolean): string {
+  if (x.km == null || !(x.km > 0)) return ''
+  const r = conRitmo ? ritmo(minutosCardio(x), x.km, id ? claseDistancia(id) : null) : null
+  return ` · ${num(x.km, 2)} km${r ? ` · ${r}` : ''}`
+}
+
 /**
  * Texto de una serie hecha. Dos estilos a propósito: «tabla» (Detalle del entreno: «47,5 × 8», «asist. 15 kg × 6»,
- * cardio en minutos) y «corto» (Lista y panel del entreno: «47,5 kg × 8», «ayuda 15 kg × 6»).
+ * cardio en minutos con su ritmo) y «corto» (Lista y panel del entreno: «47,5 kg × 8», «ayuda 15 kg × 6»). Con el
+ * id del ejercicio, el cardio con distancia lleva su ritmo.
  */
-export function textoSerie(x: Serie, registro: TipoRegistro, estilo: 'tabla' | 'corto'): string {
+export function textoSerie(x: Serie, registro: TipoRegistro, estilo: 'tabla' | 'corto', id?: string): string {
+  const reps = textoReps(x)
+  const lastre = registro === 'corporal' && x.peso != null && x.peso > 0 ? kg(x.peso) : null
   if (estilo === 'tabla') {
     if (registro === 'tiempo') return `${x.segundos ?? x.reps ?? 0} s`
-    if (registro === 'cardio') return x.segundos ? `${Math.round(x.segundos / 60)} min` : `${x.reps ?? 0} min`
-    if (registro === 'corporal' || x.peso == null) return t('{n} reps', { n: x.reps ?? 0 })
-    if (registro === 'asistido') return t('asist. {peso} × {reps}', { peso: kg(Math.abs(x.peso)), reps: x.reps ?? 0 })
-    return `${kg(x.peso)} × ${x.reps ?? 0}`
+    if (registro === 'cardio') return `${Math.round(minutosCardio(x))} min${conKm(x, id, true)}`
+    if (lastre) return t('lastre {peso} × {reps}', { peso: lastre, reps })
+    if (registro === 'corporal' || x.peso == null) return x.izq != null ? reps : t('{n} reps', { n: x.reps ?? 0 })
+    if (registro === 'asistido') return t('asist. {peso} × {reps}', { peso: kg(Math.abs(x.peso)), reps })
+    return `${kg(x.peso)} × ${reps}`
   }
   if (registro === 'tiempo') return `${x.segundos ?? x.reps} s`
-  if (registro === 'cardio') return `${x.reps} min`
-  if (registro === 'corporal' || x.peso == null) return t('{n} reps', { n: String(x.reps) })
-  return `${registro === 'asistido' ? t('ayuda {n}', { n: kg(Math.abs(x.peso)) }) : kg(x.peso)} kg × ${x.reps}`
+  if (registro === 'cardio') return `${x.reps} min${conKm(x, id, false)}`
+  if (lastre) return `${t('lastre {n} kg', { n: lastre })} × ${reps}`
+  if (registro === 'corporal' || x.peso == null) return x.izq != null ? reps : t('{n} reps', { n: String(x.reps) })
+  return `${registro === 'asistido' ? t('ayuda {n}', { n: kg(Math.abs(x.peso)) }) : kg(x.peso)} kg × ${reps}`
 }
 
 /**
  * Serie en la lista del entreno en curso: la hecha con lo apuntado y la pendiente con el objetivo («20 kg × 8-12»).
- * Distinto de «corto»: el cardio va en reps y la asistencia como «asist.».
+ * Distinto de «corto»: la asistencia va como «asist.». `porLado`: el ejercicio se hace con un lado cada vez.
  */
-export function textoSerieEnCurso(x: Serie, e: EjercicioSesion): string {
+export function textoSerieEnCurso(x: Serie, e: EjercicioSesion, porLado = false): string {
   const objetivo = `${e.repsMin}-${e.repsMax}`
   if (e.registro === 'tiempo') return x.hecha ? `${x.segundos ?? x.reps} s` : `${objetivo} s`
-  if (e.registro === 'corporal' || x.peso == null) return t('{n} reps', { n: x.hecha ? String(x.reps) : objetivo })
-  const p = e.registro === 'asistido' ? t('asist. {n} kg', { n: kg(Math.abs(x.peso)) }) : `${kg(x.peso)} kg`
-  return `${p} × ${x.hecha ? x.reps : objetivo}`
+  if (e.registro === 'cardio') return x.hecha ? `${x.reps} min${conKm(x, e.ejercicio, false)}` : `${objetivo} min`
+  const reps = x.hecha ? textoReps(x, porLado) : porLado ? t('{n} por lado', { n: objetivo }) : objetivo
+  const lastre = e.registro === 'corporal' && x.peso != null && x.peso > 0
+  if (!lastre && (e.registro === 'corporal' || x.peso == null)) return porLado ? reps : t('{n} reps', { n: reps })
+  const p = lastre ? t('lastre {n} kg', { n: kg(x.peso) }) : e.registro === 'asistido' ? t('asist. {n} kg', { n: kg(Math.abs(x.peso!)) }) : `${kg(x.peso)} kg`
+  return `${p} × ${reps}`
+}
+
+/** Los kilos que tocan: «47,5 kg» o, en los de peso corporal, «lastre 5 kg». */
+export const textoKilos = (peso: number, registro: TipoRegistro) => (registro === 'corporal' ? t('lastre {n} kg', { n: kg(peso) }) : `${kg(peso)} kg`)
+
+/** Una marca (récord o mejor serie): «47,5 kg × 8», «lastre 5 kg × 8», «10 kg × 8 por lado». */
+export function textoMarca(m: { peso: number | null; reps: number | null; lastre?: boolean; porLado?: boolean }): string {
+  const marca = `${m.lastre ? t('lastre {n} kg', { n: kg(m.peso) }) : `${kg(m.peso)} kg`} × ${m.reps ?? 0}`
+  return m.porLado ? t('{marca} por lado', { marca }) : marca
 }
 
 /** El texto de un error para enseñarlo en un aviso. */

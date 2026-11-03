@@ -1,6 +1,6 @@
 // Entrenos y fuerza: la tabla de entrenos, el esfuerzo, las subidas, las gráficas de fuerza y las mejores series.
 import type { Sesion } from '../../datos/tipos'
-import { kg, num, conSigno } from '../../dominio/formato'
+import { kg, num, conSigno, textoMarca } from '../../dominio/formato'
 import { MESES, deISO, fechaCorta, lunesDe, sumarDias } from '../../dominio/fechas'
 import { mejorMarca, volumen } from '../../dominio/progresion'
 import { ejerciciosHechos, nivelSeries, seriesDe, seriesPorGrupo } from '../../dominio/tendencias'
@@ -18,7 +18,11 @@ function recordsDe(c: Ctx, s: Sesion): RecordSesion[] {
   const orden = (id: string) => s.ejercicios.findIndex(e => e.ejercicio === id)
   return c.logros.filter(l => (l.sesionId != null && s.id != null ? l.sesionId === s.id : l.fecha === s.fecha))
     .sort((a, b) => orden(a.ejercicio) - orden(b.ejercicio))
-    .map(l => ({ ejercicio: l.ejercicio, nombre: nombreDe(c, l.ejercicio), peso: l.peso, reps: l.reps, texto: `${nombreDe(c, l.ejercicio)} ${kg(l.peso)} × ${l.reps}` }))
+    .map(l => {
+      // Con lastre o por lado se dice (si no, «5 × 8» en unas dominadas parece que levantas 5 kg).
+      const marca = l.lastre || l.porLado ? textoMarca(l) : `${kg(l.peso)} × ${l.reps}`
+      return { ejercicio: l.ejercicio, nombre: nombreDe(c, l.ejercicio), peso: l.peso, reps: l.reps, marca, texto: `${nombreDe(c, l.ejercicio)} ${marca}` }
+    })
 }
 
 function etiquetasDe(s: Sesion): string[] {
@@ -151,6 +155,8 @@ function mejoresSeries(c: Ctx): MejorSerie[] {
   const antesIni = sumarDias(c.inicio, -c.r.dias), antesFin = sumarDias(c.inicio, -1)
   const previas = c.hechas.filter(s => entre(s.fecha, antesIni, antesFin))
   for (const id of ejerciciosHechos(c.enPeriodo).slice(0, 8)) {
+    // De peso corporal, el peso es el lastre: su 1RM no cuenta el cuerpo y no se puede comparar.
+    if (c.enPeriodo.some(s => s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal'))) continue
     const series = c.enPeriodo.flatMap(s => seriesDe(s, id))
     const m = mejorMarca(series)
     if (!m) continue

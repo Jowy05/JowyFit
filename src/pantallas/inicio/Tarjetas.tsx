@@ -11,7 +11,7 @@ import { propuestaDescarga } from '../../dominio/descarga'
 import { racha } from '../../dominio/semana'
 import { resumenSemana } from '../../dominio/resumen'
 import { recordsEn, subidas } from '../../dominio/tendencias'
-import { kg } from '../../dominio/formato'
+import { textoMarca } from '../../dominio/formato'
 import { batidoDe, esBatido } from '../../dominio/comida'
 import { Barra, cx, Ico, Seccion, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -156,9 +156,12 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
   const datos = useLiveQuery(async () => {
     const metas = (await leerMetas()).filter(m => !m.hecha)
     const sesiones = await sesionesHechas()
-    let logro = null as { nombre: string; peso: number; reps: number; fecha: string } | null
+    let logro = null as { nombre: string; peso: number; reps: number; fecha: string; lastre: boolean; porLado: boolean } | null
     for (const s of sesiones) {
-      for (const e of s.ejercicios) for (const x of e.series) if (x.record && x.peso != null && x.reps != null) { logro = { nombre: nombreEjercicio(e.ejercicio), peso: x.peso, reps: x.reps, fecha: s.fecha }; break }
+      for (const e of s.ejercicios) for (const x of e.series) if (x.record && x.peso != null && x.reps != null) {
+        logro = { nombre: nombreEjercicio(e.ejercicio), peso: x.peso, reps: x.reps, fecha: s.fecha, lastre: e.registro === 'corporal', porLado: x.izq != null }
+        break
+      }
       if (logro) break
     }
     return { meta: metas[0], logro, racha: racha(rutina, sesiones, hoy) }
@@ -173,7 +176,7 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
     datos?.logro && { k: 'logro', ir: () => nav.ir('fuerza', undefined, 'pro'), el: (
       <div className="ach" style={{ border: 0, borderRadius: 10 }}>
         <span className="tro"><Ico n="trophy" b /></span>
-        <span className="tx"><small className="au">{t('Último logro · {fecha}', { fecha: fechaCorta(datos.logro.fecha) })}</small><b>{t('Récord en {nombre}', { nombre: datos.logro.nombre.toLowerCase() })}</b><small className="mono">{kg(datos.logro.peso)} kg × {datos.logro.reps}</small></span>
+        <span className="tx"><small className="au">{t('Último logro · {fecha}', { fecha: fechaCorta(datos.logro.fecha) })}</small><b>{t('Récord en {nombre}', { nombre: datos.logro.nombre.toLowerCase() })}</b><small className="mono">{textoMarca(datos.logro)}</small></span>
       </div>) },
     datos && datos.racha > 0 && { k: 'racha', ir: () => nav.pestana('pro'), el: (
       <div className="pd">

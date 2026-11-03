@@ -7,7 +7,7 @@ import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { resumen } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO } from '../../dominio/fechas'
 import { entrenosPrevistos } from '../../dominio/semana'
-import { capital, kg } from '../../dominio/formato'
+import { capital, kg, textoMarca } from '../../dominio/formato'
 import { terminarEntreno } from '../../datos/acciones/entreno'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -94,7 +94,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
               {logros.map(({ e, x }, i) => (
                 <div key={i} className="ach">
                   <span className="tro"><Ico n={i === 0 ? 'trophy' : 'medal'} b /></span>
-                  <span className="tx"><small className="au">{t('Desbloqueado')}{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>{t('Récord en {ejercicio}', { ejercicio: nombreEjercicio(e.ejercicio).toLowerCase() })}</b><small className="mono">{kg(x.peso)} kg × {x.reps}</small></span>
+                  <span className="tx"><small className="au">{t('Desbloqueado')}{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>{t('Récord en {ejercicio}', { ejercicio: nombreEjercicio(e.ejercicio).toLowerCase() })}</b><small className="mono">{textoMarca({ ...x, lastre: e.registro === 'corporal', porLado: x.izq != null })}</small></span>
                 </div>
               ))}
             </div>

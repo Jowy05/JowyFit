@@ -13,7 +13,8 @@ permissions:
 
 jobs:
   pruebas:
-    runs-on: ubuntu-latest
+    # Fija la versión: con ubuntu-latest (26.04 desde nov. 2026) Playwright no tiene WebKit y fallan las de iPhone.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

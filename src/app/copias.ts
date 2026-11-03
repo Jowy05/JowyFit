@@ -5,7 +5,7 @@ import { leerClaveCopias } from '../datos/claveCopias'
 import { reprogramarNotificaciones } from '../datos/acciones/avisos'
 import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { automaticasDeMasNueva, esCifradaPorNombre, nombreCopia } from '../dominio/copias'
-import { borrarCopiaGuardada, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo } from '../plataforma'
+import { borrarCopiaGuardada, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, permisoDocumentos } from '../plataforma'
 import { t } from '../i18n'
 
 export type CopiaPreparada = { nombre: string; bytes: Uint8Array }
@@ -46,6 +46,8 @@ export async function copiaAutomatica(): Promise<boolean> {
   if (!a.copiaAuto || !esNativo()) return false
   if (a.ultimaCopia && Date.now() - new Date(a.ultimaCopia).getTime() < 7 * 86_400_000) return false
   if (!(await leerPerfil())?.altaCompleta) return false
+  // Sin el permiso de almacenamiento (Android 10 o anterior) no se pregunta al abrir: lo pedirá «Hacer copia ahora».
+  if (!(await permisoDocumentos(false))) return false
   try {
     const guardadas = await copiasGuardadas()
     const [ultima] = automaticasDeMasNueva(guardadas.map(c => c.nombre))

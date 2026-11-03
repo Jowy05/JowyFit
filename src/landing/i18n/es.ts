@@ -166,7 +166,7 @@ const es = {
   'cuerpo.p1': 'Peso, cintura y grasa corporal en una gráfica sencilla. Con la media de cada semana, porque el peso de un día suelto engaña.',
   'cuerpo.android': 'Si tienes una báscula o un reloj conectados al móvil, los pasos y el peso se apuntan solos (a través de Health Connect, la app de salud de Android, y solo si tú lo activas).',
   'cuerpo.iphone': 'En el iPhone, el peso y los pasos los apuntas tú en un momento.',
-  'cuerpo.alt': 'Progreso, pestaña Cuerpo: el peso baja de 85,2 a 82,3 kg en siete semanas y la cintura, de 98 a 95 cm.',
+  'cuerpo.alt': 'Progreso, pestaña Cuerpo: el peso baja de 91,4 a 87,8 kg en siete semanas y la cintura, de 104 a 100 cm.',
 
   // Privacidad
   'privacidad.titulo': 'Tus datos se quedan en tu móvil.',

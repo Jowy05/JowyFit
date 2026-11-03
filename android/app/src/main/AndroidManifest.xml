@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="false"
+        android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -33,6 +34,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Copias en Documentos/JowyFit: en Android 10 o anterior hace falta este permiso (y en Android 10, el almacenamiento
+         «legacy» de arriba). Desde Android 11 la app escribe ahí sus propios archivos sin pedir nada. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <!-- Temporizador de descanso: alarma exacta sin pedir permiso (app de uso personal, fuera de Google Play). -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />

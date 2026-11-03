@@ -166,7 +166,7 @@ const en: Record<keyof typeof es, string> = {
   'cuerpo.p1': 'Weight, waist, and body fat in a simple chart. With each week’s average, because a single day’s weight can fool you.',
   'cuerpo.android': 'If you have a scale or a watch connected to your phone, your steps and weight are logged for you (through Health Connect, Android’s health app, and only if you turn it on).',
   'cuerpo.iphone': 'On iPhone, you log your weight and steps yourself in seconds.',
-  'cuerpo.alt': 'Progress, Body tab: weight drops from 85.2 to 82.3 kg in seven weeks, and waist from 98 to 95 cm.',
+  'cuerpo.alt': 'Progress, Body tab: weight drops from 91.4 to 87.8 kg in seven weeks, and waist from 104 to 100 cm.',
 
   // Privacidad
   'privacidad.titulo': 'Your data stays on your phone.',

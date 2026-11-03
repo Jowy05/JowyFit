@@ -8,9 +8,23 @@ function aBase64(bytes: Uint8Array): string {
   return btoa(s)
 }
 
+/**
+ * Android 10 o anterior: Documentos pide el permiso de almacenamiento (desde Android 11 no hace falta y sale
+ * concedido). `pedir`: si no lo tiene, se pregunta; si no, solo se mira (para no preguntar al abrir la app).
+ */
+export async function permisoDocumentos(pedir: boolean): Promise<boolean> {
+  if (!esNativo()) return true
+  try {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    const p = pedir ? await Filesystem.requestPermissions() : await Filesystem.checkPermissions()
+    return p.publicStorage === 'granted'
+  } catch { return false }
+}
+
 /** Guarda un archivo. Android: Documentos/JowyFit (sobrevive a desinstalar). Web: descarga. */
 export async function guardarArchivo(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<string> {
   if (esNativo()) {
+    if (!(await permisoDocumentos(true))) throw new Error(t('Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.'))
     const { Filesystem, Directory } = await import('@capacitor/filesystem')
     const r = await Filesystem.writeFile({ path: `JowyFit/${nombre}`, data: aBase64(bytes), directory: Directory.Documents, recursive: true })
     return r.uri
@@ -67,9 +81,9 @@ export async function compartirNativo(nombre: string, bytes: Uint8Array, titulo:
 export type CopiaGuardada = { nombre: string; fecha: number; tam: number }
 export type ArchivoElegido = { nombre: string; bytes: Uint8Array }
 
-/** Lista las copias guardadas en Documentos/JowyFit (solo Android). */
+/** Lista las copias guardadas en Documentos/JowyFit (solo Android; sin el permiso de Android 10 o anterior, ninguna). */
 export async function copiasGuardadas(): Promise<CopiaGuardada[]> {
-  if (!esNativo()) return []
+  if (!esNativo() || !(await permisoDocumentos(false))) return []
   try {
     const { Filesystem, Directory } = await import('@capacitor/filesystem')
     const r = await Filesystem.readdir({ path: 'JowyFit', directory: Directory.Documents })

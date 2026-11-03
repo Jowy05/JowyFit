@@ -166,7 +166,7 @@ const ca: Record<keyof typeof es, string> = {
   'cuerpo.p1': "Pes, cintura i greix corporal en un gràfic senzill. Amb la mitjana de cada setmana, perquè el pes d’un sol dia enganya.",
   'cuerpo.android': "Si tens una bàscula o un rellotge connectats al mòbil, els passos i el pes s’apunten sols (a través de Health Connect, l’app de salut d’Android, i només si tu ho actives).",
   'cuerpo.iphone': "A l’iPhone, el pes i els passos els apuntes tu en un moment.",
-  'cuerpo.alt': 'Progrés, pestanya Cos: el pes baixa de 85,2 a 82,3 kg en set setmanes i la cintura, de 98 a 95 cm.',
+  'cuerpo.alt': 'Progrés, pestanya Cos: el pes baixa de 91,4 a 87,8 kg en set setmanes i la cintura, de 104 a 100 cm.',
 
   // Privacidad
   'privacidad.titulo': 'Les dades es queden al teu mòbil.',

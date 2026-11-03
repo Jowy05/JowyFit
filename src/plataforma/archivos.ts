@@ -26,17 +26,19 @@ const SIN_PERMISO = 'SinPermisoDocumentos'
 export const esSinPermisoDocumentos = (e: unknown): boolean => (e as Error)?.name === SIN_PERMISO
 
 /** Sigue solo con el permiso de Documentos; si no, el error claro (y no el inglés del plugin). */
-async function exigirPermiso(pedir: boolean): Promise<void> {
+async function exigirPermiso(pedir: boolean, texto: string): Promise<void> {
   if (await permisoDocumentos(pedir)) return
-  const e = new Error(t('Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.'))
+  const e = new Error(texto)
   e.name = SIN_PERMISO
   throw e
 }
+// Al leer o borrar no se habla de «guardar»: despistaría.
+const sinPermisoCarpeta = () => t('Sin permiso para usar la carpeta Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.')
 
 /** Guarda un archivo. Android: Documentos/JowyFit (sobrevive a desinstalar). Web: descarga. */
 export async function guardarArchivo(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<string> {
   if (esNativo()) {
-    await exigirPermiso(true)
+    await exigirPermiso(true, t('Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.'))
     const { Filesystem, Directory } = await import('@capacitor/filesystem')
     const r = await Filesystem.writeFile({ path: `JowyFit/${nombre}`, data: aBase64(bytes), directory: Directory.Documents, recursive: true })
     return r.uri
@@ -112,7 +114,7 @@ function rutaCopia(nombre: string): string {
 // Leer y borrar no preguntan: sin el permiso la lista sale vacía, así que solo llega aquí si se quitó después.
 export async function leerCopiaGuardada(nombre: string): Promise<Uint8Array> {
   const ruta = rutaCopia(nombre)
-  await exigirPermiso(false)
+  await exigirPermiso(false, sinPermisoCarpeta())
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
   const r = await Filesystem.readFile({ path: ruta, directory: Directory.Documents })
   const bin = atob(typeof r.data === 'string' ? r.data : await (r.data as Blob).text())
@@ -122,7 +124,7 @@ export async function leerCopiaGuardada(nombre: string): Promise<Uint8Array> {
 /** Borra una copia de Documentos/JowyFit. Ahí no hay papelera: no se puede deshacer. */
 export async function borrarCopiaGuardada(nombre: string): Promise<void> {
   const ruta = rutaCopia(nombre)
-  await exigirPermiso(false)
+  await exigirPermiso(false, sinPermisoCarpeta())
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
   await Filesystem.deleteFile({ path: ruta, directory: Directory.Documents })
 }

@@ -129,8 +129,12 @@ describe('permiso de Documentos (Android 10 o anterior)', () => {
   })
   it('leer o borrar sin permiso da el error claro, sin preguntar ni tocar el archivo', async () => {
     permiso('denied')
-    await expect(leerCopiaGuardada('jowyfit-2026-10-13.jowyfit')).rejects.toThrow(SIN_PERMISO)
-    await expect(borrarCopiaGuardada('jowyfit-2026-10-13.jowyfit')).rejects.toThrow(SIN_PERMISO)
+    // Al leer o borrar no se habla de «guardar»; el error se reconoce igual por su nombre.
+    const CARPETA = /^Sin permiso para usar la carpeta Documentos\. Dalo en los ajustes del móvil/
+    const e: Error = await leerCopiaGuardada('jowyfit-2026-10-13.jowyfit').then(() => new Error('leyó'), (x: Error) => x)
+    expect(e.message).toMatch(CARPETA)
+    expect(esSinPermisoDocumentos(e)).toBe(true)
+    await expect(borrarCopiaGuardada('jowyfit-2026-10-13.jowyfit')).rejects.toThrow(CARPETA)
     expect(fsNativo.requestPermissions).not.toHaveBeenCalled()
     expect(fsNativo.readFile).not.toHaveBeenCalled()
     expect(fsNativo.deleteFile).not.toHaveBeenCalled()

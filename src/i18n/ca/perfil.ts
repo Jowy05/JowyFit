@@ -733,5 +733,6 @@ export default {
   'No se pudo quitar la contraseña: {error}': "No s'ha pogut treure la contrasenya: {error}",
   'No se puede leer la contraseña guardada: ponla otra vez o quítala': 'No es pot llegir la contrasenya desada: posa-la un altre cop o treu-la',
   'La contraseña de tus copias no se puede usar: quítala o ponla otra vez en Ajustes': 'La contrasenya de les teves còpies no es pot fer servir: treu-la o posa-la un altre cop a Configuració',
-  'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': "Sense permís per desar a Documents. Dona-l'hi a la configuració del mòbil: Aplicacions → JowyFit → Permisos.",
+  'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': "Sense permís per desar a Documents. Dona'l a la configuració del mòbil: Aplicacions → JowyFit → Permisos.",
+  'Sin permiso para usar la carpeta Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': "Sense permís per fer servir la carpeta Documents. Dona'l a la configuració del mòbil: Aplicacions → JowyFit → Permisos.",
 } satisfies Diccionario

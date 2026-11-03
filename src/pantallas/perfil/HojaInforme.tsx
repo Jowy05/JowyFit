@@ -102,17 +102,19 @@ export function HojaInforme() {
   const crear = unaVez(async () => {
     if (creando || !rango?.hayDatos) return
     setCreando(true); setError(null); setHecho(null); setPendiente(false)
+    let h: Hecho | null = null
     try {
       const [inf, pdf] = await Promise.all([datosInforme(periodo, new Date(), sec), import('../../informe/pdf')])
       const bytes = await pdf.crearPdf(inf, { version })
-      const h: Hecho = { nombre: pdf.nombrePdf(inf.rango), bytes, titulo: inf.cabecera.tituloPdf }
+      h = { nombre: pdf.nombrePdf(inf.rango), bytes, titulo: inf.cabecera.tituloPdf }
       setHecho(h)
       await entregar(h)
     } catch (e) {
       setError(textoError(e))
-      // Hecho pero sin el permiso de Documentos: no está guardado, pero se puede enviar (Compartir va por la caché
-      // de la app, que no pide permiso). Con cualquier otro fallo no se enseña «Guardado».
-      if (nativo && esSinPermisoDocumentos(e)) setPendiente(true)
+      // APK con el PDF ya hecho pero sin guardar en Documentos (sin el permiso de Android 10, o un PDF con el mismo
+      // nombre de una instalación anterior, que Android 11 no deja sobrescribir): se puede enviar igual, porque
+      // Compartir va por la caché de la app. Si ni se llegó a hacer, o fuera del APK, no se enseña «Guardado».
+      if (nativo && h) setPendiente(true)
       else setHecho(null)
     } finally {
       setCreando(false)

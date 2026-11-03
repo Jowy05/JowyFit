@@ -8,7 +8,7 @@ import { datosInforme, periodoInforme } from '../../informe/calculo/leer'
 import { guardarAjustes } from '../../datos/repos'
 import type { PeriodoInforme, SeccionesInforme } from '../../informe/calculo/tipos'
 import { ORDEN_PERIODOS, PERIODO_POR_DEFECTO, SECCIONES_POR_DEFECTO, etiquetaPeriodo } from '../../informe/calculo/periodo'
-import { capacidades, compartirArchivo, compartirNativo, guardarArchivo } from '../../plataforma'
+import { capacidades, compartirArchivo, compartirNativo, esSinPermisoDocumentos, guardarArchivo } from '../../plataforma'
 import { cx, Hoja, Ico, useUnaVez } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes } from '../../datos/hooks'
@@ -28,6 +28,8 @@ type Hecho = { nombre: string; bytes: Uint8Array; titulo: string }
 
 /** Mensaje claro si algo falla al crear o guardar el PDF. */
 function textoError(e: unknown): string {
+  // Android 10 o anterior sin el permiso: ya dice dónde darlo (y en catalán «permís» no lo cogería lo de abajo).
+  if (esSinPermisoDocumentos(e)) return (e as Error).message
   const m = String((e as Error)?.message ?? e ?? '')
   if (/quota|space|espacio|ENOSPC/i.test(m)) return t('No queda sitio en el móvil para guardarlo. Libera algo de espacio y vuelve a probar.')
   if (/permission|permiso|denied/i.test(m)) return t('El móvil no ha dejado guardar el archivo. Revisa los permisos de JowyFit y vuelve a probar.')

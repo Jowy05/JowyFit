@@ -101,14 +101,18 @@ describe('copias con contraseña', () => {
 
 describe('copias guardadas en el móvil: limpieza y «Borrarlas»', () => {
   type Carpeta = Map<string, { fecha: number; tam: number }>
-  /** Documentos/JowyFit simulado (la fecha, la del archivo; la más nueva, la mayor). `falla`: la que no se deja borrar. */
-  async function conCarpeta(o: { copias: string[]; tam?: (nombre: string) => number; falla?: string }, prueba: (c: typeof import('../src/app/copias'), carpeta: Carpeta) => Promise<void>) {
+  /**
+   * Documentos/JowyFit simulado (la fecha, la del archivo; la más nueva, la mayor). `falla`: la que no se deja borrar;
+   * `sinPermiso`: Android 10 o anterior sin el permiso de almacenamiento.
+   */
+  async function conCarpeta(o: { copias: string[]; tam?: (nombre: string) => number; falla?: string; sinPermiso?: boolean }, prueba: (c: typeof import('../src/app/copias'), carpeta: Carpeta) => Promise<void>) {
     const carpeta: Carpeta = new Map(o.copias.map((n, i) => [n, { fecha: i + 1, tam: o.tam?.(n) ?? 1 }]))
     let reloj = o.copias.length
     vi.resetModules()
     vi.doMock('../src/plataforma', async orig => ({
       ...((await orig()) as Record<string, unknown>),
       esNativo: () => true,
+      permisoDocumentos: async () => !o.sinPermiso,
       guardarArchivo: async (n: string, b: Uint8Array) => { carpeta.set(n, { fecha: ++reloj, tam: b.length }); return n },
       copiasGuardadas: async () => [...carpeta].map(([nombre, x]) => ({ nombre, ...x })).sort((a, b) => b.fecha - a.fecha),
       borrarCopiaGuardada: async (n: string) => { if (n === o.falla) throw new Error('sin permiso'); carpeta.delete(n) },
@@ -137,6 +141,14 @@ describe('copias guardadas en el móvil: limpieza y «Borrarlas»', () => {
     await conCarpeta({ copias: autos(6), tam: () => 50 * 1024 * 1024 }, async (s, carpeta) => {
       expect(await s.copiaAutomatica()).toBe(true)
       expect([...carpeta.keys()].filter(esCopiaAuto)).toHaveLength(7)
+    })
+  })
+
+  it('sin el permiso de almacenamiento, la semanal no hace nada (ni pregunta al abrir la app)', async () => {
+    await conCarpeta({ copias: autos(6), sinPermiso: true }, async (s, carpeta) => {
+      expect(await s.copiaAutomatica()).toBe(false)
+      expect(carpeta.size).toBe(6)
+      expect((await db.ajustes.get('app'))?.ultimaCopia ?? null).toBeNull()
     })
   })
 

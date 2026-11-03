@@ -8,18 +8,27 @@ const health = vi.hoisted(() => ({
   readSamples: vi.fn(),
 }))
 vi.mock('@capgo/capacitor-health', () => ({ Health: health }))
-const fsNativo = vi.hoisted(() => ({ readFile: vi.fn(), deleteFile: vi.fn() }))
+const fsNativo = vi.hoisted(() => ({
+  readFile: vi.fn(), deleteFile: vi.fn(), writeFile: vi.fn(), readdir: vi.fn(),
+  checkPermissions: vi.fn(), requestPermissions: vi.fn(),
+}))
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: fsNativo, Directory: { Documents: 'DOCUMENTS' } }))
+// Por defecto, el navegador; las pruebas del permiso de Documentos se hacen pasar por el APK.
+const plataforma = vi.hoisted(() => ({ nativa: false }))
+vi.mock('@capacitor/core', async orig => {
+  const m = await orig<typeof import('@capacitor/core')>()
+  return { ...m, Capacitor: { ...m.Capacitor, isNativePlatform: () => plataforma.nativa, getPlatform: () => (plataforma.nativa ? 'android' : 'web') } }
+})
 const detector = vi.hoisted(() => ({ lecturas: [] as string[][] }))
 vi.mock('barcode-detector/ponyfill', () => ({
   prepareZXingModule: () => {},
   BarcodeDetector: class { async detect() { return (detector.lecturas.shift() ?? []).map(rawValue => ({ rawValue })) } },
 }))
 
-import { borrarCopiaGuardada, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, prepararSonido } from '../src/plataforma'
+import { borrarCopiaGuardada, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
 import { abrirCamara } from '../src/plataforma/escanerWeb'
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); plataforma.nativa = false })
 
 describe('Health Connect simulado', () => {
   it('pasos por día (en hora local) desde el primer día hasta el último incluido', async () => {
@@ -62,6 +71,69 @@ describe('copias guardadas en Documentos (Android)', () => {
       await expect(leerCopiaGuardada(malo)).rejects.toThrow(/no válido/)
     }
     expect(fsNativo.deleteFile).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('permiso de Documentos (Android 10 o anterior)', () => {
+  const SIN_PERMISO = /Sin permiso para guardar en Documentos/
+  const permiso = (estado: string) => {
+    plataforma.nativa = true
+    fsNativo.checkPermissions.mockReset().mockResolvedValue({ publicStorage: estado })
+    fsNativo.requestPermissions.mockReset().mockResolvedValue({ publicStorage: estado })
+    for (const f of [fsNativo.writeFile, fsNativo.readdir, fsNativo.readFile, fsNativo.deleteFile]) f.mockReset()
+  }
+
+  it('en el navegador no hay nada que pedir', async () => {
+    expect(await permisoDocumentos(true)).toBe(true)
+    expect(fsNativo.requestPermissions).not.toHaveBeenCalled()
+  })
+  it('mirar no pregunta; pedir sí, y si el plugin falla cuenta como no', async () => {
+    permiso('prompt')
+    expect(await permisoDocumentos(false)).toBe(false)
+    expect(fsNativo.requestPermissions).not.toHaveBeenCalled()
+    fsNativo.requestPermissions.mockResolvedValue({ publicStorage: 'granted' })
+    expect(await permisoDocumentos(true)).toBe(true)
+    fsNativo.requestPermissions.mockRejectedValue(new Error('roto'))
+    expect(await permisoDocumentos(true)).toBe(false)
+  })
+  it('con el permiso, guarda en Documentos/JowyFit', async () => {
+    permiso('granted')
+    fsNativo.writeFile.mockResolvedValue({ uri: 'file:///storage/emulated/0/Documents/JowyFit/a.pdf' })
+    expect(await guardarArchivo('a.pdf', new Uint8Array([1, 2]))).toMatch(/JowyFit\/a\.pdf$/)
+    expect(fsNativo.writeFile.mock.calls[0]![0]).toMatchObject({ path: 'JowyFit/a.pdf', directory: 'DOCUMENTS', recursive: true })
+  })
+  it('si no lo dan, guardar pregunta y falla con el error claro sin escribir nada', async () => {
+    permiso('denied')
+    const e: Error = await guardarArchivo('a.pdf', new Uint8Array([1])).then(() => new Error('guardó'), (x: Error) => x)
+    expect(e).toBeInstanceOf(Error)
+    expect(e.message).toMatch(SIN_PERMISO)
+    expect(esSinPermisoDocumentos(e)).toBe(true)
+    expect(esSinPermisoDocumentos(new Error('Sin permiso para guardar en Documentos'))).toBe(false)
+    expect(fsNativo.requestPermissions).toHaveBeenCalledTimes(1)
+    expect(fsNativo.writeFile).not.toHaveBeenCalled()
+  })
+  it('sin permiso, la lista sale vacía sin preguntar ni leer la carpeta', async () => {
+    permiso('prompt')
+    expect(await copiasGuardadas()).toEqual([])
+    expect(fsNativo.requestPermissions).not.toHaveBeenCalled()
+    expect(fsNativo.readdir).not.toHaveBeenCalled()
+  })
+  it('con permiso, lista solo las copias, la más nueva primero', async () => {
+    permiso('granted')
+    fsNativo.readdir.mockResolvedValue({ files: [
+      { name: 'jowyfit-2026-10-01.jowyfit', mtime: 1, size: 10 },
+      { name: 'informe.pdf', mtime: 3, size: 5 },
+      { name: 'jowyfit-2026-10-02.jowyfit', mtime: 2, size: 20 },
+    ] })
+    expect((await copiasGuardadas()).map(c => c.nombre)).toEqual(['jowyfit-2026-10-02.jowyfit', 'jowyfit-2026-10-01.jowyfit'])
+  })
+  it('leer o borrar sin permiso da el error claro, sin preguntar ni tocar el archivo', async () => {
+    permiso('denied')
+    await expect(leerCopiaGuardada('jowyfit-2026-10-13.jowyfit')).rejects.toThrow(SIN_PERMISO)
+    await expect(borrarCopiaGuardada('jowyfit-2026-10-13.jowyfit')).rejects.toThrow(SIN_PERMISO)
+    expect(fsNativo.requestPermissions).not.toHaveBeenCalled()
+    expect(fsNativo.readFile).not.toHaveBeenCalled()
+    expect(fsNativo.deleteFile).not.toHaveBeenCalled()
   })
 })
 

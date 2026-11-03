@@ -5,9 +5,9 @@
 // La landing solo enseña el tamaño y la fecha si «version» coincide con la de package.json: así nunca
 // sale el tamaño de un APK que no es el que se va a descargar.
 export const APK = {
-  version: '0.9.0',
-  bytes: 29_904_313,
-  fecha: '2026-10-29',
+  version: '0.10.0',
+  bytes: 29_892_049,
+  fecha: '2026-11-03',
   /** SHA-256 del APK publicado (64 caracteres hexadecimales). Se rellena al publicar la release. */
-  sha256: '2668e38fa371e71153733ea82585f1eaf92ac8f30061a74435ad7f5c382ee081',
+  sha256: '0f50eba7c4c73384fbd26c9f007f1a442dc57f46f051a7724247dceae236920b',
 }

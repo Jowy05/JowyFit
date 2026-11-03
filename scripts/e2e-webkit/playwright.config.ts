@@ -9,11 +9,13 @@ export default defineConfig({
   testDir: '.',
   testMatch: /.*\.spec\.ts$/,
   outputDir: '../../.cache/e2e-webkit',
-  timeout: 120_000,
-  expect: { timeout: 8_000 },
+  // En GitHub la máquina es más lenta: más margen y, si una prueba falla, se pasa otra vez (una sola). Si vuelve a
+  // fallar, falla; si pasa a la segunda, sale como «flaky» en la lista para que se vea.
+  timeout: enCI ? 240_000 : 120_000,
+  expect: { timeout: enCI ? 20_000 : 8_000 },
   fullyParallel: true,
   workers: enCI ? 2 : 4,
-  retries: 0,
+  retries: enCI ? 1 : 0,
   reporter: 'list',
   use: {
     ...devices['iPhone 13'],

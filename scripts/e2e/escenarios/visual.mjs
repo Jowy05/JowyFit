@@ -1,5 +1,5 @@
 // Repaso visual, rendimiento y sin conexión: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { altaRapida, cdp, cerrarHoja, compilada, comprobar, escenario, esperar, js, meterSesionHecha, movil, pestana, pulsar, revisarAqui, seg, t, tema, ver } from '../ayudantes.mjs'
+import { altaRapida, cdp, cerrarHoja, compilada, comprobar, escenario, js, meterSesionHecha, movil, pestana, pulsar, revisarAqui, seg, t, tema, ver } from '../ayudantes.mjs'
 import { trasCarga } from '../navegador.mjs'
 
 for (const [ancho, alto] of [[360, 740], [390, 844], [412, 915]]) escenario(`repaso visual de todas las pestañas a ${ancho} px`, async () => {

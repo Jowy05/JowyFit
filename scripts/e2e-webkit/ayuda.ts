@@ -9,7 +9,9 @@ import { test as base, expect, type Page } from '@playwright/test'
 
 export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 export const CAPTURAS = path.join(RAIZ, '.cache', 'iphone')
-const { AYUDANTE } = (await import(pathToFileURL(path.join(RAIZ, 'scripts', 'e2e', 'pagina.mjs')).href)) as { AYUDANTE: string }
+const { AYUDANTE, ESPERAS, FACTOR_ESPERAS } = (await import(pathToFileURL(path.join(RAIZ, 'scripts', 'e2e', 'pagina.mjs')).href)) as { AYUDANTE: string; ESPERAS: string; FACTOR_ESPERAS: number }
+/** Una espera máxima, alargada en la integración continua (como las del ayudante de la página). */
+export const ms = (n: number) => n * FACTOR_ESPERAS
 
 /**
  * Reloj simulado: como el de scripts/e2e/pagina.mjs (sessionStorage.__e2e_fecha = milisegundos de diferencia),
@@ -114,19 +116,27 @@ export class Jf {
     return this.page.evaluate(() => (window as unknown as { __jf: unknown }).__jf) as Promise<T>
   }
 
-  /** Abre la app (o la ruta dada) de cero a una fecha y hora. */
-  async deCero(fechaHora: string, ruta = 'app.html', esperar: RegExp | string | null = /JOWYFIT|Buenos|Buenas|Hoy te toca/i) {
+  /**
+   * Abre la app (o la ruta dada) de cero a una fecha y hora y espera a que esté abierta de verdad (una pantalla
+   * pintada) y, si se dice, a un texto. Antes se esperaba a «JOWYFIT» sin mayúsculas, que también es el «JowyFit»
+   * de mientras carga: en la máquina de GitHub la app tardaba más y «Empezar» no salía a tiempo.
+   */
+  async deCero(fechaHora: string, ruta = 'app.html', esperar: RegExp | string | null = null) {
     // La fecha se pone antes de abrir la app (en una página sencilla del mismo sitio): recargar con la app a medio
     // cargar cortaba la descarga del catálogo y salía como error.
     await this.page.goto('privacypolicy.html')
     await this.page.evaluate(f => sessionStorage.setItem('__e2e_fecha', String(new Date(f).getTime() - (Date as unknown as { __real: () => number }).__real())), fechaHora)
     await this.page.goto(ruta)
+    if (ruta.startsWith('app.html')) await this.abierta()
     if (esperar) await this.ver(esperar, 15000)
   }
+  /** Espera a que la app haya pintado una pantalla (no el «JowyFit» de mientras carga). */
+  abierta = () => this.t('listo', 15000)
   /** Cambia el día (como si pasara el tiempo) y recarga, sin borrar nada. */
   async irA(fechaHora: string) {
     await this.page.evaluate(f => sessionStorage.setItem('__e2e_fecha', String(new Date(f).getTime() - (Date as unknown as { __real: () => number }).__real())), fechaHora)
     await this.page.reload()
+    await this.abierta()
     await this.ver(/Buenos|Buenas|Hoy te toca|Inicio/i, 15000)
   }
   /** Adelanta el reloj de la página sin recargar. */
@@ -176,6 +186,7 @@ export class Jf {
     const [p] = await this.tabla('perfil')
     await this.meter('perfil', [{ ...p, modoRutina: 'dias' }])
     await this.page.reload()
+    await this.abierta()
     await this.ver(/Hoy te toca|descansas|no entrenaste|Próximo/, 8000)
   }
   /** En la primera sesión el peso puede empezar vacío: sube el contador hasta tener un peso. */
@@ -213,7 +224,7 @@ export const test = base.extend<Fixtures>({
     const errores: string[] = []
     page.on('pageerror', e => errores.push(`excepción: ${e.message}`))
     page.on('console', m => { if (m.type() === 'error' && !/openfoodfacts|favicon|Failed to load resource/i.test(m.text())) errores.push(`console.error: ${m.text()}`) })
-    await page.addInitScript(RELOJ_VIVO + AYUDANTE)
+    await page.addInitScript(ESPERAS + RELOJ_VIVO + AYUDANTE)
     await page.addInitScript(imitarIPhone, { instalada, compartir })
     await page.route(/openfoodfacts\.org\/api\/v2\/product\//, async r => {
       const codigo = r.request().url().match(/product\/(\d+)/)?.[1] ?? ''

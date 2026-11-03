@@ -1,5 +1,5 @@
 // Comida y Mis comidas: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { ajustesBD, altaRapida, comidas, comprobar, entorno, escenario, esperar, irA, js, meter, pestana, pulsar, recargar, revisarAqui, seg, t, tabla, ver, volver } from '../ayudantes.mjs'
+import { ajustesBD, altaRapida, comidas, comprobar, entorno, escenario, esperar, irA, js, leerHasta, meter, pestana, pulsar, recargar, revisarAqui, seg, t, tabla, ver, volver } from '../ayudantes.mjs'
 
 escenario('comida: plantilla, picoteo, nota, editar y borrar', async () => {
   await altaRapida('2026-10-13T14:10:00')
@@ -147,9 +147,7 @@ escenario('comida: suplementos con su cantidad y el batido suma proteína', asyn
   // Pasado el bloqueo contra el doble toque (400 ms), se desmarca.
   await esperar(700)
   await pulsar('Batido de proteína')
-  await esperar(500)
-  hoy = (await tabla('comidas')).filter(c => c.fecha === '2026-10-13')
-  if (hoy.length !== 0) throw new Error('Al desmarcar el batido no se quita')
+  await leerHasta(async () => (await tabla('comidas')).filter(c => c.fecha === '2026-10-13'), hoy => hoy.length === 0, 'Al desmarcar el batido no se quita')
 })
 
 escenario('comida a fondo: otro día, otra franja, editar (nombre, franja, hora), borrar deslizando con deshacer y objetivo de energía', async () => {
@@ -197,8 +195,7 @@ escenario('comida a fondo: otro día, otra franja, editar (nombre, franja, hora)
   await ver('Borrado:')
   comprobar((await comidas()).length === n - 1, 'No se borra la comida')
   await pulsar('Deshacer')
-  await esperar(400)
-  comprobar((await comidas()).length === n, '«Deshacer» no la devuelve')
+  await leerHasta(comidas, c => c.length === n, '«Deshacer» no la devuelve')
   // Objetivo de energía: ver cómo se calcula y ponerlo a mano.
   await t('pulsarSel', '.card.pd.adj')
   await ver('Tu objetivo de energía')
@@ -210,9 +207,7 @@ escenario('comida a fondo: otro día, otra franja, editar (nombre, franja, hora)
   await pulsar('Lo pongo yo')
   await t('pulsarSel', '[aria-label="Kcal al día"] button[aria-label="Más"]')
   await t('pulsarSel', '[aria-label="Proteína al día"] button[aria-label="Más"]')
-  await esperar(300)
-  let a = await ajustesBD()
-  comprobar(a.kcalManual > 0 && a.proteinaManual > 0, 'El objetivo a mano no se guarda: ' + JSON.stringify([a.kcalManual, a.proteinaManual]))
+  let a = await leerHasta(ajustesBD, a => a.kcalManual > 0 && a.proteinaManual > 0, a => 'El objetivo a mano no se guarda: ' + JSON.stringify([a.kcalManual, a.proteinaManual]))
   await volver()
   await ver('puesto a mano')
   await pulsar('Volver a automático')

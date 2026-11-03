@@ -1,5 +1,13 @@
 // Código que se mete en la página en cada carga: reloj simulado y ayudante para pulsar y leer.
 
+/**
+ * Cuánto más se espera en la integración continua: la máquina de GitHub es varias veces más lenta que la de casa.
+ * Solo alarga lo que se espera a que algo aparezca; lo que se comprueba es lo mismo.
+ */
+export const FACTOR_ESPERAS = process.env.CI ? 3 : 1
+/** Va delante del ayudante: le dice a la página cuánto alargar las esperas. */
+export const ESPERAS = `globalThis.__e2eFactor = ${FACTOR_ESPERAS};`
+
 /** Desplaza la hora de la página según sessionStorage.__e2e_fecha (milisegundos de diferencia). */
 export const RELOJ = `(() => {
   const R = Date
@@ -18,6 +26,9 @@ export const AYUDANTE = `(() => {
   // salvo en las pruebas del tutorial (sessionStorage.__e2e_tutorial).
   try { if (!sessionStorage.getItem('__e2e_tutorial')) localStorage.setItem('jf-tutorial-ofrecido', '1') } catch {}
   const dormir = ms => new Promise(r => setTimeout(r, ms))
+  // Las esperas máximas, alargadas en la integración continua (ESPERAS).
+  const F = Number(globalThis.__e2eFactor) || 1
+  const hasta = ms => Date.__real() + ms * F
   const limpio = s => (s || '').replace(/\\s+/g, ' ').trim()
   const visible = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden' }
   const SEL = 'button,[role=button],[role=switch],a,summary,.it,.chip,label,.fe'
@@ -47,7 +58,7 @@ export const AYUDANTE = `(() => {
   const casaTexto = (t) => t instanceof RegExp ? t.test(document.body?.innerText ?? '') : texto().toLowerCase().includes(t.toLowerCase())
   window.__t = {
     async pulsar(t, donde, ms = 5000) {
-      const fin = Date.__real() + ms
+      const fin = hasta(ms)
       for (;;) {
         const el = buscar(t, donde)
         if (el) { el.scrollIntoView({ block: 'center' }); el.click(); await dormir(250); return limpio(el.innerText).slice(0, 40) }
@@ -56,7 +67,7 @@ export const AYUDANTE = `(() => {
       }
     },
     async ver(t, ms = 5000) {
-      const fin = Date.__real() + ms
+      const fin = hasta(ms)
       for (;;) {
         if (casaTexto(t)) return true
         if (Date.__real() > fin) throw new Error('No aparece «' + t + '»')
@@ -65,7 +76,7 @@ export const AYUDANTE = `(() => {
     },
     /** Espera a que la pantalla haya cargado (las pantallas se cargan al abrirlas). */
     async listo(ms = 8000) {
-      const fin = Date.__real() + ms
+      const fin = hasta(ms)
       for (;;) {
         const sc = document.querySelector('.screen')
         if (sc && !document.querySelector('.screens > .cargando')) { await dormir(150); return true }
@@ -74,7 +85,7 @@ export const AYUDANTE = `(() => {
       }
     },
     async pulsarSel(sel, ms = 5000) {
-      const fin = Date.__real() + ms
+      const fin = hasta(ms)
       for (;;) {
         const el = [...document.querySelectorAll(sel)].filter(visible).pop()
         if (el) { el.click(); await dormir(250); return true }
@@ -82,11 +93,31 @@ export const AYUDANTE = `(() => {
         await dormir(120)
       }
     },
+    /**
+     * Espera a que el tutorial enseñe un paso con otro título que «antes», ya encendido y quieto (la tarjeta y el
+     * recuadro sin moverse en tres miradas seguidas), y devuelve su título. Con una espera fija, en una máquina lenta
+     * se miraba la tarjeta aún moviéndose o el paso de antes.
+     */
+    async pasoTutorial(antes, ms = 8000) {
+      const fin = hasta(ms)
+      let firma = '', iguales = 0
+      for (;;) {
+        const c = document.querySelector('[data-tut-tarjeta]')
+        const h = c?.querySelector('h2')?.textContent ?? ''
+        if (c && c.classList.contains('visible') && h && h !== antes) {
+          const r = c.getBoundingClientRect(), fo = document.querySelector('[data-tut-foco]')?.getBoundingClientRect()
+          const f = [h, r.x, r.y, r.width, r.height, fo?.x, fo?.y, fo?.width, fo?.height].map(v => typeof v === 'number' ? Math.round(v) : v).join()
+          if (f !== firma) { firma = f; iguales = 0 } else if (++iguales >= 3) return h
+        } else { firma = ''; iguales = 0 }
+        if (Date.__real() > fin) throw new Error('El tutorial no pasa del paso «' + antes + '»')
+        await dormir(100)
+      }
+    },
     async noVer(t) { if (casaTexto(t)) throw new Error('Aparece «' + t + '» y no debería'); return true },
     async hay(t) { return casaTexto(t) },
     async escribir(sel, valor) {
       let el = null
-      for (let i = 0; i < 40 && !el; i++) { const els = [...document.querySelectorAll(sel)].filter(visible); el = els[els.length - 1]; if (!el) await dormir(120) }
+      for (const fin = hasta(5000); !el && Date.__real() < fin;) { const els = [...document.querySelectorAll(sel)].filter(visible); el = els[els.length - 1]; if (!el) await dormir(120) }
       if (!el) throw new Error('No encuentro el campo ' + sel)
       el.focus()
       const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
@@ -98,7 +129,7 @@ export const AYUDANTE = `(() => {
     /** Elige una opción en un desplegable (<select>). */
     async elegir(sel, valor) {
       let el = null
-      for (let i = 0; i < 40 && !el; i++) { el = [...document.querySelectorAll(sel)].filter(visible).pop(); if (!el) await dormir(120) }
+      for (const fin = hasta(5000); !el && Date.__real() < fin;) { el = [...document.querySelectorAll(sel)].filter(visible).pop(); if (!el) await dormir(120) }
       if (!el) throw new Error('No encuentro el desplegable ' + sel)
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, String(valor))
       el.dispatchEvent(new Event('change', { bubbles: true }))

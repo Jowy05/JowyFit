@@ -28,7 +28,7 @@ if (!fs.existsSync(path.join(SALIDA, 'index.html'))) {
 }
 
 const servidor = await preview({ root: RAIZ, logLevel: 'error', build: { outDir: SALIDA }, preview: { port: PUERTO, strictPort: true, host: '127.0.0.1' } })
-const nav = await abrirNavegador({ puerto: 9571 })
+const nav = await abrirNavegador()
 const { cdp } = nav
 
 let errores = []

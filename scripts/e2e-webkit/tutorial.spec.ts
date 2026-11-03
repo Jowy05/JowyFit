@@ -1,6 +1,6 @@
 // Tutorial en iPhone: se ofrece la primera vez (después de las instrucciones para instalarla), explica lo adaptado
 // (pendientes, pasos a mano, copia con Compartir, pitido y destello) y no enseña nada que en iPhone no funcione.
-import { expect, test } from './ayuda'
+import { expect, ms, test } from './ayuda'
 
 test.describe('tutorial en iPhone sin instalar', () => {
   test.use({ instalada: false })
@@ -13,13 +13,13 @@ test.describe('tutorial en iPhone sin instalar', () => {
     await page.evaluate(() => { sessionStorage.setItem('__e2e_tutorial', '1'); localStorage.removeItem('jf-tutorial-ofrecido') })
     await page.reload()
     const oferta = page.getByRole('dialog').filter({ hasText: '¿Te enseño cómo funciona JowyFit?' })
-    await expect(oferta).toBeVisible({ timeout: 10000 })
+    await expect(oferta).toBeVisible({ timeout: ms(10000) })
     await oferta.getByRole('button', { name: /Sí, enséñamelo/ }).tap()
 
     const tarjeta = page.locator('[data-tut-tarjeta]')
     const vistos: string[] = []
     for (let k = 0; k < 25; k++) {
-      await page.waitForTimeout(1300)
+      await jf.t('pasoTutorial', vistos[vistos.length - 1] ?? '')
       const m = await page.evaluate(() => {
         const fo = document.querySelector('[data-tut-foco]')?.getBoundingClientRect()
         const c = document.querySelector('[data-tut-tarjeta]')!.getBoundingClientRect()
@@ -48,6 +48,9 @@ test.describe('tutorial en iPhone sin instalar', () => {
     // Vuelve a donde estaba (Inicio) y no se vuelve a ofrecer.
     await jf.ver(/Buenos|Buenas/)
     await page.reload()
+    // Que no salga solo se ve dejando pasar el rato en que saldría (a los 1,5 s de tener Inicio a la vista).
+    await jf.abierta()
+    await jf.ver(/Buenos|Buenas/)
     await page.waitForTimeout(3200)
     await expect(oferta).toHaveCount(0)
   })

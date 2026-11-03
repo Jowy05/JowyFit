@@ -1,6 +1,6 @@
 // Progreso (peso, medidas, metas, pasos y fotos): escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import path from 'node:path'
-import { altaRapida, comprobar, entorno, escenario, esperar, irA, js, meterSesionHecha, pestana, pulsar, RAIZ, revisarAqui, seg, t, tabla, ver } from '../ayudantes.mjs'
+import { altaRapida, comprobar, entorno, escenario, irA, js, leerHasta, meterSesionHecha, pestana, pulsar, RAIZ, revisarAqui, seg, t, tabla, ver } from '../ayudantes.mjs'
 
 escenario('peso, medidas y cuerpo', async () => {
   await altaRapida('2026-10-13T07:00:00')
@@ -91,8 +91,7 @@ escenario('progreso a fondo: registrar todas las medidas (báscula, origen y fec
   await ver('Deshacer')
   comprobar((await tabla('mediciones')).length === ms.length - 1, 'No se borra la medición')
   await pulsar('Deshacer')
-  await esperar(400)
-  comprobar((await tabla('mediciones')).length === ms.length, '«Deshacer» no devuelve la medición')
+  await leerHasta(() => tabla('mediciones'), m => m.length === ms.length, '«Deshacer» no devuelve la medición')
   // Metas: crear una de peso con fecha, editarla (marcar conseguida) y borrarla.
   await pestana('Progreso')
   await seg('Metas')
@@ -117,8 +116,7 @@ escenario('progreso a fondo: registrar todas las medidas (báscula, origen y fec
   await ver('Meta borrada')
   comprobar(!(await tabla('metas')).some(x => x.id === meta.id), 'No se borra la meta')
   await pulsar('Deshacer')
-  await esperar(400)
-  comprobar((await tabla('metas')).some(x => x.id === meta.id), '«Deshacer» no devuelve la meta')
+  await leerHasta(() => tabla('metas'), m => m.some(x => x.id === meta.id), '«Deshacer» no devuelve la meta')
 })
 
 escenario('pasos, fuerza y fotos a fondo: pasos a mano de ayer, objetivo de pasos, trote en minutos, gráficas y comparador', async () => {
@@ -140,8 +138,7 @@ escenario('pasos, fuerza y fotos a fondo: pasos a mano de ayer, objetivo de paso
   await revisarAqui('pasos')
   await t('pulsarSel', 'button.pasos-obj')
   await t('pulsarSel', '[aria-label="Objetivo de pasos"] button[aria-label="Más"]')
-  await esperar(300)
-  comprobar((await tabla('perfil'))[0].pasosObjetivo === 8500, 'El objetivo de pasos no cambia: ' + (await tabla('perfil'))[0].pasosObjetivo)
+  await leerHasta(async () => (await tabla('perfil'))[0].pasosObjetivo, n => n === 8500, n => 'El objetivo de pasos no cambia: ' + n)
   if (await t('hay', 'Ayer')) {
     await pulsar('Ayer')
     await t('pulsarSel', '[aria-label="Pasos"] button[aria-label="Más"]')
@@ -174,6 +171,5 @@ escenario('pasos, fuerza y fotos a fondo: pasos a mano de ayer, objetivo de paso
   await t('pulsarSel', 'button[aria-label="Borrar foto"]')
   await ver('¿Borrar esta foto?')
   await pulsar(/^Borrar$/, '.sheet')
-  await esperar(500)
-  comprobar((await tabla('fotos')).length === 1, 'No se borra la foto')
+  await leerHasta(() => tabla('fotos'), f => f.length === 1, 'No se borra la foto')
 })

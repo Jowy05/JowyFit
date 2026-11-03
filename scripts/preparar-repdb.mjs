@@ -43,17 +43,38 @@ export function comprobarRepDB(datos, origen = 'descargado', esperada = SHA256_Z
   }
 }
 
+/** Esperas entre intentos de descarga (segundos): la red de la máquina de GitHub a veces falla un momento. */
+const ESPERAS_DESCARGA = [3, 10, 30]
+
+/**
+ * Descarga el zip y lo comprueba con su huella; si falla (sin red, error del servidor, se corta a medias o llega
+ * otra cosa), lo intenta otra vez tras las `esperas`. Nunca acepta un archivo que no cuadre: si tras el último
+ * intento sigue sin cuadrar, se para con el error de siempre.
+ */
+export async function descargarConReintentos(url, { esperada = SHA256_ZIP, esperas = ESPERAS_DESCARGA, traer = fetch, dormir = s => new Promise(r => setTimeout(r, s * 1000)), avisar = console.warn } = {}) {
+  for (let intento = 0; ; intento++) {
+    try {
+      // Con límite de tiempo: una descarga colgada no se come la media hora de las pruebas.
+      const r = await traer(url, { signal: AbortSignal.timeout(180_000) })
+      if (!r.ok) throw new Error(`No se pudo descargar RepDB: HTTP ${r.status}`)
+      const datos = Buffer.from(await r.arrayBuffer())
+      comprobarRepDB(datos, 'descargado', esperada)
+      return datos
+    } catch (e) {
+      if (intento >= esperas.length) throw e
+      avisar(`RepDB: falló la descarga (intento ${intento + 1} de ${esperas.length + 1}): ${String(e?.message ?? e).split('\n')[0]}. Otra vez en ${esperas[intento]} s.`)
+      await dormir(esperas[intento])
+    }
+  }
+}
+
 async function descargar() {
   // El guardado solo vale si es la versión revisada; si no, se descarga (sin borrar el guardado hasta que lo nuevo cuadre).
   if (fs.existsSync(ZIP) && huella(fs.readFileSync(ZIP)) === SHA256_ZIP) return
   if (fs.existsSync(ZIP)) console.warn('RepDB: el archivo guardado en .cache/repdb no es la versión esperada. Se descarga de nuevo.')
   fs.mkdirSync(CACHE, { recursive: true })
   console.log('Descargando RepDB…')
-  const r = await fetch(URL_ZIP)
-  if (!r.ok) throw new Error(`No se pudo descargar RepDB: HTTP ${r.status}`)
-  const datos = Buffer.from(await r.arrayBuffer())
-  comprobarRepDB(datos)
-  fs.writeFileSync(ZIP, datos)
+  fs.writeFileSync(ZIP, await descargarConReintentos(URL_ZIP))
 }
 
 function limpiar(dir) {

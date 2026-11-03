@@ -1,6 +1,6 @@
 // Entreno de principio a fin en iPhone: series, descanso con sonido y destello (no hay vibración), pantalla
 // encendida, Ocupado, saltar ejercicio, botón atrás de la app, resumen y volver al entreno.
-import { expect, test } from './ayuda'
+import { expect, ms, test } from './ayuda'
 
 test('entreno de principio a fin', async ({ page, jf }) => {
   await jf.deCero('2026-10-13T05:20:00') // martes, día de entreno
@@ -33,10 +33,10 @@ test('entreno de principio a fin', async ({ page, jf }) => {
   const ahora = await page.evaluate(() => Date.now())
   const osc = (await jf.registro()).audio.osc
   await jf.adelantar(curso.descansoHasta! - ahora + 300)
-  await expect(page.locator('.destello')).toBeVisible({ timeout: 4000 })
+  await expect(page.locator('.destello')).toBeVisible({ timeout: ms(4000) })
   await expect(page.locator('.destello')).toContainText('Siguiente serie')
   expect((await jf.registro()).audio.osc).toBeGreaterThanOrEqual(osc + 3)
-  await expect(page.locator('.destello')).toBeHidden({ timeout: 4000 })
+  await expect(page.locator('.destello')).toBeHidden({ timeout: ms(4000) })
   // Pantalla completa: el marco no se ha desplazado (Safari lo movía al llevar un botón a la vista) y la barra de
   // pestañas sigue escondida debajo, sin asomar.
   expect(await jf.js<number>(`return document.querySelector('.app').scrollTop + document.querySelector('.screens').scrollTop`)).toBe(0)

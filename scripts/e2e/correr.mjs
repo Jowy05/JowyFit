@@ -4,11 +4,14 @@
 //   node scripts/e2e/correr.mjs --build    → contra la versión compilada (dist/), incluida la prueba sin conexión
 //   node scripts/e2e/correr.mjs entreno    → solo los escenarios cuyo nombre contenga «entreno»
 //   Los escenarios están en escenarios/ (uno por zona) y los ayudantes que usan, en ayudantes.mjs.
+//   En la integración continua (CI) las esperas son más largas y lo que falle se pasa otra vez (reintento.mjs).
+//   E2E_LENTO=4 node scripts/e2e/correr.mjs --build → con el procesador 4 veces más lento (como en GitHub).
 import path from 'node:path'
 import { createServer, preview } from 'vite'
 import { abrirNavegador } from './navegador.mjs'
-import { AYUDANTE, RELOJ } from './pagina.mjs'
+import { AYUDANTE, ESPERAS, RELOJ } from './pagina.mjs'
 import { conectar, DESCARGAS, entorno, ESCENARIOS, esperar, js, movil, RAIZ, tema } from './ayudantes.mjs'
+import { conReintento, reintentarEnCI, resumen } from './reintento.mjs'
 
 const args = process.argv.slice(2)
 const compilada = args.includes('--build')
@@ -33,6 +36,9 @@ const { cdp } = nav
 const errores = []
 cdp.al('Runtime.exceptionThrown', p => errores.push(`excepción: ${p.exceptionDetails?.exception?.description ?? p.exceptionDetails?.text}`))
 cdp.al('Runtime.consoleAPICalled', p => { if (p.type === 'error') errores.push(`console.error: ${p.args.map(a => a.value ?? a.description).join(' ')}`) })
+// Si la página se cae (sin memoria en la máquina de GitHub), se dice: si no, solo saldría «target closed».
+const incidencias = []
+cdp.al('Inspector.targetCrashed', () => incidencias.push('la página se ha caído (¿sin memoria?)'))
 cdp.al('Log.entryAdded', p => { if (p.entry.level === 'error' && !/openfoodfacts|favicon/.test(p.entry.url ?? '')) errores.push(`log: ${p.entry.text} ${p.entry.url ?? ''}`) })
 cdp.al('Fetch.requestPaused', async p => {
   const u = p.request.url
@@ -52,7 +58,9 @@ await cdp.enviar('Page.enable')
 await cdp.enviar('Fetch.enable', { patterns: [{ urlPattern: '*openfoodfacts*' }] })
 await cdp.enviar('Emulation.setTimezoneOverride', { timezoneId: 'Europe/Madrid' })
 await cdp.enviar('Emulation.setLocaleOverride', { locale: 'es-ES' })
-await cdp.enviar('Page.addScriptToEvaluateOnNewDocument', { source: RELOJ + AYUDANTE })
+// E2E_LENTO=4: el procesador de la página 4 veces más lento, para ver en casa lo que falla en la máquina de GitHub.
+if (Number(process.env.E2E_LENTO) > 1) await cdp.enviar('Emulation.setCPUThrottlingRate', { rate: Number(process.env.E2E_LENTO) })
+await cdp.enviar('Page.addScriptToEvaluateOnNewDocument', { source: ESPERAS + RELOJ + AYUDANTE })
 await cdp.enviar('DOM.enable')
 await cdp.enviar('Page.setInterceptFileChooserDialog', { enabled: true })
 const fsx = await import('node:fs')
@@ -72,32 +80,58 @@ for (const zona of ['alta', 'inicio', 'entreno', 'rutina', 'generador', 'comida'
 
 // ---------- ejecución ----------
 await cdp.enviar('Performance.enable').catch(() => {})
-let bien = 0, mal = 0
+const reintentar = reintentarEnCI()
+let bien = 0, mal = 0, reintentados = 0
 const inicio = Date.now()
-for (const e of ESCENARIOS) {
-  if (filtro && !e.nombre.includes(filtro)) continue
-  errores.length = 0
-  // Cada escenario empieza igual aunque el anterior fallara a medias (tamaño, tema, archivos, conexión).
+
+/** Un escenario de principio a fin, desde el estado de siempre aunque el anterior fallara a medias. */
+async function pasar(e) {
+  errores.length = 0; incidencias.length = 0; cdp.recargasSolas()
+  // Tamaño, tema, archivos y conexión como al principio.
   await movil(390, 844).catch(() => {}); await tema('light').catch(() => {})
   entorno.archivoParaElegir = null; entorno.sinConexion = false
+  await e.f()
+  await esperar(300)
+  const propios = errores.filter(x => !/Download the React DevTools|\[vite\]/.test(x))
+  if (propios.length) throw new Error(`errores en la consola:\n      ${propios.slice(0, 5).join('\n      ')}`)
+}
+
+/** Lo que se ve al fallar: el error, lo que había en pantalla, la captura y si la página se recargó o cayó sola. */
+async function contarFallo(e, err, intento = '') {
+  const solas = cdp.recargasSolas()
+  const foto = await cdp.enviar('Page.captureScreenshot', { format: 'png' }).catch(() => null)
+  const archivo = path.join(RAIZ, '.cache', `e2e-fallo-${e.nombre.replace(/[^a-z0-9]+/gi, '-')}${intento}.png`)
+  if (foto) { const fs = await import('node:fs'); fs.mkdirSync(path.dirname(archivo), { recursive: true }); fs.writeFileSync(archivo, Buffer.from(foto.data, 'base64')) }
+  const pantalla = await js(`return document.querySelector('.sheet')?.innerText?.slice(0,300) || document.querySelector('.screen')?.innerText?.slice(0,300) || document.body.innerText.slice(0,300)`).catch(() => '')
+  const extra = [...incidencias, ...(solas.length ? [`la página se recargó sola ${solas.length} ${solas.length === 1 ? 'vez' : 'veces'}`] : [])]
+  return `${err?.message ?? err}\n    pantalla: ${String(pantalla).replace(/\n+/g, ' / ')}\n    captura: ${foto ? archivo : '—'}${extra.map(x => `\n    ${x}`).join('')}`
+}
+
+for (const e of ESCENARIOS) {
+  if (filtro && !e.nombre.includes(filtro)) continue
   const t0 = Date.now()
-  try {
-    await e.f()
-    await esperar(300)
-    const propios = errores.filter(x => !/Download the React DevTools|\[vite\]/.test(x))
-    if (propios.length) throw new Error(`errores en la consola:\n      ${propios.slice(0, 5).join('\n      ')}`)
+  const r = await conReintento(() => pasar(e), {
+    reintentar,
+    antesDeReintentar: async err => console.log(`  ↻ ${e.nombre}: ${await contarFallo(e, err, '-intento-1')}\n    se vuelve a pasar una vez`),
+  })
+  const s = ((Date.now() - t0) / 1000).toFixed(1)
+  if (r.ok) {
     bien++
-    console.log(`  ✓ ${e.nombre} (${((Date.now() - t0) / 1000).toFixed(1)} s)`)
-  } catch (err) {
+    if (r.reintentado) {
+      reintentados++
+      console.log(`  ✓ ${e.nombre} (${s} s) · reintentado`)
+      // Que se vea en el resumen de GitHub aunque todo acabe en verde.
+      if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Prueba reintentada::${e.nombre}`)
+    } else console.log(`  ✓ ${e.nombre} (${s} s)`)
+    // Bien, pero la app se recargó sin que nadie lo pidiera: se dice, por si es lo que hace fallar a otras.
+    const solas = cdp.recargasSolas()
+    if (solas.length) console.log(`    (la página se recargó sola: ${solas.join(' · ')})`)
+  } else {
     mal++
-    const foto = await cdp.enviar('Page.captureScreenshot', { format: 'png' }).catch(() => null)
-    const archivo = path.join(RAIZ, '.cache', `e2e-fallo-${e.nombre.replace(/[^a-z0-9]+/gi, '-')}.png`)
-    if (foto) { const fs = await import('node:fs'); fs.mkdirSync(path.dirname(archivo), { recursive: true }); fs.writeFileSync(archivo, Buffer.from(foto.data, 'base64')) }
-    const pantalla = await js(`return document.querySelector('.sheet')?.innerText?.slice(0,300) || document.querySelector('.screen')?.innerText?.slice(0,300) || document.body.innerText.slice(0,300)`).catch(() => '')
-    console.log(`  ✗ ${e.nombre}: ${err.message}\n    pantalla: ${String(pantalla).replace(/\n+/g, ' / ')}\n    captura: ${foto ? archivo : '—'}`)
+    console.log(`  ✗ ${e.nombre}${r.reintentado ? ' (también al reintentarlo)' : ''}: ${await contarFallo(e, r.error)}`)
   }
 }
-console.log(`\n${bien} bien, ${mal} mal · ${((Date.now() - inicio) / 1000).toFixed(0)} s`)
+console.log(`\n${resumen({ bien, mal, reintentados, segundos: ((Date.now() - inicio) / 1000).toFixed(0) })}`)
 await nav.cerrar()
 await servidor.close?.() ?? servidor.httpServer?.close()
 process.exit(mal ? 1 : 0)

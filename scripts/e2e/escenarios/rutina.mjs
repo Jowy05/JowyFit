@@ -1,5 +1,5 @@
 // Rutina, semana y gimnasios: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { altaRapida, cerrarHoja, comprobar, escenario, esperar, hacerEntreno, irA, js, meter, meterSesionHecha, noVer, pestana, ponerPesoSiFalta, pulsar, recargar, revisarAqui, seg, soltarFoco, t, tabla, ver, volver } from '../ayudantes.mjs'
+import { altaRapida, cerrarHoja, comprobar, escenario, esperar, hacerEntreno, hastaQue, irA, js, leerHasta, meter, meterSesionHecha, noVer, pestana, ponerPesoSiFalta, primeroDeLaBusqueda, pulsar, recargar, revisarAqui, seg, soltarFoco, t, tabla, ver, volver } from '../ayudantes.mjs'
 
 escenario('semana: dos entrenos, progresión y día perdido', async () => {
   await altaRapida('2026-10-12T09:00:00')
@@ -144,53 +144,43 @@ escenario('rutina a fondo: día, editar plan (series, reps, prisa, dos seguidos,
   const b0 = a.bloques[0]
   // Series: + 1.
   await js(`document.querySelectorAll('.edr.card')[0].querySelector('[aria-label="Series"] button[aria-label="Más"]').click()`)
-  await esperar(350)
-  a = await diaA()
-  comprobar(a.bloques[0].series === b0.series + 1, 'El + de series no cambia la rutina')
+  await leerHasta(diaA, a => a.bloques[0].series === b0.series + 1, 'El + de series no cambia la rutina')
   // Reps: tocar el chip pasa al siguiente rango.
   await js(`document.querySelectorAll('.edr.card')[0].querySelector('.ux-rut-reps')?.click()`)
-  await esperar(350)
-  a = await diaA()
-  comprobar(b0.registro === 'tiempo' || a.bloques[0].repsMin !== b0.repsMin || a.bloques[0].repsMax !== b0.repsMax, 'Tocar las reps no cambia el rango')
+  await leerHasta(diaA, a => b0.registro === 'tiempo' || a.bloques[0].repsMin !== b0.repsMin || a.bloques[0].repsMax !== b0.repsMax, 'Tocar las reps no cambia el rango')
   // Más opciones: fuera si hay prisa, dos seguidos y separar, bajar.
   await enTarjeta(0, 'Más opciones')
   await enTarjeta(0, 'Fuera si hay prisa')
-  a = await diaA()
-  comprobar(a.bloques[0].fueraEnCorta === !b0.fueraEnCorta, '«Fuera si hay prisa» no cambia')
+  a = await leerHasta(diaA, a => a.bloques[0].fueraEnCorta === !b0.fueraEnCorta, '«Fuera si hay prisa» no cambia')
   const libre = a.bloques.findIndex((b, i) => i < a.bloques.length - 1 && !b.superserie && !a.bloques[i + 1].superserie)
   if (libre >= 0) {
     if (libre !== 0) await enTarjeta(libre, 'Más opciones')
     await enTarjeta(libre, 'Dos seguidos')
-    a = await diaA()
-    comprobar(a.bloques[libre].superserie === a.bloques[libre + 1].uid, '«Dos seguidos» no los junta')
+    a = await leerHasta(diaA, a => a.bloques[libre].superserie === a.bloques[libre + 1].uid, '«Dos seguidos» no los junta')
     // El «Separar» de esta pareja (puede haber otras parejas antes).
     const antes = a.bloques.slice(0, libre).filter(b => b.superserie && a.bloques.findIndex(x => x.uid === b.superserie) > a.bloques.indexOf(b)).length
     await js(`document.querySelectorAll('.ss-head button.lnk')[${antes}].click()`)
     await ver('Ya no van seguidos')
-    a = await diaA()
-    comprobar(!a.bloques[libre].superserie, '«Separar» no los separa')
+    a = await leerHasta(diaA, a => !a.bloques[libre].superserie, '«Separar» no los separa')
   }
   const orden = (await diaA()).bloques.map(b => b.uid)
   if (!(await js(`return [...document.querySelectorAll('.edr.card')[0].querySelectorAll('button')].some(b => b.innerText.trim().startsWith('Bajar'))`))) await enTarjeta(0, 'Más opciones')
   await enTarjeta(0, 'Bajar')
-  a = await diaA()
-  comprobar(a.bloques[1].uid === orden[0] && a.bloques[0].uid === orden[1], '«Bajar» no baja el ejercicio')
+  a = await leerHasta(diaA, a => a.bloques[1].uid === orden[0] && a.bloques[0].uid === orden[1], '«Bajar» no baja el ejercicio')
   // Si está ocupado: elegir una alternativa.
   if (!(await js(`return [...document.querySelectorAll('.edr.card')[0].querySelectorAll('button')].some(b => b.innerText.trim().startsWith('Si está ocupado'))`))) await enTarjeta(0, 'Más opciones')
   await enTarjeta(0, 'Si está ocupado')
   await ver('Qué hacer si')
   const alt = await js(`const b = document.querySelector('.sheet .list button.it'); const n = b.querySelector('b')?.innerText; b.click(); return n`)
   await ver('Si está ocupado:')
-  a = await diaA()
-  comprobar(a.bloques[0].alternativas.length > 0, 'La alternativa no se guarda')
+  a = await leerHasta(diaA, a => a.bloques[0].alternativas.length > 0, 'La alternativa no se guarda')
   // Cambiar ejercicio.
   const antes = a.bloques[0].ejercicio
   await enTarjeta(0, 'Cambiar ejercicio')
   await ver('En lugar de')
   await js(`document.querySelector('.sheet .list button.it').click()`)
   await ver('Cambiado por')
-  a = await diaA()
-  comprobar(a.bloques[0].ejercicio !== antes, 'No se cambia el ejercicio del plan (' + alt + ')')
+  a = await leerHasta(diaA, a => a.bloques[0].ejercicio !== antes, 'No se cambia el ejercicio del plan (' + alt + ')')
   // Quitar y deshacer.
   const n = a.bloques.length
   if (!(await js(`return [...document.querySelectorAll('.edr.card')[0].querySelectorAll('button')].some(b => b.innerText.trim().startsWith('Quitar'))`))) await enTarjeta(0, 'Más opciones')
@@ -198,12 +188,11 @@ escenario('rutina a fondo: día, editar plan (series, reps, prisa, dos seguidos,
   await ver('Ejercicio quitado')
   comprobar((await diaA()).bloques.length === n - 1, 'No se quita el ejercicio')
   await pulsar('Deshacer')
-  await esperar(400)
-  comprobar((await diaA()).bloques.length === n, '«Deshacer» no lo devuelve')
+  await leerHasta(diaA, a => a.bloques.length === n, '«Deshacer» no lo devuelve')
   // Añadir un ejercicio al día.
   await pulsar('Añadir ejercicio')
   await t('escribir', '.sheet input[type=search]', 'plancha')
-  await esperar(300)
+  await primeroDeLaBusqueda(/plancha/i)
   await js(`document.querySelector('.sheet .list button.it').click()`)
   await ver('Añadido:')
   comprobar((await diaA()).bloques.length === n + 1, 'No se añade el ejercicio al día')
@@ -228,28 +217,23 @@ escenario('rutina a fondo: ficha (no me gusta, me duele, ajustes, notas, al plan
   comprobar(todos >= total, 'Sin «En mi gimnasio» salen menos ejercicios')
   await pulsar('Más filtros')
   await t('elegir', 'select[aria-label="Equipamiento"]', 'dumbbell')
-  await esperar(300)
-  comprobar((await cuenta()) < todos, 'El filtro de equipamiento no filtra')
+  await leerHasta(cuenta, c => c < todos, 'El filtro de equipamiento no filtra')
   await pulsar('Quitar filtros').catch(() => pulsar(/^Quitar/))
-  await esperar(300)
+  await leerHasta(cuenta, c => c === todos, c => `«Quitar filtros» no vuelve a la lista entera: ${c} de ${todos}`)
   // Calistenia y cardio: no son solo máquinas y pesas (dominadas, flexiones, correr, comba…).
   await pulsar(/^Calistenia$/)
-  await esperar(300)
-  const nCal = await cuenta()
-  comprobar(nCal > 30 && nCal < todos, 'El filtro «Calistenia» no filtra bien: ' + nCal)
+  const nCal = await leerHasta(cuenta, n => n > 30 && n < todos, n => 'El filtro «Calistenia» no filtra bien: ' + n)
   await ver('Dominadas')
   await pulsar(/^Cardio$/)
-  await esperar(300)
-  const nCar = await cuenta()
-  comprobar(nCar > 5 && nCar < nCal, 'El filtro «Cardio» no filtra bien: ' + nCar)
+  await leerHasta(cuenta, n => n > 5 && n < nCal, n => 'El filtro «Cardio» no filtra bien: ' + n)
   await ver('Burpees')
   await pulsar(/^Cardio$/)
-  await esperar(300)
-  comprobar((await cuenta()) === todos, 'Quitar «Cardio» no vuelve a la lista entera')
+  await leerHasta(cuenta, c => c === todos, 'Quitar «Cardio» no vuelve a la lista entera')
   await t('escribir', 'input[aria-label="Buscar ejercicio"]', 'calistenia')
-  await esperar(300)
-  // Al buscar también salen los estiramientos (la lista sin buscar los esconde), así que son los mismos o más.
-  comprobar((await cuenta()) >= nCal, 'Buscar «calistenia» da menos que el filtro')
+  // Al buscar también salen los estiramientos (la lista sin buscar los esconde), así que son los mismos o más; pero
+  // no todos: si la cuenta sigue en la lista entera, la búsqueda aún no se ha aplicado.
+  const nBus = await leerHasta(cuenta, c => c !== todos, 'Buscar «calistenia» no cambia la lista')
+  comprobar(nBus >= nCal, 'Buscar «calistenia» da menos que el filtro')
   await ver('Dominadas')
   await t('escribir', 'input[aria-label="Buscar ejercicio"]', 'press banca')
   await pulsar(/Press de Banca con Barra/i)
@@ -257,19 +241,15 @@ escenario('rutina a fondo: ficha (no me gusta, me duele, ajustes, notas, al plan
   await revisarAqui('ficha')
   await pulsar('No me gusta')
   await pulsar('Me duele')
-  await esperar(300)
-  let m = (await tabla('marcas')).find(x => x.odiado)
-  const idFicha = m?.id
-  comprobar(m?.odiado && m.duele, '«No me gusta» y «Me duele» no se guardan: ' + JSON.stringify(m))
+  const m = await leerHasta(async () => (await tabla('marcas')).find(x => x.odiado), m => m?.odiado && m.duele, m => '«No me gusta» y «Me duele» no se guardan: ' + JSON.stringify(m))
+  const idFicha = m.id
   await pulsar('Me duele')
   await pulsar('Escribir')
   await t('escribir', 'input[placeholder^="Asiento 4"]', 'Banco 3')
   await soltarFoco()
   await t('escribir', 'textarea[placeholder^="Escápulas"]', 'Codos a 45 grados')
   await soltarFoco()
-  await esperar(300)
-  m = (await tabla('marcas')).find(x => x.id === idFicha)
-  comprobar(m?.ajustes === 'Banco 3' && m.notas === 'Codos a 45 grados' && !m.duele, 'Ajustes y notas no se guardan: ' + JSON.stringify(m))
+  await leerHasta(async () => (await tabla('marcas')).find(x => x.id === idFicha), m => m?.ajustes === 'Banco 3' && m.notas === 'Codos a 45 grados' && !m.duele, m => 'Ajustes y notas no se guardan: ' + JSON.stringify(m))
   await pulsar('Listo')
   await ver('Banco 3')
   // Añadir a mi plan (al día B).
@@ -346,8 +326,7 @@ escenario('gimnasios a fondo: otro gimnasio, nombre y notas, material, mancuerna
   await pulsar('Borrar gimnasio')
   await ver('¿Borrar «')
   await pulsar(/^Borrar$/, '.sheet')
-  await esperar(600)
-  comprobar((await tabla('gimnasios')).length === n, 'No se borra el gimnasio')
+  await leerHasta(() => tabla('gimnasios'), g => g.length === n, 'No se borra el gimnasio')
 })
 
 escenario('ejercicios propios: crear, «Tuyo», al plan, editar y borrar con deshacer', async () => {
@@ -394,8 +373,7 @@ escenario('ejercicios propios: crear, «Tuyo», al plan, editar y borrar con des
   comprobar(!(await enPlan()), 'Borrado, pero sigue en el plan')
   comprobar(!!(await tabla('propios'))[0].borrado, 'No queda marcado como borrado')
   await pulsar('Deshacer')
-  await esperar(400)
-  comprobar(await enPlan(), '«Deshacer» no lo devolvió al plan')
+  await hastaQue(enPlan, '«Deshacer» no lo devolvió al plan')
   comprobar(!(await tabla('propios'))[0].borrado, '«Deshacer» no lo recuperó')
   await revisarAqui('ejercicios propios')
 })

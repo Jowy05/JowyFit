@@ -1,7 +1,7 @@
 // Idiomas: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { altaRapida, cdp, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, esperar, js, meter, noVer, pestana, pulsar, revisarAqui, seg, t, tabla, ver, volcar } from '../ayudantes.mjs'
+import { altaRapida, cdp, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, esperar, hastaQue, js, leerHasta, meter, noVer, pestana, pulsar, revisarAqui, seg, t, tabla, ver, volcar } from '../ayudantes.mjs'
 import { trasCarga } from '../navegador.mjs'
 
 // Lo que se comprueba en cada idioma: el nombre de las pestañas y unos textos de Inicio, de una hoja, del tutorial
@@ -68,8 +68,7 @@ async function repasarIdioma(i) {
   await ver(x.hoja)
   if (i !== 'es') await noVer('¿Cuánto tiempo tienes?')
   await t('pulsarSel', `.sheet button[aria-label="${x.cerrar}"]`)
-  await esperar(300)
-  comprobar(!(await js(`return !!document.querySelector('.sheet')`)), `La hoja no se cierra con «${x.cerrar}»`)
+  await hastaQue(async () => !(await js(`return !!document.querySelector('.sheet')`)), `La hoja no se cierra con «${x.cerrar}»`)
   // Ajustes y el tutorial (dos pasos y Esc).
   await t('pulsarSel', `button[aria-label="${x.ajustes}"]`)
   await ver(x.apariencia)
@@ -82,8 +81,7 @@ async function repasarIdioma(i) {
   await ver(x.tut2)
   if (i !== 'es') await noVer('Tu semana de un vistazo')
   await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
-  await esperar(400)
-  comprobar(!(await js(`return !!document.querySelector('.tut')`)), `Esc no cierra el tutorial (${i})`)
+  await hastaQue(async () => !(await js(`return !!document.querySelector('.tut')`)), `Esc no cierra el tutorial (${i})`)
   await ver(x.apariencia)
 }
 
@@ -127,8 +125,7 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   // El aviso dura unos segundos: se apunta en cuanto sale (con el equipo lento podría irse antes de mirarlo).
   await js(`window.__avisos = new Set(); new MutationObserver(() => { for (const a of document.body.innerText.match(/Desat: [^\\n]*/g) ?? []) window.__avisos.add(a) }).observe(document.body, { childList: true, subtree: true, characterData: true })`)
   await pulsar('Desar', '.sheet')
-  for (let i = 0; i < 40 && !(await js(`return [...window.__avisos].some(a => a.startsWith('Desat: 75,5 kg'))`)); i++) await esperar(150)
-  comprobar(await js(`return [...window.__avisos].some(a => a.startsWith('Desat: 75,5 kg'))`), 'No sale el aviso «Desat: 75,5 kg»: ' + JSON.stringify(await js(`return [...window.__avisos]`)))
+  await leerHasta(() => js(`return [...window.__avisos]`), avisos => avisos.some(a => a.startsWith('Desat: 75,5 kg')), avisos => 'No sale el aviso «Desat: 75,5 kg»: ' + JSON.stringify(avisos), 6000)
   await abrirAjustes('ca')
   const yaHabia = new Set(fsx.readdirSync(DESCARGAS))
   await pulsar('Fer una còpia ara')

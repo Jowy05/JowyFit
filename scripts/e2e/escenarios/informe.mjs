@@ -1,7 +1,7 @@
 // El informe en PDF: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { ajustesBD, altaRapida, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, esperar, js, pestana, pulsar, RAIZ, revisarAqui, t, ver } from '../ayudantes.mjs'
+import { ajustesBD, altaRapida, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, js, leerHasta, pestana, pulsar, RAIZ, revisarAqui, t, ver } from '../ayudantes.mjs'
 
 escenario('informe en PDF desde Ajustes: elegir días y casillas, crear y descargar', async () => {
   await altaRapida('2026-10-14T14:00:00')
@@ -50,8 +50,7 @@ escenario('informe en PDF desde Ajustes: elegir días y casillas, crear y descar
   await pulsar('Cerrar', '.sheet')
   await pulsar('Informe en PDF')
   await ver('¿De qué días?')
-  await esperar(300)
-  comprobar(JSON.stringify(await marcadas()) === '[true,true,true,false,false]', 'Al volver a abrir, no salen las casillas elegidas')
+  await leerHasta(marcadas, m => JSON.stringify(m) === '[true,true,true,false,false]', m => 'Al volver a abrir, no salen las casillas elegidas: ' + JSON.stringify(m))
   await revisarAqui('Hoja del informe al volver')
 })
 
@@ -61,8 +60,6 @@ escenario('informe en PDF con la copia real del dueño', async () => {
   await deCero('2026-10-20T21:30:00')
   entorno.archivoParaElegir = copia
   await pulsar(/Tengo una copia/)
-  await esperar(1500)
-  if (await t('hay', /¿Restaurar/)) await pulsar(/^Restaurar/)
   await ver(/Buenos|Buenas|Hoy te toca|descansas/, 15000)
   entorno.archivoParaElegir = null
   await pestana('Perfil')

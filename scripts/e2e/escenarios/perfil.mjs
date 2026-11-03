@@ -1,7 +1,7 @@
 // Perfil y Ajustes: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { ajustesBD, altaRapida, cdp, comprobar, entorno, escenario, esperar, js, perfilBD, pestana, pulsar, RAIZ, revisarAqui, soltarFoco, t, tabla, tema, ver, volver } from '../ayudantes.mjs'
+import { ajustesBD, altaRapida, cdp, comprobar, entorno, escenario, js, leerHasta, perfilBD, pestana, pulsar, RAIZ, revisarAqui, soltarFoco, t, tabla, tema, ver, volver } from '../ayudantes.mjs'
 import { trasCarga } from '../navegador.mjs'
 
 escenario('perfil y ajustes', async () => {
@@ -30,9 +30,8 @@ escenario('ajustes a fondo: letra, tema, cada interruptor, descansos, cafeína y
   // Letra grande y tema oscuro: se aplican a la página y se ven bien.
   await pulsar(/Grande$/)
   await pulsar('Oscuro')
-  await esperar(300)
-  const pagina = await js(`const d = document.documentElement; return { ...d.dataset, clase: d.className, tema: localStorage.getItem('jf-tema'), letra: localStorage.getItem('jf-letra') }`)
-  comprobar(pagina.theme === 'dark' && pagina.tema === 'oscuro' && pagina.letra === 'grande', 'La letra o el tema no se aplican: ' + JSON.stringify(pagina))
+  await leerHasta(() => js(`const d = document.documentElement; return { ...d.dataset, clase: d.className, tema: localStorage.getItem('jf-tema'), letra: localStorage.getItem('jf-letra') }`),
+    pagina => pagina.theme === 'dark' && pagina.tema === 'oscuro' && pagina.letra === 'grande', pagina => 'La letra o el tema no se aplican: ' + JSON.stringify(pagina))
   await revisarAqui('ajustes con letra grande y tema oscuro')
   await pulsar('Más ajustes')
   await revisarAqui('más ajustes (oscuro, grande)')
@@ -42,17 +41,15 @@ escenario('ajustes a fondo: letra, tema, cada interruptor, descansos, cafeína y
     if (!(await js(`return !!document.querySelector('[role=switch][aria-label=${JSON.stringify(etq)}]')`))) continue
     const antes = (await ajustesBD())[campo]
     await t('pulsarSel', `[role=switch][aria-label="${etq}"]`)
-    await esperar(250)
-    comprobar((await ajustesBD())[campo] === !antes, `«${etq}» no cambia ${campo}`)
+    await leerHasta(ajustesBD, a => a[campo] === !antes, `«${etq}» no cambia ${campo}`)
   }
   // Descansos y cafeína.
   const a0 = await ajustesBD()
   await t('pulsarSel', '[aria-label="Descanso de compuestos"] button[aria-label="Más"]')
   await t('pulsarSel', '[aria-label="Descanso de aislamiento"] button[aria-label="Menos"]')
   await t('pulsarSel', '[aria-label="Límite de cafeína"] button[aria-label="Menos"]')
-  await esperar(300)
-  const a1 = await ajustesBD()
-  comprobar(a1.descansoCompuesto === a0.descansoCompuesto + 15 && a1.descansoAislamiento === a0.descansoAislamiento - 15 && a1.cafeinaLimite === a0.cafeinaLimite - 50, 'Descansos o cafeína no se guardan: ' + JSON.stringify([a1.descansoCompuesto, a1.descansoAislamiento, a1.cafeinaLimite]))
+  await leerHasta(ajustesBD, a1 => a1.descansoCompuesto === a0.descansoCompuesto + 15 && a1.descansoAislamiento === a0.descansoAislamiento - 15 && a1.cafeinaLimite === a0.cafeinaLimite - 50,
+    a1 => 'Descansos o cafeína no se guardan: ' + JSON.stringify([a1.descansoCompuesto, a1.descansoAislamiento, a1.cafeinaLimite]))
   // Recuperar una copia desde Ajustes (pide confirmar antes de sustituir nada).
   const copia = path.join(RAIZ, '.cache', 'e2e-copia-ajustes.jowyfit')
   fsx.writeFileSync(copia, JSON.stringify({ app: 'JowyFit', version: 1, datos: { perfil: (await tabla('perfil')).map(p => ({ ...p, nombre: 'Copiado' })), ajustes: await tabla('ajustes'), plantillas: [], rutinas: await tabla('rutinas'), gimnasios: await tabla('gimnasios') } }))
@@ -93,9 +90,7 @@ escenario('perfil a fondo: cada sección de la ficha cambia el perfil guardado',
   await seccion('Datos personales')
   await pulsar('Mujer')
   await t('pulsarSel', '[aria-label="Altura"] button[aria-label="Más"]')
-  await esperar(300)
-  let p = await perfilBD()
-  comprobar(p.sexo === 'mujer' && p.alturaCm === p0.alturaCm + 1, 'Datos personales no se guardan: ' + JSON.stringify([p.sexo, p.alturaCm]))
+  await leerHasta(perfilBD, p => p.sexo === 'mujer' && p.alturaCm === p0.alturaCm + 1, p => 'Datos personales no se guardan: ' + JSON.stringify([p.sexo, p.alturaCm]))
   await pulsar('Hombre')
   await seccion('Peso y medidas')
   // Objetivos: otro objetivo y una zona a reforzar.
@@ -103,18 +98,14 @@ escenario('perfil a fondo: cada sección de la ficha cambia el perfil guardado',
   // La tarjeta del objetivo (no el chip de «¿Algo más?», que dice lo mismo) y una zona de «Afinar».
   await pulsar('Ganar fuerza', '.opts')
   await js(`[...document.querySelectorAll('.screen button.mq')].find(c => /pecho/i.test(c.innerText))?.click()`)
-  await esperar(300)
-  p = await perfilBD()
-  comprobar(p.objetivo === 'fuerza' && JSON.stringify(p.zonasPrioridad) !== JSON.stringify(p0.zonasPrioridad), 'Objetivos no se guardan: ' + JSON.stringify([p.objetivo, p.zonasPrioridad]))
+  await leerHasta(perfilBD, p => p.objetivo === 'fuerza' && JSON.stringify(p.zonasPrioridad) !== JSON.stringify(p0.zonasPrioridad), p => 'Objetivos no se guardan: ' + JSON.stringify([p.objetivo, p.zonasPrioridad]))
   // Horario: el lunes pasa a fijo, la hora y el transporte.
   await seccion('Horario')
   await js(`[...document.querySelectorAll('.screen .chip.day')][0].click()`)
   await pulsar('Coche')
   await t('escribir', 'input[aria-label="Otra hora"]', '06:15')
-  await esperar(300)
-  p = await perfilBD()
+  const p = await leerHasta(perfilBD, p => p.transporte === 'coche' && p.horaEntreno === '06:15', p => 'Horario no se guarda: ' + JSON.stringify([p.transporte, p.horaEntreno]))
   comprobar(JSON.stringify(p.diasFijos) !== JSON.stringify(p0.diasFijos) || JSON.stringify(p.diasOpcionales) !== JSON.stringify(p0.diasOpcionales), 'El día no cambia')
-  comprobar(p.transporte === 'coche' && p.horaEntreno === '06:15', 'Horario no se guarda: ' + JSON.stringify([p.transporte, p.horaEntreno]))
   // Salud: una zona sensible y las lesiones (se guardan al salir del campo).
   await seccion('Salud y molestias')
   // Una molestia con sus tres toques (la hoja de la zona) y el texto libre.
@@ -123,36 +114,29 @@ escenario('perfil a fondo: cada sección de la ficha cambia el perfil guardado',
   await pulsar(/^Guardar$/, '.sheet')
   await t('escribir', 'textarea[placeholder^="Por ejemplo"]', 'Hombro derecho')
   await soltarFoco()
-  p = await perfilBD()
-  comprobar(p.dolores?.some(d => d.zona === 'hombros' && d.cuanto === 'regular') && p.lesiones === 'Hombro derecho', 'Salud no se guarda: ' + JSON.stringify([p.dolores, p.lesiones]))
+  await leerHasta(perfilBD, p => p.dolores?.some(d => d.zona === 'hombros' && d.cuanto === 'regular') && p.lesiones === 'Hombro derecho', p => 'Salud no se guarda: ' + JSON.stringify([p.dolores, p.lesiones]))
   // Preferencias: dos seguidos y abdominales.
   await seccion('Preferencias de entreno')
   await t('pulsarSel', '[role=switch][aria-label="Dos seguidos"]')
   await t('pulsarSel', '[role=switch][aria-label="Abdominales"]')
-  await esperar(300)
-  p = await perfilBD()
-  comprobar(p.superseries === !p0.superseries && p.core === !p0.core, 'Preferencias no se guardan')
+  await leerHasta(perfilBD, p => p.superseries === !p0.superseries && p.core === !p0.core, 'Preferencias no se guardan')
   // Tu nivel: un peso de referencia.
   await seccion('Tu nivel')
   await t('escribir', 'input[aria-label="Press de banca"]', '50 kg × 8')
   await soltarFoco()
-  p = await perfilBD()
-  comprobar(p.referencias.banca === '50 kg × 8', 'La referencia no se guarda: ' + JSON.stringify(p.referencias))
+  await leerHasta(perfilBD, p => p.referencias.banca === '50 kg × 8', p => 'La referencia no se guarda: ' + JSON.stringify(p.referencias))
   // Pesarte y fotos: semanas entre fotos.
   await seccion('Pesarte y fotos')
   await t('pulsarSel', '[aria-label="Semanas entre fotos"] button[aria-label="Más"]')
-  await esperar(300)
-  comprobar((await perfilBD()).fotosCadaSemanas === p0.fotosCadaSemanas + 1, 'Las semanas entre fotos no cambian')
+  await leerHasta(perfilBD, p => p.fotosCadaSemanas === p0.fotosCadaSemanas + 1, 'Las semanas entre fotos no cambian')
   // Suplementos: marcar uno.
   await seccion('Suplementos')
   await js(`document.querySelector('.screen .chips .chip').click()`)
-  await esperar(300)
-  comprobar((await perfilBD()).suplementos.length !== p0.suplementos.length, 'Los suplementos no cambian')
+  await leerHasta(perfilBD, p => p.suplementos.length !== p0.suplementos.length, 'Los suplementos no cambian')
   // Tu trabajo.
   await seccion('Tu trabajo')
   await pulsar('De pie')
-  await esperar(300)
-  comprobar((await perfilBD()).trabajo === 'depie', 'El trabajo no cambia')
+  await leerHasta(perfilBD, p => p.trabajo === 'depie', 'El trabajo no cambia')
   // Regenerar desde una sección que afecta a la rutina.
   await seccion('Objetivos')
   await pulsar('Regenerar la rutina')

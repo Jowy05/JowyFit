@@ -1,5 +1,5 @@
 // Generador v2: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { alta, comprobar, escenario, deCero, esperar, js, meter, perfilBD, pestana, pulsar, recargar, revisarAqui, t, tabla, ver } from '../ayudantes.mjs'
+import { alta, comprobar, escenario, deCero, js, leerHasta, meter, perfilBD, pestana, pulsar, recargar, revisarAqui, t, tabla, ver } from '../ayudantes.mjs'
 
 escenario('en orden: «Te toca», sesión mínima, «Me encuentro mal» y Mi plan con la cola', async () => {
   await deCero('2026-10-13T05:20:00') // martes
@@ -30,8 +30,7 @@ escenario('en orden: «Te toca», sesión mínima, «Me encuentro mal» y Mi pla
   // Se desmarca en Perfil → Salud y vuelve la rutina.
   await pulsar('Ir a Salud')
   await pulsar('Mareo o desmayo')
-  await esperar(300)
-  comprobar(!(await perfilBD()).urgencias?.length, 'No se desmarca la señal en Perfil → Salud')
+  await leerHasta(perfilBD, p => !p.urgencias?.length, 'No se desmarca la señal en Perfil → Salud')
   await pestana('Inicio')
   await ver('Te toca')
   // Mi plan: la cola y el cambio a días fijos (y vuelta).
@@ -41,12 +40,10 @@ escenario('en orden: «Te toca», sesión mínima, «Me encuentro mal» y Mi pla
   await ver('Siguiente')
   await revisarAqui('mi plan en cola')
   await pulsar('Días fijos')
-  await esperar(300)
-  comprobar((await perfilBD()).modoRutina === 'dias', '«Días fijos» no se guarda')
+  await leerHasta(perfilBD, p => p.modoRutina === 'dias', '«Días fijos» no se guarda')
   await ver('Toca uno para verlo')
   await pulsar('En orden')
-  await esperar(300)
-  comprobar((await perfilBD()).modoRutina === 'cola', '«En orden» no se guarda')
+  await leerHasta(perfilBD, p => p.modoRutina === 'cola', '«En orden» no se guarda')
 })
 
 escenario('revisión de la semana: todo bien, una molestia que va peor con su «Deshacer», «no quiero» y cardio', async () => {
@@ -79,9 +76,7 @@ escenario('revisión de la semana: todo bien, una molestia que va peor con su «
   comprobar((await perfilBD()).dolores[0].cuanto === 'regular', 'La molestia no sube un nivel al ir peor')
   await pulsar('Deshacer')
   await ver('Deshecho')
-  await esperar(300)
-  const otra = (await tabla('revisiones')).find(r => r.id === rev.id)
-  comprobar(otra.cambios.some(c => c.deshecho), '«Deshacer» no marca el cambio como deshecho')
+  await leerHasta(async () => (await tabla('revisiones')).find(r => r.id === rev.id), otra => otra.cambios.some(c => c.deshecho), '«Deshacer» no marca el cambio como deshecho')
   await pulsar(/^Vale$/)
   // «Lo que no quieres hacer» desde Ajustes.
   await pulsar('Lo que no quieres hacer')

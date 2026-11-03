@@ -3,6 +3,8 @@
 import * as fsx from 'node:fs'
 import path from 'node:path'
 import { trasCarga } from './navegador.mjs'
+import { hastaQue, leerHasta } from './esperas.mjs'
+import { FACTOR_ESPERAS } from './pagina.mjs'
 
 export const RAIZ = path.resolve(import.meta.dirname, '..', '..')
 export const DESCARGAS = path.join(RAIZ, '.cache', 'e2e-descargas')
@@ -55,8 +57,13 @@ export async function deCero(fechaHora) {
 }
 export async function recargar() {
   await trasCarga(cdp, () => cdp.enviar('Page.reload', { ignoreCache: true }))
-  await t('ver', /JOWYFIT|Buenos|Buenas|Hoy te toca|Inicio/i, 15000)
+  await abierta()
 }
+/**
+ * Espera a que la app haya abierto de verdad (una pantalla pintada), no al «JowyFit» de mientras carga: buscar ese
+ * texto daba por abierta la app al momento y, en una máquina lenta, lo siguiente no encontraba sus botones.
+ */
+export const abierta = () => t('listo', 15000)
 /** Cambia la fecha simulada sin borrar datos (como si pasaran los días). */
 export async function irA(fechaHora) {
   await js(`sessionStorage.setItem('__e2e_fecha', String(new Date(${JSON.stringify(fechaHora)}).getTime() - Date.__real()))`)
@@ -179,6 +186,10 @@ export async function meterSesionHecha(fecha, peso, x = {}, letra = 'A') {
 export const enCurso = async () => (await tabla('sesiones')).find(s => s.estado === 'curso')
 /** Falla con un mensaje claro si algo no se cumple. */
 export function comprobar(cond, msg) { if (!cond) throw new Error(msg) }
+// Esperar a que algo se cumpla, no un tiempo fijo (esperas.mjs).
+export { hastaQue, leerHasta }
+/** Tras escribir en el buscador de una hoja: espera a que el primero de la lista ya sea de lo buscado (`re`). */
+export const primeroDeLaBusqueda = re => hastaQue(() => js(`return ${re}.test(document.querySelector('.sheet .list button.it')?.innerText ?? '')`), `La búsqueda no filtra la lista (${re})`)
 /** Revisa la pantalla actual (textos rotos, cosas que se salen) y falla si hay algo. */
 export async function revisarAqui(donde) { const f = await t('revisar'); if (f) throw new Error(`${donde}: ${f}`) }
 /** Tras recargar con un entreno a medias: vuelve a la pantalla del entreno. */
@@ -199,7 +210,7 @@ export const cerrarHoja = () => t('pulsarSel', '.sheet button[aria-label="Cerrar
 
 /** Espera a que aparezca en Descargas un archivo nuevo que cumpla `filtro` y lo devuelve leído. */
 export async function descargado(filtro, antes = new Set()) {
-  for (let i = 0; i < 60; i++) {
+  for (const fin = Date.now() + 15_000 * FACTOR_ESPERAS; Date.now() < fin;) {
     const f = fsx.readdirSync(DESCARGAS).find(x => filtro(x) && !antes.has(x) && !x.endsWith('.crdownload'))
     if (f) { await esperar(200); return { nombre: f, bytes: new Uint8Array(fsx.readFileSync(path.join(DESCARGAS, f))) } }
     await esperar(250)

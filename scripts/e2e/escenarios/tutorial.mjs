@@ -1,5 +1,5 @@
 // El tutorial: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { altaRapida, escenario, esperar, js, noVer, pulsar, recargar, t, ver } from '../ayudantes.mjs'
+import { altaRapida, escenario, esperar, hastaQue, js, noVer, pulsar, recargar, t, ver } from '../ayudantes.mjs'
 
 escenario('tutorial: se ofrece una vez, «Ahora no», desde Ajustes, Atrás, Esc, botón atrás y entero sin tapar nada', async () => {
   await altaRapida('2026-10-13T05:20:00')
@@ -11,6 +11,8 @@ escenario('tutorial: se ofrece una vez, «Ahora no», desde Ajustes, Atrás, Esc
   await noVer('¿Te enseño cómo funciona JowyFit?')
   // Una sola vez: al volver a entrar ya no sale.
   await recargar()
+  // Que algo no salga solo se ve dejando pasar el rato en que saldría (a los 1,5 s de tener Inicio a la vista).
+  await ver(/Buenos|Buenas|Hoy te toca/)
   await esperar(3200)
   await noVer('¿Te enseño cómo funciona JowyFit?')
 
@@ -22,20 +24,19 @@ escenario('tutorial: se ofrece una vez, «Ahora no», desde Ajustes, Atrás, Esc
   await pulsar('Siguiente', '.tut'); await ver('Lo que te toca hoy')
   await pulsar('Atrás', '.tut'); await ver('Tu semana de un vistazo')
   await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
-  await esperar(400)
-  if (await js(`return !!document.querySelector('.tut')`)) throw new Error('Esc no cierra el tutorial')
+  await hastaQue(async () => !(await js(`return !!document.querySelector('.tut')`)), 'Esc no cierra el tutorial')
   await ver('Apariencia')
   // El botón atrás del móvil también lo cierra (y no saca de la pantalla).
   await pulsar('Ver el tutorial'); await ver('Así funciona JowyFit')
-  await js(`window.__jfAtras()`); await esperar(400)
-  if (await js(`return !!document.querySelector('.tut')`)) throw new Error('El botón atrás no cierra el tutorial')
+  await js(`window.__jfAtras()`)
+  await hastaQue(async () => !(await js(`return !!document.querySelector('.tut')`)), 'El botón atrás no cierra el tutorial')
   await ver('Apariencia')
 
   // Entero: ningún paso saltado, la tarjeta nunca tapa lo que señala y al terminar se vuelve a Ajustes.
   await pulsar('Ver el tutorial'); await ver('Así funciona JowyFit')
   const vistos = []
   for (let k = 0; k < 25; k++) {
-    await esperar(1300)
+    await t('pasoTutorial', vistos[vistos.length - 1] ?? '')
     const m = await js(`
       const t = document.querySelector('[data-tut-tarjeta] h2')?.textContent
       const fo = document.querySelector('[data-tut-foco]')?.getBoundingClientRect()
@@ -50,7 +51,6 @@ escenario('tutorial: se ofrece una vez, «Ahora no», desde Ajustes, Atrás, Esc
   }
   const esperados = ['Así funciona JowyFit', 'Tu semana de un vistazo', 'Lo que te toca hoy', 'Durante el entreno', 'Apunta en un toque', 'Tu día en números', 'Tu rutina, hecha para ti', 'Apunta lo que comes', 'La proteína del día', 'Cómo vas', 'Copias de seguridad', 'Tu informe en PDF', '¡Listo! A entrenar']
   if (JSON.stringify(vistos) !== JSON.stringify(esperados)) throw new Error(`Pasos: ${vistos.join(' | ')}`)
-  await esperar(400)
-  if (await js(`return !!document.querySelector('.tut')`)) throw new Error('«Terminar» no cierra el tutorial')
+  await hastaQue(async () => !(await js(`return !!document.querySelector('.tut')`)), '«Terminar» no cierra el tutorial')
   await ver('Apariencia')
 })

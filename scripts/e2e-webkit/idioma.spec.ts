@@ -2,7 +2,7 @@
 // English y todo se repinta (pestañas, Inicio, una hoja, el tutorial, Ajustes); se recuerda al volver a abrirla; y
 // una copia hecha en un idioma se recupera en otro sin perder nada.
 import type { Page } from '@playwright/test'
-import { expect, test, type Jf } from './ayuda'
+import { expect, ms, test, type Jf } from './ayuda'
 
 type Idioma = 'es' | 'ca' | 'en'
 // Los mismos textos en cada idioma (con su traducción de src/i18n).
@@ -19,7 +19,7 @@ async function enIdioma(page: Page, jf: Jf, i: Idioma) {
   await expect.poll(() => page.evaluate(() => ({
     lang: document.documentElement.lang,
     tabs: [...document.querySelectorAll('.tabbar button')].map(b => b.textContent!.trim()),
-  })).catch(() => null), { timeout: 15000 }).toEqual({ lang: i, tabs: [...IDIOMA[i].pestanas] })
+  })).catch(() => null), { timeout: ms(15000) }).toEqual({ lang: i, tabs: [...IDIOMA[i].pestanas] })
   await jf.listo()
 }
 
@@ -34,7 +34,7 @@ async function abrirAjustes(jf: Jf, i: Idioma) {
 /** Ajustes → Idioma → el que se pida: la app se vuelve a abrir en ese idioma. */
 async function cambiarIdioma(page: Page, jf: Jf, de: Idioma, a: Idioma) {
   await abrirAjustes(jf, de)
-  const recarga = page.waitForEvent('load', { timeout: 15000 })
+  const recarga = page.waitForEvent('load', { timeout: ms(15000) })
   await page.locator('[data-idioma] button', { hasText: IDIOMA[a].nombre }).tap()
   await recarga
   await enIdioma(page, jf, a)

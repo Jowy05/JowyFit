@@ -16,7 +16,11 @@ const CANDIDATOS = [
 
 const esperar = ms => new Promise(r => setTimeout(r, ms))
 
-export async function abrirNavegador({ puerto = 9555 } = {}) {
+/**
+ * Abre el navegador sin ventana. Con `puerto` 0 (lo normal) elige él uno libre y lo apunta en DevToolsActivePort,
+ * dentro de su perfil: así no choca con otro navegador de pruebas que se haya quedado abierto en el mismo puerto.
+ */
+export async function abrirNavegador({ puerto = 0 } = {}) {
   const exe = CANDIDATOS.find(c => fs.existsSync(c))
   if (!exe) throw new Error('No encuentro Edge ni Chrome (usa E2E_NAVEGADOR)')
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), 'jowyfit-e2e-'))
@@ -29,9 +33,13 @@ export async function abrirNavegador({ puerto = 9555 } = {}) {
     'about:blank',
   ], { stdio: 'ignore' })
   let lista = null
+  const activo = path.join(perfil, 'DevToolsActivePort')
   // Hasta 60 s: en la máquina de GitHub, Chrome a veces tarda más de 15 s en abrir la primera vez.
   for (let i = 0; i < 240 && !lista; i++) {
-    try { lista = await (await fetch(`http://127.0.0.1:${puerto}/json`)).json() } catch { await esperar(250) }
+    try {
+      const p = puerto || Number(fs.readFileSync(activo, 'utf8').split('\n')[0])
+      lista = await (await fetch(`http://127.0.0.1:${p}/json`)).json()
+    } catch { await esperar(250) }
   }
   if (!lista) throw new Error('El navegador no arrancó')
   const pag = lista.find(p => p.type === 'page')
@@ -72,10 +80,19 @@ async function conectar(url) {
  * documentos ha terminado de cargar: lo que necesita trasCarga.
  */
 export function contarNavegaciones(cdp) {
-  let navegaciones = 0, cargada = 0
-  cdp.al('Page.frameNavigated', p => { if (!p.frame.parentId) navegaciones++ })
+  let navegaciones = 0, cargada = 0, esperando = 0
+  // Las que no pide una prueba (con trasCarga): la app recargándose sola. Si una prueba falla, se dice.
+  const solas = []
+  cdp.al('Page.frameNavigated', p => {
+    if (p.frame.parentId) return
+    navegaciones++
+    if (!esperando) solas.push(p.frame.url)
+  })
   cdp.al('Page.loadEventFired', () => { cargada = navegaciones })
   cdp.navegacion = () => ({ navegaciones, cargada })
+  cdp.esperandoCarga = (d) => { esperando += d }
+  /** Las navegaciones que no pidió ninguna prueba desde la última vez (y se olvidan). */
+  cdp.recargasSolas = () => solas.splice(0)
   return cdp
 }
 
@@ -84,13 +101,18 @@ export function contarNavegaciones(cdp) {
  * Con una espera fija, en una máquina lenta la recarga empieza después y lo siguiente que se le pregunta a la
  * página muere a medias («Inspected target navigated or closed»).
  */
-export async function trasCarga(cdp, accion, que = 'navegar', ms = 20_000) {
+export async function trasCarga(cdp, accion, que = 'navegar', ms = process.env.CI ? 60_000 : 20_000) {
   const antes = cdp.navegacion().navegaciones
-  await accion()
-  const fin = Date.now() + ms
-  // Un documento nuevo, que empezó después de la acción, y ya cargado (no vale la carga del de antes).
-  for (let n = cdp.navegacion(); n.navegaciones === antes || n.cargada !== n.navegaciones; n = cdp.navegacion()) {
-    if (Date.now() > fin) throw new Error(`La página no termina de cargar tras ${que}`)
-    await esperar(50)
+  cdp.esperandoCarga?.(1)
+  try {
+    await accion()
+    const fin = Date.now() + ms
+    // Un documento nuevo, que empezó después de la acción, y ya cargado (no vale la carga del de antes).
+    for (let n = cdp.navegacion(); n.navegaciones === antes || n.cargada !== n.navegaciones; n = cdp.navegacion()) {
+      if (Date.now() > fin) throw new Error(`La página no termina de cargar tras ${que}`)
+      await esperar(50)
+    }
+  } finally {
+    cdp.esperandoCarga?.(-1)
   }
 }

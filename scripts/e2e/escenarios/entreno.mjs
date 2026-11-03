@@ -1,5 +1,5 @@
 // El entreno: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { altaRapida, cerrarHoja, comprobar, enCurso, escenario, esperar, irA, js, meter, noVer, pestana, ponerPesoSiFalta, pulsar, recargar, revisarAqui, seg, t, tabla, ver, volverAlEntreno } from '../ayudantes.mjs'
+import { altaRapida, cerrarHoja, comprobar, enCurso, escenario, esperar, hastaQue, irA, js, leerHasta, meter, noVer, pestana, ponerPesoSiFalta, primeroDeLaBusqueda, pulsar, recargar, revisarAqui, seg, t, tabla, ver, volverAlEntreno } from '../ayudantes.mjs'
 
 escenario('entreno completo', async () => {
   await altaRapida('2026-10-13T05:20:00')
@@ -187,8 +187,7 @@ escenario('entreno a fondo: empezar en corta, igual que la anterior, corregir y 
   await ver('Serie quitada')
   comprobar((await enCurso()).ejercicios[0].series.length === nSeries, 'No se quita la serie')
   await pulsar('Deshacer')
-  await esperar(300)
-  comprobar((await enCurso()).ejercicios[0].series.length === nSeries + 1, '«Deshacer» no devuelve la serie quitada')
+  await leerHasta(enCurso, s => s.ejercicios[0].series.length === nSeries + 1, '«Deshacer» no devuelve la serie quitada')
   await t('pulsarSel', 'button[aria-label="Herramientas"]')
   await pulsar('Cómo se hace', '.sheet')
   await ver('Instrucciones')
@@ -225,9 +224,7 @@ escenario('entreno a fondo: lista (ir a otro, orden, añadir, recuperar), calent
   await ver('Toca un ejercicio para ir a él')
   await revisarAqui('lista de la sesión')
   await js(`[...document.querySelectorAll('.sheet .it.sl button.tx')][1].click()`)
-  await esperar(400)
-  s = await enCurso()
-  comprobar(s.ejercicios[1].estado === 'curso' && s.ejercicios[0].estado === 'pendiente', 'Tocar otro en la lista no lo pone en curso')
+  s = await leerHasta(enCurso, s => s.ejercicios[1].estado === 'curso' && s.ejercicios[0].estado === 'pendiente', 'Tocar otro en la lista no lo pone en curso')
   // Calentamiento sugerido del ejercicio en curso (aún sin empezar).
   const idx = 1
   if (['peso', 'mancuerna'].includes(s.ejercicios[idx].registro)) {
@@ -267,16 +264,14 @@ escenario('entreno a fondo: lista (ir a otro, orden, añadir, recuperar), calent
     const antes = (await enCurso()).ejercicios.map(e => e.uid)
     await pulsar('Cambiar orden', '.sheet')
     await js(`document.querySelector('.sheet button[aria-label="Bajar"]').click()`)
-    await esperar(400)
-    const despues = (await enCurso()).ejercicios.map(e => e.uid)
-    comprobar(JSON.stringify(antes) !== JSON.stringify(despues), 'Las flechas no cambian el orden')
+    await leerHasta(enCurso, s => JSON.stringify(antes) !== JSON.stringify(s.ejercicios.map(e => e.uid)), 'Las flechas no cambian el orden')
     await pulsar('Listo', '.sheet')
   }
   // Añadir un ejercicio desde la lista.
   await pulsar('Añadir ejercicio', '.sheet')
   await ver('Añadir al entreno')
   await t('escribir', '.sheet input[type=search]', 'curl')
-  await esperar(300)
+  await primeroDeLaBusqueda(/curl/i)
   await js(`[...document.querySelectorAll('.sheet .list button.it')][0].click()`)
   await ver('Añadido:')
   comprobar((await enCurso()).ejercicios.length === n + 1, 'No se añade el ejercicio a la sesión')
@@ -303,7 +298,7 @@ escenario('entreno libre y otro día: añadir, salir sin terminar, volver y desc
   await revisarAqui('entreno libre vacío')
   await pulsar('Añadir ejercicio')
   await t('escribir', '.sheet input[type=search]', 'press')
-  await esperar(300)
+  await primeroDeLaBusqueda(/press/i)
   await js(`[...document.querySelectorAll('.sheet .list button.it')][0].click()`)
   await ver('Añadido:')
   await ver('Hecho', 6000)
@@ -320,8 +315,7 @@ escenario('entreno libre y otro día: añadir, salir sin terminar, volver y desc
   await pulsar('Descartar entreno', '.sheet')
   await ver('¿Descartar este entreno?')
   await pulsar(/^Descartar$/, '.sheet')
-  await esperar(600)
-  comprobar(!(await enCurso()), 'Descartar deja el entreno en curso')
+  await hastaQue(async () => !(await enCurso()), 'Descartar deja el entreno en curso')
   // Otro día de la rutina (hoy toca A; se elige otro).
   await pestana('Rutina')
   await pulsar('Otras formas de entrenar')
@@ -346,19 +340,16 @@ escenario('entreno a fondo: +15 s de descanso, ocupado (también ocupada, espera
   let s = await enCurso()
   const hasta = s.descansoHasta
   await pulsar('+15 s')
-  await esperar(300)
-  s = await enCurso()
-  comprobar(s.descansoHasta === hasta + 15000, '+15 s no alarga el descanso')
+  await leerHasta(enCurso, s => s.descansoHasta === hasta + 15000, '+15 s no alarga el descanso')
   await pulsar(/^Saltar$/)
-  comprobar(!(await enCurso()).descansoHasta, '«Saltar» no quita el descanso')
+  await leerHasta(enCurso, s => !s.descansoHasta, '«Saltar» no quita el descanso')
   // Vas tarde: aplicar la propuesta (versión corta o una serie menos).
   await ver(/min tarde/, 6000)
   await revisarAqui('entreno con recorte')
   const series0 = (await enCurso()).ejercicios.reduce((t, e) => t + e.series.length, 0)
   await pulsar('Aplicar')
   await ver(/Pasado a la versión corta|1 serie menos/)
-  s = await enCurso()
-  comprobar(s.version === 'corta' || s.ejercicios.reduce((t, e) => t + e.series.length, 0) === series0 - 1, 'Aplicar el recorte no cambia nada')
+  await leerHasta(enCurso, s => s.version === 'corta' || s.ejercicios.reduce((t, e) => t + e.series.length, 0) === series0 - 1, 'Aplicar el recorte no cambia nada')
   // Ocupado: «También ocupada» pasa a la siguiente alternativa; «Esperar» cierra sin cambiar.
   await pulsar('Ocupado')
   await ver(/ocupado|ocupada/i)
@@ -375,20 +366,17 @@ escenario('entreno a fondo: +15 s de descanso, ocupado (también ocupada, espera
   if (iT >= 0) {
     await t('pulsarSel', '[aria-label="Lista de la sesión"]')
     await js(`[...document.querySelectorAll('.sheet .it.sl button.tx')][${iT}].click()`)
-    await esperar(400)
     await pulsar(/^Empezar$/)
+    // El cronómetro tiene que correr un rato de verdad: esta espera sí es de tiempo.
     await esperar(2200)
     await pulsar(/^Parar$/)
     await pulsar(/^Hecho$/)
-    await esperar(300)
-    const seg = (await enCurso())?.ejercicios[iT].series.find(x => x.hecha)?.segundos
-    comprobar(seg >= 1, 'El cronómetro no apunta los segundos: ' + seg)
+    await leerHasta(async () => (await enCurso())?.ejercicios[iT].series.find(x => x.hecha)?.segundos, seg => seg >= 1, seg => 'El cronómetro no apunta los segundos: ' + seg)
     await pulsar(/^Saltar$/).catch(() => {})
   }
   // Descartar el entreno.
   await t('pulsarSel', '[aria-label="Lista de la sesión"]')
   await pulsar('Descartar entreno', '.sheet')
   await pulsar(/^Descartar$/, '.sheet')
-  await esperar(600)
-  comprobar(!(await enCurso()), 'Descartar no cierra el entreno')
+  await hastaQue(async () => !(await enCurso()), 'Descartar no cierra el entreno')
 })

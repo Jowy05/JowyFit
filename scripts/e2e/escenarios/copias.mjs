@@ -1,7 +1,7 @@
 // Copias de seguridad: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { altaRapida, cdp, compilada, comprobar, DESCARGAS, descargado, entorno, escenario, esperar, js, pestana, pulsar, soltarFoco, t, ver } from '../ayudantes.mjs'
+import { altaRapida, cdp, compilada, comprobar, DESCARGAS, descargado, entorno, escenario, hastaQue, js, pestana, pulsar, soltarFoco, t, ver } from '../ayudantes.mjs'
 import { trasCarga } from '../navegador.mjs'
 
 if (!compilada) escenario('copia de seguridad: exportar e importar', async () => {
@@ -32,9 +32,7 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
   await pulsar('Hacer copia ahora')
-  let archivo = null
-  for (let i = 0; i < 40 && !archivo; i++) { await esperar(250); archivo = fsx.readdirSync(DESCARGAS).find(f => f.endsWith('.jowyfit')) }
-  if (!archivo) throw new Error('No se descargó la copia')
+  const archivo = await hastaQue(() => fsx.readdirSync(DESCARGAS).find(f => f.endsWith('.jowyfit')), 'No se descargó la copia', 10_000)
   await pulsar('Borrar todos los datos')
   // Se confirma dos veces: la primera solo cambia el botón a «Sí, borrarlo todo».
   await pulsar(/^Borrar todo/, '.sheet')
@@ -44,8 +42,6 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   await ver('Tu fuerza y tu comida', 10000)
   entorno.archivoParaElegir = path.join(DESCARGAS, archivo)
   await pulsar(/Tengo una copia/)
-  await esperar(1500)
-  if (await t('hay', /¿Restaurar/)) await pulsar(/^Restaurar/)
   await ver(/Buenos|Buenas|Hoy te toca|descansas/, 15000)
   await pestana('Comida')
   await ver('Batido de proteína')

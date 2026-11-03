@@ -102,6 +102,8 @@ Los códigos de los comentarios (`// INI-01`, `// SES-04`, «§5 del diseño»�
 
 Un escenario suelto: `node scripts/e2e/correr.mjs --build entreno` (los que contengan «entreno»). `correr.mjs` arranca el servidor y el navegador y pasa los escenarios; cada zona tiene los suyos en `scripts/e2e/escenarios/` y lo que comparten (pulsar, ver, alta, leer la base…) está en `scripts/e2e/ayudantes.mjs`.
 
+En GitHub (`CI` puesto) las esperas máximas son el triple (`FACTOR_ESPERAS` en `scripts/e2e/pagina.mjs`) y lo que falla se pasa **una sola vez más**: `correr.mjs` lo marca como «reintentado» (y avisa en el resumen de GitHub) y Playwright, como «flaky»; si vuelve a fallar, falla (`scripts/e2e/reintento.mjs`). En casa no se reintenta nada. Las pruebas esperan a que algo se cumpla (`leerHasta` y `hastaQue`, en `scripts/e2e/esperas.mjs`), no un tiempo fijo; para ver en casa lo que pasa en una máquina lenta: `E2E_LENTO=4 node scripts/e2e/correr.mjs --build entreno` (procesador 4 veces más lento). `npm run repdb` reintenta la descarga hasta 4 veces, pero solo acepta el archivo si cuadra con su huella.
+
 Las unitarias de `dominio/` e `informe/` se llaman como el módulo que prueban (`tests/tendencias.test.ts` → `src/dominio/tendencias.ts`, `tests/informe-dia.test.ts` → `src/informe/calculo/dia.ts`); los datos de ejemplo del informe están en `tests/informe-ejemplo.ts`.
 
 ### Idiomas

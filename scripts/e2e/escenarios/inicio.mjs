@@ -1,5 +1,5 @@
 // Inicio: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { ajustesBD, altaRapida, cerrarHoja, comidas, comprobar, entorno, escenario, esperar, irA, js, meter, meterSesionHecha, perfilBD, pestana, pulsar, recargar, revisarAqui, seg, t, tabla, ver } from '../ayudantes.mjs'
+import { ajustesBD, altaRapida, cerrarHoja, comidas, comprobar, entorno, escenario, hastaQue, irA, js, meter, meterSesionHecha, perfilBD, pestana, pulsar, recargar, revisarAqui, seg, t, tabla, ver } from '../ayudantes.mjs'
 
 escenario('inicio a fondo: días de la semana, atajos, + Peso con báscula, pendientes de hoy, pasar al sábado y ¿Voy bien?', async () => {
   await altaRapida('2026-10-13T05:20:00')
@@ -33,8 +33,7 @@ escenario('inicio a fondo: días de la semana, atajos, + Peso con báscula, pend
   await ver('Pendientes de hoy')
   await revisarAqui('inicio con pendientes')
   await pulsar(/^Creatina/)
-  await esperar(500)
-  comprobar((await tabla('suplementos')).some(x => x.fecha === '2026-10-13' && x.tomados.includes('Creatina')), 'Marcar la creatina en pendientes no se guarda')
+  await hastaQue(async () => (await tabla('suplementos')).some(x => x.fecha === '2026-10-13' && x.tomados.includes('Creatina')), 'Marcar la creatina en pendientes no se guarda')
   // Sábado sin haber entrenado el viernes: ¿pasarlo al sábado? → Sí.
   await irA('2026-10-17T09:00:00')
   await ver('no entrenaste')
@@ -92,8 +91,7 @@ escenario('inicio y comida: «Hoy no», «No» a pasar la sesión, ver el entren
   // Abre «Escribir lo que he comido» con el código, para apuntarlo como nota.
   await pulsar('Apuntar como nota')
   await pulsar(/^Apuntar$/, '.sheet')
-  await esperar(500)
-  comprobar((await comidas()).some(c => c.fecha === '2026-10-20'), '«Apuntar como nota» no apunta nada')
+  await hastaQue(async () => (await comidas()).some(c => c.fecha === '2026-10-20'), '«Apuntar como nota» no apunta nada')
   comprobar((await tabla('productos')).some(p => p.codigo === '5449000000996' && p.pendiente), 'El código no queda pendiente')
   entorno.sinConexion = false
   await pestana('Comida')

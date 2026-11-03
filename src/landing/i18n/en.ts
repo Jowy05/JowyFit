@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-10-1.cab': "<b>Version 0.10.1</b> · November 3, 2026",
+  'nov.0-10-1.texto': "Fix: on phones with Android 10 or older that haven’t updated “Android System WebView”, and on iPhones with an old iOS 15 or 16, the app no longer stays blank: it explains what needs updating. On iPhone, iOS 16.0 to 16.3 can now open it.",
   'nov.0-10-0.cab': "<b>Version 0.10.0</b> · November 3, 2026",
   'nov.0-10-0.texto': "Log your sets better: on one-side-at-a-time exercises (lunges, Bulgarian split squats, one-arm rows…) you count reps per side and, if one side comes out different, you say so; on pull-ups and dips you can add extra weight; on cardio, the km if you know them, with your pace. On phones with Android 10 or older, the app asks for permission to save backups and PDFs to Documents and, if you say no, it tells you clearly and you can still send the PDF. Also, 36 exercises come with corrected explanations.",
   'nov.0-9-0.cab': "<b>Version 0.9.0</b> · October 29, 2026",

@@ -47,7 +47,9 @@ if (Capacitor.isNativePlatform()) {
   void import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }))
 }
 
-createRoot(document.getElementById('raiz')!).render(
+// Con un navegador demasiado antiguo, app.html ya enseña cómo actualizarlo: no se pinta la app encima.
+const raiz = document.getElementById('raiz')!
+if (!raiz.hasAttribute('data-navegador-viejo')) createRoot(raiz).render(
   <StrictMode>
     {/* Si algo falla al pintar, nunca se queda en blanco: «Algo ha ido mal» con salida (Inicio, copia, borrar). */}
     <RedSeguridad nivel="app">

@@ -84,7 +84,8 @@ describe('seguridad · Content-Security-Policy de la compilación', () => {
     expect(csp).not.toMatch(/googleapis|gstatic|\*/)
   })
   it('la misma política en la web y en el APK: nunca «unsafe-inline» en los scripts (antes el APK lo llevaba)', () => {
-    expect(valor(cspPara(app), 'script-src')).toBe("'self' 'wasm-unsafe-eval'")
+    // El único script en línea (el aviso de navegador viejo de app.html) va por su huella.
+    expect(valor(cspPara(app), 'script-src')).toMatch(/^'self' 'wasm-unsafe-eval' 'sha256-[A-Za-z0-9+/=]+'$/)
   })
 })
 

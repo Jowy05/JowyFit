@@ -18,7 +18,11 @@ export const NOMBRE_NO_QUIERO = Object.fromEntries(GRUPOS_NO_QUIERO.map(g => [g.
 
 const MAQUINAS_SIN_MACHINE = ['smith_machine', 'leg_press', 'hack_squat', 'leg_curl', 'leg_extension', 'pec_deck', 'glute_ham_developer']
 // Lo que se hace tumbado o de rodillas en el suelo: RepDB no lo marca, se reconoce por el nombre (en inglés, el id).
-const EN_EL_SUELO = /(crunch|plank|bridge|dead-bug|bird-dog|lying|floor|sit-?up|(?<!hanging-)leg-raise|mountain-climber|push-?up|superman|v-up|russian-twist|hollow|flutter-kick|scissor|side-lying|clamshell|fire-hydrant|donkey-kick)/
+const EN_EL_SUELO = /(crunch|plank|bridge|dead-bug|bird-dog|lying|floor|sit-?up|mountain-climber|push-?up|superman|v-up|russian-twist|hollow|flutter-kick|scissor|side-lying|clamshell|fire-hydrant|donkey-kick)/
+
+// Las elevaciones de piernas, salvo colgado de la barra. Sin «lookbehind» en la regex: Safari < 16.4 no lo
+// entiende y la app entera se quedaba en blanco.
+const enElSuelo = (id: string) => EN_EL_SUELO.test(id) || id.replace(/hanging-leg-raise/g, '').includes('leg-raise')
 
 /** ¿Es este ejercicio del grupo? Los propios, por el material que eligió el usuario. */
 export function deGrupo(e: Ejercicio, g: GrupoNoQuiero): boolean {
@@ -37,7 +41,7 @@ export function deGrupo(e: Ejercicio, g: GrupoNoQuiero): boolean {
     case 'maquinas': return !!e.material && (e.material.includes('machine') || MAQUINAS_SIN_MACHINE.includes(e.material))
     case 'libre': return ES_LIBRE(e)
     case 'poleas': return e.material === 'cable'
-    case 'suelo': return !e.material || e.material === 'stability_ball' || e.material === 'ab_wheel' ? EN_EL_SUELO.test(e.id) : false
+    case 'suelo': return !e.material || e.material === 'stability_ball' || e.material === 'ab_wheel' ? enElSuelo(e.id) : false
   }
 }
 

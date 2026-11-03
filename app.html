@@ -18,6 +18,36 @@
   </head>
   <body>
     <div id="raiz"></div>
+    <script>
+      // Un móvil con el WebView (o el navegador) de hace años no entiende la app, compilada para es2022, y se quedaba
+      // en blanco. Se mira si tiene lo más nuevo que usa la app (Chrome 98, Safari 16.4) y, si no, se explica qué hacer.
+      // Va sin nada moderno, para que lo entienda cualquier navegador.
+      (function () {
+        var regexNueva = true
+        try { new RegExp('(?<!a)b') } catch (e) { regexNueva = false }
+        if (typeof Object.hasOwn === 'function' && typeof [].at === 'function' && typeof structuredClone === 'function' && regexNueva) return
+        var idioma = 'es'
+        try { idioma = localStorage.getItem('jf-idioma-app') || 'es' } catch (e) {}
+        if (idioma !== 'ca' && idioma !== 'en') idioma = 'es'
+        var apk = !!window.Capacitor || / wv\)/.test(navigator.userAgent)
+        var textos = {
+          es: apk
+            ? ['Hay que actualizar una pieza del móvil', 'Tu móvil tiene una versión muy antigua de «Android System WebView», la pieza que usa JowyFit para funcionar. Abre Google Play, busca «Android System WebView», toca «Actualizar» y vuelve a abrir JowyFit. Tus datos no se pierden.']
+            : ['Este navegador es demasiado antiguo', 'JowyFit necesita un navegador más nuevo. Actualiza el sistema del móvil (o el navegador) y vuelve a abrir esta página.'],
+          ca: apk
+            ? ['Cal actualitzar una peça del mòbil', 'El teu mòbil té una versió molt antiga d’«Android System WebView», la peça que fa servir JowyFit per funcionar. Obre Google Play, cerca «Android System WebView», toca «Actualitza» i torna a obrir JowyFit. No perds les teves dades.']
+            : ['Aquest navegador és massa antic', 'JowyFit necessita un navegador més nou. Actualitza el sistema del mòbil (o el navegador) i torna a obrir aquesta pàgina.'],
+          en: apk
+            ? ['A part of your phone needs updating', 'Your phone has a very old version of “Android System WebView”, the part JowyFit uses to run. Open Google Play, search for “Android System WebView”, tap “Update” and open JowyFit again. Your data is kept.']
+            : ['This browser is too old', 'JowyFit needs a newer browser. Update your phone’s system (or the browser) and open this page again.'],
+        }
+        var t = textos[idioma] || textos.es
+        var raiz = document.getElementById('raiz')
+        raiz.setAttribute('data-navegador-viejo', '')
+        raiz.innerHTML = '<div role="alert" style="min-height:100vh;box-sizing:border-box;padding:32px 24px;display:flex;flex-direction:column;justify-content:center;background:#10151C;color:#fff;font:18px/1.5 sans-serif">'
+          + '<h1 style="font-size:26px;line-height:1.25;margin:0 0 16px">' + t[0] + '</h1><p style="margin:0">' + t[1] + '</p></div>'
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

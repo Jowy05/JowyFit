@@ -227,7 +227,7 @@ const es = {
 
   // Novedades de cada versión
   'nov.0-10-1.cab': "<b>Versión 0.10.1</b> · 3 de noviembre de 2026",
-  'nov.0-10-1.texto': "Arreglo: en móviles con Android 10 o anterior que no han actualizado «Android System WebView», y en iPhone con iOS 15 o 16 antiguo, la app ya no se queda en blanco: explica qué hay que actualizar. En el iPhone, los iOS de 16.0 a 16.3 ya la pueden abrir.",
+  'nov.0-10-1.texto': "Arreglo: en móviles con Android 10 o anterior que no han actualizado «Android System WebView», y en iPhone con iOS 15 o 16 antiguo, la app ya no se queda en blanco: explica qué hay que actualizar.",
   'nov.0-10-0.cab': "<b>Versión 0.10.0</b> · 3 de noviembre de 2026",
   'nov.0-10-0.texto': "Apunta mejor tus series: en los ejercicios de un lado cada vez (zancadas, búlgaras, remo a una mano…) cuentas las repeticiones por lado y, si un lado sale distinto, lo dices; en dominadas y fondos puedes añadir lastre; en el cardio, los km si los sabes, con tu ritmo. En móviles con Android 10 o anterior, la app pide permiso para guardar copias y PDF en Documentos y, si no se lo das, te lo dice claro y el PDF se puede enviar igual. Además, 36 ejercicios traen su explicación corregida.",
   'nov.0-9-0.cab': "<b>Versión 0.9.0</b> · 29 de octubre de 2026",

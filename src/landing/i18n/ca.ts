@@ -227,7 +227,7 @@ const ca: Record<keyof typeof es, string> = {
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
   'nov.0-10-1.cab': "<b>Versió 0.10.1</b> · 3 de novembre del 2026",
-  'nov.0-10-1.texto': "Arranjament: als mòbils amb Android 10 o anterior que no han actualitzat «Android System WebView», i als iPhone amb un iOS 15 o 16 antic, l’app ja no es queda en blanc: explica què cal actualitzar. A l’iPhone, els iOS del 16.0 al 16.3 ja la poden obrir.",
+  'nov.0-10-1.texto': "Arranjament: als mòbils amb Android 10 o anterior que no han actualitzat «Android System WebView», i als iPhone amb un iOS 15 o 16 antic, l’app ja no es queda en blanc: explica què cal actualitzar.",
   'nov.0-10-0.cab': "<b>Versió 0.10.0</b> · 3 de novembre del 2026",
   'nov.0-10-0.texto': "Apunta millor les teves sèries: als exercicis d’un costat cada vegada (gambades, búlgares, rem a una mà…) comptes les repeticions per costat i, si un costat surt diferent, ho dius; a les dominades i els fons pots afegir llast; al cardio, els km si els saps, amb el teu ritme. Als mòbils amb Android 10 o anterior, l’app demana permís per desar còpies i PDF a Documents i, si no l’hi dones, t’ho diu clar i el PDF es pot enviar igualment. A més, 36 exercicis porten l’explicació corregida.",
   'nov.0-9-0.cab': "<b>Versió 0.9.0</b> · 29 d’octubre del 2026",

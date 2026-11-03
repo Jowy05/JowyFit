@@ -60,7 +60,8 @@ export function HojaInforme() {
   const [creando, setCreando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hecho, setHecho] = useState<Hecho | null>(null)
-  // iPhone: el PDF está hecho pero Safari no dejó abrir el menú Compartir (tardó demasiado tras el toque).
+  // El PDF está hecho pero sin guardar: en iPhone, Safari no dejó abrir Compartir (tardó demasiado tras el toque);
+  // en Android 10 o anterior, no hay permiso para Documentos.
   const [pendiente, setPendiente] = useState(false)
 
   const recordar = (p: PeriodoInforme, s: SeccionesInforme) => { void guardarAjustes({ informe: { periodo: p, secciones: s } }) }
@@ -109,6 +110,10 @@ export function HojaInforme() {
       await entregar(h)
     } catch (e) {
       setError(textoError(e))
+      // Hecho pero sin el permiso de Documentos: no está guardado, pero se puede enviar (Compartir va por la caché
+      // de la app, que no pide permiso). Con cualquier otro fallo no se enseña «Guardado».
+      if (nativo && esSinPermisoDocumentos(e)) setPendiente(true)
+      else setHecho(null)
     } finally {
       setCreando(false)
     }

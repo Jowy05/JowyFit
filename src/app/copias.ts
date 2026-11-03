@@ -42,6 +42,7 @@ async function borrarCopias(nombres: string[]): Promise<number> {
  * pueden ser las únicas buenas.
  */
 export async function copiaAutomatica(): Promise<boolean> {
+  if (copiandoAMano > 0) return false
   const a = await leerAjustes()
   if (!a.copiaAuto || !esNativo()) return false
   if (a.ultimaCopia && Date.now() - new Date(a.ultimaCopia).getTime() < 7 * 86_400_000) return false
@@ -69,12 +70,19 @@ export async function limpiarAutomaticas(guardar: number): Promise<number> {
   return borrarCopias(automaticasDeMasNueva((await copiasGuardadas()).map(c => c.nombre)).slice(guardar))
 }
 
+// «Hacer copia ahora» en marcha: al cerrar el diálogo del permiso (Android 10 o anterior) la app se reanuda y,
+// sin esto, la semanal saldría a la vez y dejaría dos copias seguidas.
+let copiandoAMano = 0
+
 /** Hace la copia y devuelve el nombre del archivo (el que sale en el aviso: lleva la hora y, si hace falta, «-2»). */
 export async function hacerCopiaAhora(): Promise<string> {
-  const c = await prepararCopia()
-  await guardarArchivo(c.nombre, c.bytes, TIPO)
-  await apuntarCopia()
-  return c.nombre
+  copiandoAMano++
+  try {
+    const c = await prepararCopia()
+    await guardarArchivo(c.nombre, c.bytes, TIPO)
+    await apuntarCopia()
+    return c.nombre
+  } finally { copiandoAMano-- }
 }
 
 /**

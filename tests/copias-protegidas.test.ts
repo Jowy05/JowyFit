@@ -105,7 +105,7 @@ describe('copias guardadas en el móvil: limpieza y «Borrarlas»', () => {
    * Documentos/JowyFit simulado (la fecha, la del archivo; la más nueva, la mayor). `falla`: la que no se deja borrar;
    * `sinPermiso`: Android 10 o anterior sin el permiso de almacenamiento.
    */
-  async function conCarpeta(o: { copias: string[]; tam?: (nombre: string) => number; falla?: string; sinPermiso?: boolean }, prueba: (c: typeof import('../src/app/copias'), carpeta: Carpeta) => Promise<void>) {
+  async function conCarpeta(o: { copias: string[]; tam?: (nombre: string) => number; falla?: string; sinPermiso?: boolean; espera?: Promise<void> }, prueba: (c: typeof import('../src/app/copias'), carpeta: Carpeta) => Promise<void>) {
     const carpeta: Carpeta = new Map(o.copias.map((n, i) => [n, { fecha: i + 1, tam: o.tam?.(n) ?? 1 }]))
     let reloj = o.copias.length
     vi.resetModules()
@@ -113,7 +113,7 @@ describe('copias guardadas en el móvil: limpieza y «Borrarlas»', () => {
       ...((await orig()) as Record<string, unknown>),
       esNativo: () => true,
       permisoDocumentos: async () => !o.sinPermiso,
-      guardarArchivo: async (n: string, b: Uint8Array) => { carpeta.set(n, { fecha: ++reloj, tam: b.length }); return n },
+      guardarArchivo: async (n: string, b: Uint8Array) => { await o.espera; carpeta.set(n, { fecha: ++reloj, tam: b.length }); return n },
       copiasGuardadas: async () => [...carpeta].map(([nombre, x]) => ({ nombre, ...x })).sort((a, b) => b.fecha - a.fecha),
       borrarCopiaGuardada: async (n: string) => { if (n === o.falla) throw new Error('sin permiso'); carpeta.delete(n) },
     }))
@@ -149,6 +149,20 @@ describe('copias guardadas en el móvil: limpieza y «Borrarlas»', () => {
       expect(await s.copiaAutomatica()).toBe(false)
       expect(carpeta.size).toBe(6)
       expect((await db.ajustes.get('app'))?.ultimaCopia ?? null).toBeNull()
+    })
+  })
+
+  it('mientras «Hacer copia ahora» espera el permiso, la semanal no sale a la vez', async () => {
+    let soltar = () => {}
+    const espera = new Promise<void>(r => { soltar = r })
+    await conCarpeta({ copias: [], espera }, async (s, carpeta) => {
+      const aMano = s.hacerCopiaAhora()
+      // Al cerrar el diálogo del permiso la app se reanuda y lanza la semanal.
+      expect(await s.copiaAutomatica()).toBe(false)
+      soltar()
+      const nombre = await aMano
+      expect([...carpeta.keys()]).toEqual([nombre])
+      expect(esCopiaAuto(nombre)).toBe(false)
     })
   })
 

@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-10-0.cab': "<b>Versió 0.10.0</b> · 3 de novembre del 2026",
+  'nov.0-10-0.texto': "Apunta millor les teves sèries: als exercicis d’un costat cada vegada (gambades, búlgares, rem a una mà…) comptes les repeticions per costat i, si un costat surt diferent, ho dius; a les dominades i els fons pots afegir llast; al cardio, els km si els saps, amb el teu ritme. Als mòbils amb Android 10 o anterior, l’app demana permís per desar còpies i PDF a Documents i, si no l’hi dones, t’ho diu clar i el PDF es pot enviar igualment.",
   'nov.0-9-0.cab': "<b>Versió 0.9.0</b> · 29 d’octubre del 2026",
   'nov.0-9-0.texto': "Còpies amb contrasenya: activa-ho a Configuració → Còpia de seguretat i totes les teves còpies noves, també la setmanal, van xifrades; sense la contrasenya ningú no les pot obrir. La còpia setmanal ja no s’acumula: es desen les 4 últimes (o les 8, o totes), i les altres còpies del mòbil es poden esborrar amb la paperera. En canviar de mòbil, recuperes la còpia amb la seva contrasenya i es queda posada.",
   'nov.0-8-1.cab': "<b>Versió 0.8.1</b> · 29 d’octubre del 2026",

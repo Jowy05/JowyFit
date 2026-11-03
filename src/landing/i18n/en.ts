@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-10-0.cab': "<b>Version 0.10.0</b> · November 3, 2026",
+  'nov.0-10-0.texto': "Log your sets better: on one-side-at-a-time exercises (lunges, Bulgarian split squats, one-arm rows…) you count reps per side and, if one side comes out different, you say so; on pull-ups and dips you can add extra weight; on cardio, the km if you know them, with your pace. On phones with Android 10 or older, the app asks for permission to save backups and PDFs to Documents and, if you say no, it tells you clearly and you can still send the PDF.",
   'nov.0-9-0.cab': "<b>Version 0.9.0</b> · October 29, 2026",
   'nov.0-9-0.texto': "Password-protected backups: turn it on in Settings → Backup and all your new backups, including the weekly one, are encrypted; without the password nobody can open them. The weekly backup no longer piles up: the last 4 are kept (or 8, or all), and other backups on the phone can be deleted with the bin. When you switch phones, you restore the backup with its password and it stays set.",
   'nov.0-8-1.cab': "<b>Version 0.8.1</b> · October 29, 2026",

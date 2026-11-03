@@ -40,9 +40,13 @@ export function paginaAnexo(maq: Maqueta) {
         : motivo ? t('{nombre} (en vez de {otro}, {motivo})', { nombre: e.nombre, otro: e.enVezDe, motivo }) : t('{nombre} (en vez de {otro})', { nombre: e.nombre, otro: e.enVezDe })
       if (e.saltado || !e.series.length) { filas.push({ celdas: [{ t: nombre, partir: true }, null, null, null, null, t('saltado')], estilo: 'gris', fondo }); return }
       e.series.forEach((x, k) => {
-        const peso = x.peso == null ? '—' : x.peso < 0 ? t('ayuda {kg} kg', { kg: kg(-x.peso) }) : `${kg(x.peso)} kg`
-        const reps = x.reps != null ? String(x.reps) : x.segundos != null ? `${x.segundos} s` : '—'
-        const notaS = [x.calentamiento ? t('calentamiento') : null, x.hecha ? null : t('sin hacer'), x.nota].filter(Boolean).join(' · ')
+        const peso = x.peso == null || (e.registro === 'corporal' && x.peso <= 0) ? '—' : x.peso < 0 ? t('ayuda {kg} kg', { kg: kg(-x.peso) })
+          : e.registro === 'corporal' ? t('lastre {n} kg', { n: kg(x.peso) }) : `${kg(x.peso)} kg`
+        // En el cardio las reps son minutos; los km y el ritmo van en la nota, como los lados.
+        const reps = x.reps != null ? (e.registro === 'cardio' ? `${x.reps} min` : String(x.reps)) : x.segundos != null ? `${x.segundos} s` : '—'
+        const lados = x.izq != null && x.der != null ? t('{izq} izq. · {der} der.', { izq: x.izq, der: x.der }) : x.porLado ? t('por lado') : null
+        const km = x.km != null ? `${num(x.km, 2)} km${x.ritmo ? ` · ${x.ritmo}` : ''}` : null
+        const notaS = [x.calentamiento ? t('calentamiento') : null, x.hecha ? null : t('sin hacer'), lados, km, x.nota].filter(Boolean).join(' · ')
         filas.push({
           estilo: x.calentamiento || !x.hecha ? 'gris' : undefined, fondo, sigue: t('{titulo} (sigue)', { titulo: e.nombre }),
           celdas: [

@@ -594,4 +594,6 @@ export default {
   'Revisiones': 'Revisions',
   'Este PDF solo sale de tu móvil si tú lo compartes. Puedes dárselo a tu entrenador, a tu médico o a un asistente de IA para que ajuste tu rutina.': "Aquest PDF només surt del teu mòbil si el comparteixes tu. Pots donar-lo al teu entrenador, al teu metge o a un assistent d'IA perquè ajusti la teva rutina.",
   'Tus datos son tuyos': 'Les teves dades són teves',
+  'lastre, kg': 'llast, kg',
+  '{nombre} (lastre)': '{nombre} (llast)',
 } satisfies Diccionario

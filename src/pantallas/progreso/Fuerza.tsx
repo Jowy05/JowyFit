@@ -4,8 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { metasDeTipo } from '../../datos/consultas'
 import { sesionesHechas } from '../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
-import { patron } from '../../catalogo/clasificacion'
-import { kg, num } from '../../dominio/formato'
+import { patron, tipoRegistro } from '../../catalogo/clasificacion'
+import { kg, num, textoMarca, textoSubida } from '../../dominio/formato'
 import { fechaCorta, hoyISO, MESES, semanaDe, sumarDias } from '../../dominio/fechas'
 import { resumen } from '../../dominio/sesion'
 import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, nivelSeries, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../dominio/tendencias'
@@ -50,10 +50,10 @@ export function Fuerza() {
 
   // Subidas de los últimos 30 días, una por ejercicio (del primer «antes» al último «ahora»).
   const desde = sumarDias(hoy, -30)
-  const porEj = new Map<string, { id: string; antes: number; ahora: number; fecha: string }>()
+  const porEj = new Map<string, { id: string; antes: number; ahora: number; fecha: string; lastre?: boolean }>()
   for (const s of subidas(sesiones).filter(x => x.fecha >= desde)) {
     const p = porEj.get(s.ejercicio)
-    if (!p) porEj.set(s.ejercicio, { id: s.ejercicio, antes: s.antes, ahora: s.ahora, fecha: s.fecha })
+    if (!p) porEj.set(s.ejercicio, { id: s.ejercicio, antes: s.antes, ahora: s.ahora, fecha: s.fecha, lastre: s.lastre })
     else p.antes = Math.min(p.antes, s.antes)
   }
   const subidasMes = [...porEj.values()]
@@ -74,9 +74,16 @@ export function Fuerza() {
   const puntosVol = id ? aPuntos(evolucion(sesiones, id, 'volumen')) : []
   const cambio = cambioDesdeInicio(evoPeso)
   const nombre = id ? nombreEjercicio(id) : ''
+  // De peso corporal: el peso de la gráfica es el lastre (los días sin él no salen) y el 1RM no tiene sentido.
+  const ejId = id ? ejercicio(id) : undefined
+  const corporal = !!ejId && tipoRegistro(ejId) === 'corporal'
   // Frase que contesta «¿levanto más que al empezar?».
   const vf: Vars = cambio ? { ejercicio: nombre, kg: kg(cambio.ahora), cambio: kg(Math.abs(cambio.delta)) } : {}
   const frase = !cambio ? null
+    : corporal ? (evoPeso.length < 2 ? t('{ejercicio}: {kg} kg de lastre la primera vez.', vf)
+      : cambio.delta > 0 ? t('{ejercicio}: {kg} kg de lastre, +{cambio} kg desde el inicio.', vf)
+        : cambio.delta < 0 ? t('{ejercicio}: {kg} kg de lastre, {cambio} kg menos que al inicio.', vf)
+          : t('{ejercicio}: {kg} kg de lastre, igual que al inicio.', vf))
     : evoPeso.length < 2 ? t('{ejercicio}: {kg} kg la primera vez. Repítelo y verás si subes.', vf)
       : cambio.delta > 0 ? t('{ejercicio}: {kg} kg, +{cambio} kg desde el inicio.', vf)
         : cambio.delta < 0 ? t('{ejercicio}: {kg} kg, {cambio} kg menos que al inicio.', vf)
@@ -102,7 +109,7 @@ export function Fuerza() {
                   <span className="tx">
                     <small className="au">{fechaCorta(l.fecha)} · {l.tipo === 'reps' ? t('récord de reps') : t('récord')}</small>
                     <b>{nombreEjercicio(l.ejercicio)}</b>
-                    <small className="mono">{kg(l.peso)} kg × {l.reps}</small>
+                    <small className="mono">{textoMarca(l)}</small>
                   </span>
                   {l.mejora > 0 && <span className="end up">{l.tipo === 'reps' ? tn(l.mejora, '+{n} rep', '+{n} reps') : `+${kg(l.mejora)} kg`}</span>}
                 </button>
@@ -128,7 +135,7 @@ export function Fuerza() {
               {subidasMes.map(u => (
                 <div key={u.id} className="it">
                   <Th ej={ejercicio(u.id)} size="s" />
-                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{kg(u.antes)} → {kg(u.ahora)} kg</small></span>
+                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{textoSubida(u.antes, u.ahora, u.lastre)}</small></span>
                   <span className="end up">+{kg(u.ahora - u.antes)} kg</span>
                 </div>
               ))}
@@ -147,7 +154,9 @@ export function Fuerza() {
               {!todosEj && ids.length > MAX_CHIPS && <button type="button" className="lnk small" onClick={() => setTodosEj(true)}>{t('Ver {n} más', { n: ids.length - MAX_CHIPS })}</button>}
             </div>
             {frase && <p className="fza-frase mt12">{frase}</p>}
-            <p className="lbl mt12">{t('Peso máx.')} <span className="muted">{t('· lo más pesado de cada día')}</span></p>
+            {corporal && puntos.length > 0
+              ? <p className="lbl mt12">{t('Lastre máx.')} <span className="muted">{t('· el peso que te cuelgas, los días que lo llevas')}</span></p>
+              : <p className="lbl mt12">{t('Peso máx.')} <span className="muted">{t('· lo más pesado de cada día')}</span></p>}
             <div className="mt8">
               {puntos.length === 0
                 ? <p className="small muted">{t('Este ejercicio no lleva peso o aún no tiene series: mira sus repeticiones en el historial.')}</p>
@@ -157,9 +166,11 @@ export function Fuerza() {
               <details className="fold mt12">
                 <summary><Ico n="chart-bar" className="blue" />{t('Más gráficas')} <Ico n="caret-down" /></summary>
                 <div className="in">
-                  <p className="lbl">{t('1RM est.')} <span className="muted">{t('· lo que podrías levantar 1 vez')}</span></p>
-                  <div className="mt8"><Linea puntos={puntos1RM} decimales={1} vacia={t('Aún no hay datos para calcularlo.')} /></div>
-                  <p className="lbl mt12">{t('Volumen')} <span className="muted">{t('· kilos movidos en total (peso × repeticiones)')}</span></p>
+                  {!corporal && <>
+                    <p className="lbl">{t('1RM est.')} <span className="muted">{t('· lo que podrías levantar 1 vez')}</span></p>
+                    <div className="mt8"><Linea puntos={puntos1RM} decimales={1} vacia={t('Aún no hay datos para calcularlo.')} /></div>
+                  </>}
+                  <p className={cx('lbl', !corporal && 'mt12')}>{t('Volumen')} <span className="muted">{t('· kilos movidos en total (peso × repeticiones)')}</span></p>
                   <div className="mt8"><Barras puntos={puntosVol} vacia={t('Aún no hay datos para calcularlo.')} /></div>
                 </div>
               </details>

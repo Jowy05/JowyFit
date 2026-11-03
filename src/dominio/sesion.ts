@@ -1,13 +1,43 @@
 // Entreno en curso: crear la sesión desde un día de la rutina y operaciones puras sobre ella.
 import type { Bloque, DiaRutina, EjercicioSesion, Serie, Sesion, TipoRegistro } from '../datos/tipos'
 import { hoyISO } from './fechas'
-import { esRecord } from './progresion'
+import { esRecord, repsVolumen } from './progresion'
 
 /**
  * Lo más que se puede apuntar en una serie. Los mismos topes en los contadores del entreno y en las copias: con un
- * número absurdo la gráfica de fuerza y el PDF se quedaban sin memoria. Peso negativo = asistencia.
+ * número absurdo la gráfica de fuerza y el PDF se quedaban sin memoria. Peso negativo = asistencia. Las reps de cada
+ * lado van con el tope de `reps`.
  */
-export const TOPE_SERIE = { peso: 2000, reps: 10_000, segundos: 86_400 } as const
+export const TOPE_SERIE = { peso: 2000, reps: 10_000, segundos: 86_400, km: 1000 } as const
+
+/** Lo que se apunta al hacer o corregir una serie. */
+export type DatosSerie = Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos' | 'izq' | 'der' | 'km'>
+
+/** Cómo se apunta un ejercicio: lo que sale en los contadores del panel. */
+export type ComoSeApunta = { registro: TipoRegistro; conPeso: boolean; lastre: boolean; porLado: boolean; distancia: boolean }
+/** Lo que marcan los contadores del panel (o al corregir). `separar`: cada lado con sus reps. */
+export type CamposSerie = { peso: number | null; reps: number; segundos: number; izq: number; der: number; separar: boolean; km: number | null }
+
+/**
+ * Lo que se guarda de los contadores según cómo se apunta el ejercicio. Por lado, `reps` es el lado que menos hizo
+ * (la progresión no sube si un lado se quedó corto) y los dos lados quedan apuntados para el volumen.
+ */
+export function datosDeCampos(c: CamposSerie, como: ComoSeApunta): Omit<DatosSerie, 'rpe'> {
+  if (como.registro === 'tiempo') return { peso: null, reps: null, segundos: c.segundos }
+  if (como.registro === 'cardio') return { peso: null, reps: c.reps, segundos: null, km: como.distancia && c.km != null && c.km > 0 ? Math.round(c.km * 100) / 100 : null }
+  // De peso corporal, el lastre si lo hay (el que ya estaba apuntado se respeta aunque el ejercicio ya no lo ofrezca).
+  const peso = como.conPeso ? c.peso : como.registro === 'corporal' && c.peso != null && c.peso > 0 ? c.peso : null
+  if (!como.porLado) return { peso, reps: c.reps, segundos: null }
+  const [izq, der] = c.separar ? [c.izq, c.der] : [c.reps, c.reps]
+  return { peso, reps: Math.min(izq, der), segundos: null, izq, der }
+}
+
+/** Peso que pasa a una serie nueva: el de peso corporal solo si es lastre (sin él, nada). */
+const pesoInicial = (peso: number | null | undefined, registro: TipoRegistro): number | null => {
+  if (registro === 'tiempo' || registro === 'cardio') return null
+  if (registro === 'corporal') return peso != null && peso > 0 ? peso : null
+  return peso ?? null
+}
 
 export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: Sesion['version']; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }> }): Sesion {
   const ahora = o.ahora ?? Date.now()
@@ -32,7 +62,7 @@ export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnas
 export function seriesNuevas(n: number, peso: number | null, reps: number | null, registro: TipoRegistro): Serie[] {
   return Array.from({ length: n }, (_, i) => ({
     n: i + 1,
-    peso: registro === 'corporal' || registro === 'tiempo' || registro === 'cardio' ? null : peso,
+    peso: pesoInicial(peso, registro),
     reps: registro === 'tiempo' ? null : reps,
     segundos: registro === 'tiempo' ? reps : null,
     rpe: null,
@@ -73,7 +103,7 @@ export function serieActual(e: EjercicioSesion): number {
 const clon = (s: Sesion): Sesion => structuredClone(s)
 
 /** Marca la serie como hecha y decide qué viene después (superserie, siguiente serie o ejercicio). */
-export function hecha(s0: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>, ahora = Date.now()): { sesion: Sesion; descanso: number } {
+export function hecha(s0: Sesion, idx: number, datos: DatosSerie, ahora = Date.now()): { sesion: Sesion; descanso: number } {
   const s = clon(s0)
   const e = s.ejercicios[idx]
   if (!e) return { sesion: s, descanso: 0 }
@@ -112,7 +142,7 @@ export const DESCANSO_CALENTAMIENTO = 45
  * «Hecho» en la serie que toca: la marca, mira si es récord frente a `previas` (historial y lo de hoy) y pone el
  * descanso que sigue (`descansoHasta`) si toca y el entreno no ha terminado. Null si no queda serie por hacer.
  */
-export function apuntarSerie(s: Sesion, idx: number, datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>, previas: Serie[], ahora = Date.now()): { sesion: Sesion; record: ReturnType<typeof esRecord> } | null {
+export function apuntarSerie(s: Sesion, idx: number, datos: DatosSerie, previas: Serie[], ahora = Date.now()): { sesion: Sesion; record: ReturnType<typeof esRecord> } | null {
   const e = s.ejercicios[idx]
   const n = e ? serieActual(e) : -1
   const actual = e?.series[n]
@@ -138,7 +168,7 @@ export function cambiarSerie(s0: Sesion, idx: number, n: number, cambios: Partia
  * Corrige una serie ya hecha. Las siguientes sin hacer que heredaron el peso equivocado pasan al corregido y las
  * tocadas a mano se respetan. Una serie sin hacer o fuera de rango no se toca.
  */
-export function corregirSerie(s0: Sesion, idx: number, n: number, datos: Pick<Serie, 'peso' | 'reps' | 'segundos'> & { record?: boolean }): Sesion {
+export function corregirSerie(s0: Sesion, idx: number, n: number, datos: Omit<DatosSerie, 'rpe'> & { record?: boolean }): Sesion {
   const s = clon(s0)
   const e = s.ejercicios[idx]
   const x = e?.series[n]
@@ -147,6 +177,8 @@ export function corregirSerie(s0: Sesion, idx: number, n: number, datos: Pick<Se
   x.peso = datos.peso
   x.reps = datos.reps
   x.segundos = datos.segundos
+  // Los lados y los km se quitan si ya no vienen (corregido a «igual en los dos lados» o sin distancia).
+  for (const k of ['izq', 'der', 'km'] as const) { if (datos[k] != null) x[k] = datos[k]; else delete x[k] }
   if (datos.record !== undefined) x.record = datos.record || undefined
   if (!x.calentamiento && pesoAntes !== datos.peso) {
     for (const y of e.series.slice(n + 1)) if (!y.hecha && !y.calentamiento && y.peso === pesoAntes) y.peso = datos.peso
@@ -204,7 +236,7 @@ export function sustituir(s0: Sesion, idx: number, nuevo: string, motivo: 'ocupa
   const r = e.registro
   for (const x of e.series) if (!x.hecha) {
     // Al cambiar a un ejercicio por tiempo o de peso corporal, las series pendientes se adaptan.
-    x.peso = r === 'corporal' || r === 'tiempo' || r === 'cardio' ? null : sug?.peso ?? null
+    x.peso = pesoInicial(sug?.peso, r)
     if (r === 'tiempo') { x.segundos = sug?.reps ?? x.segundos ?? 30; x.reps = null }
     else {
       if (sug?.reps != null) x.reps = sug.reps
@@ -264,7 +296,7 @@ export const terminada = (s: Sesion) => s.ejercicios.every(e => e.estado === 'he
 export function resumen(s: Sesion) {
   const hechos = s.ejercicios.filter(e => e.estado === 'hecho' || e.series.some(x => x.hecha && !x.calentamiento))
   const series = s.ejercicios.reduce((t, e) => t + e.series.filter(x => x.hecha && !x.calentamiento).length, 0)
-  const volumen = s.ejercicios.reduce((t, e) => t + e.series.filter(x => x.hecha && !x.calentamiento).reduce((a, x) => a + Math.max(0, x.peso ?? 0) * (x.reps ?? 0), 0), 0)
+  const volumen = s.ejercicios.reduce((t, e) => t + e.series.filter(x => x.hecha && !x.calentamiento).reduce((a, x) => a + Math.max(0, x.peso ?? 0) * repsVolumen(x), 0), 0)
   return {
     ejercicios: s.ejercicios.length,
     hechos: hechos.length,

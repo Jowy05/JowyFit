@@ -65,7 +65,8 @@ export function ejerciciosHechos(sesiones: Sesion[]): string[] {
   return [...cuenta.entries()].sort((a, b) => b[1].n - a[1].n || b[1].ultimo - a[1].ultimo).map(([id]) => id)
 }
 
-export type Subida = { ejercicio: string; fecha: string; sesionId?: number; antes: number; ahora: number }
+/** `lastre`: de peso corporal, los kilos son lastre (para no decir «2,5 → 5 kg» en unas dominadas). */
+export type Subida = { ejercicio: string; fecha: string; sesionId?: number; antes: number; ahora: number; lastre?: boolean }
 
 /** Ejercicios cuyo peso máximo subió frente a la sesión anterior en que se hicieron (más recientes primero). */
 export function subidas(sesiones: Sesion[]): Subida[] {
@@ -77,14 +78,18 @@ export function subidas(sesiones: Sesion[]): Subida[] {
       // Las asistidas (peso negativo) no cuentan como subida de peso.
       if (p == null || p <= 0) continue
       const antes = ultimo.get(id)
-      if (antes != null && p > antes) out.push({ ejercicio: id, fecha: s.fecha, sesionId: s.id, antes, ahora: p })
+      if (antes != null && p > antes) {
+        const lastre = s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal')
+        out.push({ ejercicio: id, fecha: s.fecha, sesionId: s.id, antes, ahora: p, ...(lastre ? { lastre } : {}) })
+      }
       ultimo.set(id, p)
     }
   }
   return out.reverse()
 }
 
-export type Logro = { ejercicio: string; fecha: string; sesionId?: number; peso: number; reps: number; tipo: 'peso' | 'reps' | 'primero'; mejora: number }
+/** `lastre`: el peso es el lastre de uno de peso corporal; `porLado`: las reps son de cada lado. */
+export type Logro = { ejercicio: string; fecha: string; sesionId?: number; peso: number; reps: number; tipo: 'peso' | 'reps' | 'primero'; mejora: number; lastre?: boolean; porLado?: boolean }
 
 /** Récords (series marcadas como récord), uno por ejercicio y sesión, más recientes primero. */
 export function logros(sesiones: Sesion[]): Logro[] {
@@ -99,7 +104,8 @@ export function logros(sesiones: Sesion[]): Logro[] {
       const recs = validas.filter(x => x.record)
       if (recs.length) {
         const mejor = recs.reduce((a, b) => (epley(b.peso!, b.reps!) > epley(a.peso!, a.reps!) ? b : a))
-        const base = { ejercicio: id, fecha: s.fecha, sesionId: s.id, peso: mejor.peso!, reps: mejor.reps! }
+        const lastre = s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal')
+        const base = { ejercicio: id, fecha: s.fecha, sesionId: s.id, peso: mejor.peso!, reps: mejor.reps!, ...(lastre ? { lastre } : {}), ...(mejor.izq != null ? { porLado: true } : {}) }
         if (!prev) out.push({ ...base, tipo: 'primero', mejora: 0 })
         else if (mejor.peso! > prev.maxPeso) out.push({ ...base, tipo: 'peso', mejora: mejor.peso! - prev.maxPeso })
         else {

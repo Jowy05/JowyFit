@@ -100,7 +100,7 @@ function Ejercicio({ s, idx, e, primero, companero, corrigiendo, onCorregir }: {
       {companero && <p className="small muted xd-n"><Ico n="link" /> {t('Dos seguidos, con {ejercicio}', { ejercicio: nombreEjercicio(companero.ejercicio) })}</p>}
       {hechas.length > 0 ? (
         <table className="tbl">
-          <thead><tr><th>{t('Serie')}</th><th>{e.registro === 'tiempo' ? t('Tiempo') : e.registro === 'corporal' ? t('Reps') : t('kg × reps')}</th><th>{t('Esfuerzo')}</th></tr></thead>
+          <thead><tr><th>{t('Serie')}</th><th>{e.registro === 'tiempo' || e.registro === 'cardio' ? t('Tiempo') : e.registro === 'corporal' && !hechas.some(x => x.peso != null && x.peso > 0) ? t('Reps') : t('kg × reps')}</th><th>{t('Esfuerzo')}</th></tr></thead>
           <tbody>
             {hechas.map((x, k) => {
               if (!x.calentamiento) trabajo++
@@ -109,7 +109,7 @@ function Ejercicio({ s, idx, e, primero, companero, corrigiendo, onCorregir }: {
                 <tr key={k} className={cx(x.calentamiento && 'muted', 'ux-det-serie')} role="button" tabIndex={0} aria-label={x.calentamiento ? t('Corregir serie de calentamiento') : t('Corregir serie {n}', { n: trabajo })}
                   onClick={() => onCorregir(corrigiendo === pos ? null : pos)}>
                   <td>{x.calentamiento ? t('Calent.') : trabajo}</td>
-                  <td>{textoSerie(x, e.registro, 'tabla')}{x.record && <> <Ico n="trophy" b className="goldc" /></>}</td>
+                  <td>{textoSerie(x, e.registro, 'tabla', e.ejercicio)}{x.record && <> <Ico n="trophy" b className="goldc" /></>}</td>
                   <td>{x.rpe ?? '—'}</td>
                 </tr>
               )

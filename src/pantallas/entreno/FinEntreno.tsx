@@ -7,7 +7,7 @@ import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { resumen } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO } from '../../dominio/fechas'
 import { entrenosPrevistos } from '../../dominio/semana'
-import { capital, kg } from '../../dominio/formato'
+import { capital, kg, textoMarca, textoSubida } from '../../dominio/formato'
 import { terminarEntreno } from '../../datos/acciones/entreno'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -36,14 +36,14 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const unaVez = useUnaVez()
   const subidas = useLiveQuery(async () => {
     if (!s) return []
-    const out: { id: string; antes: number; ahora: number }[] = []
+    const out: { id: string; antes: number; ahora: number; lastre: boolean }[] = []
     const todas = await sesionesHechas() // una sola lectura para todos los ejercicios
     for (const e of s.ejercicios) {
       const hoy = Math.max(0, ...e.series.filter(x => x.hecha && !x.calentamiento && x.peso != null).map(x => x.peso!))
       if (!hoy) continue
       const prev = historialEn(todas, e.ejercicio, s.id)[0]
       const antes = prev ? Math.max(0, ...prev.series.filter(x => !x.calentamiento && x.peso != null).map(x => x.peso!)) : 0
-      if (antes && hoy > antes) out.push({ id: e.ejercicio, antes, ahora: hoy })
+      if (antes && hoy > antes) out.push({ id: e.ejercicio, antes, ahora: hoy, lastre: e.registro === 'corporal' })
     }
     return out
   }, [s?.id]) ?? []
@@ -94,7 +94,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
               {logros.map(({ e, x }, i) => (
                 <div key={i} className="ach">
                   <span className="tro"><Ico n={i === 0 ? 'trophy' : 'medal'} b /></span>
-                  <span className="tx"><small className="au">{t('Desbloqueado')}{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>{t('Récord en {ejercicio}', { ejercicio: nombreEjercicio(e.ejercicio).toLowerCase() })}</b><small className="mono">{kg(x.peso)} kg × {x.reps}</small></span>
+                  <span className="tx"><small className="au">{t('Desbloqueado')}{x.ts ? ` · ${horaDe(x.ts)}` : ''}</small><b>{t('Récord en {ejercicio}', { ejercicio: nombreEjercicio(e.ejercicio).toLowerCase() })}</b><small className="mono">{textoMarca({ ...x, lastre: e.registro === 'corporal', porLado: x.izq != null })}</small></span>
                 </div>
               ))}
             </div>
@@ -108,7 +108,7 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
               {subidas.map(u => (
                 <div key={u.id} className="it">
                   <Th ej={ejercicio(u.id)} size="s" />
-                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{kg(u.antes)} → {kg(u.ahora)} kg</small></span>
+                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{textoSubida(u.antes, u.ahora, u.lastre)}</small></span>
                   <span className="end up">+{kg(u.ahora - u.antes)} kg</span>
                 </div>
               ))}

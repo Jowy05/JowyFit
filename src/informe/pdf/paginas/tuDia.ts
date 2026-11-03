@@ -186,7 +186,7 @@ function filaHoy(l: Lienzo, x: number, y: number, w: number, fh: number, e: Fila
     // Si el mínimo y el máximo son iguales, un trozo corto de unos 2 mm alrededor.
     const a = e.max > e.min ? X(e.min) : X(e.min) - 1.6, b = e.max > e.min ? X(e.max) : X(e.max) + 1.6
     l.rect(a, cy - 0.9, Math.max(3.2, b - a), 1.8, l.c.zonaClara, 0.9)
-    const fmt = (v: number) => (e.unidad === 'kg' || e.unidad === 'asistido' ? kg(v) : num(v, 0))
+    const fmt = (v: number) => (e.unidad === 'kg' || e.unidad === 'lastre' || e.unidad === 'asistido' ? kg(v) : num(v, 0))
     // Lo normal: una raya gris con su valor encima.
     const xn = X(e.normal), xh = X(e.hoy)
     l.rect(xn - 0.3, cy - 2.4, 0.6, 4.8, l.c.gris)

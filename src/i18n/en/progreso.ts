@@ -440,4 +440,10 @@ export default {
   'Lo que haces fuera de las pesas.': 'What you do outside of weights.',
   '¿Qué has hecho?': 'What did you do?',
   'Revisa la fecha': 'Check the date',
+  '{ejercicio}: {kg} kg de lastre la primera vez.': '{ejercicio}: {kg} kg added weight the first time.',
+  '{ejercicio}: {kg} kg de lastre, +{cambio} kg desde el inicio.': '{ejercicio}: {kg} kg added weight, +{cambio} kg since you started.',
+  '{ejercicio}: {kg} kg de lastre, {cambio} kg menos que al inicio.': '{ejercicio}: {kg} kg added weight, {cambio} kg less than when you started.',
+  '{ejercicio}: {kg} kg de lastre, igual que al inicio.': '{ejercicio}: {kg} kg added weight, same as when you started.',
+  'Lastre máx.': 'Max added weight',
+  '· el peso que te cuelgas, los días que lo llevas': '· the weight you hang on, on the days you use it',
 } satisfies Diccionario

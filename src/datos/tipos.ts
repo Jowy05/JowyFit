@@ -170,6 +170,8 @@ export type EjercicioPropio = {
   material: 'corporal' | 'barra' | 'mancuernas' | 'maquina' | 'polea' | 'otro'
   /** Con mancuernas, «peso» se apunta como los kg de cada una. */
   registro: 'peso' | 'corporal' | 'tiempo' | 'cardio'
+  /** Se hace con un lado cada vez (una pierna o un brazo): las repeticiones se apuntan por lado. */
+  unilateral?: boolean
   foto?: Blob
   notas?: string
   /** La rutina automática puede proponerlo (si no, solo sale donde lo pone el usuario). */
@@ -220,6 +222,7 @@ export type Rutina = {
 
 export type Serie = {
   n: number
+  /** Kilos. En los asistidos va en negativo (la ayuda); en los de peso corporal, el lastre que se cuelga (o null). */
   peso: number | null
   reps: number | null
   segundos?: number | null
@@ -229,6 +232,14 @@ export type Serie = {
   ts?: number // fin de la serie (marca de tiempo)
   nota?: string
   record?: boolean
+  /**
+   * Ejercicios de un lado cada vez (zancadas, remo a una mano…): repeticiones de cada lado. `reps` es el lado que
+   * menos hizo, para que la progresión y los récords no se pasen; el volumen suma los dos.
+   */
+  izq?: number | null
+  der?: number | null
+  /** Cardio: kilómetros, si se saben (los minutos van en `reps`). */
+  km?: number | null
 }
 
 export type EjercicioSesion = {

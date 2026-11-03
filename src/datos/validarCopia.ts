@@ -182,7 +182,7 @@ const PROPIO = obj({
   id: req((v, d) => (typeof v === 'string' && /^mio-[\w-]{1,100}$/.test(v) ? v : mal(d, t('no es el esperado')))), nombre: req(nombre),
   grupo: req(uno('pecho', 'espalda', 'hombro', 'brazo', 'abdomen', 'gluteo', 'pierna', 'completo')),
   material: req(uno('corporal', 'barra', 'mancuernas', 'maquina', 'polea', 'otro')), registro: req(uno('peso', 'corporal', 'tiempo', 'cardio')),
-  foto: opc(archivo), notas: opc(nota), rutinaAuto: req(bool), creado: req(fecha), borrado: opc(fecha),
+  unilateral: opc(bool), foto: opc(archivo), notas: opc(nota), rutinaAuto: req(bool), creado: req(fecha), borrado: opc(fecha),
 })
 
 const MARCA = obj({ id: req(texto(200)), favorito: opc(bool), odiado: opc(bool), duele: opc(bool), notas: opc(nota), ajustes: opc(nombre) })
@@ -210,6 +210,7 @@ const SERIE = obj({
   n: req(num), peso: req(nulo(acotado(-TOPE_SERIE.peso, TOPE_SERIE.peso))), reps: req(nulo(acotado(0, TOPE_SERIE.reps))),
   segundos: opc(nulo(acotado(0, TOPE_SERIE.segundos))), rpe: req(nulo(acotado(0, 10))),
   calentamiento: req(bool), hecha: req(bool), ts: opc(num), nota: opc(nota), record: opc(bool),
+  izq: opc(nulo(acotado(0, TOPE_SERIE.reps))), der: opc(nulo(acotado(0, TOPE_SERIE.reps))), km: opc(nulo(acotado(0, TOPE_SERIE.km))),
 })
 const EJ_SESION = obj({
   uid: req(texto(200)), ejercicio: req(texto(200)), planificado: req(texto(200)), motivo: opc(uno('ocupado', 'cambio')), estado: req(uno('pendiente', 'curso', 'hecho', 'saltado')), series: req(lista(SERIE, 100)),
@@ -259,8 +260,11 @@ const NOMBRE_TABLA: Record<NombreTabla, string> = {
   propios: tk('tus ejercicios'), revisiones: tk('revisiones'),
 }
 
-/** Versión del formato de la copia que entiende esta app (2: ejercicios propios; 3: generador v2, salud y revisiones). */
-export const VERSION_COPIA = 3
+/**
+ * Versión del formato de la copia que entiende esta app (2: ejercicios propios; 3: generador v2, salud y revisiones;
+ * 4: reps de cada lado, km del cardio y propios de un lado cada vez).
+ */
+export const VERSION_COPIA = 4
 
 const OBJETIVOS_V1 = ['recomposicion', 'perder', 'fuerza']
 const CAMPOS_V3 = ['objetivosExtra', 'zonasMucho', 'urgencias', 'dolores', 'condicionesSalud', 'noQuiero', 'modoMayor', 'modoRutina', 'cardioMin', 'cardioTipos', 'cardioCuando', 'progresoMovimiento', 'sueno', 'deportes', 'diaDeporte', 'experienciaPrevia']
@@ -276,11 +280,20 @@ function datosV3(datos: Record<string, unknown[]>): boolean {
     || noti.revision !== undefined || noti.revisionHora !== undefined
 }
 
+/** Lo que una copia de la versión 3 quitaría sin avisar: los lados de cada serie, los km y los propios de un lado. */
+function datosV4(datos: Record<string, unknown[]>): boolean {
+  const nueva = (x: Fila) => x.izq != null || x.der != null || x.km != null
+  return filas(datos, 'sesiones').some(s => filasDe(s.ejercicios).some(e => filasDe(e.series).some(nueva)))
+    // Un propio de tiempo o cardio con «unilateral» no pierde nada en una app anterior (no lo usa).
+    || filas(datos, 'propios').some(p => p.unilateral === true && (p.registro === 'peso' || p.registro === 'corporal'))
+}
+
 /**
  * La versión más baja que entiende estos datos: una app anterior pide actualizar en vez de perder sin avisar lo que
  * no conoce (los ejercicios propios, las molestias, las revisiones…).
  */
 export function versionNecesaria(datos: Record<string, unknown[]>): number {
+  if (datosV4(datos)) return 4
   const perfil = filas(datos, 'perfil')[0]
   const v3 = datosV3(datos) || (!!perfil && (CAMPOS_V3.some(k => perfil[k] !== undefined) || !OBJETIVOS_V1.includes(String(perfil.objetivo))))
   if (v3) return 3

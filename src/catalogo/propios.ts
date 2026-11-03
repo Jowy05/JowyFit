@@ -59,7 +59,7 @@ export function comoEjercicio(p: EjercicioPropio): Ejercicio {
     secundarios: [],
     objetivos: [],
     etiquetas: p.material === 'corporal' ? ['bodyweight'] : [],
-    unilateral: false,
+    unilateral: !!p.unilateral,
     pesoCorporal: p.material === 'corporal',
     poses: [],
     // Gasto de un entreno de fuerza normal y de un cardio moderado (Compendio de actividades físicas).

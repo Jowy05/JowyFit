@@ -440,4 +440,10 @@ export default {
   'Lo que haces fuera de las pesas.': 'El que fas fora de les peses.',
   '¿Qué has hecho?': 'Què has fet?',
   'Revisa la fecha': 'Revisa la data',
+  '{ejercicio}: {kg} kg de lastre la primera vez.': '{ejercicio}: {kg} kg de llast la primera vegada.',
+  '{ejercicio}: {kg} kg de lastre, +{cambio} kg desde el inicio.': '{ejercicio}: {kg} kg de llast, +{cambio} kg des del començament.',
+  '{ejercicio}: {kg} kg de lastre, {cambio} kg menos que al inicio.': '{ejercicio}: {kg} kg de llast, {cambio} kg menys que al començament.',
+  '{ejercicio}: {kg} kg de lastre, igual que al inicio.': '{ejercicio}: {kg} kg de llast, igual que al començament.',
+  'Lastre máx.': 'Llast màx.',
+  '· el peso que te cuelgas, los días que lo llevas': '· el pes que et penges, els dies que el portes',
 } satisfies Diccionario

@@ -6,7 +6,7 @@ import { guardarSesion } from '../../datos/acciones/entreno'
 import type { Sesion } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { irA, mover, serieActual } from '../../dominio/sesion'
-import { kg, textoSerie } from '../../dominio/formato'
+import { textoSerie } from '../../dominio/formato'
 import { cx, Hoja, Ico } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -61,7 +61,7 @@ export function HojaLista() {
               }}>
                 <b>{e.superserie ? t('{nombre} (dos seguidos)', { nombre }) : nombre}</b>
                 <small className="mono">
-                  {e.estado === 'saltado' ? t('Toca para recuperarlo') : sust ? t('En vez de {ejercicio}', { ejercicio: nombreEjercicio(e.planificado) }) : e.estado === 'hecho' ? `${hechas.length}/${total}${hechas[0]?.peso != null ? ` · ${kg(hechas[0].peso)} kg × ${hechas[0].reps}` : ''}` : e.estado === 'curso' ? t('Serie {n} de {total}', { n: Math.max(1, serieActual(e) + 1 - e.series.filter(x => x.calentamiento).length), total }) : `${total} × ${e.repsMin}-${e.repsMax}`}
+                  {e.estado === 'saltado' ? t('Toca para recuperarlo') : sust ? t('En vez de {ejercicio}', { ejercicio: nombreEjercicio(e.planificado) }) : e.estado === 'hecho' ? `${hechas.length}/${total}${hechas[0] && (hechas[0].peso != null || e.registro === 'cardio' || hechas[0].izq != null) ? ` · ${textoSerie(hechas[0], e.registro, 'corto', e.ejercicio)}` : ''}` : e.estado === 'curso' ? t('Serie {n} de {total}', { n: Math.max(1, serieActual(e) + 1 - e.series.filter(x => x.calentamiento).length), total }) : `${total} × ${e.repsMin}-${e.repsMax}`}
                 </small>
               </button>
               {tag && <span className={cx('tag', e.estado === 'hecho' && 'ok', e.estado === 'curso' && 'go')}>{tag}</span>}
@@ -74,9 +74,9 @@ export function HojaLista() {
                   : <>
                     <p className="small muted">{t('Toca una serie para corregirla')}</p>
                     {e.series.map((x, k) => x.hecha && (
-                      <button key={k} className="set done ux-tocable" onClick={() => setCorr({ uid: e.uid, k })} aria-label={x.calentamiento ? t('Corregir el calentamiento: {valor}', { valor: textoSerie(x, e.registro, 'corto') }) : t('Corregir la serie {n}: {valor}', { n: e.series.filter(y => !y.calentamiento).indexOf(x) + 1, valor: textoSerie(x, e.registro, 'corto') })}>
+                      <button key={k} className="set done ux-tocable" onClick={() => setCorr({ uid: e.uid, k })} aria-label={x.calentamiento ? t('Corregir el calentamiento: {valor}', { valor: textoSerie(x, e.registro, 'corto', e.ejercicio) }) : t('Corregir la serie {n}: {valor}', { n: e.series.filter(y => !y.calentamiento).indexOf(x) + 1, valor: textoSerie(x, e.registro, 'corto', e.ejercicio) })}>
                         <span className="sn">{x.calentamiento ? tc('calentamiento', 'C') : e.series.filter(y => !y.calentamiento).indexOf(x) + 1}</span>
-                        <span className="sv">{textoSerie(x, e.registro, 'corto')}</span>
+                        <span className="sv">{textoSerie(x, e.registro, 'corto', e.ejercicio)}</span>
                         <span className="se"><Ico n="pencil-simple" /></span>
                         {x.record ? <Ico n="trophy" b /> : <Ico n="check" b />}
                       </button>

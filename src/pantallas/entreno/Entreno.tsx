@@ -3,15 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { marcaDe } from '../../datos/repos'
 import { historialDe } from '../../datos/consultas'
-import type { EjercicioSesion, Guardado, Serie, Sesion } from '../../datos/tipos'
+import type { EjercicioSesion, Guardado, Sesion } from '../../datos/tipos'
 import { ejercicio, etiqueta, nombreEjercicio } from '../../catalogo/catalogo'
 import { ES_MAQUINA, patron } from '../../catalogo/clasificacion'
 import { calentamiento as aproximacion, pesosPara } from '../../dominio/pesos'
-import { conCalentamiento, indiceActual, quitarUnaSerie, saltar, serieActual, terminada } from '../../dominio/sesion'
+import { conCalentamiento, indiceActual, quitarUnaSerie, saltar, serieActual, terminada, type DatosSerie } from '../../dominio/sesion'
 import { estadoHora, propuestaRecorte } from '../../dominio/tiempos'
 import { TEXTO_PARTIDA } from '../../dominio/progresion'
 import { formatoHora } from '../../dominio/fechas'
-import { kg, textoSerieEnCurso } from '../../dominio/formato'
+import { kg, textoMarca, textoSerie, textoSerieEnCurso } from '../../dominio/formato'
 import { capacidades, pantallaEncendida, pitido, vibrar } from '../../plataforma'
 import { cx, Ico, Pantalla, Th } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -20,6 +20,7 @@ import { useAjustes, useGimnasio, useSesionEnCurso } from '../../datos/hooks'
 import { alargarDescanso, apuntarHecha, descansoCumplido, guardarSesion, pasarACorta, quitarDescanso } from '../../datos/acciones/entreno'
 import { FormCorregir } from './Corregir'
 import { Panel } from './Panel'
+import { comoSeApunta } from './CamposSerie'
 import { t, tc } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
 
@@ -104,6 +105,7 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
 
   const n = serieActual(e)
   const actual = e.series[n]
+  const como = comoSeApunta(e, ej)
   const ultimaHist = hist[0]?.series.filter(x => !x.calentamiento) ?? null
   const topUltima = ultimaHist?.length ? ultimaHist.reduce((a, b) => ((b.peso ?? 0) > (a.peso ?? 0) ? b : a)) : null
   const trabajo = e.series.filter(x => !x.calentamiento)
@@ -129,12 +131,12 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
   // Terminar está en un solo sitio: «Lista» → «Terminar entreno».
   const kCorr = corr && corr.uid === e.uid && e.series[corr.n]?.hecha ? corr.n : null
 
-  const hecho = async (datos: Pick<Serie, 'peso' | 'reps' | 'rpe' | 'segundos'>) => {
+  const hecho = async (datos: DatosSerie) => {
     if (!actual) return
     const rec = await apuntarHecha(s, idx, datos, [...hist.flatMap(h => h.series), ...e.series.filter(x => x.hecha)])
     if (ajustes.vibrar) void vibrar('corta')
     if (rec) {
-      setLogro({ texto: rec.tipo === 'peso' ? t('Nuevo récord de peso') : t('Récord de repeticiones'), nombre: ej.nombre, valor: `${kg(datos.peso)} kg × ${datos.reps}` })
+      setLogro({ texto: rec.tipo === 'peso' ? t('Nuevo récord de peso') : t('Récord de repeticiones'), nombre: ej.nombre, valor: textoMarca({ ...datos, lastre: e.registro === 'corporal', porLado: datos.izq != null }) })
       window.clearTimeout(tLogro.current)
       tLogro.current = window.setTimeout(() => setLogro(null), 2200)
     }
@@ -214,7 +216,7 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
           <div className="lastw">
             <p className="lbl">{t('La última vez')}</p>
             {topUltima ? <>
-              <p className="mono"><b>{topUltima.peso != null ? `${kg(topUltima.peso)} kg × ${topUltima.reps}` : e.registro === 'tiempo' ? `${topUltima.reps ?? topUltima.segundos} s` : t('{n} reps', { n: String(topUltima.reps ?? topUltima.segundos) })}</b></p>
+              <p className="mono"><b>{textoSerie(topUltima, e.registro, 'corto', e.ejercicio)}</b></p>
               <p className="small muted">{topUltima.rpe ? t('esfuerzo {n}', { n: topUltima.rpe }) : ''}</p>
             </> : <p className="small muted mt4">{t('Primera vez con este ejercicio')}</p>}
           </div>
@@ -228,7 +230,12 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
               </>
             ) : e.registro === 'peso' || e.registro === 'mancuerna' || e.registro === 'asistido'
               ? <><p className="hoy-v mono">?<small>kg</small></p><p className="small muted">{t('Pon el peso abajo con + o −')}</p></>
-              : <p className="hoy-v mono">{trabajo.find(x => !x.hecha)?.reps ?? trabajo.find(x => !x.hecha)?.segundos ?? e.repsMin}<small>{e.registro === 'tiempo' ? 's' : t('reps')}</small></p>}
+              : <>
+                <p className="hoy-v mono">{trabajo.find(x => !x.hecha)?.reps ?? trabajo.find(x => !x.hecha)?.segundos ?? e.repsMin}<small>{e.registro === 'tiempo' ? 's' : e.registro === 'cardio' ? 'min' : t('reps')}</small></p>
+                {/* Peso corporal con lastre, o de un lado cada vez: que se vea qué significa el número. */}
+                {e.registro === 'corporal' && pesoHoy != null && pesoHoy > 0 && <p className="small muted">{t('lastre {n} kg', { n: kg(pesoHoy) })}</p>}
+                {como.porLado && <p className="small muted">{t('por lado')}</p>}
+              </>}
           </div>
         </div>
       </div>
@@ -253,9 +260,9 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
           const fin = x.record ? <Ico n="trophy" b /> : x.hecha ? <Ico n="check" b /> : cur ? <Ico n="caret-down" b /> : <Ico n="circle" />
           // Una serie ya hecha se toca para corregirla (reps o peso mal apuntados con las prisas).
           if (x.hecha) return (
-            <button key={x.n} className={cx('set done ux-tocable', x.record && 'rec', kCorr === pos && 'ux-corr')} onClick={() => setCorr({ uid: e.uid, n: pos })} aria-label={t('Corregir la serie {n}: {valor}', { n: k + 1, valor: textoSerieEnCurso(x, e) })}>
+            <button key={x.n} className={cx('set done ux-tocable', x.record && 'rec', kCorr === pos && 'ux-corr')} onClick={() => setCorr({ uid: e.uid, n: pos })} aria-label={t('Corregir la serie {n}: {valor}', { n: k + 1, valor: textoSerieEnCurso(x, e, como.porLado) })}>
               <span className="sn">{k + 1}</span>
-              <span className="sv">{textoSerieEnCurso(x, e)}</span>
+              <span className="sv">{textoSerieEnCurso(x, e, como.porLado)}</span>
               <span className="se"><Ico n="pencil-simple" /></span>
               {fin}
             </button>
@@ -263,7 +270,7 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
           return (
             <p key={x.n} className={cx('set', x.record && 'rec', cur && 'cur')}>
               <span className="sn">{k + 1}</span>
-              <span className="sv">{textoSerieEnCurso(x, e)}</span>
+              <span className="sv">{textoSerieEnCurso(x, e, como.porLado)}</span>
               <span className="se">{cur ? t('ahora') : ''}</span>
               {fin}
             </p>

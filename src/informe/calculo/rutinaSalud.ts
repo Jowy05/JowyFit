@@ -1,6 +1,6 @@
 // «Tu rutina y tu salud» (§10 del generador v2): perfil y objetivo, la rutina que toca con sus pesos, las marcas por
 // ejercicio, las molestias con su historial y las revisiones. Lógica pura, como el resto del cálculo.
-import type { Bloque, DiaRutina, Perfil, Revision, Serie, Sesion } from '../../datos/tipos'
+import type { Bloque, DiaRutina, Perfil, Revision, Serie, Sesion, TipoRegistro } from '../../datos/tipos'
 import { NOMBRE_OBJETIVO } from '../../dominio/objetivos'
 import { CONDICIONES, detalleDolor, doloresDe, nombreZonaDolor, URGENCIAS } from '../../dominio/salud'
 import { NOMBRE_NO_QUIERO } from '../../catalogo/grupos'
@@ -9,7 +9,7 @@ import { nombreCardio } from '../../dominio/cardio'
 import { textoCambio } from '../../dominio/revision'
 import { nombreZona } from '../../dominio/generador'
 import { DIAS, fechaCorta } from '../../dominio/fechas'
-import { capital, kg, num } from '../../dominio/formato'
+import { capital, kg, num, textoMarca, textoReps } from '../../dominio/formato'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t, tk } from '../../i18n'
 import type { DatoInforme, RutinaSaludInforme, TonoInforme } from './tipos'
@@ -46,12 +46,18 @@ function mejorSerie(s: Sesion, id: string): Serie | null {
   return series.reduce<Serie | null>((m, x) => (!m || (x.peso ?? 0) > (m.peso ?? 0) || ((x.peso ?? 0) === (m.peso ?? 0) && (x.reps ?? 0) > (m.reps ?? 0)) ? x : m), null)
 }
 
-const textoSerie = (x: Serie) => (x.peso && x.peso > 0 ? t('{kg} kg × {reps}', { kg: kg(x.peso), reps: x.reps ?? '—' }) : x.segundos ? `${x.segundos} s` : t('{n} veces', { n: x.reps ?? 0 }))
+/** La mejor serie en una frase. En los de peso corporal, el peso es el lastre; con un lado cada vez, las reps son por lado. */
+function textoSerie(x: Serie, registro: TipoRegistro): string {
+  if (x.peso && x.peso > 0) {
+    return registro === 'corporal' || x.izq != null ? textoMarca({ ...x, lastre: registro === 'corporal', porLado: x.izq != null }) : t('{kg} kg × {reps}', { kg: kg(x.peso), reps: x.reps ?? '—' })
+  }
+  return x.segundos ? `${x.segundos} s` : x.izq != null ? textoReps(x) : t('{n} veces', { n: x.reps ?? 0 })
+}
 
 function pesoDe(b: Bloque, hechas: Sesion[]): string {
   for (let i = hechas.length - 1; i >= 0; i--) {
     const x = mejorSerie(hechas[i]!, b.ejercicio)
-    if (x) return x.peso && x.peso > 0 ? `${kg(x.peso)} kg` : b.registro === 'tiempo' && x.segundos ? `${x.segundos} s` : t('su peso')
+    if (x) return x.peso && x.peso > 0 ? (b.registro === 'corporal' ? t('lastre {n} kg', { n: kg(x.peso) }) : `${kg(x.peso)} kg`) : b.registro === 'tiempo' && x.segundos ? `${x.segundos} s` : t('su peso')
   }
   return '—'
 }
@@ -74,15 +80,16 @@ function rutinaQueToca(p: Perfil, c: Ctx): RutinaSaludInforme['rutina'] {
 }
 
 function marcas(c: Ctx): RutinaSaludInforme['marcas'] {
-  const ids = [...new Set(c.rutina?.dias.flatMap(d => d.bloques.filter(b => b.registro !== 'cardio').map(b => b.ejercicio)) ?? [])]
-  return ids.flatMap(id => {
+  const bloques = c.rutina?.dias.flatMap(d => d.bloques.filter(b => b.registro !== 'cardio')) ?? []
+  const registro = new Map(bloques.map(b => [b.ejercicio, b.registro]))
+  return [...registro.keys()].flatMap(id => {
     const series = c.hechas.map(s => mejorSerie(s, id)).filter((x): x is Serie => !!x)
     const antes = series[0], ahora = series.at(-1)
     if (!antes || !ahora) return []
     const conPeso = !!(ahora.peso && ahora.peso > 0)
     const dif = conPeso ? (ahora.peso ?? 0) - (antes.peso ?? 0) : (ahora.segundos ?? ahora.reps ?? 0) - (antes.segundos ?? antes.reps ?? 0)
     const cambio = series.length < 2 || dif === 0 ? '=' : `${dif > 0 ? '+' : '−'}${conPeso ? `${kg(Math.abs(dif))} kg` : num(Math.abs(dif), 0)}`
-    return [{ ejercicio: c.cat.nombre(id), antes: textoSerie(antes), ahora: textoSerie(ahora), cambio, tono: dif > 0 ? 'ok' as const : dif < 0 ? 'warn' as const : 'gris' as const }]
+    return [{ ejercicio: c.cat.nombre(id), antes: textoSerie(antes, registro.get(id)!), ahora: textoSerie(ahora, registro.get(id)!), cambio, tono: dif > 0 ? 'ok' as const : dif < 0 ? 'warn' as const : 'gris' as const }]
   }).slice(0, MAX_MARCAS)
 }
 

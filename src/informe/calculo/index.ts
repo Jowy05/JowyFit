@@ -8,7 +8,8 @@ import { nombreEntreno } from '../../dominio/nombres'
 import { idioma, t } from '../../i18n'
 import type { CasillaDia, DetalleEntreno, DetalleSerie, EntradaInforme, Evaluacion, Informe, ResumenInforme, SeccionesInforme } from './tipos'
 import { dia10, entre, fechaDia, minutosSesion, suma, textoDuracion, unico } from './comun'
-import { fijo } from '../../dominio/formato'
+import { fijo, minutosCardio, ritmo } from '../../dominio/formato'
+import { claseDistancia } from '../../catalogo/clasificacion'
 import { SECCIONES_POR_DEFECTO, hayDatosEn, primerDato, rangoInforme } from './periodo'
 import { contexto, cuentaEntrenos, edadEn, estadosDias, leerPeso, nombreDe, type Ctx } from './contexto'
 import { mesesInforme, puntuacionInforme, semanasInforme } from './semanas'
@@ -18,6 +19,8 @@ import { entrenosInforme, fuerzaInforme } from './entrenos'
 import { comidaInforme, pasosInforme } from './comidaPasos'
 import { tuDiaInforme } from './dia'
 import { rutinaSaludInforme } from './rutinaSalud'
+
+const conRitmo = (r: string | null) => (r ? { ritmo: r } : {})
 
 function detalleEntrenos(c: Ctx): DetalleEntreno[] {
   return c.enPeriodo.map(s => {
@@ -29,11 +32,13 @@ function detalleEntrenos(c: Ctx): DetalleEntreno[] {
       ejercicios: s.ejercicios.map(e => ({
         id: e.ejercicio, nombre: nombreDe(c, e.ejercicio), saltado: e.estado === 'saltado',
         enVezDe: e.planificado && e.planificado !== e.ejercicio ? nombreDe(c, e.planificado) : null,
-        motivo: e.motivo === 'ocupado' ? 'ocupado' : e.motivo === 'cambio' ? 'cambio' : null,
+        motivo: e.motivo === 'ocupado' ? 'ocupado' : e.motivo === 'cambio' ? 'cambio' : null, registro: e.registro,
         // Las series de trabajo se numeran desde 1 (los calentamientos no cuentan).
         series: e.series.map((x, i): DetalleSerie => ({
           n: x.calentamiento ? 0 : e.series.slice(0, i + 1).filter(y => !y.calentamiento).length, peso: x.peso, reps: x.reps, segundos: x.segundos ?? null, rpe: x.rpe, calentamiento: x.calentamiento, hecha: x.hecha,
           record: !!x.record && recs.has(`${e.ejercicio}|${x.peso}|${x.reps}`), nota: x.nota ?? null,
+          ...(x.izq != null ? { porLado: true } : {}), ...(x.izq != null && x.der != null && x.izq !== x.der ? { izq: x.izq, der: x.der } : {}),
+          ...(x.km != null && x.km > 0 ? { km: x.km, ...conRitmo(ritmo(minutosCardio(x), x.km, claseDistancia(e.ejercicio))) } : {}),
         })),
       })),
     }

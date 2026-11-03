@@ -49,7 +49,7 @@ function filaHoyNormal(c: Ctx, id: string, delDia: Sesion[], antes: Sesion[]): F
     } else {
       juicio = 'igual'
       frase = t('{hoy} · igual que lo normal', { hoy: tf(hoy) })
-      if (unidad === 'kg' && hoy === normal) {
+      if ((unidad === 'kg' || unidad === 'lastre') && hoy === normal) {
         // Mismo peso: se mira si hoy salieron más repeticiones con ese peso que lo normal.
         const repsA = (series: Serie[]) => Math.max(...trabajo(series).filter(x => x.peso === hoy).map(x => x.reps!))
         const repsNormal = mediana(previas.filter(p => p.valor === hoy).map(p => repsA(p.series)))
@@ -135,7 +135,8 @@ export function tuDiaInforme(c: Ctx): TuDiaInforme {
   const idP = meta ?? ejerciciosHechos(c.hechas).find(id => !ids.length || ids.includes(id))
   let principal: TuDiaInforme['principal'] = null
   if (idP) {
-    const u = unidadFuerza(c.hechas, idP)
+    // La gráfica son las 12 últimas veces: el lastre se decide con esas.
+    const u = unidadFuerza(c.hechas, idP, hechasAsc(c.hechas).filter(s => trabajo(seriesDe(s, idP)).length).slice(-12))
     const pts = serieFuerza(c.hechas, idP, u).slice(-12)
     const recs = new Set(logros(c.hechas).filter(l => l.ejercicio === idP).map(l => l.fecha))
     const previos = (pts.at(-1)?.fecha === dia ? pts.slice(0, -1) : pts).slice(-4).map(p => p.valor)

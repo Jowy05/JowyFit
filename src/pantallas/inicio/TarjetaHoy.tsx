@@ -12,7 +12,7 @@ import type { Tarjeta } from '../../dominio/semana'
 import type { Cola } from '../../dominio/cola'
 import { nombreCardio } from '../../dominio/cardio'
 import { rutinaBloqueada } from '../../dominio/salud'
-import { capital, kg } from '../../dominio/formato'
+import { capital, kg, textoKilos } from '../../dominio/formato'
 import type { Sugerencia } from '../../dominio/progresion'
 import { nombreEntreno } from '../../dominio/nombres'
 import { cx, Ico, Th } from '../../ui/componentes'
@@ -206,14 +206,14 @@ function FilasDia({ dia, sug, equilibrio, cardio }: { dia: DiaRutina; sug?: Map<
     const e = ejercicio(b.ejercicio)
     const s = sug?.get(b.ejercicio)
     const s2 = comp ? sug?.get(comp.ejercicio) : undefined
-    const pesoTxt = (x?: Sugerencia) => (!x ? '' : nuevo(x) ? (todosNuevos ? '' : t('nuevo')) : x.peso != null ? kg(x.peso) : x.reps != null ? (b.registro === 'tiempo' ? `${x.reps} s` : t('{n} reps', { n: x.reps })) : '')
+    const pesoTxt = (x?: Sugerencia) => (!x ? '' : nuevo(x) ? (todosNuevos ? '' : t('nuevo')) : x.peso != null ? (b.registro === 'corporal' ? textoKilos(x.peso, b.registro) : kg(x.peso)) : x.reps != null ? (b.registro === 'tiempo' ? `${x.reps} s` : t('{n} reps', { n: x.reps })) : '')
     filas.push(
       <div key={b.uid} className={cx('exr', s?.accion === 'subir' && 'hot')}>
         {comp ? <span className="th xs c-br"><Ico n="link" b /></span> : <Th ej={e} size="xs" />}
         <span className="tx">{comp ? t('Dos seguidos: {a} + {b}', { a: palabraClave(e?.nombre), b: palabraClave(ejercicio(comp.ejercicio)?.nombre) }) : e?.nombre}</span>
         <span className="sr">{b.series} × {b.repsMin}-{b.repsMax}</span>
         <b className={cx('kg', (comp ? nuevo(s) && nuevo(s2) : nuevo(s)) && 'ux-nuevo')}>
-          {comp ? (nuevo(s) && nuevo(s2) ? (todosNuevos ? '' : t('nuevo')) : `${pesoTxt(s)} · ${pesoTxt(s2)}`) : s && !nuevo(s) && s.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : pesoTxt(s)}
+          {comp ? (nuevo(s) && nuevo(s2) ? (todosNuevos ? '' : t('nuevo')) : `${pesoTxt(s)} · ${pesoTxt(s2)}`) : s && !nuevo(s) && s.peso != null ? <>{textoKilos(s.peso, b.registro)} {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : pesoTxt(s)}
         </b>
       </div>,
     )

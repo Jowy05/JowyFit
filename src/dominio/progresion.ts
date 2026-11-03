@@ -96,8 +96,14 @@ export function esRecord(s: Serie, historial: Serie[]): Logro | null {
   return null
 }
 
+/** Repeticiones que cuentan para el volumen: con un lado cada vez, las de los dos lados. */
+export function repsVolumen(x: Pick<Serie, 'reps' | 'izq' | 'der'>): number {
+  const r = (v: number | null | undefined) => (v != null && Number.isFinite(v) ? Math.max(0, v) : 0)
+  return x.izq != null || x.der != null ? r(x.izq) + r(x.der) : r(x.reps)
+}
+
 export function volumen(series: Serie[]): number {
-  return trabajo(series).reduce((t, s) => t + Math.max(0, s.peso ?? 0) * (s.reps ?? 0), 0)
+  return trabajo(series).reduce((t, s) => t + Math.max(0, s.peso ?? 0) * repsVolumen(s), 0)
 }
 
 // Primera carga a partir de los pesos de referencia del perfil
@@ -173,8 +179,11 @@ export function conPartida(s: Sugerencia, material: string | null | undefined, r
   return peso == null ? s : { ...s, peso, partida: true, texto: t(TEXTO_PARTIDA) }
 }
 
-/** Series hechas de un ejercicio en una sesión terminada. */
-export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[] }
+/**
+ * Series hechas de un ejercicio en una sesión terminada. `registro`: cómo se apuntó ese día (un propio puede pasar de
+ * «con peso» a «peso corporal»).
+ */
+export type Hecho = { sesionId: number; fecha: string; inicio: number; series: Serie[]; registro: TipoRegistro }
 
 /** Historial de un ejercicio dentro de una lista de sesiones ya leída (más reciente primero). */
 export function historialEn(sesiones: Sesion[], id: string, excluir?: number): Hecho[] {
@@ -184,7 +193,7 @@ export function historialEn(sesiones: Sesion[], id: string, excluir?: number): H
     for (const e of s.ejercicios) {
       if (e.ejercicio !== id) continue
       const series = e.series.filter(x => x.hecha)
-      if (series.some(x => !x.calentamiento)) out.push({ sesionId: s.id!, fecha: s.fecha, inicio: s.inicio, series })
+      if (series.some(x => !x.calentamiento)) out.push({ sesionId: s.id!, fecha: s.fecha, inicio: s.inicio, series, registro: e.registro })
     }
   }
   return out

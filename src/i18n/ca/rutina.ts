@@ -585,4 +585,6 @@ export default {
   'Descansos más largos, hasta estar sin mareo.': 'Descansos més llargs, fins que no hi hagi mareig.',
   'Lo quitas cuando quieras en Ajustes.': 'El treus quan vulguis a Configuració.',
   'Sí, probarlo': 'Sí, provar-lo',
+  'Encendido: apuntas las repeticiones de cada pierna o brazo.': 'Encès: apuntes les repeticions de cada cama o braç.',
+  'Apagado: los dos lados a la vez.': 'Apagat: els dos costats alhora.',
 } satisfies Diccionario

@@ -59,8 +59,12 @@ describe('series nuevas según cómo se apunta', () => {
       { n: 2, peso: 20, reps: 10, segundos: null, rpe: null, calentamiento: false, hecha: false },
     ])
   })
-  it('corporal y cardio: sin peso; tiempo: segundos en vez de reps', () => {
-    expect(seriesNuevas(1, 20, 10, 'corporal')[0]).toMatchObject({ peso: null, reps: 10 })
+  it('corporal y cardio: sin peso (el corporal, solo su lastre); tiempo: segundos en vez de reps', () => {
+    expect(seriesNuevas(1, null, 10, 'corporal')[0]).toMatchObject({ peso: null, reps: 10 })
+    // El peso de un corporal es el lastre de la última vez: pasa a las series; sin lastre (0 o una ayuda), nada.
+    expect(seriesNuevas(1, 10, 10, 'corporal')[0]).toMatchObject({ peso: 10, reps: 10 })
+    expect(seriesNuevas(1, 0, 10, 'corporal')[0]!.peso).toBeNull()
+    expect(seriesNuevas(1, -15, 10, 'corporal')[0]!.peso).toBeNull()
     expect(seriesNuevas(1, 20, 10, 'cardio')[0]).toMatchObject({ peso: null, reps: 10 })
     expect(seriesNuevas(1, 20, 30, 'tiempo')[0]).toMatchObject({ peso: null, reps: null, segundos: 30 })
   })
@@ -307,8 +311,11 @@ describe('sesión en curso', () => {
   it('fallaba: cambiar a un ejercicio por tiempo dejaba «reps» y ningún segundo', () => {
     const s = sustituir(sesion([ej('a', { estado: 'curso' })]), 0, 'plank', 'cambio', { peso: null, reps: 40 }, 'tiempo')
     for (const x of s.ejercicios[0]!.series) { expect(x.segundos).toBe(40); expect(x.reps).toBeNull(); expect(x.peso).toBeNull() }
-    const c = sustituir(sesion([ej('a')]), 0, 'push-up', 'cambio', { peso: 40, reps: null }, 'corporal')
+    const c = sustituir(sesion([ej('a')]), 0, 'push-up', 'cambio', { peso: null, reps: null }, 'corporal')
     for (const x of c.ejercicios[0]!.series) { expect(x.peso).toBeNull(); expect(x.reps).toBe(8) }
+    // A uno de peso corporal con lastre en su historial: las series pendientes llevan ese lastre.
+    const d = sustituir(sesion([ej('a')]), 0, 'dips', 'cambio', { peso: 10, reps: null }, 'corporal')
+    for (const x of d.ejercicios[0]!.series) expect(x.peso).toBe(10)
   })
   it('índices que no existen no revientan (hecha, saltar, quitar serie)', () => {
     const s = sesion([ej('a')])

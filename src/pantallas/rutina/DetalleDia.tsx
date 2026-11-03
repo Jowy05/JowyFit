@@ -4,7 +4,7 @@ import type { Bloque } from '../../datos/tipos'
 import { sugerenciasDia } from '../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { duracion, formatoHora } from '../../dominio/fechas'
-import { kg } from '../../dominio/formato'
+import { textoKilos } from '../../dominio/formato'
 import type { Sugerencia } from '../../dominio/progresion'
 import { Cab, cx, Ico, Pantalla, Th } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -68,7 +68,7 @@ function Tarjeta({ b, etiqueta, s, sigue }: { b: Bloque; etiqueta: string; s?: S
         </span>
         <span className={cx('nx', s?.accion === 'subir' && 'hot')}>
           <small>{t('Peso')}</small>
-          <b>{s?.peso != null ? <>{kg(s.peso)} kg {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : s?.accion === 'primera' ? t('Nuevo') : s?.reps ? `${s.reps} ${b.registro === 'tiempo' ? 's' : t('reps')}` : '—'}</b>
+          <b>{s?.peso != null ? <>{textoKilos(s.peso, b.registro)} {s.accion === 'subir' && <Ico n="arrow-up" b />}</> : s?.accion === 'primera' ? t('Nuevo') : s?.reps ? `${s.reps} ${b.registro === 'tiempo' ? 's' : t('reps')}` : '—'}</b>
         </span>
       </span>
       <span className="strip sm">

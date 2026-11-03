@@ -284,7 +284,8 @@ function datosV3(datos: Record<string, unknown[]>): boolean {
 function datosV4(datos: Record<string, unknown[]>): boolean {
   const nueva = (x: Fila) => x.izq != null || x.der != null || x.km != null
   return filas(datos, 'sesiones').some(s => filasDe(s.ejercicios).some(e => filasDe(e.series).some(nueva)))
-    || filas(datos, 'propios').some(p => p.unilateral === true)
+    // Un propio de tiempo o cardio con «unilateral» no pierde nada en una app anterior (no lo usa).
+    || filas(datos, 'propios').some(p => p.unilateral === true && (p.registro === 'peso' || p.registro === 'corporal'))
 }
 
 /**

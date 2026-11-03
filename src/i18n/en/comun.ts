@@ -107,4 +107,5 @@ export default {
   'Más suave por tu molestia: {peso} kg': 'Lighter because of your pain: {peso} kg',
   'revisiones': 'check-ins',
   'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': 'No permission to save to Documents. Allow it in your phone settings: Apps → JowyFit → Permissions.',
+  'lastre {antes} → {ahora} kg': 'added {antes} → {ahora} kg',
 } satisfies Diccionario

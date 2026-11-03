@@ -65,7 +65,8 @@ export function ejerciciosHechos(sesiones: Sesion[]): string[] {
   return [...cuenta.entries()].sort((a, b) => b[1].n - a[1].n || b[1].ultimo - a[1].ultimo).map(([id]) => id)
 }
 
-export type Subida = { ejercicio: string; fecha: string; sesionId?: number; antes: number; ahora: number }
+/** `lastre`: de peso corporal, los kilos son lastre (para no decir «2,5 → 5 kg» en unas dominadas). */
+export type Subida = { ejercicio: string; fecha: string; sesionId?: number; antes: number; ahora: number; lastre?: boolean }
 
 /** Ejercicios cuyo peso máximo subió frente a la sesión anterior en que se hicieron (más recientes primero). */
 export function subidas(sesiones: Sesion[]): Subida[] {
@@ -77,7 +78,10 @@ export function subidas(sesiones: Sesion[]): Subida[] {
       // Las asistidas (peso negativo) no cuentan como subida de peso.
       if (p == null || p <= 0) continue
       const antes = ultimo.get(id)
-      if (antes != null && p > antes) out.push({ ejercicio: id, fecha: s.fecha, sesionId: s.id, antes, ahora: p })
+      if (antes != null && p > antes) {
+        const lastre = s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal')
+        out.push({ ejercicio: id, fecha: s.fecha, sesionId: s.id, antes, ahora: p, ...(lastre ? { lastre } : {}) })
+      }
       ultimo.set(id, p)
     }
   }

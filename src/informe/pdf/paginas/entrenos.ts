@@ -59,7 +59,8 @@ export function paginaEntrenos(maq: Maqueta, e: EntrenosInforme): Flujo {
   const wc = (ANCHO - 6) / 2
   const subidas: FilaTabla[] = e.subidasLista.map(x => ({
     celdas: [
-      { t: x.nombre, partir: true, estrella: x.record },
+      // Las columnas son de kilos: con lastre se dice en el nombre, o en unas dominadas parece que se levantan 5 kg.
+      { t: x.lastre ? t('{nombre} (lastre)', { nombre: x.nombre }) : x.nombre, partir: true, estrella: x.record },
       { t: kg(x.antes), color: f.l.c.gris }, { t: kg(x.ahora), peso: 'negrita' }, { t: fechaCorta(x.fecha), color: f.l.c.gris },
     ],
   }))

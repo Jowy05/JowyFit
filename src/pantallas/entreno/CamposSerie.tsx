@@ -1,5 +1,6 @@
 // Los contadores de una serie por repeticiones o de cardio, iguales en el panel del entreno y al corregir: el peso
 // (o el lastre), las reps (por lado, o cada lado aparte si uno salió distinto) y los minutos con sus km.
+import { useEffect, useRef } from 'react'
 import type { EjercicioSesion, Serie } from '../../datos/tipos'
 import type { Ejercicio } from '../../catalogo/tipos'
 import { admiteLastre, claseDistancia, conDistancia, porLado } from '../../catalogo/clasificacion'
@@ -17,6 +18,9 @@ export const etiquetaReps = (e: EjercicioSesion, lado = false) => (e.registro ==
 const LASTRE_INICIAL = 2.5
 /** Lastre de 0 a 100 kg de 2,5 en 2,5 (tocando el número se escribe cualquiera). */
 const PESOS_LASTRE = Array.from({ length: 41 }, (_, i) => i * 2.5)
+
+/** Adónde va el foco cuando un control aparece en lugar del que se ha tocado. */
+type Foco = 'reps' | 'izq' | 'lastre' | 'añadirLastre'
 
 /** Cómo se apunta este ejercicio (el del catálogo, si está). */
 export function comoSeApunta(e: EjercicioSesion, ej: Ejercicio | undefined): ComoSeApunta {
@@ -49,14 +53,27 @@ export function CamposSerie({ e, como, lista, v, cambiar, falta }: {
   const conLastre = e.registro === 'corporal' && v.peso != null && v.peso > 0
   const separar = como.porLado && v.separar
   const r = cardio && como.distancia ? ritmo(v.reps, v.km, claseDistancia(e.ejercicio)) : null
+  // El botón tocado desaparece y sale otro control en su sitio: el foco va a ese control nuevo. Si no, se pierde
+  // (al cuerpo de la página) y quien usa el teclado o TalkBack no sabe qué ha aparecido.
+  const foco = useRef<Foco | null>(null)
+  const sitios = useRef<Partial<Record<Foco, HTMLElement | null>>>({})
+  useEffect(() => {
+    const k = foco.current
+    if (!k) return
+    foco.current = null
+    const el = sitios.current[k]
+    ;(el?.matches('button') ? el : el?.querySelector('button'))?.focus()
+  })
+  const llevar = (k: Foco, c: Partial<Campos>) => { foco.current = k; cambiar(c) }
+  const sitio = (k: Foco) => (el: HTMLElement | null) => { sitios.current[k] = el }
   const reps = (
-    <div className={cx('pn-f', !como.conPeso && !conLastre && 'w', falta === 'reps' && 'ux-falta')}>
+    <div ref={sitio('reps')} className={cx('pn-f', !como.conPeso && !conLastre && 'w', falta === 'reps' && 'ux-falta')}>
       <span className="lbl ux-pn-lbl">{falta === 'reps' ? (cardio ? t('Pon los minutos') : t('Pon las que has hecho')) : etiquetaReps(e, como.porLado)}</span>
       <Stepper className="tall" valor={v.reps} paso={1} min={1} max={TOPE_SERIE.reps} onCambio={x => cambiar({ reps: x, izq: x, der: x })} etiqueta={cardio ? t('Minutos') : t('Repeticiones')} />
     </div>
   )
   const lado = (cual: 'izq' | 'der') => (
-    <div className={cx('pn-f', falta === 'reps' && 'ux-falta')}>
+    <div ref={cual === 'izq' ? sitio('izq') : undefined} className={cx('pn-f', falta === 'reps' && 'ux-falta')}>
       <span className="lbl ux-pn-lbl">{cual === 'izq' ? t('Izquierda') : t('Derecha')}</span>
       <Stepper className="tall" valor={v[cual]} paso={1} min={1} max={TOPE_SERIE.reps} onCambio={x => cambiar(cual === 'izq' ? { izq: x } : { der: x })}
         etiqueta={cual === 'izq' ? t('Repeticiones con el lado izquierdo') : t('Repeticiones con el lado derecho')} />
@@ -73,10 +90,11 @@ export function CamposSerie({ e, como, lista, v, cambiar, falta }: {
           </div>
         )}
         {conLastre && (
-          <div className="pn-f w">
+          <div ref={sitio('lastre')} className="pn-f w">
             <span className="lbl ux-pn-lbl">{t('Lastre (kg)')}</span>
-            {/* Bajar a 0 quita el lastre (y vuelve el enlace para ponerlo). */}
-            <Stepper className="tall" valor={v.peso} lista={PESOS_LASTRE} paso={2.5} min={0} max={TOPE_SERIE.peso} onCambio={peso => cambiar({ peso: peso > 0 ? peso : null })} etiqueta={t('Lastre')} />
+            {/* Bajar a 0 quita el lastre (y vuelve el enlace para ponerlo, que se lleva el foco). */}
+            <Stepper className="tall" valor={v.peso} lista={PESOS_LASTRE} paso={2.5} min={0} max={TOPE_SERIE.peso}
+              onCambio={peso => (peso > 0 ? cambiar({ peso }) : llevar(como.lastre ? 'añadirLastre' : 'reps', { peso: null }))} etiqueta={t('Lastre')} />
           </div>
         )}
         {!separar && reps}
@@ -93,9 +111,9 @@ export function CamposSerie({ e, como, lista, v, cambiar, falta }: {
     {(como.porLado || (como.lastre && !conLastre)) && (
       <div className="ux-pn-extra">
         {como.porLado && (separar
-          ? <button type="button" className="lnk" onClick={() => cambiar({ separar: false, izq: v.reps, der: v.reps })}><Ico n="equals" />{t('Igual en los dos lados')}</button>
-          : <button type="button" className="lnk" onClick={() => cambiar({ separar: true, izq: v.reps, der: v.reps })}><Ico n="arrows-left-right" />{t('Un lado ha salido distinto')}</button>)}
-        {como.lastre && !conLastre && <button type="button" className="lnk" onClick={() => cambiar({ peso: LASTRE_INICIAL })}><Ico n="plus" />{t('Añadir lastre')}</button>}
+          ? <button type="button" className="lnk" onClick={() => llevar('reps', { separar: false, izq: v.reps, der: v.reps })}><Ico n="equals" />{t('Igual en los dos lados')}</button>
+          : <button type="button" className="lnk" onClick={() => llevar('izq', { separar: true, izq: v.reps, der: v.reps })}><Ico n="arrows-left-right" />{t('Un lado ha salido distinto')}</button>)}
+        {como.lastre && !conLastre && <button ref={sitio('añadirLastre')} type="button" className="lnk" onClick={() => llevar('lastre', { peso: LASTRE_INICIAL })}><Ico n="plus" />{t('Añadir lastre')}</button>}
       </div>
     )}
   </>

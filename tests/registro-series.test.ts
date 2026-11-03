@@ -8,8 +8,9 @@ import { comoEjercicio } from '../src/catalogo/propios'
 import { usarCatalogo } from '../src/catalogo/catalogo'
 import { corregirSerie, datosDeCampos, hecha, resumen, TOPE_SERIE, type CamposSerie, type ComoSeApunta } from '../src/dominio/sesion'
 import { esRecord, repsVolumen, sugerir, volumen } from '../src/dominio/progresion'
-import { ritmo, textoKilos, textoMarca, textoReps, textoSerie, textoSerieEnCurso } from '../src/dominio/formato'
-import { logros } from '../src/dominio/tendencias'
+import { ritmo, textoKilos, textoMarca, textoReps, textoSerie, textoSerieEnCurso, textoSubida } from '../src/dominio/formato'
+import { logros, subidas } from '../src/dominio/tendencias'
+import { guardarPropio } from '../src/datos/acciones/propios'
 import { textoFuerza, textoSerie as textoSerieInforme, unidadFuerza, valorFuerza } from '../src/informe/calculo/comun'
 import { calcularInforme } from '../src/informe/calculo/index'
 import { crearPdf } from '../src/informe/pdf'
@@ -172,12 +173,22 @@ describe('textos de las series', () => {
     expect(textoSerieEnCurso(serie({ hecha: false, peso: null }), cinta)).toBe('20-30 min')
     expect(textoSerieEnCurso(serie({ peso: null, reps: 25, km: 4 }), cinta)).toBe('25 min · 4 km')
   })
+  it('el cardio antiguo apuntado en segundos sale en minutos (no «null min»)', () => {
+    const antigua = serie({ peso: null, reps: null, segundos: 1200 })
+    expect(textoSerie(antigua, 'cardio', 'corto')).toBe('20 min')
+    expect(textoSerie(antigua, 'cardio', 'tabla')).toBe('20 min')
+    expect(textoSerieEnCurso(antigua, ejSesion({ ejercicio: 'treadmill-running', registro: 'cardio' }))).toBe('20 min')
+  })
   it('las marcas (récords) dicen si es lastre o por lado', () => {
     expect(textoMarca({ peso: 47.5, reps: 8 })).toBe('47,5 kg × 8')
     expect(textoMarca({ peso: 5, reps: 8, lastre: true })).toBe('lastre 5 kg × 8')
     expect(textoMarca({ peso: 10, reps: 8, porLado: true })).toBe('10 kg × 8 por lado')
     expect(textoKilos(5, 'corporal')).toBe('lastre 5 kg')
     expect(textoKilos(47.5, 'peso')).toBe('47,5 kg')
+  })
+  it('las subidas dicen si los kilos son lastre', () => {
+    expect(textoSubida(45, 47.5)).toBe('45 → 47,5 kg')
+    expect(textoSubida(2.5, 5, true)).toBe('lastre 2,5 → 5 kg')
   })
   it('el ritmo: andando o corriendo en min/km, en bici en km/h; sin sentido, nada', () => {
     expect(ritmo(30, 5, 'pie')).toBe('6:00 min/km')
@@ -203,6 +214,18 @@ describe('Progreso: récords con lastre y por lado', () => {
     expect(l.find(x => x.ejercicio === 'dips')!.porLado).toBeUndefined()
     expect(l.find(x => x.ejercicio === 'bulgarian-split-squat')).toMatchObject({ tipo: 'peso', peso: 12, porLado: true })
     expect(l.find(x => x.ejercicio === 'bulgarian-split-squat')!.lastre).toBeUndefined()
+  })
+  it('subidas marca las de lastre (si no, en unas dominadas parece que se levantan 5 kg)', () => {
+    idsDesde(9050)
+    const s = [
+      SES('2026-10-06', [E('dips', [S(2.5, 8)], { registro: 'corporal' }), E('bench-press', [S(40, 8)])]),
+      SES('2026-10-08', [E('dips', [S(5, 8)], { registro: 'corporal' }), E('bench-press', [S(42.5, 8)])]),
+    ]
+    const u = subidas(s)
+    expect(u.find(x => x.ejercicio === 'dips')).toMatchObject({ antes: 2.5, ahora: 5, lastre: true })
+    expect(u.find(x => x.ejercicio === 'bench-press')!.lastre).toBeUndefined()
+    const inf = calcularInforme(entrada({ sesiones: s, periodo: 'mes' }))
+    expect(inf.entrenos!.subidasLista.find(x => x.ejercicio === 'dips')).toMatchObject({ lastre: true })
   })
 })
 
@@ -233,6 +256,20 @@ describe('informe en PDF', () => {
     expect(d.ejercicios[2]!.series[0]).toMatchObject({ km: 5, ritmo: '6:00 min/km' })
     expect(inf.fuerza!.mejores.map(m => m.id)).not.toContain('dips')
     expect(inf.fuerza!.ejercicios.find(g => g.id === 'dips')).toMatchObject({ unidad: 'lastre' })
+  })
+  it('un lastre suelto y antiguo no deja la gráfica en un punto: se queda en repeticiones', () => {
+    idsDesde(9150)
+    const s = [
+      SES('2026-08-04', [E('pull-up', [S(null, 8)], { registro: 'corporal' })]),
+      SES('2026-08-06', [E('pull-up', [S(2.5, 6)], { registro: 'corporal' })]),
+      ...['2026-10-06', '2026-10-08', '2026-10-13', '2026-10-15'].map((f, i) => SES(f, [E('pull-up', [S(null, 8 + i)], { registro: 'corporal' })])),
+    ]
+    const enPeriodo = s.slice(2)
+    expect(unidadFuerza(s, 'pull-up')).toBe('reps') // 1 de 6 días con lastre
+    expect(unidadFuerza(s, 'pull-up', enPeriodo)).toBe('reps')
+    expect(unidadFuerza(s, 'pull-up', s.slice(1, 3))).toBe('lastre') // la mitad de lo que se pinta, sí
+    const g = calcularInforme(entrada({ sesiones: s, periodo: 'mes' })).fuerza!.ejercicios.find(x => x.id === 'pull-up')!
+    expect(g).toMatchObject({ unidad: 'reps', veces: 4, desde: 8, hasta: 11 })
   })
   it('el PDF sale y dice lastre, los lados y los km', async () => {
     const inf = calcularInforme(entrada({ sesiones, periodo: 'semana', secciones: { detalle: true } }))
@@ -268,8 +305,24 @@ describe('copias', () => {
     const propio = { id: 'mio-1', nombre: 'Zancada', grupo: 'pierna', material: 'corporal', registro: 'corporal', rutinaAuto: false, creado: '2026-10-20' }
     expect(versionNecesaria({ ...base, propios: [propio] })).toBe(2)
     expect(versionNecesaria({ ...base, propios: [{ ...propio, unilateral: true }] })).toBe(4)
+    // En uno de tiempo o cardio, «unilateral» no sirve: no obliga a la versión nueva.
+    expect(versionNecesaria({ ...base, propios: [{ ...propio, registro: 'tiempo', unilateral: true }] })).toBe(2)
     // El lastre no hace falta: una app anterior lo guarda igual (es el peso de la serie).
     expect(versionNecesaria(conSerie({ peso: 5 }))).toBeLessThan(4)
+  })
+})
+
+describe('ejercicios propios de un lado cada vez', () => {
+  const propio = { id: 'mio-lado', nombre: 'Zancada', grupo: 'pierna', material: 'corporal', registro: 'corporal', rutinaAuto: false, creado: '2026-10-20' } as const
+  it('se guarda con peso o peso corporal', async () => {
+    await guardarPropio({ ...propio, unilateral: true })
+    expect((await db.propios.get('mio-lado'))!.unilateral).toBe(true)
+  })
+  it('si se cambia a tiempo o cardio, no se queda guardado', async () => {
+    await guardarPropio({ ...propio, registro: 'tiempo', unilateral: true })
+    expect((await db.propios.get('mio-lado'))!.unilateral).toBeUndefined()
+    await guardarPropio({ ...propio, registro: 'cardio', unilateral: true })
+    expect((await db.propios.get('mio-lado'))!.unilateral).toBeUndefined()
   })
 })
 

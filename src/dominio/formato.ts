@@ -107,7 +107,7 @@ export function textoSerie(x: Serie, registro: TipoRegistro, estilo: 'tabla' | '
     return `${kg(x.peso)} × ${reps}`
   }
   if (registro === 'tiempo') return `${x.segundos ?? x.reps} s`
-  if (registro === 'cardio') return `${x.reps} min${conKm(x, id, false)}`
+  if (registro === 'cardio') return `${Math.round(minutosCardio(x))} min${conKm(x, id, false)}`
   if (lastre) return `${t('lastre {n} kg', { n: lastre })} × ${reps}`
   if (registro === 'corporal' || x.peso == null) return x.izq != null ? reps : t('{n} reps', { n: String(x.reps) })
   return `${registro === 'asistido' ? t('ayuda {n}', { n: kg(Math.abs(x.peso)) }) : kg(x.peso)} kg × ${reps}`
@@ -120,7 +120,7 @@ export function textoSerie(x: Serie, registro: TipoRegistro, estilo: 'tabla' | '
 export function textoSerieEnCurso(x: Serie, e: EjercicioSesion, porLado = false): string {
   const objetivo = `${e.repsMin}-${e.repsMax}`
   if (e.registro === 'tiempo') return x.hecha ? `${x.segundos ?? x.reps} s` : `${objetivo} s`
-  if (e.registro === 'cardio') return x.hecha ? `${x.reps} min${conKm(x, e.ejercicio, false)}` : `${objetivo} min`
+  if (e.registro === 'cardio') return x.hecha ? `${Math.round(minutosCardio(x))} min${conKm(x, e.ejercicio, false)}` : `${objetivo} min`
   const reps = x.hecha ? textoReps(x, porLado) : porLado ? t('{n} por lado', { n: objetivo }) : objetivo
   const lastre = e.registro === 'corporal' && x.peso != null && x.peso > 0
   if (!lastre && (e.registro === 'corporal' || x.peso == null)) return porLado ? reps : t('{n} reps', { n: reps })
@@ -130,6 +130,10 @@ export function textoSerieEnCurso(x: Serie, e: EjercicioSesion, porLado = false)
 
 /** Los kilos que tocan: «47,5 kg» o, en los de peso corporal, «lastre 5 kg». */
 export const textoKilos = (peso: number, registro: TipoRegistro) => (registro === 'corporal' ? t('lastre {n} kg', { n: kg(peso) }) : `${kg(peso)} kg`)
+
+/** Una subida: «45 → 47,5 kg» o, en los de peso corporal, «lastre 2,5 → 5 kg». */
+export const textoSubida = (antes: number, ahora: number, lastre?: boolean) =>
+  (lastre ? t('lastre {antes} → {ahora} kg', { antes: kg(antes), ahora: kg(ahora) }) : `${kg(antes)} → ${kg(ahora)} kg`)
 
 /** Una marca (récord o mejor serie): «47,5 kg × 8», «lastre 5 kg × 8», «10 kg × 8 por lado». */
 export function textoMarca(m: { peso: number | null; reps: number | null; lastre?: boolean; porLado?: boolean }): string {

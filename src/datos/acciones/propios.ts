@@ -19,7 +19,9 @@ export async function cargarPropios() {
  * pasan a apuntarse así, con las series y repeticiones de un bloque nuevo: las de antes contaban otra cosa.
  */
 export async function guardarPropio(p: EjercicioPropio) {
-  const limpio = { ...p, nombre: p.nombre.trim(), notas: p.notas?.trim() || undefined }
+  // «Un lado cada vez» solo vale con peso o peso corporal: si se cambió a tiempo o cardio, no se queda guardado.
+  const porLado = p.unilateral === true && (p.registro === 'peso' || p.registro === 'corporal')
+  const limpio = { ...p, nombre: p.nombre.trim(), notas: p.notas?.trim() || undefined, unilateral: porLado || undefined }
   await db.transaction('rw', [db.propios, db.rutinas, db.perfil], async () => {
     const antes = await db.propios.get(p.id)
     await db.propios.put(limpio)

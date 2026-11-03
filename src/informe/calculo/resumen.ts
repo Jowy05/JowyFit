@@ -13,7 +13,7 @@ function filaPrincipal(c: Ctx): FilaResumen | null {
   const meta = c.metas.find(m => m.tipo === 'ejercicio' && m.ejercicio && enP.some(s => trabajo(seriesDe(s, m.ejercicio!)).length))
   const id = meta?.ejercicio ?? ejerciciosHechos(enP)[0]
   if (!id) return null
-  const u = unidadFuerza(c.hechas, id)
+  const u = unidadFuerza(c.hechas, id, enP)
   const pts = serieFuerza(enP, id, u)
   if (!pts.length) return null
   const a = pts[0]!.valor, b = pts[pts.length - 1]!.valor

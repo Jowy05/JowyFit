@@ -135,7 +135,8 @@ export function tuDiaInforme(c: Ctx): TuDiaInforme {
   const idP = meta ?? ejerciciosHechos(c.hechas).find(id => !ids.length || ids.includes(id))
   let principal: TuDiaInforme['principal'] = null
   if (idP) {
-    const u = unidadFuerza(c.hechas, idP)
+    // La gráfica son las 12 últimas veces: el lastre se decide con esas.
+    const u = unidadFuerza(c.hechas, idP, hechasAsc(c.hechas).filter(s => trabajo(seriesDe(s, idP)).length).slice(-12))
     const pts = serieFuerza(c.hechas, idP, u).slice(-12)
     const recs = new Set(logros(c.hechas).filter(l => l.ejercicio === idP).map(l => l.fecha))
     const previos = (pts.at(-1)?.fecha === dia ? pts.slice(0, -1) : pts).slice(-4).map(p => p.valor)

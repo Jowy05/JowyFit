@@ -96,7 +96,7 @@ export function entrenosInforme(c: Ctx, ent: ReturnType<typeof cuentaEntrenos>):
     const d = deISO(`${m}-01`)
     return fila(`${m}-01`, i === 0 || d.getMonth() === 0 ? `${MESES[d.getMonth()]} ${d.getFullYear()}` : MESES[d.getMonth()]!, xs)
   }) : null
-  const lista8 = c.subidas.slice(0, 8).map((s): SubidaInforme => ({ ejercicio: s.ejercicio, nombre: nombreDe(c, s.ejercicio), antes: s.antes, ahora: s.ahora, fecha: s.fecha, record: c.logros.some(l => l.ejercicio === s.ejercicio && l.fecha === s.fecha) }))
+  const lista8 = c.subidas.slice(0, 8).map((s): SubidaInforme => ({ ejercicio: s.ejercicio, nombre: nombreDe(c, s.ejercicio), antes: s.antes, ahora: s.ahora, fecha: s.fecha, record: c.logros.some(l => l.ejercicio === s.ejercicio && l.fecha === s.fecha), ...(s.lastre ? { lastre: true } : {}) }))
   const porEj: EsfuerzoEjercicio[] = []
   const sinMarcar: string[] = []
   for (const id of ejerciciosHechos(ses)) {
@@ -126,7 +126,7 @@ export function entrenosInforme(c: Ctx, ent: ReturnType<typeof cuentaEntrenos>):
 }
 
 function graficaFuerza(c: Ctx, id: string): GraficaFuerza | null {
-  const unidad = unidadFuerza(c.hechas, id)
+  const unidad = unidadFuerza(c.hechas, id, c.enPeriodo)
   const pts = serieFuerza(c.enPeriodo, id, unidad)
   if (!pts.length) return null
   const recs = new Set(c.logros.filter(l => l.ejercicio === id).map(l => l.fecha))

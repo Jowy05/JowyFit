@@ -5,7 +5,7 @@ import { metasDeTipo } from '../../datos/consultas'
 import { sesionesHechas } from '../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { patron, tipoRegistro } from '../../catalogo/clasificacion'
-import { kg, num, textoMarca } from '../../dominio/formato'
+import { kg, num, textoMarca, textoSubida } from '../../dominio/formato'
 import { fechaCorta, hoyISO, MESES, semanaDe, sumarDias } from '../../dominio/fechas'
 import { resumen } from '../../dominio/sesion'
 import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, nivelSeries, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../dominio/tendencias'
@@ -50,10 +50,10 @@ export function Fuerza() {
 
   // Subidas de los últimos 30 días, una por ejercicio (del primer «antes» al último «ahora»).
   const desde = sumarDias(hoy, -30)
-  const porEj = new Map<string, { id: string; antes: number; ahora: number; fecha: string }>()
+  const porEj = new Map<string, { id: string; antes: number; ahora: number; fecha: string; lastre?: boolean }>()
   for (const s of subidas(sesiones).filter(x => x.fecha >= desde)) {
     const p = porEj.get(s.ejercicio)
-    if (!p) porEj.set(s.ejercicio, { id: s.ejercicio, antes: s.antes, ahora: s.ahora, fecha: s.fecha })
+    if (!p) porEj.set(s.ejercicio, { id: s.ejercicio, antes: s.antes, ahora: s.ahora, fecha: s.fecha, lastre: s.lastre })
     else p.antes = Math.min(p.antes, s.antes)
   }
   const subidasMes = [...porEj.values()]
@@ -135,7 +135,7 @@ export function Fuerza() {
               {subidasMes.map(u => (
                 <div key={u.id} className="it">
                   <Th ej={ejercicio(u.id)} size="s" />
-                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{kg(u.antes)} → {kg(u.ahora)} kg</small></span>
+                  <span className="tx"><b>{nombreEjercicio(u.id)}</b><small className="mono">{textoSubida(u.antes, u.ahora, u.lastre)}</small></span>
                   <span className="end up">+{kg(u.ahora - u.antes)} kg</span>
                 </div>
               ))}

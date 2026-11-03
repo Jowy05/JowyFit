@@ -248,7 +248,8 @@ export type FilaEntreno = {
 
 export type FilaSemanaEntrenos = { lunes: string; etiqueta: string; entrenos: number; minutos: number | null; duracion: string; series: number; kg: number; esfuerzo: number | null; records: number }
 
-export type SubidaInforme = { ejercicio: string; nombre: string; antes: number; ahora: number; fecha: string; record: boolean }
+/** `lastre`: de peso corporal; los kilos son lastre. */
+export type SubidaInforme = { ejercicio: string; nombre: string; antes: number; ahora: number; fecha: string; record: boolean; lastre?: boolean }
 
 export type EsfuerzoEjercicio = {
   id: string

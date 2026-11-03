@@ -119,14 +119,23 @@ export function esfuerzoDe(ejs: EjercicioSesion[]): EsfuerzoInforme {
   }
 }
 
+const conKilos = (x: Serie) => x.peso != null && x.peso > 0 && (x.reps ?? 0) > 0
+
 /**
  * Cómo se mide un ejercicio en las gráficas: kg (o el lastre, en los de peso corporal), ayuda (asistidos, menos es
- * mejor), repeticiones o segundos.
+ * mejor), repeticiones o segundos. `pintadas`: las sesiones que salen en la gráfica (por defecto, las mismas).
  */
-export function unidadFuerza(sesiones: Sesion[], id: string): UnidadFuerza {
+export function unidadFuerza(sesiones: Sesion[], id: string, pintadas = sesiones): UnidadFuerza {
   const series = sesiones.flatMap(s => trabajo(seriesDe(s, id)))
-  if (series.some(x => x.peso != null && x.peso > 0 && (x.reps ?? 0) > 0)) {
-    return sesiones.some(s => s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal')) ? 'lastre' : 'kg'
+  if (series.some(conKilos)) {
+    // Kilos de un día apuntado «con peso» (un propio que luego pasó a peso corporal): son kilos de verdad.
+    const corporal = (s: Sesion) => s.ejercicios.some(e => e.ejercicio === id && e.registro === 'corporal')
+    if (sesiones.some(s => !corporal(s) && trabajo(seriesDe(s, id)).some(conKilos))) return 'kg'
+    // Con lastre solo salen los días que se llevó: manda si lo lleva al menos la mitad de los días que se pintan.
+    // Si no, un día suelto con lastre dejaría la gráfica de unas dominadas en un punto (o sin ninguno).
+    const dias = pintadas.map(s => trabajo(seriesDe(s, id))).filter(x => x.length)
+    const conLastre = dias.filter(x => x.some(conKilos)).length
+    if (conLastre > 0 && conLastre * 2 >= dias.length) return 'lastre'
   }
   if (series.some(x => x.peso != null && x.peso < 0)) return 'asistido'
   if (series.some(x => (x.reps ?? 0) > 0)) return 'reps'

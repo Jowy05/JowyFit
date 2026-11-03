@@ -39,6 +39,7 @@ cdp.al('Runtime.consoleAPICalled', p => { if (p.type === 'error') errores.push(`
 // Si la página se cae (sin memoria en la máquina de GitHub), se dice: si no, solo saldría «target closed».
 const incidencias = []
 cdp.al('Inspector.targetCrashed', () => incidencias.push('la página se ha caído (¿sin memoria?)'))
+await cdp.enviar('Inspector.enable').catch(() => {})
 cdp.al('Log.entryAdded', p => { if (p.entry.level === 'error' && !/openfoodfacts|favicon/.test(p.entry.url ?? '')) errores.push(`log: ${p.entry.text} ${p.entry.url ?? ''}`) })
 cdp.al('Fetch.requestPaused', async p => {
   const u = p.request.url

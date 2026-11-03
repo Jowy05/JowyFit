@@ -126,8 +126,10 @@ export function HojaInforme() {
     try {
       if (nativo) {
         const r = await compartirNativo(hecho.nombre, hecho.bytes, hecho.titulo)
-        if (r === 'cancelado') aviso(t('No se ha enviado el PDF'))
+        if (r === 'cancelado') { aviso(t('No se ha enviado el PDF')); return }
       } else await entregar(hecho)
+      // Enviado: el error de no poder guardarlo en Documentos ya no viene a cuento.
+      setError(null)
     } catch (e) {
       setError(textoError(e))
     }

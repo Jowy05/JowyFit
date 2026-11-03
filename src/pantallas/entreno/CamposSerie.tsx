@@ -5,7 +5,7 @@ import type { EjercicioSesion, Serie } from '../../datos/tipos'
 import type { Ejercicio } from '../../catalogo/tipos'
 import { admiteLastre, claseDistancia, conDistancia, porLado } from '../../catalogo/clasificacion'
 import { TOPE_SERIE, type CamposSerie as Campos, type ComoSeApunta } from '../../dominio/sesion'
-import { ritmo } from '../../dominio/formato'
+import { minutosCardio, ritmo } from '../../dominio/formato'
 import { cx, Ico, Stepper } from '../../ui/componentes'
 import { t } from '../../i18n'
 
@@ -35,7 +35,8 @@ export function comoSeApunta(e: EjercicioSesion, ej: Ejercicio | undefined): Com
 
 /** Los valores con que arrancan los contadores: los de la serie (o el objetivo del ejercicio). */
 export function camposDe(serie: Serie, e: EjercicioSesion): Campos {
-  const reps = serie.reps ?? e.repsMin
+  // Un cardio antiguo guardaba los segundos con reps vacío: el contador va en minutos.
+  const reps = e.registro === 'cardio' ? Math.round(minutosCardio(serie)) || e.repsMin : serie.reps ?? e.repsMin
   return {
     peso: serie.peso, reps, segundos: serie.segundos ?? serie.reps ?? e.repsMin,
     izq: serie.izq ?? reps, der: serie.der ?? reps,

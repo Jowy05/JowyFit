@@ -307,8 +307,14 @@ describe('copias', () => {
     expect(versionNecesaria({ ...base, propios: [{ ...propio, unilateral: true }] })).toBe(4)
     // En uno de tiempo o cardio, «unilateral» no sirve: no obliga a la versión nueva.
     expect(versionNecesaria({ ...base, propios: [{ ...propio, registro: 'tiempo', unilateral: true }] })).toBe(2)
-    // El lastre no hace falta: una app anterior lo guarda igual (es el peso de la serie).
+    // El peso de un ejercicio con peso no es nuevo; el lastre sí: una app anterior lo borraba al corregir la serie.
     expect(versionNecesaria(conSerie({ peso: 5 }))).toBeLessThan(4)
+    const corporal = (peso: number | null) => {
+      const c = conSerie({ peso })
+      return { ...c, sesiones: c.sesiones.map(x => ({ ...x, ejercicios: x.ejercicios.map(e => ({ ...e, registro: 'corporal' })) })) }
+    }
+    expect(versionNecesaria(corporal(null))).toBeLessThan(4)
+    expect(versionNecesaria(corporal(5))).toBe(4)
   })
 })
 

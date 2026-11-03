@@ -280,10 +280,14 @@ function datosV3(datos: Record<string, unknown[]>): boolean {
     || noti.revision !== undefined || noti.revisionHora !== undefined
 }
 
-/** Lo que una copia de la versión 3 quitaría sin avisar: los lados de cada serie, los km y los propios de un lado. */
+/**
+ * Lo que una copia de la versión 3 quitaría sin avisar: los lados de cada serie, los km, el lastre (peso en un ejercicio
+ * de peso corporal: la 0.9 lo borraba al corregir la serie) y los propios de un lado.
+ */
 function datosV4(datos: Record<string, unknown[]>): boolean {
   const nueva = (x: Fila) => x.izq != null || x.der != null || x.km != null
-  return filas(datos, 'sesiones').some(s => filasDe(s.ejercicios).some(e => filasDe(e.series).some(nueva)))
+  const lastre = (e: Fila) => e.registro === 'corporal' && filasDe(e.series).some(x => typeof x.peso === 'number' && x.peso > 0)
+  return filas(datos, 'sesiones').some(s => filasDe(s.ejercicios).some(e => filasDe(e.series).some(nueva) || lastre(e)))
     // Un propio de tiempo o cardio con «unilateral» no pierde nada en una app anterior (no lo usa).
     || filas(datos, 'propios').some(p => p.unilateral === true && (p.registro === 'peso' || p.registro === 'corporal'))
 }

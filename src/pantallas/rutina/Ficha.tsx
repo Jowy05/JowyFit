@@ -7,7 +7,7 @@ import { historialDe, sugerenciaPara } from '../../datos/consultas'
 import { ejercicio, etiqueta, imagen, imagenMaterial, imagenMusculo, nombreMaterial, nombreMusculo, relacionados, useCatalogo } from '../../catalogo/catalogo'
 import { ETIQUETAS_ES, NOMBRE_PATRON, patron, porLado, tipoRegistro } from '../../catalogo/clasificacion'
 import { epley } from '../../dominio/calculos'
-import { kg, num, textoMarca } from '../../dominio/formato'
+import { kg, num, textoMarca, textoSerie } from '../../dominio/formato'
 import { duracion, fechaCorta, hoyISO } from '../../dominio/fechas'
 import { bloqueNuevo } from '../../dominio/generador'
 import { desdeBloque } from '../../dominio/sesion'
@@ -180,7 +180,7 @@ export function Ficha({ ruta }: { ruta: Ruta<'ficha'> }) {
                     return (
                       <p key={`${h.sesionId}-${h.inicio}`}>
                         <span>{h.fecha === hoyISO() ? t('Hoy') : fechaCorta(h.fecha)}</span>
-                        <b>{validas.map(s => (s.peso != null ? `${kg(s.peso)}×${s.reps ?? s.segundos}` : `${s.reps ?? s.segundos}${reg === 'tiempo' ? 's' : ''}`)).join(' · ')} {validas.some(s => s.record) && <Ico n="trophy" b className="goldc" />}</b>
+                        <b>{validas.map(s => textoSerie(s, reg, 'tabla', e.id)).join(' · ')} {validas.some(s => s.record) && <Ico n="trophy" b className="goldc" />}</b>
                         <em>{rpe || '—'}</em>
                       </p>
                     )

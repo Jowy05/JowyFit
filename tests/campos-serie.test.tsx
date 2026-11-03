@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { EjercicioSesion } from '../src/datos/tipos'
 import type { CamposSerie as Campos, ComoSeApunta } from '../src/dominio/sesion'
-import { CamposSerie } from '../src/pantallas/entreno/CamposSerie'
+import { CamposSerie, camposDe } from '../src/pantallas/entreno/CamposSerie'
 
 afterEach(cleanup)
 
@@ -39,5 +39,14 @@ describe('el foco al cambiar los contadores', () => {
     expect(dentroDe('Repeticiones con el lado izquierdo')).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Igual en los dos lados' }))
     expect(dentroDe('Repeticiones')).toBe(true)
+  })
+})
+
+describe('corregir una serie', () => {
+  const cardio = { uid: 'c', ejercicio: 'cinta', planificado: 'cinta', estado: 'hecho', series: [], repsMin: 20, repsMax: 30, rpe: 7, descanso: 0, registro: 'cardio' } as EjercicioSesion
+  it('un cardio antiguo guardado en segundos arranca con sus minutos, no con el objetivo', () => {
+    expect(camposDe({ n: 1, peso: null, reps: null, segundos: 1800, rpe: null, calentamiento: false, hecha: true }, cardio).reps).toBe(30)
+    expect(camposDe({ n: 1, peso: null, reps: 25, rpe: null, calentamiento: false, hecha: true }, cardio).reps).toBe(25)
+    expect(camposDe({ n: 1, peso: null, reps: null, rpe: null, calentamiento: false, hecha: false }, cardio).reps).toBe(20)
   })
 })

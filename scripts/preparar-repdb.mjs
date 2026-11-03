@@ -26,7 +26,7 @@ const URL_ZIP = 'https://cdn.repdb.co/repdb-assets/site/repdb-free.zip'
 // Si lo descargado no cuadra (el zip ha cambiado o alguien lo ha manipulado), la compilación se para:
 // así nunca se publica un catálogo que no se ha revisado. Para pasar a una versión nueva de RepDB, se revisa
 // y se pone aquí su huella (o se compila una vez con REPDB_SHA256=<huella nueva>).
-const SHA256_ZIP = process.env.REPDB_SHA256 || 'afa162bf10bb23cadd9c3588be6ab84e56691fa328abcefabb4371cdeb47cb16'
+const SHA256_ZIP = process.env.REPDB_SHA256 || '5422288dc92a7a8ef002257cde978afeb02c90ea2dba10e495f2065587de85b0'
 
 export const huella = datos => createHash('sha256').update(datos).digest('hex')
 

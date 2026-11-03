@@ -733,6 +733,6 @@ export default {
   'No se pudo quitar la contraseña: {error}': "Couldn't remove the password: {error}",
   'No se puede leer la contraseña guardada: ponla otra vez o quítala': "The saved password can't be read: set it again or remove it",
   'La contraseña de tus copias no se puede usar: quítala o ponla otra vez en Ajustes': "Your backup password can't be used: remove it or set it again in Settings",
-  'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': 'No permission to save in Documents. Allow it in your phone settings: Apps → JowyFit → Permissions.',
+  'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': 'No permission to save to Documents. Allow it in your phone settings: Apps → JowyFit → Permissions.',
   'Sin permiso para usar la carpeta Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': 'No permission to use the Documents folder. Allow it in your phone settings: Apps → JowyFit → Permissions.',
 } satisfies Diccionario

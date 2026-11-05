@@ -12,7 +12,7 @@ import { terminarEntreno } from '../../datos/acciones/entreno'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, useGimnasio, usePerfil, useRutina } from '../../datos/hooks'
+import { useAjustes, useGimnasioDe, usePerfil, useRutina } from '../../datos/hooks'
 import { duracionDia } from '../../dominio/generador'
 import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
@@ -22,16 +22,19 @@ import { nombreEntreno } from '../../dominio/nombres'
 export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const nav = useNav()
   const aviso = useAviso()
-  const g = useGimnasio()
   const perfil = usePerfil()
   const ajustes = useAjustes()
   const r = useRutina()
   const s = useLiveQuery(() => leerSesion(ruta.d.id), [ruta.d.id])
+  // El gimnasio donde se entrenó (puede no ser el activo).
+  const g = useGimnasioDe(s?.gimnasioId)
   // Hora de fin: ahora, salvo que la última serie quede muy lejos (la app se cerró en el resumen o se guarda
   // al día siguiente): entonces, poco después de la última serie, para que la duración no salga en horas.
   const [abierto] = useState(Date.now())
   const [molestia, setMolestia] = useState('')
-  const [hayMolestia, setHayMolestia] = useState(false)
+  // null hasta tocar algo: vale lo que ya traiga el entreno (un «Me duele» deja la molestia apuntada).
+  const [hayMolestia, setHayMolestia] = useState<boolean | null>(null)
+  const [molestos, setMolestos] = useState<string[] | null>(null)
   const [nota, setNota] = useState('')
   const unaVez = useUnaVez()
   const subidas = useLiveQuery(async () => {
@@ -62,12 +65,22 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const logros = s.ejercicios.flatMap(e => e.series.filter(x => x.record).map(x => ({ e, x })))
   const hoy = hoyISO()
   const prox = entrenosPrevistos(r, hoy, ajustes.recolocadas)[0]
+  // Los ejercicios que se pueden señalar: los hechos (aunque sea una serie) y los que ya llevan la molestia.
+  const hechosHoy = s.ejercicios.filter(e => e.molestia || e.series.some(x => x.hecha))
+  const conMolestia = hayMolestia ?? s.ejercicios.some(e => e.molestia)
+  const marcados = molestos ?? s.ejercicios.filter(e => e.molestia).map(e => e.uid)
+  const tocarMolestia = (uid: string) => setMolestos(marcados.includes(uid) ? marcados.filter(x => x !== uid) : [...marcados, uid])
 
   // Un doble toque en «Guardar» no abre dos veces la rutina definitiva ni vuelve dos veces a Inicio.
   const guardar = unaVez(async () => {
     const mins = Math.round(res.segundos / 60)
     // El tiempo, los descansos y lo que estaba ocupado ya los mide la app: solo se pregunta lo que no sabe.
-    await terminarEntreno(s, fin, { minutosReales: mins, molestia: hayMolestia ? molestia || 'sí' : undefined, nota: nota || undefined })
+    // La molestia de cada ejercicio cuenta para proponer cambiarlo si se repite (con «Ninguna», ninguno la lleva).
+    const ejercicios = s.ejercicios.map(e => {
+      const { molestia: _, ...resto } = e
+      return conMolestia && marcados.includes(e.uid) ? { ...resto, molestia: true } : resto
+    })
+    await terminarEntreno({ ...s, ejercicios }, fin, { minutosReales: mins, molestia: conMolestia ? molestia || 'sí' : undefined, nota: nota || undefined })
     nav.completa(null)
     if (calibCompleta) { nav.ir('generar-rutina', { definitiva: true }, 'rut'); aviso(t('Semana de prueba terminada')) }
     else { nav.raiz('ini'); aviso(t('Guardado. {dia} ✓', { dia: capital(DIAS[(new Date().getDay() + 6) % 7]!) })) }
@@ -132,10 +145,16 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
           <div className="qq">
             <p className="lbl">{t('¿Alguna molestia?')}</p>
             <div className="chips">
-              <Chip on={!hayMolestia} onClick={() => setHayMolestia(false)}>{t('Ninguna')}</Chip>
-              <Chip on={hayMolestia} onClick={() => setHayMolestia(true)}>{t('Sí, te digo dónde')}</Chip>
+              <Chip on={!conMolestia} onClick={() => setHayMolestia(false)}>{t('Ninguna')}</Chip>
+              <Chip on={conMolestia} onClick={() => setHayMolestia(true)}>{t('Sí, te digo dónde')}</Chip>
             </div>
-            {hayMolestia && <input className="inp" maxLength={LARGO.frase} value={molestia} onChange={e => setMolestia(e.target.value)} placeholder={t('Hombro derecho en el press…')} />}
+            {conMolestia && hechosHoy.length > 0 && <>
+              <p className="small muted">{t('¿En qué ejercicio? Si se repite, te propondremos cambiarlo.')}</p>
+              <div className="chips">
+                {hechosHoy.map(e => <Chip key={e.uid} ck on={marcados.includes(e.uid)} onClick={() => tocarMolestia(e.uid)}>{nombreEjercicio(e.ejercicio)}</Chip>)}
+              </div>
+            </>}
+            {conMolestia && <input className="inp" maxLength={LARGO.frase} value={molestia} onChange={e => setMolestia(e.target.value)} placeholder={t('Hombro derecho en el press…')} />}
             <p className="lbl">{t('Nota')}</p>
             <textarea className="inp" maxLength={LARGO.nota} value={nota} onChange={e => setNota(e.target.value)} placeholder={t('Algo que quieras recordar')} aria-label={t('Nota del entreno')} />
           </div>

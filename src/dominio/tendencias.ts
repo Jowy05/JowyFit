@@ -39,6 +39,12 @@ export function repsMaximas(series: Serie[]): number | null {
   return r.length ? Math.max(...r) : null
 }
 
+/** Lo actual de una meta de un ejercicio en todas las sesiones: los kg máximos o las repeticiones seguidas. */
+export function actualEjercicio(sesiones: Sesion[], id: string, que: 'kg' | 'reps'): number | null {
+  const v = sesiones.map(s => (que === 'reps' ? repsMaximas : pesoMaximo)(seriesDe(s, id))).filter((x): x is number => x != null)
+  return v.length ? Math.max(...v) : null
+}
+
 type Medida = 'peso' | 'e1rm' | 'volumen'
 
 /** Evolución de un ejercicio sesión a sesión según la medida elegida. */
@@ -350,13 +356,17 @@ export function hitosDominadas(sesiones: Sesion[]): { hitos: Hito[]; estrictas: 
 
 // Pasos
 
+/** Pasos de 1 km de trote si no se cambia en Ajustes, y de 1 minuto. */
 export const PASOS_POR_KM = 1300
 export const PASOS_POR_MINUTO = 160
 
-/** Pasos equivalentes a un trote, redondeados a 10. */
-export function pasosEquivalentes(valor: number, modo: 'km' | 'min'): number {
-  return Math.round((Math.max(0, valor) * (modo === 'km' ? PASOS_POR_KM : PASOS_POR_MINUTO)) / 10) * 10
+/** Pasos equivalentes a un trote, redondeados a 10. `porKm`: los de Ajustes (Trote → pasos). */
+export function pasosEquivalentes(valor: number, modo: 'km' | 'min', porKm = PASOS_POR_KM): number {
+  return Math.round((Math.max(0, valor) * (modo === 'km' ? porKm : PASOS_POR_MINUTO)) / 10) * 10
 }
+
+/** Los km de un trote apuntado en pasos (con 1 decimal), para guardarlos aparte de los andados. */
+export const kmDeTrote = (pasos: number, porKm = PASOS_POR_KM) => Math.round((pasos / porKm) * 10) / 10
 
 // Mini gráfica
 

@@ -1,5 +1,5 @@
 // Archivos: guardar, compartir y elegir (copias e informe), copias en Documentos y fotos.
-import { esNativo, esWebApple } from './dispositivo'
+import { esAndroid, esNativo, esWebApple } from './dispositivo'
 import { t } from '../i18n'
 
 function aBase64(bytes: Uint8Array): string {
@@ -155,11 +155,32 @@ export async function elegirArchivo(aceptar = '.jowyfit,.json,application/json,a
   return f ? { nombre: f.name, bytes: new Uint8Array(await f.arrayBuffer()) } : null
 }
 
-/** Hace una foto (o la elige de la galería) y la devuelve reducida a JPEG. */
-export async function hacerFoto(max = 1280): Promise<Blob | null> {
+/**
+ * Menos que esto entre tocar «Foto» y volver sin nada: no se llegó a abrir la cámara (nadie hace y descarta una
+ * foto tan rápido). En Android pasa cuando el permiso de la cámara está denegado y ya no se pregunta.
+ */
+export const MS_SIN_CAMARA = 1000
+const EVENTO_SIN_PERMISO = 'jf-sin-permiso-camara'
+
+/** Avisa cuando la cámara del sistema no se abrió por falta de permiso (para explicarlo en pantalla). */
+export function alFaltarPermisoCamara(fn: () => void): () => void {
+  window.addEventListener(EVENTO_SIN_PERMISO, fn)
+  return () => window.removeEventListener(EVENTO_SIN_PERMISO, fn)
+}
+
+/** Hace una foto (o la elige de la galería) y la devuelve reducida a JPEG. `lado`: con qué cámara se abre. */
+export async function hacerFoto(max = 1280, lado: 'delantera' | 'trasera' = 'trasera'): Promise<Blob | null> {
+  const desde = Date.now()
   // En iPhone, con «capture» solo se puede usar la cámara; sin él sale «Hacer foto · Fototeca · Elegir archivo».
-  const f = await pedirArchivo(i => { i.accept = 'image/*'; if (!esWebApple()) i.setAttribute('capture', 'environment') })
-  return f ? reducir(f, max) : null
+  const f = await pedirArchivo(i => { i.accept = 'image/*'; if (!esWebApple()) i.setAttribute('capture', lado === 'delantera' ? 'user' : 'environment') })
+  if (f) return reducir(f, max)
+  // Android (la app pide el permiso de la cámara): si se denegó, el selector vuelve vacío al momento. En vez de no
+  // hacer nada, se explica y se abre la galería, que no necesita ese permiso.
+  if (esAndroid() && Date.now() - desde < MS_SIN_CAMARA) {
+    window.dispatchEvent(new Event(EVENTO_SIN_PERMISO))
+    return elegirFoto(max)
+  }
+  return null
 }
 
 /** Elige una foto de la galería (sin abrir la cámara) y la devuelve reducida a JPEG. */

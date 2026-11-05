@@ -1,22 +1,23 @@
 // INI-01 · Inicio
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { comidasDe, gastoDelDia, hayEntrenoHecho, objetivosEnergia, pasosDelDia, sesionesEntre } from '../../datos/consultas'
+import { comidasDe, datosMetas, gastoDelDia, hayEntrenoHecho, objetivosEnergia, pasosDelDia, sesionesEntre } from '../../datos/consultas'
 import { totalesComida } from '../../dominio/comida'
 import { basalHastaAhora } from '../../dominio/energia'
-import { DIAS, DIAS_ABREV, DIAS_CORTOS, deISO, diaMes, diaSemana, formatoHora, hoyISO, numeroSemana, saludo, semanaDe, sumarDias } from '../../dominio/fechas'
-import { estadoSemana, tarjetaCola, tarjetaHoy, type EstadoDia } from '../../dominio/semana'
+import { DIAS_ABREV, DIAS_CORTOS, deISO, diaMes, diaSemana, fechaLarga, hoyISO, numeroSemana, saludo, semanaDe, sumarDias } from '../../dominio/fechas'
+import { estadoSemana, semanaEnCola, tarjetaCola, tarjetaHoy, type EstadoDia } from '../../dominio/semana'
 import { capital, num } from '../../dominio/formato'
 import { proponerModoMayor } from '../../dominio/modoMayor'
 import { rutinaBloqueada } from '../../dominio/salud'
-import { nombreEntreno } from '../../dominio/nombres'
 import { Anillo, Barra, Cab, cx, Ico, Pantalla, Seccion, LARGO, recortar } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useCola, useGimnasio, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { TarjetaHoy } from './TarjetaHoy'
-import { CardioSemana, Pendientes, SemanaSuave, TuProgreso, VoyBien } from './Tarjetas'
+import { CardioSemana, MetaALaVista, Pendientes, SemanaSuave, TuProgreso, useMetaPrincipal, VoyBien } from './Tarjetas'
+import { Celebracion } from './Celebracion'
 import { PrimerosPasos, usePrimerosPasos } from './PrimerosPasos'
+import { MolestiaRepetida } from './MolestiaRepetida'
 import { t, tc } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -47,7 +48,8 @@ export function Inicio() {
   // undefined mientras carga: no se pinta la tarjeta por días para cambiarla al momento por la de la cola.
   const cola = useCola(hoy)
   // En cola los días de la semana solo recuerdan: un día sin entrenar no se pierde, la cola espera.
-  const semana = estadoSemana(rutina, sesiones, hoy, ajustes.recolocadas).map(e => (cola !== null && (e.estado === 'perdido' || e.estado === 'movido') ? { ...e, estado: 'descanso' as const } : e))
+  const semanaDias = estadoSemana(rutina, sesiones, hoy, ajustes.recolocadas)
+  const semana = cola !== null ? semanaEnCola(semanaDias) : semanaDias
   const proxSemana = estadoSemana(rutina, sesiones, sumarDias(dias[6]!, 1), ajustes.recolocadas).find(d => d.estado === 'plan')
   const tarjeta = cola ? tarjetaCola(cola, semana, hoy, !!enCurso) : tarjetaHoy(rutina, semana, hoy, !!enCurso, perfil.sesionPerdida === 'sabado', proxSemana)
   const tot = totalesComida(comidas)
@@ -56,6 +58,10 @@ export function Inicio() {
   const nSemana = ajustes.inicio ? Math.max(1, numeroSemana(ajustes.inicio, hoy)) : 1
   // Mientras se ve la guía «Primeros pasos» no salen «Pendientes de hoy» ni la tarjeta de pasos (dos listas casi iguales).
   const guia = usePrimerosPasos(tarjeta)
+  // Metas, mediciones y sesiones hechas, leídas una sola vez para la meta a la vista, las celebraciones y «Tu progreso»:
+  // con años de historial, cada lectura de más se nota al apuntar series con el entreno minimizado.
+  const historial = useLiveQuery(datosMetas, [])
+  const principal = useMetaPrincipal(historial)
   const conGuia = guia !== null
 
   // Desde los 65, el modo mayor se propone una vez con la rutina ya hecha (también a quien ya la tenía); con
@@ -64,18 +70,6 @@ export function Inicio() {
   // Solo depende de `proponer`: `nav` cambia al abrir la hoja y, con él, el efecto la volvería a abrir sin parar.
   const hayHoja = !!nav.estado.hoja
   useEffect(() => { if (proponer && !hayHoja) nav.hoja('hoja-modo-mayor', { rehacer: true }) }, [proponer])
-
-  const describe = (e: EstadoDia) => {
-    const nom = `${capital(DIAS[diaSemana(deISO(e.fecha))]!)} ${deISO(e.fecha).getDate()}`
-    switch (e.estado) {
-      case 'hecho': return t('{dia} · hecho: {nombre}', { dia: nom, nombre: e.sesion ? nombreEntreno(e.sesion) : '' })
-      case 'plan': return `${nom} · ${e.dia ? nombreEntreno(e.dia) : ''} · ${formatoHora(perfil.horaEntreno)}`
-      case 'perdido': return t('{dia} · perdido: {nombre}', { dia: nom, nombre: e.dia ? nombreEntreno(e.dia) : '' })
-      case 'movido': return t('{dia} · pasado a otro día', { dia: nom })
-      case 'opcional': return t('{dia} · opcional: {nombre}', { dia: nom, nombre: e.dia ? nombreEntreno(e.dia) : '' })
-      default: return t('{dia} · descanso', { dia: nom })
-    }
-  }
 
   return (
     <Pantalla>
@@ -86,7 +80,7 @@ export function Inicio() {
       >
         <div className="week mt12" role="list" data-tour="semana">
           {semana.map((e, i) => (
-            <button key={e.fecha} role="listitem" className={cx('wd', e.hoy ? 'today' : e.estado === 'plan' ? 'plan' : e.estado === 'opcional' ? 'opt' : 'off')} onClick={() => aviso(describe(e))}>
+            <button key={e.fecha} role="listitem" className={cx('wd', e.hoy ? 'today' : e.estado === 'plan' ? 'plan' : e.estado === 'opcional' ? 'opt' : 'off')} aria-label={capital(fechaLarga(e.fecha))} onClick={() => nav.hoja('hoja-dia', { fecha: e.fecha })}>
               <span>{DIAS_CORTOS[i]}</span>
               <b>{deISO(e.fecha).getDate()}</b>
               <i className={iconoDia(e)} />
@@ -104,7 +98,10 @@ export function Inicio() {
       </Cab>
 
       <div className="pg">
+        <Celebracion rutina={rutina} historial={historial} />
+
         <SemanaSuave rutina={rutina ?? null} />
+        {!enCurso && <MolestiaRepetida />}
 
         {cola !== undefined && <Seccion tour="hoy" titulo={cola ? t('Te toca') : t('Hoy te toca')} accion={cola ? t('Ver la cola') : tarjeta.tipo === 'hoy' ? t('Ver día') : undefined}
           onAccion={() => (cola ? nav.pestana('rut') : tarjeta.tipo === 'hoy' && nav.ir('detalle-dia', { letra: tarjeta.dia.letra }, 'rut'))}>
@@ -124,6 +121,8 @@ export function Inicio() {
         </div>
 
         {guia && <PrimerosPasos g={guia} />}
+
+        {principal && <MetaALaVista p={principal} />}
 
         <Seccion tour="numeros" titulo={t('Hoy en números')} accion={t('Comida')} onAccion={() => nav.pestana('com')}>
           <div className="grid2">
@@ -185,7 +184,7 @@ export function Inicio() {
 
         {!conGuia && <Pendientes />}
 
-        <TuProgreso rutina={rutina ?? null} />
+        <TuProgreso rutina={rutina ?? null} sinMeta={principal !== null} historial={historial} />
 
         {/* El aviso de copia no sale a quien acaba de llegar: espera a que haya algo que guardar (un entreno). */}
         {yaEntreno && (ajustes.ultimaCopia == null || Date.now() - new Date(ajustes.ultimaCopia).getTime() > 8 * 86400000) ? (

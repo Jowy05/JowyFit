@@ -1,15 +1,16 @@
-// AJU-01 · Health Connect en Ajustes: «Reloj y báscula» (arriba) y «Pasos y báscula» (en «Más ajustes»). Solo Android;
+// AJU-01 · Health Connect en Ajustes: «Reloj y báscula» (arriba, con los entrenos) y «Pasos y báscula» (en «Más ajustes»). Solo Android;
 // en otro navegador se dice que está en la app de Android y en los de Apple no se nombra.
 import { useEffect, useState } from 'react'
 import { guardarAjustes } from '../../datos/repos'
 import type { Ajustes } from '../../datos/tipos'
 import { abrirHealthConnect, capacidades, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
-import { Elegir, Ico } from '../../ui/componentes'
+import { Elegir, FilaInterruptor, Ico, Stepper } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
-import { activarBascula, comprobarSalud, conectarSalud, sincronizarPasos } from '../../app/servicios'
+import { activarBascula, cambiarEntrenosSalud, comprobarSalud, conectarSalud, sincronizarPasos } from '../../app/servicios'
 import { miles } from '../../dominio/formato'
+import { PASOS_POR_KM } from '../../dominio/tendencias'
 import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -56,6 +57,9 @@ export function RelojYBascula({ salud }: { salud: Salud }) {
             {llega && <p className="small muted">{llega.join(' · ')}</p>}
             <button className="lnk" onClick={() => void abrirHealthConnect()}>{t('Abrir Health Connect (permisos)')} <Ico n="caret-right" /></button>
           </div>
+          {/* Apagado de entrada: al encenderlo, Health Connect pregunta si deja guardar los entrenos. */}
+          <FilaInterruptor ico="barbell" titulo={t('Guardar mis entrenos en Health Connect')} d={t('Al terminar, cada entreno se apunta allí como «fuerza», con su hora y sus calorías.')}
+            on={!!a.entrenosASalud} onCambio={on => void cambiarEntrenosSalud(on).then(texto => aviso(texto))} />
         </div>
       ) : (
         <div className="list" data-tour="reloj">
@@ -69,7 +73,7 @@ export function RelojYBascula({ salud }: { salud: Salud }) {
   )
 }
 
-/** «Pasos y báscula» de «Más ajustes»: de dónde salen los pasos y el peso, y el objetivo de pasos. */
+/** «Pasos y báscula» de «Más ajustes»: de dónde salen los pasos y el peso, el objetivo de pasos y cuánto cuenta el trote. */
 export function PasosYBascula({ salud }: { salud: Salud }) {
   const nav = useNav()
   const aviso = useAviso()
@@ -111,6 +115,11 @@ export function PasosYBascula({ salud }: { salud: Salud }) {
           <span className="end small">{miles(p.pasosObjetivo)}</span>
           <Ico n="caret-right" className="car" />
         </button>
+        {/* Trote → pasos: lo que suma un trote apuntado en km (y correr en «Apuntar cardio»). */}
+        <div className="it col">
+          <span className="tx"><b>{t('Trote → pasos')}</b><small>{t('Cuántos pasos cuenta 1 km corriendo. Si das pasos largos, pon menos')}</small></span>
+          <Stepper className="sm" valor={a.pasosPorKm ?? PASOS_POR_KM} paso={50} min={800} max={2000} decimales={0} sufijo={t('pasos')} etiqueta={t('Pasos por kilómetro')} onCambio={v => guardar({ pasosPorKm: v })} />
+        </div>
       </div>
     </>
   )

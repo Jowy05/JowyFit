@@ -3,6 +3,7 @@
 import type { Ejercicio } from '../catalogo/tipos'
 import { patron, ZONA_EVITAR, type Patron } from '../catalogo/clasificacion'
 import type { CondicionSalud, Dolor, Perfil, Urgencia, ZonaDolor, Zona } from '../datos/tipos'
+import { rpeMaximo } from './objetivos'
 import { t, tk } from '../i18n'
 
 export const URGENCIAS: { v: Urgencia; t: string; d?: string }[] = [
@@ -168,6 +169,14 @@ export function restricciones(p: Pick<Perfil, 'dolores' | 'zonasSensibles' | 'cr
     rpeMax,
     maxIsometrico,
   }
+}
+
+/**
+ * El esfuerzo más alto que se deja poner a mano en el plan: el mismo tope que respeta el generador (margen por nivel o
+ * modo mayor, y lo que pidan las molestias y condiciones), en número entero.
+ */
+export function esfuerzoMaximo(p: Perfil): number {
+  return Math.floor(Math.min(rpeMaximo(p), restricciones(p).rpeMax ?? 10))
 }
 
 /** Qué hará la rutina con una molestia (la frase bajo los tres toques), y su tono. */

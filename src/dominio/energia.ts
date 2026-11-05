@@ -24,12 +24,12 @@ export const zancada = (alturaCm: number) => (alturaCm / 100) * 0.415
 
 /**
  * kcal por los pasos, sin contar el reposo (eso va aparte): caminar gasta unas 0,5 kcal por kg y km;
- * trotar, alrededor de 1. El trote apuntado a mano ya está sumado en los pasos (a 1.300 pasos por km).
+ * trotar, alrededor de 1. El trote apuntado a mano ya está sumado en los pasos (a `porKm` pasos por km: 1.300 si no se cambia).
  */
-export function kcalPasos(pasos: number, pesoKg: number, alturaCm: number, troteKm = 0): number {
-  const pasosTrote = Math.min(pasos, troteKm * PASOS_POR_KM)
+export function kcalPasos(pasos: number, pesoKg: number, alturaCm: number, troteKm = 0, porKm = PASOS_POR_KM): number {
+  const pasosTrote = Math.min(pasos, troteKm * porKm)
   const kmAndando = ((pasos - pasosTrote) * zancada(alturaCm)) / 1000
-  return Math.round(0.5 * pesoKg * kmAndando + 1.0 * pesoKg * (pasosTrote / PASOS_POR_KM))
+  return Math.round(0.5 * pesoKg * kmAndando + 1.0 * pesoKg * (pasosTrote / porKm))
 }
 
 /** Lo que dura una serie con su descanso detrás (s). */

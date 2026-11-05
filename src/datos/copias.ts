@@ -208,7 +208,9 @@ async function restaurar(datos: Record<NombreTabla, Fila[]>, archivos: Record<st
   filas.fotos = filas.fotos.filter(f => f.imagen instanceof Blob)
   // Lo que falte del perfil y de los ajustes (copias de versiones viejas) se completa con lo de siempre.
   filas.perfil = filas.perfil.map(p => ({ ...perfilPorDefecto(), ...p }))
-  filas.ajustes = filas.ajustes.map(a => ({ ...ajustesPorDefecto(), ...a, noti: { ...ajustesPorDefecto().noti, ...(a.noti as object | undefined) } }))
+  // Guardar los entrenos en Health Connect se apaga: el permiso es de cada móvil y en este quizá no está dado (cada
+  // entreno fallaría sin que se note). Se vuelve a encender en Ajustes, que pide el permiso.
+  filas.ajustes = filas.ajustes.map(a => ({ ...ajustesPorDefecto(), ...a, noti: { ...ajustesPorDefecto().noti, ...(a.noti as object | undefined) }, entrenosASalud: false }))
   await db.transaction('rw', TABLAS.map(tb => db.table(tb)), async () => {
     for (const tb of TABLAS) {
       await db.table(tb).clear()

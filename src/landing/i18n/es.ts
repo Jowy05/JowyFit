@@ -226,6 +226,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-11-0.cab': "<b>Versión 0.11.0</b> · 5 de noviembre de 2026",
+  'nov.0-11-0.texto': "Entreno y seguimiento: apunta qué ejercicios molestan y cámbialos con Deshacer; el sábado se adapta a lo que falta esa semana. Elige gimnasio para cada sesión y ajusta el descanso y el esfuerzo en el plan. Inicio muestra el detalle de cada día, el progreso de tu meta y celebraciones. Fotos con silueta, cámara frontal y temporizador. En Android puedes guardar tus entrenos en Health Connect. Además, metas de repeticiones, historial del objetivo de energía y horarios de comida editables.",
   'nov.0-10-1.cab': "<b>Versión 0.10.1</b> · 3 de noviembre de 2026",
   'nov.0-10-1.texto': "Arreglo: en móviles con Android 10 o anterior que no han actualizado «Android System WebView», y en iPhone con iOS 15 o 16 antiguo, la app ya no se queda en blanco: explica qué hay que actualizar.",
   'nov.0-10-0.cab': "<b>Versión 0.10.0</b> · 3 de noviembre de 2026",

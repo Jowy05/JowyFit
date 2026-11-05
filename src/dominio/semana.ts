@@ -53,6 +53,11 @@ export function estadoSemana<S extends Sesion>(r: Rutina | null | undefined, ses
   })
 }
 
+/** La semana con la rutina en cola: un día sin entrenar no se pierde (la cola espera), así que sale como descanso. */
+export function semanaEnCola<S extends Sesion>(semana: EstadoDia<S>[]): EstadoDia<S>[] {
+  return semana.map(e => (e.estado === 'perdido' || e.estado === 'movido' ? { ...e, estado: 'descanso' as const } : e))
+}
+
 /**
  * Entrenos previstos después de hoy, esta semana y la siguiente, en orden. La siguiente se mira desde su lunes:
  * vista desde «dentro de 7 días», sus primeros días saldrían como perdidos.

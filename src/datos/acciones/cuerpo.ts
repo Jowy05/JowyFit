@@ -3,8 +3,8 @@ import { db } from '../db'
 import type { Foto, Guardado, Medicion, Meta, TipoCardio } from '../tipos'
 import { guardarAjustes, leerPerfil } from '../repos'
 import type { grasaTardia } from '../../dominio/bascula'
-import { PASOS_POR_KM } from '../../dominio/tendencias'
-import { CARDIO_INICIO, metaMovimiento } from '../../dominio/cardio'
+import { kmDeTrote, PASOS_POR_KM } from '../../dominio/tendencias'
+import { CARDIO_INICIO, metaMovimiento, pasosDeCardio } from '../../dominio/cardio'
 import { diasEntre, edad, hoyISO, sumarDias } from '../../dominio/fechas'
 import { reprogramarNotificaciones } from './avisos'
 
@@ -63,11 +63,20 @@ export async function sumarTrote(fecha: string, pasos: number, km: number): Prom
   return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)) }
 }
 
-/** Minutos de cardio fuera del gimnasio (caminar, bici…). No suma pasos: los pasos no son minutos de cardio. */
-export async function apuntarCardio(fecha: string, tipo: TipoCardio, min: number): Promise<() => void> {
+/**
+ * Minutos de cardio fuera del gimnasio (caminar, bici…). Correr suma además sus pasos aproximados como un trote
+ * (AJU-01, trote → pasos); lo demás no: los pasos no son minutos de cardio.
+ * sumarPasos = false cuando el móvil o el reloj ya contó esos pasos (Health Connect): si no, saldrían dos veces.
+ */
+export async function apuntarCardio(fecha: string, tipo: TipoCardio, min: number, sumarPasos = true): Promise<() => void> {
+  const minutos = Math.max(1, Math.round(min))
+  const trote = sumarPasos ? pasosDeCardio(tipo, minutos) : 0
+  const porKm = (await db.ajustes.get('app'))?.pasosPorKm
   const prev = await db.transaction('rw', db.pasos, async () => {
     const prev = await db.pasos.get(fecha)
-    await db.pasos.put({ ...(prev ?? { fecha, pasos: 0, fuente: 'manual' as const }), cardio: [...(prev?.cardio ?? []), { tipo, min: Math.max(1, Math.round(min)) }] })
+    const dia = { ...(prev ?? { fecha, pasos: 0, fuente: 'manual' as const }), cardio: [...(prev?.cardio ?? []), { tipo, min: minutos }] }
+    if (trote) Object.assign(dia, { pasos: dia.pasos + trote, troteKm: Math.round(((prev?.troteKm ?? 0) + kmDeTrote(trote, porKm)) * 10) / 10 })
+    await db.pasos.put(dia)
     return prev
   })
   return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)) }
@@ -75,10 +84,11 @@ export async function apuntarCardio(fecha: string, tipo: TipoCardio, min: number
 
 /** Pasos andados de Health Connect por día; el trote apuntado a mano se suma aparte. */
 export async function guardarPasosAuto(dias: Record<string, number>) {
+  const porKm = (await db.ajustes.get('app'))?.pasosPorKm ?? PASOS_POR_KM
   await db.transaction('rw', db.pasos, async () => {
     for (const [fecha, pasos] of Object.entries(dias)) {
       const prev = await db.pasos.get(fecha)
-      const trote = prev?.troteKm ? Math.round(prev.troteKm * PASOS_POR_KM) : 0
+      const trote = prev?.troteKm ? Math.round(prev.troteKm * porKm) : 0
       await db.pasos.put({ ...prev, fecha, pasos: pasos + trote, fuente: 'auto', troteKm: prev?.troteKm })
     }
   })

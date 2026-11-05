@@ -306,4 +306,13 @@ export default {
   'comes lo que gastas.': 'menges el que gastes.',
   'un poco más de lo que gastas, para construir músculo.': 'una mica més del que gastes, per construir múscul.',
   'un poco más de lo que gastas, para subir de peso con músculo.': 'una mica més del que gastes, per pujar de pes amb múscul.',
+  'Empiezas con ~{kcal} kcal y {proteina} g de proteína': 'Comences amb ~{kcal} kcal i {proteina} g de proteïna',
+  'Igual que antes: ~{kcal} kcal y {proteina} g de proteína': 'Igual que abans: ~{kcal} kcal i {proteina} g de proteïna',
+  '~{antes} → ~{despues} kcal · {pantes} → {pdespues} g de proteína': '~{antes} → ~{despues} kcal · {pantes} → {pdespues} g de proteïna',
+  'Tu peso: {antes} → {despues} kg': 'El teu pes: {antes} → {despues} kg',
+  'Tu objetivo lo pones tú a mano: la app no lo cambia.': "El teu objectiu el poses tu a mà: l'app no el canvia.",
+  'Punto de partida: calculado con tu peso, tu altura y tu actividad.': 'Punt de partida: calculat amb el teu pes, la teva alçada i la teva activitat.',
+  'Ajustes de cada 2 semanas': 'Ajustos de cada 2 setmanes',
+  'Cada 2 semanas miramos tu cintura y tu peso, y aquí verás el objetivo que te toca.': "Cada 2 setmanes mirem la teva cintura i el teu pes, i aquí veuràs l'objectiu que et toca.",
+  'Tu objetivo de comida y por qué cambió': 'El teu objectiu de menjar i per què ha canviat',
 } satisfies Diccionario

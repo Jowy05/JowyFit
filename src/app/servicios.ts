@@ -1,5 +1,6 @@
 // Tareas que corren mientras la app está abierta: recordatorios, pasos y copia automática.
 import { guardarLecturasBascula, guardarPasosAuto, subirMovimiento } from '../datos/acciones/cuerpo'
+import { registrarAjusteEnergia } from '../datos/acciones/energia'
 import { reprogramarNotificaciones } from '../datos/acciones/avisos'
 import { reponerAvisoDescanso } from '../datos/acciones/entreno'
 import { copiaAutomatica } from './copias'
@@ -7,7 +8,7 @@ import { buscarPendientes } from '../datos/acciones/comida'
 import { leerMediciones } from '../datos/consultas'
 import { guardarAjustes, leerAjustes } from '../datos/repos'
 import { hoyISO, sumarDias } from '../dominio/fechas'
-import { alVolverAPrimerPlano, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisosSalud, permisosSalud } from '../plataforma'
+import { alVolverAPrimerPlano, leerBascula, leerPasos, pasosDisponibles, pedirPermisoBascula, pedirPermisoEntrenos, pedirPermisosSalud, permisoEntrenos, permisosSalud } from '../plataforma'
 import { fechaLocal, grasaTardia, juntarBascula, lecturasNuevas, medicionDeLectura, nombreFuente } from '../dominio/bascula'
 import { decimal, miles } from '../dominio/formato'
 import { t, tn } from '../i18n'
@@ -66,6 +67,17 @@ export async function conectarSalud(): Promise<string> {
 
 const pesadasTraidas = (n: number) => tn(n, '1 pesada traída', '{n} pesadas traídas')
 
+/** Guardar los entrenos en Health Connect: al encenderlo se pide su permiso y, sin él, se queda apagado. Devuelve el aviso. */
+export async function cambiarEntrenosSalud(on: boolean): Promise<string> {
+  if (!on) {
+    await guardarAjustes({ entrenosASalud: false })
+    return t('Los entrenos ya no se guardan en Health Connect')
+  }
+  if (!(await pedirPermisoEntrenos())) return t('Sin permiso de Health Connect: los entrenos se quedan solo en la app')
+  await guardarAjustes({ entrenosASalud: true })
+  return t('Cada entreno que termines se guardará en Health Connect')
+}
+
 /** Para probar en el móvil: qué ve la app en Health Connect (permisos, pasos de hoy y la última pesada). */
 export async function comprobarSalud(): Promise<string[]> {
   if (!(await pasosDisponibles())) return [t('Health Connect no está en este móvil (o no está instalado).')]
@@ -91,6 +103,7 @@ export async function comprobarSalud(): Promise<string[]> {
       })
       : t('No hay pesadas en Health Connect de los últimos 30 días.'))
   }
+  if ((await leerAjustes()).entrenosASalud) lineas.push(t('Guardar entrenos · permiso: {si}', { si: (await permisoEntrenos()) ? t('sí') : t('no') }))
   return lineas
 }
 
@@ -101,7 +114,7 @@ export function arrancarServicios(): () => void {
   // Los escaneados sin conexión se buscan al abrir la app, al volver a ella y en cuanto vuelve la cobertura.
   const pendientes = () => { if (navigator.onLine) void buscarPendientes().catch(() => {}) }
   const tarea = () => {
-    void sincronizarPasos(); void sincronizarBascula(); void reponerAvisoDescanso(); void subirMovimiento(); pendientes()
+    void sincronizarPasos(); void sincronizarBascula(); void reponerAvisoDescanso(); void subirMovimiento(); void registrarAjusteEnergia().catch(() => {}); pendientes()
     // La copia automática va antes que los avisos: el de la copia cuenta desde ella.
     void copiaAutomatica().finally(() => { void reprogramarNotificaciones() })
   }

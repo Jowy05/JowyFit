@@ -7,7 +7,7 @@ import { ejercicio } from '../../catalogo/catalogo'
 import { pesosPara } from '../../dominio/pesos'
 import { cx, Ico, Stepper } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
-import { useGimnasio } from '../../datos/hooks'
+import { useGimnasioDe } from '../../datos/hooks'
 import { datosDeCampos, TOPE_SERIE, type CamposSerie as Campos } from '../../dominio/sesion'
 import { CamposSerie, camposDe, comoSeApunta } from './CamposSerie'
 import { t } from '../../i18n'
@@ -15,7 +15,7 @@ import { t } from '../../i18n'
 /** El formulario: los mismos − y + del panel, con lo que se apuntó; «Cancelar» y «Guardar cambio». */
 export function FormCorregir({ s, idx, k, className, onCerrar }: { s: Sesion; idx: number; k: number; className?: string; onCerrar: () => void }) {
   const aviso = useAviso()
-  const g = useGimnasio()
+  const g = useGimnasioDe(s.gimnasioId)
   const e = s.ejercicios[idx]!
   const serie = e.series[k]!
   const ej = ejercicio(e.ejercicio)

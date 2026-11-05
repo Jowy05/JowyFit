@@ -4,7 +4,10 @@ import type { Foto, Guardado, Meta, OrigenMedicion } from '../../datos/tipos'
 import { deISO } from '../../dominio/fechas'
 import { Cab, Seg } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
-import { t, tk } from '../../i18n'
+import { t, tc, tk } from '../../i18n'
+
+/** Nombre de la pose en el idioma de la app («Perfil» de la foto no es la pestaña Perfil: va con contexto). */
+export const nombrePose = (p: Foto['pose']) => (p === 'frente' ? t('Frente') : p === 'perfil' ? tc('pose', 'Perfil') : t('Espalda'))
 
 type PestanaProgreso = 'semana' | 'fuerza' | 'cuerpo' | 'fotos' | 'objetivos'
 
@@ -65,6 +68,7 @@ export function useUrlsFotos(fotos: Guardado<Foto>[]): Map<number, string> {
 export const TIPOS_META: { v: Meta['tipo']; t: string; unidad: string; paso: number; icono: string }[] = [
   { v: 'cintura', t: tk('Cintura'), unidad: 'cm', paso: 0.5, icono: 'ruler' },
   { v: 'ejercicio', t: tk('Ejercicio'), unidad: 'kg', paso: 2.5, icono: 'barbell' },
+  { v: 'reps', t: tk('Repeticiones'), unidad: 'reps', paso: 1, icono: 'repeat' },
   { v: 'dominadas', t: tk('Dominadas'), unidad: 'reps', paso: 1, icono: 'arrow-fat-lines-up' },
   { v: 'grasa', t: tk('% grasa'), unidad: '%', paso: 0.5, icono: 'drop' },
   { v: 'peso', t: tk('Peso'), unidad: 'kg', paso: 0.5, icono: 'scales' },

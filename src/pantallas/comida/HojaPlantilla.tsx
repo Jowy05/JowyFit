@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { leerPlantilla } from '../../datos/consultas'
 import type { Plantilla } from '../../datos/tipos'
-import { FRANJAS, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, franjaPorHora, nombreFranja, tipoRacion } from '../../dominio/comida'
+import { FRANJAS, NOMBRE_RACION, PISTA_RACION, aspecto, conRacion, nombreFranja, tipoRacion } from '../../dominio/comida'
 import { t, tc, tk } from '../../i18n'
-import { horaActual, hoyISO } from '../../dominio/fechas'
+import { hoyISO } from '../../dominio/fechas'
 import { hacerFoto } from '../../plataforma'
 import { Chip, cx, Hoja, Ico, Stepper, useUnaVez, LARGO, useUrlBlob } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
@@ -61,10 +61,11 @@ export function HojaPlantilla({ ruta }: { ruta: Ruta<'hoja-plantilla'> }) {
     if (!x) return
     const nuevoId = await guardarPlantilla(x)
     const fecha = fechaRuta ?? hoyISO()
-    // Como en Añadir: la comida va a la franja elegida (o la suya); el picoteo y la bebida de hoy, a la de la hora.
+    // Como en Añadir: la comida va a la franja elegida (o la suya); el picoteo y la bebida de hoy, a la de la hora
+    // (sin franja, la pone apuntarPlantilla con las horas de Ajustes).
     const franja = fecha !== hoyISO() ? franjaRuta
-      : x.tipo === 'comida' ? franjaRuta ?? x.franja ?? franjaPorHora(horaActual())
-      : franjaPorHora(horaActual())
+      : x.tipo === 'comida' ? franjaRuta ?? x.franja
+      : undefined
     const deshacer = await apuntarPlantilla({ ...x, id: nuevoId }, 'N', fecha, franja)
     nav.hoja(null)
     // Deshacer quita lo apuntado; la comida sigue en Mis comidas.

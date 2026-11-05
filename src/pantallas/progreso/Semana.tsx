@@ -215,6 +215,9 @@ export function Semana() {
             <span className="row jb"><span className="lbl">{t('Consejo de la quincena')}</span><span className="tag blue">{t('Cada 2 semanas')}</span></span>
             <b className="adj-t">{consejoT}</b>
             {consejoD && <p className="small muted">{consejoD}</p>}
+            {(ajustes.historialEnergia?.length ?? 0) > 0 && (
+              <button className="lnk mt8" onClick={() => nav.hoja('hoja-ajustes-energia')}>{t('Ver los ajustes anteriores')} <Ico n="caret-right" /></button>
+            )}
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { strToU8, zipSync } from 'fflate'
 import { db, TABLAS } from '../src/datos/db'
 import { borrarTodosLosDatos, exportar, importar, LIMITES_ZIP } from '../src/datos/copias'
 import { ajustesPorDefecto, gimnasioNuevo, perfilPorDefecto } from '../src/datos/repos'
+import { VERSION_COPIA } from '../src/datos/validarCopia'
 
 const MB = 1024 * 1024
 const copia = (datos: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({ app: 'JowyFit', version: 1, ...extra, datos })
@@ -111,7 +112,7 @@ describe('seguridad · versión de la copia', () => {
     it(`versión ${JSON.stringify(version)} se rechaza`, async () => { await rechazada(json(copia({ perfil: [perfil()] }, { version })), /versión/) })
   }
   it('sin versión se rechaza', async () => { await rechazada(json({ app: 'JowyFit', datos: { perfil: [perfil()] } }), /versión/) })
-  it('una versión más nueva lo dice', async () => { await rechazada(zipDe(copia({ perfil: [perfil()] }, { version: 5 })), /más nueva/) })
+  it('una versión más nueva lo dice', async () => { await rechazada(zipDe(copia({ perfil: [perfil()] }, { version: VERSION_COPIA + 1 })), /más nueva/) })
 })
 
 describe('seguridad · fotos de la copia (SVG/HTML podían ejecutar código)', () => {

@@ -3,6 +3,8 @@ import { dispositivoApple } from '../plataforma'
 import { db } from './db'
 import type { Ajustes, Gimnasio, Guardado, MarcaEjercicio, Perfil, Plantilla, Rutina } from './tipos'
 import { COPIAS_AUTO } from '../dominio/copias'
+import { FRANJAS_HORAS } from '../dominio/comida'
+import { PASOS_POR_KM } from '../dominio/tendencias'
 import { t, tk } from '../i18n'
 
 export function perfilPorDefecto(): Perfil {
@@ -67,6 +69,7 @@ export function ajustesPorDefecto(): Ajustes {
     cafeinaLimite: 400,
     cafeinaHoraTope: '16:00',
     fuentePasos: 'manual',
+    entrenosASalud: false,
     noti: {
       dormir: true,
       pesarse: true,
@@ -85,10 +88,15 @@ export function ajustesPorDefecto(): Ajustes {
     copiasAuto: COPIAS_AUTO,
     ultimaCopia: null,
     ultimoAjusteEnergia: null,
+    historialEnergia: [],
+    ayudaEsfuerzo: true,
+    franjasHoras: { ...FRANJAS_HORAS },
+    pasosPorKm: PASOS_POR_KM,
     recolocadas: [],
     inicio: null,
     semanaSuave: null,
     suavePospuesta: null,
+    celebradas: null,
   }
 }
 

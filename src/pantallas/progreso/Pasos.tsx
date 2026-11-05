@@ -6,7 +6,7 @@ import { guardarPasos, sumarTrote } from '../../datos/acciones/cuerpo'
 import { guardarAjustes, guardarPerfil } from '../../datos/repos'
 import { num } from '../../dominio/formato'
 import { DIAS_CORTOS, deISO, diaSemana, hoyISO, sumarDias } from '../../dominio/fechas'
-import { pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../dominio/tendencias'
+import { kmDeTrote, pasosEquivalentes, PASOS_POR_KM, PASOS_POR_MINUTO } from '../../dominio/tendencias'
 import { hayPasos } from '../../dominio/cardio'
 import { capacidades, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
 import { sincronizarPasos } from '../../app/servicios'
@@ -181,17 +181,18 @@ function ApuntarPasos({ hoy }: { hoy: string }) {
 export function HojaTrote() {
   const nav = useNav()
   const aviso = useAviso()
+  const porKm = useAjustes().pasosPorKm ?? PASOS_POR_KM
   const [modo, setModo] = useState<'km' | 'min'>('km')
   const [km, setKm] = useState(3)
   const [min, setMin] = useState(20)
   const unaVez = useUnaVez()
   const valor = modo === 'km' ? km : min
-  const equivalen = pasosEquivalentes(valor, modo)
+  const equivalen = pasosEquivalentes(valor, modo, porKm)
 
   // Un doble toque no suma el trote dos veces a los pasos del día.
   const anadir = unaVez(async () => {
     if (equivalen <= 0) { aviso(t('Pon cuántos kilómetros o minutos')); return }
-    const kmTrote = modo === 'km' ? km : Math.round((equivalen / PASOS_POR_KM) * 10) / 10
+    const kmTrote = modo === 'km' ? km : kmDeTrote(equivalen, porKm)
     const deshacer = await sumarTrote(hoyISO(), equivalen, kmTrote)
     nav.hoja(null)
     aviso(t('Añadido: trote de {cuanto} (≈ {n} pasos)', { cuanto: modo === 'km' ? `${num(km)} km` : `${min} min`, n: num(equivalen, 0) }), deshacer)
@@ -208,7 +209,7 @@ export function HojaTrote() {
         : <Stepper className="big mt12" valor={min} onCambio={setMin} paso={5} min={0} max={300} decimales={0} sufijo="min" etiqueta={t('Minutos')} />}
       <div className="spec-box mt12"><div className="spec">
         <p><span>{t('Equivale a')}</span><b className="goc">{t('≈ {n} pasos', { n: num(equivalen, 0) })}</b></p>
-        <p><span>{t('Cálculo')}</span><b>{modo === 'km' ? t('1 km ≈ {n} pasos', { n: num(PASOS_POR_KM, 0) }) : t('1 min ≈ {n} pasos', { n: num(PASOS_POR_MINUTO, 0) })}</b></p>
+        <p><span>{t('Cálculo')}</span><b>{modo === 'km' ? t('1 km ≈ {n} pasos', { n: num(porKm, 0) }) : t('1 min ≈ {n} pasos', { n: num(PASOS_POR_MINUTO, 0) })}</b></p>
       </div></div>
       <button className="btn mt16" onClick={() => void anadir()}>{t('Añadir')}</button>
     </Hoja>

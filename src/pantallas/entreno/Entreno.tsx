@@ -16,7 +16,7 @@ import { capacidades, pantallaEncendida, pitido, vibrar } from '../../plataforma
 import { cx, Ico, Pantalla, Th } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, useGimnasio, useSesionEnCurso } from '../../datos/hooks'
+import { useAjustes, useGimnasioDe, useSesionEnCurso } from '../../datos/hooks'
 import { alargarDescanso, apuntarHecha, descansoCumplido, guardarSesion, pasarACorta, quitarDescanso } from '../../datos/acciones/entreno'
 import { FormCorregir } from './Corregir'
 import { Panel } from './Panel'
@@ -48,7 +48,7 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
   const nav = useNav()
   const aviso = useAviso()
   const ajustes = useAjustes()
-  const g = useGimnasio()
+  const g = useGimnasioDe(s.gimnasioId)
   const [ahora, setAhora] = useState(Date.now())
   const [logro, setLogro] = useState<{ texto: string; nombre: string; valor: string } | null>(null)
   const [recorteVisto, setRecorteVisto] = useState<number>(0)

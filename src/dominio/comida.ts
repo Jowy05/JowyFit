@@ -1,5 +1,5 @@
 // Comida: franjas por hora, raciones P/N/G, lectura de Open Food Facts, picoteo y cafeína.
-import type { Comida, Franja, Medicion, Plantilla, Producto, TipoObjetivo } from '../datos/tipos'
+import type { Comida, Franja, Medicion, Plantilla, Producto, TipoConsejo, TipoObjetivo } from '../datos/tipos'
 import { t, tc, tk } from '../i18n'
 import { propio } from './claves'
 import { minutosDe } from './fechas'
@@ -26,14 +26,28 @@ export function nombreFranja(f: Franja): string {
   }
 }
 
-/** Franja según la hora: de 5 a 11 desayuno, hasta las 16:30 comida, hasta las 19:30 merienda y luego cena (también de madrugada). */
-export function franjaPorHora(hhmm: string): Franja {
+/** A qué hora empieza cada franja si no se cambia en Ajustes: de 5 a 11 desayuno, hasta las 16:30 comida, hasta las 19:30 merienda y luego cena. */
+export const FRANJAS_HORAS: Record<Franja, string> = { desayuno: '05:00', comida: '11:00', merienda: '16:30', cena: '19:30' }
+
+/** Las horas valen si cada franja empieza después de la anterior (si no, alguna no saldría nunca). */
+export function franjasValidas(h: Record<Franja, string>): boolean {
+  const m = FRANJAS.map(f => minutosDe(h[f.v]))
+  return m.every((x, i) => Number.isFinite(x) && (i === 0 || x > m[i - 1]!))
+}
+
+/** Por qué no valen unas franjas, o '' si valen. */
+export function falloFranjas(h: Record<Franja, string>): string {
+  if (FRANJAS.some(f => !h[f.v])) return t('Pon la hora de cada comida')
+  return franjasValidas(h) ? '' : t('Cada comida tiene que empezar más tarde que la anterior')
+}
+
+/** Franja según la hora y las horas de inicio de cada una. Antes del desayuno es cena (de madrugada). */
+export function franjaPorHora(hhmm: string, horas: Record<Franja, string> = FRANJAS_HORAS): Franja {
+  const h = franjasValidas(horas) ? horas : FRANJAS_HORAS
   const m = minutosDe(hhmm)
-  if (m < 5 * 60) return 'cena'
-  if (m < 11 * 60) return 'desayuno'
-  if (m < 16 * 60 + 30) return 'comida'
-  if (m < 19 * 60 + 30) return 'merienda'
-  return 'cena'
+  let franja: Franja = 'cena'
+  for (const f of FRANJAS) if (m >= minutosDe(h[f.v])) franja = f.v
+  return franja
 }
 
 export type Racion = 'P' | 'N' | 'G'
@@ -243,7 +257,7 @@ export function ordenarPlantillas(ps: Plantilla[]): Plantilla[] {
 }
 
 // Ajuste quincenal
-type Quincena = { consejo: string; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
+type Quincena = { consejo: string; tipo: TipoConsejo; tono: 'ok' | 'warn' | 'neutral'; etiqueta: string; cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null }
 
 /** Consejo quincenal (14 días frente a los 14 anteriores) con tono y etiqueta. Los números salen de `tendencias.datosQuincena`, la misma cuenta que usa Progreso. */
 export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas: Comida[]; objetivoProteina: number; objetivo: TipoObjetivo }): Quincena {
@@ -255,12 +269,12 @@ export function datosQuincena(o: { hoy: string; mediciones: Medicion[]; comidas:
   const proteinaMedia = base.proteinaMedia == null ? null : Math.round(base.proteinaMedia)
   const datos = { cinturaDelta, pesoDelta, picoteoDias, proteinaMedia, objetivoProteina: o.objetivoProteina, objetivo: o.objetivo }
   const consejo = consejoQuincenal(datos)
-  if (cinturaDelta == null && pesoDelta == null) return { consejo, tono: 'neutral', etiqueta: t('Faltan datos'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
+  const tipo = tipoConsejo(datos)
+  if (cinturaDelta == null && pesoDelta == null) return { consejo, tipo, tono: 'neutral', etiqueta: t('Faltan datos'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
   // Por el tipo de consejo y no por su frase, que cambia con el idioma. Va bien si baja la cintura, si está todo
   // estable sin picoteo o, con «fuerza», si no toca «come un poco más».
-  const tipo = tipoConsejo(datos)
   const bien = (cinturaDelta ?? 0) < -0.3 || tipo === 'estable' || (subirPesoEsBueno(o.objetivo) && tipo !== 'peso-estable')
-  return { consejo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? t('Vas bien') : t('Un ajuste'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
+  return { consejo, tipo, tono: bien ? 'ok' : 'warn', etiqueta: bien ? t('Vas bien') : t('Un ajuste'), cinturaDelta, pesoDelta, picoteoDias, proteinaMedia }
 }
 
 // «Lo de ayer» y «Recientes» al añadir

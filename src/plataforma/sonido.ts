@@ -1,4 +1,4 @@
-// Pitido y vibración del fin del descanso.
+// Pitidos y vibración: el fin del descanso y la cuenta atrás de las fotos.
 import { esNativo } from './dispositivo'
 
 let audio: AudioContext | null = null
@@ -53,6 +53,23 @@ export function pitido() {
       o.connect(g).connect(a.destination)
       o.start(t); o.stop(t + 0.18)
     }
+  } catch { /* sin audio */ }
+}
+
+/** Un pitido corto: cada segundo de la cuenta atrás de la foto (`agudo`, el de la foto), para oírlo desde lejos. */
+export function tic(agudo = false) {
+  try {
+    const a = contextoAudio()
+    if (!a) return
+    void a.resume().catch(() => {})
+    const t = a.currentTime + 0.02
+    const o = a.createOscillator(), g = a.createGain()
+    o.type = 'sine'; o.frequency.value = agudo ? 1320 : 880
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.3, t + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12)
+    o.connect(g).connect(a.destination)
+    o.start(t); o.stop(t + 0.14)
   } catch { /* sin audio */ }
 }
 

@@ -2,9 +2,9 @@
 import type { ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { recolocarSesion, SIN_DIA } from '../../datos/acciones/rutina'
-import { sugerenciasDia } from '../../datos/consultas'
+import { loQueFalta, sugerenciasDia } from '../../datos/consultas'
 import type { DiaRutina, Guardado, Perfil, Rutina, Sesion } from '../../datos/tipos'
-import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
+import { ejercicio, nombreEjercicio, useCatalogo } from '../../catalogo/catalogo'
 import { indiceActual } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, fechaCorta, formatoHora } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
@@ -12,7 +12,8 @@ import type { Tarjeta } from '../../dominio/semana'
 import type { Cola } from '../../dominio/cola'
 import { nombreCardio } from '../../dominio/cardio'
 import { rutinaBloqueada } from '../../dominio/salud'
-import { capital, kg, textoKilos } from '../../dominio/formato'
+import { capital, enLista, kg, textoKilos } from '../../dominio/formato'
+import { nombreZonaVolumen } from '../../dominio/volumen'
 import type { Sugerencia } from '../../dominio/progresion'
 import { nombreEntreno } from '../../dominio/nombres'
 import { cx, Ico, Th } from '../../ui/componentes'
@@ -30,7 +31,11 @@ export function TarjetaHoy({ tar, cola, rutina, enCurso, gym }: { tar: Tarjeta<G
   const aviso = useAviso()
   const perfil = usePerfil()
   const g = useGimnasio()
-  const dia = tar.tipo === 'hoy' || tar.tipo === 'opcional' ? tar.dia : null
+  // El día opcional se arma con lo que falta de la semana (lo mismo que saldrá al empezar).
+  const cat = useCatalogo()
+  const opcional = tar.tipo === 'opcional' ? tar.dia : null
+  const falta = useLiveQuery(() => (opcional && rutina && cat ? loQueFalta(opcional, rutina) : Promise.resolve(null)), [opcional, rutina, cat])
+  const dia = tar.tipo === 'hoy' ? tar.dia : opcional ? falta?.dia ?? opcional : null
   const sug = useLiveQuery(() => (dia ? sugerenciasDia(dia, g) : Promise.resolve(undefined)), [dia, g])
   const empezar = (version: 'normal' | 'minima') => dia && nav.hoja('hoja-empezar', { letra: dia.letra, version })
   const cardio = cardioAlAcabar(perfil, rutina)
@@ -105,9 +110,9 @@ export function TarjetaHoy({ tar, cola, rutina, enCurso, gym }: { tar: Tarjeta<G
         <div className="today-hero opt">
           <div className="row"><span className="tag blue">{t('Opcional')}</span><span className="tag">{capital(DIAS[diaSemana(new Date())]!)}</span></div>
           <h3>{t('¿Sesión extra?')}</h3>
-          <p className="today-meta"><span>{nombreEntreno(tar.dia)} · ~{Math.round(duracionDia(tar.dia.bloques) / 60)} min</span></p>
+          <p className="today-meta"><span>{falta?.zonas.length ? t('Lo que te falta esta semana: {zonas}', { zonas: enLista(falta.zonas.map(nombreZonaVolumen)) }) : nombreEntreno(tar.dia)} · ~{Math.round(duracionDia((falta?.dia ?? tar.dia).bloques) / 60)} min</span></p>
         </div>
-        <FilasDia dia={tar.dia} sug={sug} />
+        <FilasDia dia={falta?.dia ?? tar.dia} sug={sug} />
         <div className="pd btns">
           <button className="btn gry sm" onClick={() => aviso(t('Vale, hoy no. Buen día'))}>{t('Hoy no')}</button>
           <button className="btn sm" onClick={() => empezar('normal')}>{t('Empezar')}</button>

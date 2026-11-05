@@ -8,9 +8,10 @@ import { guardarAjustes, guardarPerfil, leerPerfil } from '../../datos/repos'
 import { regenerarRutina } from '../../datos/acciones/rutina'
 import { guardarAvisos, reprogramarNotificaciones } from '../../datos/acciones/avisos'
 import { objetivosEnergia } from '../../datos/consultas'
-import type { Ajustes as TAjustes } from '../../datos/tipos'
+import type { Ajustes as TAjustes, Franja } from '../../datos/tipos'
 import { useCatalogo } from '../../catalogo/catalogo'
 import { duracion, hoyISO } from '../../dominio/fechas'
+import { falloFranjas, FRANJAS, FRANJAS_HORAS, nombreFranja } from '../../dominio/comida'
 import { miles, num } from '../../dominio/formato'
 import { capacidades, permisoNotificaciones } from '../../plataforma'
 import { cx, Cab, Elegir, FilaInterruptor, Ico, Interruptor, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
@@ -228,6 +229,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
               </div>
               <FilaInterruptor titulo={t('Calentamiento sugerido')} d={t('Unas series ligeras antes de las pesadas')} on={a.calentamiento} onCambio={v => guardar({ calentamiento: v })} />
               <FilaInterruptor titulo={t('Avisos de seguridad')} d={t('En banca y sentadilla con barra')} on={a.avisosSeguridad} onCambio={v => guardar({ avisosSeguridad: v })} />
+              <FilaInterruptor titulo={t('Ayuda del esfuerzo')} d={t('En el entreno, qué significa cada número de «¿Cuánto te ha costado?»')} on={a.ayudaEsfuerzo !== false} onCambio={v => guardar({ ayudaEsfuerzo: v })} />
             </div>
 
             <p className="grp-t" ref={refComida}>{t('Comida')}</p>
@@ -254,6 +256,7 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
                 </div>
                 <small className="small muted">{t('Un café son unos 80 mg.')}</small>
               </div>
+              <FilaFranjas horas={a.franjasHoras ?? FRANJAS_HORAS} onCambio={h => guardar({ franjasHoras: h })} />
             </div>
 
             <PasosYBascula salud={salud} />
@@ -308,6 +311,49 @@ function FilaHora({ titulo, d, on, hora, c, h }: { titulo: string; d: string; on
       </span>
       {on && <input className="inp" type="time" value={hora} aria-label={t('Hora de {que}', { que: titulo.toLowerCase() })} style={{ width: 104, minHeight: 40 }} onChange={e => { if (e.target.value) h(e.target.value) }} />}
       <Interruptor on={on} onCambio={c} etiqueta={titulo} />
+    </div>
+  )
+}
+
+/**
+ * Franjas horarias: a qué hora empieza cada comida (así se elige sola al apuntar). Cada una, después de la anterior.
+ * Se comprueba al salir del campo, no al teclear: en el PC «12:00» pasa por «01:00» mientras se escribe,
+ * y así también se pueden mover varias horas en cualquier orden.
+ */
+function FilaFranjas({ horas, onCambio }: { horas: Record<Franja, string>; onCambio: (h: Record<Franja, string>) => void }) {
+  const [borrador, setBorrador] = useState<Record<Franja, string>>({ ...horas })
+  const [fallo, setFallo] = useState('')
+  // Si las horas guardadas cambian (al guardar o al volver a las de siempre), el borrador las sigue,
+  // salvo las que se están cambiando a mano: lo escrito mientras se guardaba no se pierde.
+  const [vistas, setVistas] = useState(horas)
+  if (FRANJAS.some(f => vistas[f.v] !== horas[f.v])) {
+    const nuevo = { ...borrador }
+    for (const f of FRANJAS) if (borrador[f.v] === vistas[f.v]) nuevo[f.v] = horas[f.v]
+    setVistas(horas); setBorrador(nuevo)
+    if (!falloFranjas(nuevo)) setFallo('')
+  }
+
+  const deSiempre = FRANJAS.every(f => borrador[f.v] === FRANJAS_HORAS[f.v])
+  const comprobar = () => {
+    const f = falloFranjas(borrador)
+    setFallo(f)
+    if (!f && FRANJAS.some(x => borrador[x.v] !== horas[x.v])) onCambio({ ...borrador })
+  }
+  const volver = () => { setBorrador({ ...FRANJAS_HORAS }); setFallo(''); onCambio({ ...FRANJAS_HORAS }) }
+  return (
+    <div className="it col">
+      <span className="tx"><b>{t('Franjas horarias')}</b><small>{t('A qué hora empieza cada comida: así se elige sola al apuntar')}</small></span>
+      <div className="grid2">
+        {FRANJAS.map(f => (
+          <label key={f.v}><span className="lbl fl">{nombreFranja(f.v)}</span>
+            <input className="inp" type="time" value={borrador[f.v]} aria-label={t('Hora de {que}', { que: nombreFranja(f.v).toLowerCase() })}
+              aria-invalid={fallo ? true : undefined} aria-describedby="fallo-franjas"
+              onChange={e => { const v = e.target.value; setBorrador(b => ({ ...b, [f.v]: v })) }} onBlur={comprobar} />
+          </label>
+        ))}
+      </div>
+      <span className="fallo-campo" id="fallo-franjas" aria-live="polite">{fallo}</span>
+      {!deSiempre && <button className="btn ln sm" onClick={volver}><Ico n="arrow-counter-clockwise" b />{t('Volver a las de siempre')}</button>}
     </div>
   )
 }

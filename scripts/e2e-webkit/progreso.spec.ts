@@ -53,6 +53,7 @@ test('pasos a mano y trote, y por la tarde «Apunta tus pasos de hoy»', async (
 })
 
 test('fotos de progreso: hacer foto o elegirla de Fotos', async ({ page, jf }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined }))
   await jf.deCero('2026-10-14T18:00:00')
   await jf.alta()
   await jf.pestana('Progreso')

@@ -3,22 +3,25 @@ import { useState } from 'react'
 import { guardarRutina } from '../../datos/acciones/rutina'
 import type { Bloque } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
-import { duracion } from '../../dominio/fechas'
 import { Cab, Chip, estilo, Ico, Pantalla, Stepper, Th, Vacio } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useRutina } from '../../datos/hooks'
+import { usePerfil, useRutina } from '../../datos/hooks'
+import { esfuerzoMaximo } from '../../dominio/salud'
 import { abrevDia, materialCorto, tituloDia } from './comun'
-import { filas, minutosDia, seriesPorGrupo } from '../../dominio/rutina'
+import { editarBloque, filas, minutosDia, seriesPorGrupo, unirConSiguiente } from '../../dominio/rutina'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t } from '../../i18n'
 
 const RANGOS: [number, number][] = [[5, 8], [6, 10], [8, 12], [10, 15], [12, 20]]
+/** Esfuerzo más bajo que se puede poner: el «fácil» de la escala del entreno. */
+const ESFUERZO_MIN = 6
 
 export function EditarPlan({ ruta }: { ruta: Ruta<'editar-plan'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const r = useRutina()
+  const perfil = usePerfil()
   const [letra, setLetra] = useState(ruta.d?.letra ?? 'A')
   // Ejercicios con «Más opciones» abierto (lo raro va plegado: a la vista solo nombre, series y cambiar).
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
@@ -28,6 +31,9 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'editar-plan'> }) {
   if (!r) return <Pantalla><Cab atras crumb={t('Mi plan')} titulo={t('Editar plan')} /><div className="pg"><Vacio icono="clipboard-text" titulo={t('Aún no tienes rutina')} accion={t('Crear mi rutina')} onAccion={() => nav.ir('generar-rutina')} /></div></Pantalla>
   const dia = r.dias.find(d => d.letra === letra) ?? r.dias[0]!
   const grupos = seriesPorGrupo(r)
+  // El mismo tope que el generador: con una molestia o en modo mayor no se deja subir el esfuerzo a mano (si ya estaba
+  // por encima, se puede dejar o bajar).
+  const tope = Math.max(ESFUERZO_MIN, esfuerzoMaximo(perfil))
 
   const cambiar = async (f: (bs: Bloque[]) => Bloque[]) => {
     const nueva = structuredClone(r)
@@ -42,12 +48,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'editar-plan'> }) {
     const out = [...bs]; [out[i], out[j]] = [out[j]!, out[i]!]
     return out
   })
-  const editar = (uid: string, c: Partial<Bloque>) => cambiar(bs => bs.map(b => {
-    if (b.uid === uid) return { ...b, ...c }
-    // La pareja de superserie comparte series y corta.
-    if (b.superserie === uid && (c.series != null || c.fueraEnCorta != null)) return { ...b, ...(c.series != null ? { series: c.series } : {}), ...(c.fueraEnCorta != null ? { fueraEnCorta: c.fueraEnCorta } : {}) }
-    return b
-  }))
+  const editar = (uid: string, c: Partial<Bloque>) => cambiar(bs => editarBloque(bs, uid, c))
   const quitar = async (b: Bloque) => {
     const antes = structuredClone(r)
     await cambiar(bs => bs.filter(x => x.uid !== b.uid).map(x => (x.superserie === b.uid ? { ...x, superserie: undefined } : x)))
@@ -58,12 +59,7 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'editar-plan'> }) {
     await cambiar(bs => bs.map(x => (x.uid === a.uid || x.uid === a.superserie ? { ...x, superserie: undefined } : x)))
     aviso(t('Ya no van seguidos'), () => void guardarRutina(antes))
   }
-  const unirSiguiente = (b: Bloque) => cambiar(bs => {
-    const i = bs.findIndex(x => x.uid === b.uid)
-    const sig = bs[i + 1]
-    if (!sig || sig.superserie || b.superserie) return bs
-    return bs.map(x => (x.uid === b.uid ? { ...x, superserie: sig.uid } : x.uid === sig.uid ? { ...x, superserie: b.uid, series: b.series } : x))
-  })
+  const unirSiguiente = (b: Bloque) => cambiar(bs => unirConSiguiente(bs, b.uid))
 
   const fila = (b: Bloque) => {
     const e = ejercicio(b.ejercicio)
@@ -94,7 +90,12 @@ export function EditarPlan({ ruta }: { ruta: Ruta<'editar-plan'> }) {
         </div>
         {abierta && (
           <div className="ux-rut-mas">
-            <p className="small muted">{t('Esfuerzo {rpe}/10 · descanso {tiempo}', { rpe: b.rpe, tiempo: duracion(b.descanso) })}</p>
+            {/* Descanso y esfuerzo de este ejercicio: los usa el entreno (la cuenta atrás y el peso que toca). */}
+            <div className="grid2">
+              <div><span className="lbl fl">{t('Descanso')}</span><Stepper className="sm" valor={b.descanso} paso={15} min={15} max={600} sufijo="s" etiqueta={t('Descanso entre series')} onCambio={v => void editar(b.uid, { descanso: v })} /></div>
+              <div><span className="lbl fl">{t('Esfuerzo')}</span><Stepper className="sm" valor={b.rpe} paso={1} min={ESFUERZO_MIN} max={Math.max(tope, b.rpe)} sufijo="/10" etiqueta={t('Esfuerzo')} onCambio={v => void editar(b.uid, { rpe: v })} /></div>
+            </div>
+            <p className="small muted mt4">{b.superserie ? t('El descanso va después de los dos. Esfuerzo: 6 es fácil y 10, no podías más.') : t('Esfuerzo: 6 es fácil y 10, no podías más.')}</p>
             <div className="ux-rut-mas-acc">
               <button className="chip" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'alternativa', letra: dia.letra, uid: b.uid, id: b.ejercicio })}><Ico n="arrows-left-right" />{t('Si está ocupado')}</button>
               <Chip on={!!b.fueraEnCorta} ck onClick={() => void editar(b.uid, { fueraEnCorta: !b.fueraEnCorta })}><Ico n="scissors" />{t('Fuera si hay prisa')}</Chip>

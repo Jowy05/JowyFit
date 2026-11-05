@@ -1,15 +1,16 @@
 // SES-02 herramientas · SES-07 discos · SES-08 calentamiento · instrucciones · nota de serie
 import { useState, type ReactElement } from 'react'
 import { guardarSesion } from '../../datos/acciones/entreno'
+import { meDuele } from '../../datos/acciones/molestias'
 import { ejercicio, imagen } from '../../catalogo/catalogo'
 import { BARRAS, calentamiento, discosPorLado, pesosBarra, pesosPara } from '../../dominio/pesos'
 import { anadirSerie, cambiarSerie, conCalentamiento, quitarSerie, saltar, serieActual } from '../../dominio/sesion'
 import type { EjercicioPropio, Serie, Sesion } from '../../datos/tipos'
 import { conUnidad, kg, num } from '../../dominio/formato'
-import { Chip, cx, Hoja, Ico, Interruptor, Stepper, LARGO, useUrlBlob } from '../../ui/componentes'
+import { Chip, cx, Hoja, Ico, Interruptor, Stepper, LARGO, useUnaVez, useUrlBlob } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useGimnasio, useSesionEnCurso } from '../../datos/hooks'
+import { useGimnasioDe, useSesionEnCurso } from '../../datos/hooks'
 import { t } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
@@ -20,6 +21,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'hoja-herramientas'> }) 
   const idx = ruta.d.idx
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)
+  const unaVez = useUnaVez()
   if (s === undefined) return <Hoja titulo={t('Más')}><p className="muted">{t('Cargando…')}</p></Hoja>
   if (!s || !e || !ej) return <Hoja titulo={t('Más')}><p className="muted">{t('No hay entreno en curso.')}</p></Hoja>
   const conBarra = !!ej.material && ej.material in BARRAS
@@ -29,6 +31,12 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'hoja-herramientas'> }) 
   const guardar = (x: Sesion) => guardarSesion(x)
   const numSerie = serie && !serie.calentamiento ? e.series.filter(x => !x.calentamiento).indexOf(serie) + 1 : 0
   const conCalent = e.registro === 'peso' || e.registro === 'mancuerna'
+  // Fuera del plan (cambiado por otro que no cargue la zona, o quitado) y de este entreno, con «Deshacer».
+  const duele = unaVez(async () => {
+    const r = await meDuele(s, idx)
+    nav.hoja(null)
+    aviso(r.texto, () => void r.deshacer())
+  })
   return (
     <Hoja titulo={t('Más')} sub={ej.nombre} className="tall">
       <div className="list">
@@ -44,6 +52,7 @@ export function HojaHerramientas({ ruta }: { ruta: Ruta<'hoja-herramientas'> }) 
           await guardar(nueva); nav.hoja(null); aviso(t('Serie quitada'), () => void guardar(antes))
         }}><span className="ico"><Ico n="minus-square" /></span><span className="tx"><b>{t('Quitar una serie')}</b></span></button>}
         <button className="it" onClick={async () => { const antes = s; await guardarSesion(saltar(s, idx)); nav.hoja(null); aviso(t('Saltado: lo verás en la lista'), () => void guardarSesion(antes)) }}><span className="ico"><Ico n="skip-forward" /></span><span className="tx"><b>{t('Saltar este ejercicio')}</b><small>{t('Puedes recuperarlo desde la lista')}</small></span></button>
+        <button className="it" onClick={() => void duele()}><span className="ico warnc"><Ico n="warning" /></span><span className="tx"><b>{t('Me duele')}</b><small>{t('Lo quitamos de tu plan y te ponemos otro')}</small></span></button>
         <button className="it" onClick={() => nav.hoja('hoja-me-encuentro-mal')}><span className="ico badc"><Ico n="first-aid" /></span><span className="tx"><b>{t('Me encuentro mal')}</b><small>{t('Mareo, pecho, falta de aire…')}</small></span><Ico n="caret-right" className="car" /></button>
       </div>
       <details className="fold mt16">
@@ -73,7 +82,7 @@ const ancho = (d: number) => (d >= 10 ? 15 : d >= 5 ? 12 : 9)
 
 export function HojaDiscos({ ruta }: { ruta: Ruta<'hoja-discos'> }) {
   const s = useSesionEnCurso()
-  const g = useGimnasio()
+  const g = useGimnasioDe(s?.gimnasioId)
   const e = s?.ejercicios[ruta.d.idx]
   const ej = ejercicio(e?.ejercicio)
   const barraPorDefecto = ej?.material === 'barbell' || !ej?.material ? (g?.barraKg ?? 20) : (BARRAS[ej.material] ?? 20)
@@ -126,7 +135,7 @@ export function HojaCalentamiento({ ruta }: { ruta: Ruta<'hoja-calentamiento'> }
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
-  const g = useGimnasio()
+  const g = useGimnasioDe(s?.gimnasioId)
   const idx = ruta.d.idx
   const e = s?.ejercicios[idx]
   const ej = ejercicio(e?.ejercicio)

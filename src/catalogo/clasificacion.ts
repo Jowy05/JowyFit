@@ -2,11 +2,14 @@
 // Los nombres van marcados con tk(): se traducen al pintarlos con t().
 import type { Ejercicio } from './tipos'
 import type { TipoRegistro } from '../datos/tipos'
+import { ACCESORIOS_POLEA } from './material'
 import { tk } from '../i18n'
 
 export const GRUPOS_MATERIAL: { id: string; nombre: string; claves: string[] }[] = [
-  { id: 'libre', nombre: tk('Peso libre'), claves: ['dumbbell', 'barbell', 'ez_bar', 'trap_bar', 'kettlebell', 'plates', 'flat_bench', 'smith_machine'] },
-  { id: 'poleas', nombre: tk('Poleas'), claves: ['cable'] },
+  { id: 'libre', nombre: tk('Peso libre'), claves: ['dumbbell', 'kettlebell', 'plates', 'flat_bench', 'smith_machine'] },
+  { id: 'barras', nombre: tk('Barras'), claves: ['barbell', 'ez_bar', 'trap_bar'] },
+  // La polea y lo que se le engancha (RepDB no lo separa: ver catalogo/material).
+  { id: 'poleas', nombre: tk('Poleas'), claves: ['cable', ...ACCESORIOS_POLEA] },
   { id: 'pierna', nombre: tk('Máquinas de pierna'), claves: ['leg_press', 'hack_squat', 'leg_curl', 'leg_extension', 'standing_calf_raise_machine', 'seated_calf_raise_machine', 'donkey_calf_raise_machine', 'hip_abduction_machine', 'hip_adduction_machine', 'hip_thrust_machine', 'glute_ham_developer', 'back_extension_machine'] },
   { id: 'torso', nombre: tk('Máquinas de torso'), claves: ['chest_press_machine', 'chest_fly_machine', 'pec_deck', 'reverse_fly_machine', 'shoulder_press_machine', 'plate_loaded_lateral_raise_machine', 'lat_pulldown_machine', 'seated_row_machine', 'bicep_curl_machine', 'preacher_curl_machine', 'tricep_extension_machine', 'plate_loaded_dip_machine', 'shrug_machine', 'ab_crunch_machine'] },
   { id: 'dominadas', nombre: tk('Dominadas y fondos'), claves: ['pull_up_bar', 'dip_station', 'assisted_pullup_machine', 'dip_machine', 'rings', 'climbing_rope'] },
@@ -113,6 +116,12 @@ export function claseDistancia(id: string): ClaseDistancia | null {
 }
 
 export const conDistancia = (e: Ejercicio) => tipoRegistro(e) === 'cardio' && claseDistancia(e.id) != null
+
+/** Si sus series cuentan repeticiones: en el cardio se apuntan minutos y en los de aguantar, segundos. */
+export function cuentaRepeticiones(e: Ejercicio): boolean {
+  const r = tipoRegistro(e)
+  return r !== 'cardio' && r !== 'tiempo'
+}
 
 /** Ejercicios conocidos y fiables: el generador los prefiere a variantes raras. */
 export const HABITUALES: string[] = [

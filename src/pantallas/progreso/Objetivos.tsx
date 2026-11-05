@@ -2,12 +2,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { borrarMeta, guardarMeta } from '../../datos/acciones/cuerpo'
-import { leerMediciones, leerMeta, leerMetas, sesionesHechas, valorActualMeta } from '../../datos/consultas'
-import type { Guardado, Medicion, Meta, Perfil, Sesion } from '../../datos/tipos'
-import { nombreEjercicio } from '../../catalogo/catalogo'
-import { capital, kg, num } from '../../dominio/formato'
+import { datosMetas, leerMeta, sesionesHechas, valorActualMeta } from '../../datos/consultas'
+import type { Guardado, Meta } from '../../datos/tipos'
+import { cuentaRepeticiones } from '../../catalogo/clasificacion'
+import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
+import { capital, num } from '../../dominio/formato'
 import { fechaCorta, hoyISO, mesAnio, fechaDeCampo } from '../../dominio/fechas'
-import { ejerciciosHechos, faltaMeta, grasaActual, hitosDominadas, pesoMaximo, progresoMeta, seriesDe, ultimoValor } from '../../dominio/tendencias'
+import { ejerciciosHechos, hitosDominadas } from '../../dominio/tendencias'
+import { estadoMeta, unidadFalta, valorMeta, valorTxt } from '../../dominio/metas'
 import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -15,32 +17,12 @@ import { usePerfil } from '../../datos/hooks'
 import { CabProgreso, TIPOS_META } from './comun'
 import { t } from '../../i18n'
 
-function actualDe(m: Meta, ms: Medicion[], ses: Sesion[], perfil: Perfil): number | null {
-  switch (m.tipo) {
-    case 'cintura': return ultimoValor(ms, x => x.perimetros?.cintura)?.valor ?? null
-    case 'peso': return ultimoValor(ms, x => x.pesoKg)?.valor ?? null
-    case 'grasa': return grasaActual(ms, perfil, hoyISO())
-    case 'dominadas': return hitosDominadas(ses).estrictas
-    case 'ejercicio': {
-      if (!m.ejercicio) return null
-      const p = ses.map(s => pesoMaximo(seriesDe(s, m.ejercicio!))).filter((v): v is number => v != null)
-      return p.length ? Math.max(...p) : null
-    }
-    default: return null
-  }
-}
-
-const TONO: Partial<Record<Meta['tipo'], 'ok' | 'go'>> = { cintura: 'ok', grasa: 'ok', peso: 'ok', ejercicio: 'go' }
-// La unidad la escribe el usuario: solo se traducen «puntos» (los de la grasa, que pone la app).
-const valorTxt = (v: number, unidad: string) => `${unidad === 'kg' ? kg(v) : num(v)}${unidad ? ` ${unidad === 'reps' && v === 1 ? 'rep' : unidad === 'puntos' ? t('puntos') : unidad}` : ''}`
+const TONO: Partial<Record<Meta['tipo'], 'ok' | 'go'>> = { cintura: 'ok', grasa: 'ok', peso: 'ok', ejercicio: 'go', reps: 'go' }
 
 export function Objetivos() {
   const nav = useNav()
   const perfil = usePerfil()
-  const datos = useLiveQuery(async () => {
-    const [metas, ms, ses] = await Promise.all([leerMetas(), leerMediciones(), sesionesHechas()])
-    return { metas, ms, ses }
-  }, [])
+  const datos = useLiveQuery(datosMetas, [])
   const cab = <CabProgreso actual="objetivos" crumb={t('Metas e hitos')} />
   if (!datos) return <Pantalla>{cab}</Pantalla>
 
@@ -60,10 +42,8 @@ export function Objetivos() {
         )}
 
         {ordenadas.map((m, i) => {
-          const actual = actualDe(m, ms, ses, perfil)
-          const falta = m.tipo === 'libre' ? null : faltaMeta(m.inicio, actual, m.objetivo)
-          const conseguida = m.hecha || falta === 0
-          const prog = m.tipo === 'libre' ? (m.hecha ? 1 : 0) : conseguida ? 1 : progresoMeta(m.inicio, actual, m.objetivo)
+          const actual = valorMeta(m, ms, ses, perfil, hoyISO())
+          const { falta, conseguida, progreso: prog } = estadoMeta(m, actual)
           return (
             <button key={m.id} className={cx('goal card pd', i > 0 && 'mt8')} onClick={() => nav.hoja('hoja-meta', { id: m.id })}>
               <div className="row jb">
@@ -76,7 +56,7 @@ export function Objetivos() {
               ) : (
                 <div className="spec flat c2 mt4">
                   <p><span>{t('Ahora')}</span><b>{actual != null ? valorTxt(actual, m.unidad) : '—'}</b></p>
-                  <p><span>{t('Falta')}</span><b className={cx(conseguida && 'okc')}>{conseguida ? t('¡Nada!') : falta != null ? valorTxt(falta, m.tipo === 'grasa' ? 'puntos' : m.unidad) : '—'}</b></p>
+                  <p><span>{t('Falta')}</span><b className={cx(conseguida && 'okc')}>{conseguida ? t('¡Nada!') : falta != null ? valorTxt(falta, unidadFalta(m)) : '—'}</b></p>
                 </div>
               )}
             </button>
@@ -124,6 +104,7 @@ function sugerido(tipo: Meta['tipo'], actual: number | null): number {
     case 'grasa': return actual ? Math.max(10, Math.round(actual - 5)) : 18
     case 'dominadas': return actual && actual >= 5 ? actual + 5 : 5
     case 'ejercicio': return actual ? Math.ceil((actual * 1.2) / 2.5) * 2.5 : 50
+    case 'reps': return actual ? actual + 3 : 10
     default: return 1
   }
 }
@@ -136,6 +117,7 @@ function tituloAuto(tipo: Meta['tipo'], objetivo: number, unidad: string, ejerci
     case 'grasa': return t('~{n} % de grasa', { n: num(objetivo) })
     case 'dominadas': return t('{n} dominadas estrictas', { n: objetivo })
     case 'ejercicio': return ejercicio ? `${nombreEjercicio(ejercicio)}: ${valorTxt(objetivo, unidad || 'kg')}` : t('Ejercicio: {valor}', { valor: valorTxt(objetivo, unidad || 'kg') })
+    case 'reps': return ejercicio ? t('{nombre}: {n} seguidas', { nombre: nombreEjercicio(ejercicio), n: objetivo }) : t('{n} repeticiones seguidas', { n: objetivo })
     default: return t('Mi meta')
   }
 }
@@ -151,9 +133,14 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
   const [objetivo, setObjetivo] = useState<number>(meta?.objetivo ?? sugerido(inicialTipo, null))
   const [unidad, setUnidad] = useState(meta?.unidad ?? def.unidad)
   const [fecha, setFecha] = useState(meta?.fecha ?? '')
-  const [ej, setEj] = useState<string | undefined>(meta?.ejercicio ?? ejercicios[0])
+  // Una meta de repeticiones no vale para el cardio (se apuntan minutos) ni para la plancha (segundos).
+  const conReps = ejercicios.filter(x => { const e = ejercicio(x); return !e || cuentaRepeticiones(e) })
+  const [ej, setEj] = useState<string | undefined>(meta?.ejercicio ?? (inicialTipo === 'reps' ? conReps : ejercicios)[0])
   const [hecha, setHecha] = useState(!!meta?.hecha)
   const info = TIPOS_META.find(x => x.v === tipo)!
+  // Las de kilos y las de repeticiones van con un ejercicio.
+  const deEjercicio = tipo === 'ejercicio' || tipo === 'reps'
+  const lista = tipo === 'reps' ? conReps : ejercicios
   const unaVez = useUnaVez()
   // Solo vale la última propuesta: si se cambia de tipo rápido, una respuesta vieja pisaría el objetivo del tipo nuevo.
   const ultimaPropuesta = useRef(0)
@@ -169,22 +156,24 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
     setTipo(tp)
     setUnidad(TIPOS_META.find(x => x.v === tp)!.unidad)
     setObjetivo(sugerido(tp, null))
-    proponer(tp, ej)
+    const nuevoEj = tp === 'reps' && ej && !conReps.includes(ej) ? conReps[0] : ej
+    setEj(nuevoEj)
+    proponer(tp, nuevoEj)
   }
-  const cambiarEj = (e: string) => { setEj(e); if (!meta) proponer('ejercicio', e) }
+  const cambiarEj = (e: string) => { setEj(e); if (!meta) proponer(tipo, e) }
 
   // Una meta nueva no tiene id: un doble toque crearía dos.
   const guardar = unaVez(async () => {
-    if (tipo === 'ejercicio' && !ej) { aviso(t('Elige un ejercicio')); return }
+    if (deEjercicio && !ej) { aviso(t('Elige un ejercicio')); return }
     // Se comprueba al guardar, no al teclear: en el PC el año pasa por «0002…» mientras se escribe.
     if (fecha && !fechaDeCampo(fecha)) { aviso(t('Revisa la fecha')); return }
-    const mismoValor = meta && meta.tipo === tipo && (tipo !== 'ejercicio' || meta.ejercicio === ej)
+    const mismoValor = meta && meta.tipo === tipo && (!deEjercicio || meta.ejercicio === ej)
     const inicio = mismoValor ? meta.inicio : (await valorActualMeta(tipo, ej, perfil)) ?? undefined
     const nueva: Meta = {
       tipo, objetivo, unidad: unidad.trim(),
       titulo: titulo.trim() || tituloAuto(tipo, objetivo, unidad.trim(), ej),
       fecha: fecha || undefined,
-      ejercicio: tipo === 'ejercicio' ? ej : undefined,
+      ejercicio: deEjercicio ? ej : undefined,
       inicio, hecha,
     }
     if (meta) nueva.id = meta.id
@@ -207,11 +196,11 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
         {TIPOS_META.map(x => <Chip key={x.v} on={tipo === x.v} onClick={() => cambiarTipo(x.v)}><Ico n={x.icono} />{t(x.t)}</Chip>)}
       </div>
 
-      {tipo === 'ejercicio' && (
+      {deEjercicio && (
         <div className="mt12">
-          <Campo etiqueta={t('Ejercicio')}>
-            {ejercicios.length
-              ? <select className="inp" value={ej ?? ''} onChange={e => cambiarEj(e.target.value)}>{ejercicios.map(x => <option key={x} value={x}>{nombreEjercicio(x)}</option>)}</select>
+          <Campo etiqueta={t('Ejercicio')} ayuda={tipo === 'reps' ? t('Cuenta tu mejor serie: las repeticiones seguidas sin parar.') : undefined}>
+            {lista.length
+              ? <select className="inp" value={ej ?? ''} onChange={e => cambiarEj(e.target.value)}>{lista.map(x => <option key={x} value={x}>{nombreEjercicio(x)}</option>)}</select>
               : <p className="small muted">{t('Haz algún entreno primero para elegir uno de tus ejercicios.')}</p>}
           </Campo>
         </div>

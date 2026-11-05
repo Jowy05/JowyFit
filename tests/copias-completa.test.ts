@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { strToU8, unzipSync, zipSync, strFromU8 } from 'fflate'
 import { db, TABLAS } from '../src/datos/db'
 import { exportar, importar } from '../src/datos/copias'
+import { VERSION_COPIA, versionNecesaria } from '../src/datos/validarCopia'
 import { nombreCopia } from '../src/dominio/copias'
 import { ajustesPorDefecto, leerAjustes, perfilPorDefecto } from '../src/datos/repos'
 import { sugerenciaPara, gastoDelDia } from '../src/datos/consultas'
@@ -32,11 +33,17 @@ const perfil: Required<Perfil> = {
   cardioCuando: 'despues', progresoMovimiento: '2026-10-12', sueno: 'poco', deportes: ['pádel'], diaDeporte: 6, experienciaPrevia: 'hace-anos',
 }
 const ajustes: Required<Ajustes> = {
-  ...ajustesPorDefecto(), gimnasioActivo: 1, kcalManual: 2300, proteinaManual: 150, fuentePasos: 'auto', fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'],
+  ...ajustesPorDefecto(), gimnasioActivo: 1, kcalManual: 2300, proteinaManual: 150, fuentePasos: 'auto', fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'], entrenosASalud: true,
   copiasAuto: 8, ultimaCopia: '2026-10-12T10:00:00.000Z', ultimoAjusteEnergia: '2026-10-01', recolocadas: [{ fecha: '2026-10-17', letra: 'C', desde: '2026-10-16' }],
-  inicio: '2026-10-13', semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28',
+  inicio: '2026-10-13', semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28', celebradas: ['primer-entreno', 'semana:2026-10-12'], molestiasVistas: [{ ejercicio: 'bench-press', sesion: 1 }],
+  historialEnergia: [
+    { fecha: '2026-09-17', antes: null, despues: { kcal: 2250, proteina: 145, peso: 80.2 }, porque: 'inicio' },
+    { fecha: '2026-10-01', antes: { kcal: 2250, proteina: 145, peso: 80.2 }, despues: { kcal: 2200, proteina: 140, peso: null }, porque: 'baja-cintura', manual: true },
+  ],
+  ayudaEsfuerzo: false, franjasHoras: { desayuno: '07:00', comida: '14:00', merienda: '17:00', cena: '20:00' }, pasosPorKm: 1400,
   noti: { ...ajustesPorDefecto().noti, revision: true, revisionHora: '18:30' },
   informe: { periodo: 'semana', secciones: { entrenos: true, comida: false, cuerpo: true, pasos: false, detalle: true } },
+  fotos: { camara: 'delantera', esperar: true },
 }
 const medicion: Required<Medicion> = {
   id: 1, fecha: '2026-10-13T07:05', origen: 'casa', pesoKg: 79.1,
@@ -52,7 +59,7 @@ const bloque: Required<Bloque> = { uid: 'b1', ejercicio: 'bench-press', alternat
 const diaRutina: Required<DiaRutina> = { letra: 'A', nombre: 'Cuerpo completo A', dia: 1, opcional: false, bloques: [bloque, { ...bloque, uid: 'b2', ejercicio: 'seated-cable-row', superserie: 'b1' }] }
 const rutina: Required<Rutina> = { id: 1, creada: '2026-10-13T05:00:00.000Z', activa: true, estructura: 'Cuerpo completo · 3 días', porque: ['3 días'], calibracion: true, gimnasioId: 1, dias: [diaRutina], equilibrio: 6, sinCubrir: ['Poleas'] }
 const serie: Required<Serie> = { n: 1, peso: 40, reps: 8, segundos: null, rpe: 8.5, calentamiento: false, hecha: true, ts: 1_760_000_000_000, nota: 'bien', record: true, izq: 8, der: 9, km: 2.5 }
-const ejSesion: Required<EjercicioSesion> = { uid: 'b1', ejercicio: 'chest-press-machine', planificado: 'bench-press', motivo: 'ocupado', estado: 'hecho', series: [serie, { ...serie, n: 2, record: false, hecha: false, ts: 0 }], inicio: 1, fin: 2, repsMin: 6, repsMax: 10, rpe: 8, descanso: 150, superserie: 'b2', registro: 'peso', cargaPct: 0.8 }
+const ejSesion: Required<EjercicioSesion> = { uid: 'b1', ejercicio: 'chest-press-machine', planificado: 'bench-press', motivo: 'ocupado', estado: 'hecho', series: [serie, { ...serie, n: 2, record: false, hecha: false, ts: 0 }], inicio: 1, fin: 2, repsMin: 6, repsMax: 10, rpe: 8, descanso: 150, superserie: 'b2', registro: 'peso', cargaPct: 0.8, molestia: true, fueraEnCorta: true }
 const sesion: Required<Sesion> = {
   id: 1, fecha: '2026-10-13', rutinaId: 1, letra: 'A', nombre: 'Cuerpo completo A', gimnasioId: 1, inicio: 1_760_000_000_000, fin: 1_760_003_600_000, horaLimite: '06:45',
   version: 'normal', estado: 'hecha', ejercicios: [ejSesion], descansoHasta: 0, descansoTotal: 90,
@@ -72,6 +79,8 @@ const revision: Required<Revision> = {
   cambios: [{ uid: 'b1', letra: 'A', zona: 'rodillas', antes: bloque, despues: { ...bloque, cargaPct: 0.8 }, deshecho: false }],
 }
 const meta: Required<Meta> = { id: 1, tipo: 'ejercicio', titulo: 'Banca 60 kg', objetivo: 60, unidad: 'kg', fecha: '2027-06-01', ejercicio: 'bench-press', inicio: 40, hecha: false }
+// La de repeticiones va aparte: la de kilos es la que más se usa y también tiene que sobrevivir.
+const metaReps: Required<Meta> = { id: 2, tipo: 'reps', titulo: '10 dominadas', objetivo: 10, unidad: 'reps', fecha: '2027-06-01', ejercicio: 'pull-up', inicio: 3, hecha: false }
 
 async function sembrarTodo() {
   for (const t of TABLAS) await db.table(t).clear()
@@ -88,7 +97,7 @@ async function sembrarTodo() {
   await db.productos.put(producto)
   await db.pasos.put(pasos)
   await db.suplementos.put(suple)
-  await db.metas.put(meta)
+  await db.metas.bulkPut([meta, metaReps])
   await db.propios.put(propio)
   await db.revisiones.put(revision)
 }
@@ -111,22 +120,28 @@ const copiaJSON = (datos: Record<string, unknown[]>, version = 1) => strToU8(JSO
 describe('copia completa: cada tabla y cada campo', () => {
   beforeEach(sembrarTodo)
 
-  it('las 16 tablas tienen una fila con todos sus campos', async () => {
-    for (const t of TABLAS) expect(await db.table(t).count(), t).toBe(1)
+  it('las 16 tablas tienen una fila con todos sus campos (metas, dos: de kilos y de repeticiones)', async () => {
+    for (const t of TABLAS) expect(await db.table(t).count(), t).toBe(t === 'metas' ? 2 : 1)
   })
   it('exportar → borrar todo → importar deja cada campo igual (fotos, propias y campos nuevos incluidos)', async () => {
     const antes = await instantanea()
     const bytes = await exportar()
     for (const t of TABLAS) await db.table(t).clear()
     expect(await importar(bytes)).toBe('copia')
-    expect(await instantanea()).toEqual(antes)
+    // Lo único que cambia: guardar entrenos en Health Connect se apaga (el permiso es de cada móvil).
+    expect(await instantanea()).toEqual({ ...antes, ajustes: (antes.ajustes as object[]).map(a => ({ ...a, entrenosASalud: false })) })
     // Campos nuevos (0.1.1 – 0.1.6) que tienen que sobrevivir.
     const p = (await db.perfil.get('yo'))!
     expect(p.dosisSuplementos).toEqual({ Creatina: '5 g' })
     expect(p.batido).toEqual({ proteina: 30, kcal: 150 })
     const a = (await db.ajustes.get('app'))!
-    expect(a).toMatchObject({ fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'], semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28' })
+    expect(a).toMatchObject({ fuenteBascula: 'auto', hcIgnorados: ['hc-borrada'], entrenosASalud: false, semanaSuave: '2026-10-05', suavePospuesta: '2026-09-28' })
+    expect(a.historialEnergia).toEqual(ajustes.historialEnergia)
+    expect(a).toMatchObject({ ayudaEsfuerzo: false, franjasHoras: { desayuno: '07:00', comida: '14:00', merienda: '17:00', cena: '20:00' }, pasosPorKm: 1400 })
+    expect(await db.metas.get(1)).toEqual(meta)
+    expect(await db.metas.get(2)).toEqual(metaReps)
     expect(a.informe).toEqual({ periodo: 'semana', secciones: { entrenos: true, comida: false, cuerpo: true, pasos: false, detalle: true } })
+    expect(a.fotos).toEqual({ camara: 'delantera', esperar: true })
     const m = (await db.mediciones.toArray())[0]!
     expect(m.hc).toEqual(['hc-1', 'hc-2'])
     expect(m.fuente).toBe('com.fitdays.fitdays')
@@ -138,6 +153,14 @@ describe('copia completa: cada tabla y cada campo', () => {
     expect((await db.sesiones.toArray())[0]!.suave).toBe(false)
     expect((await db.sesiones.toArray())[0]!.respuestas).toEqual(sesion.respuestas)
   })
+  it('al restaurar, guardar entrenos en Health Connect se apaga aunque la copia lo traiga encendido', async () => {
+    // En otro móvil (o tras reinstalar) el permiso no está dado: encendido, cada entreno fallaría sin avisar.
+    expect((await db.ajustes.get('app'))!.entrenosASalud).toBe(true)
+    const bytes = await exportar()
+    for (const t of TABLAS) await db.table(t).clear()
+    await importar(bytes)
+    expect((await leerAjustes()).entrenosASalud).toBe(false)
+  })
   it('la copia es un zip con datos.json y un archivo por imagen (5: foto, máquina, plato, plantilla y ejercicio propio)', async () => {
     const ar = unzipSync(await exportar())
     const nombres = Object.keys(ar)
@@ -145,8 +168,8 @@ describe('copia completa: cada tabla y cada campo', () => {
     expect(nombres.filter(n => n.startsWith('archivos/'))).toHaveLength(5)
     expect(nombres.some(n => n.endsWith('.png'))).toBe(true)
     const json = JSON.parse(strFromU8(ar['datos.json']!))
-    // Trae reps de cada lado, km y un propio de un lado cada vez: versión 4 (una app anterior pide actualizar en vez de perderlos).
-    expect(json).toMatchObject({ app: 'JowyFit', version: 4 })
+    // El historial de energía y las metas de repeticiones necesitan el formato 6.
+    expect(json).toMatchObject({ app: 'JowyFit', version: 6 })
     expect(Object.keys(json.datos).sort()).toEqual([...TABLAS].sort())
     // Los Blob van como referencia al archivo, no como «{}».
     expect(json.datos.fotos[0].imagen).toMatchObject({ __archivo: expect.stringMatching(/^archivos\//), tipo: 'image/png' })
@@ -162,7 +185,7 @@ describe('copia completa: cada tabla y cada campo', () => {
   })
   it('fallaba: una copia sin comprimir de una versión más nueva entraba sin avisar', async () => {
     const antes = await instantanea()
-    await expect(importar(copiaJSON({ perfil: [] }, 5))).rejects.toThrow(/versión más nueva/)
+    await expect(importar(copiaJSON({ perfil: [] }, VERSION_COPIA + 1))).rejects.toThrow(/versión más nueva/)
     expect(await instantanea()).toEqual(antes)
   })
   it('una copia con un archivo de imagen que falta: la foto se queda fuera y el resto entra sin esa imagen', async () => {
@@ -186,7 +209,7 @@ describe('copias viejas (sin los campos nuevos)', () => {
 
   // Una copia de las primeras versiones: sin metas ni suplementos, sin macros, sin dosis, sin Health Connect y sin semana suave.
   const { dosisSuplementos: _d, batido: _b, ...perfilViejo } = perfil
-  const { fuenteBascula: _f, hcIgnorados: _h, semanaSuave: _s, suavePospuesta: _p, ...ajustesViejos } = ajustes
+  const { fuenteBascula: _f, hcIgnorados: _h, semanaSuave: _s, suavePospuesta: _p, celebradas: _c, entrenosASalud: _e, ...ajustesViejos } = ajustes
   const vieja = {
     perfil: [perfilViejo],
     ajustes: [{ ...ajustesViejos, noti: { dormir: true, pesarse: false, pesarseHora: '07:00', copia: true } }],
@@ -219,6 +242,8 @@ describe('copias viejas (sin los campos nuevos)', () => {
     expect(a.semanaSuave).toBeNull()
     expect(a.suavePospuesta).toBeNull()
     expect(a.hcIgnorados).toBeUndefined()
+    // Sin el ajuste, los entrenos no se mandan a Health Connect.
+    expect(a.entrenosASalud).toBe(false)
     const p = (await db.perfil.get('yo'))!
     expect(p.dosisSuplementos).toBeUndefined()
     // Sugerencias y gasto del día con los datos viejos.
@@ -308,5 +333,17 @@ describe.skipIf(!fs.existsSync(REAL))('la copia real del dueño', () => {
     const antes = await instantanea()
     await importar(await exportar())
     expect(await instantanea()).toEqual(antes)
+  })
+})
+
+
+describe('compatibilidad al integrar molestias con el registro por lado', () => {
+  it('mantiene la versión 4 para los datos publicados y exige la 5 si hay molestias o sábado armado', () => {
+    const sesiones = [{ ejercicios: [{ series: [{ izq: 8, der: 7, km: 2 }] }] }]
+    expect(versionNecesaria({ sesiones })).toBe(4)
+    for (const campo of [{ molestia: true }, { molestia: false }, { fueraEnCorta: true }]) {
+      expect(versionNecesaria({ sesiones: [{ ejercicios: [{ ...sesiones[0]!.ejercicios[0], ...campo }] }] })).toBe(5)
+    }
+    expect(versionNecesaria({ sesiones, ajustes: [{ molestiasVistas: [] }] })).toBe(5)
   })
 })

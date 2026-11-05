@@ -4,7 +4,7 @@ import { semanaDe, sumarDias } from './fechas'
 import { num } from './formato'
 import { t, tn } from '../i18n'
 import { subirPesoEsBueno } from './objetivos'
-import type { TipoObjetivo } from '../datos/tipos'
+import type { TipoConsejo, TipoObjetivo } from '../datos/tipos'
 
 export type Resumen = {
   semaforo: 'verde' | 'ambar' | 'rojo'
@@ -126,7 +126,6 @@ export function resumenSemana(o: {
 }
 
 type DatosConsejo = { cinturaDelta: number | null; pesoDelta: number | null; picoteoDias: number; proteinaMedia: number | null; objetivoProteina: number; objetivo: TipoObjetivo }
-type TipoConsejo = 'faltan-datos' | 'proteina' | 'sube-peso' | 'peso-estable' | 'baja-cintura' | 'menos-picoteo' | 'recorta-cenas' | 'estable-picoteo' | 'estable'
 
 /** Qué consejo toca, sin depender del idioma (para decidir el tono sin mirar la frase). */
 export function tipoConsejo(o: DatosConsejo): TipoConsejo {
@@ -145,7 +144,12 @@ export function tipoConsejo(o: DatosConsejo): TipoConsejo {
  * (titular y detalle): las traducciones mantienen ese corte.
  */
 export function consejoQuincenal(o: DatosConsejo): string {
-  switch (tipoConsejo(o)) {
+  return textoConsejo(tipoConsejo(o))
+}
+
+/** La frase de cada consejo (la usa también el historial de ajustes, que guarda solo el tipo). */
+export function textoConsejo(tipo: TipoConsejo): string {
+  switch (tipo) {
     case 'faltan-datos': return t('Pésate y mide la cintura un par de veces para poder ver tu tendencia.')
     case 'proteina': return t('La proteína va corta: un batido o la versión con pollo o atún de lo que ya comes.')
     case 'sube-peso': return t('Subes de peso: bien si la cintura no crece.')

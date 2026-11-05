@@ -4,7 +4,7 @@ import { num } from '../../dominio/formato'
 import { NOMBRE_RACION, nombreFranja } from '../../dominio/comida'
 import { basalDia, kcalPasos, kcalSesion, zancada } from '../../dominio/energia'
 import { lunesDe, sumarDias } from '../../dominio/fechas'
-import { ultimoValor, grasaEn } from '../../dominio/tendencias'
+import { PASOS_POR_KM, ultimoValor, grasaEn } from '../../dominio/tendencias'
 import { t, tn } from '../../i18n'
 import type { ComidaFila, ComidaInforme, DiaComidaInforme, GastoDiaInforme, PasosInforme } from './tipos'
 import { agrupar, entre, media, r1, suma, unico } from './comun'
@@ -85,14 +85,14 @@ export function comidaInforme(c: Ctx, detalle: boolean): ComidaInforme {
 }
 
 /** Gasto de un día con el peso y el % de grasa de ESE día (no los de hoy). Null si falta el peso o la altura. */
-export function gastoEnDia(c: Pick<Ctx, 'ms' | 'marina' | 'p' | 'pasos' | 'todas' | 'cat'>, fecha: string): GastoDiaInforme | null {
+export function gastoEnDia(c: Pick<Ctx, 'ms' | 'marina' | 'p' | 'pasos' | 'todas' | 'cat'> & Partial<Pick<Ctx, 'ajustes'>>, fecha: string): GastoDiaInforme | null {
   const peso = ultimoValor(c.ms, leerPeso, fecha)?.valor
   const e = edadEn(c.p.nacimiento, fecha)
   if (peso == null || !(c.p.alturaCm > 0) || e == null) return null
   const g = grasaEn(c.ms, c.marina, fecha)
   const b = basalDia({ pesoKg: peso, alturaCm: c.p.alturaCm, edad: e, sexo: c.p.sexo, grasaPct: g?.valor })
   const d = c.pasos.find(x => x.fecha === fecha)
-  const pasos = d ? kcalPasos(d.pasos, peso, c.p.alturaCm, d.troteKm ?? 0) : 0
+  const pasos = d ? kcalPasos(d.pasos, peso, c.p.alturaCm, d.troteKm ?? 0, c.ajustes?.pasosPorKm) : 0
   const entreno = suma(c.todas.filter(s => s.fecha === fecha && s.estado !== 'cancelada').map(s => kcalSesion(s, peso, id => c.cat.met(id)).hecho))
   return { fecha, reposo: b.kcal, pasos, entreno, total: b.kcal + pasos + entreno, formula: b.formula }
 }
@@ -103,7 +103,7 @@ export function pasosInforme(c: Ctx): PasosInforme {
   const dias = c.dias.map(f => {
     const d = enP.get(f)
     const troteKm = d?.troteKm ?? 0
-    return { fecha: f, pasos: d ? d.pasos : null, troteKm, pasosTrote: d ? Math.min(d.pasos, Math.round(troteKm * 1300)) : 0, cumple: !!d && d.pasos >= obj }
+    return { fecha: f, pasos: d ? d.pasos : null, troteKm, pasosTrote: d ? Math.min(d.pasos, Math.round(troteKm * (c.ajustes?.pasosPorKm ?? PASOS_POR_KM))) : 0, cumple: !!d && d.pasos >= obj }
   })
   const con = dias.filter(d => d.pasos != null)
   // La sección solo se calcula si hay algún día con pasos.

@@ -3,6 +3,7 @@
 import type { PasosDia, Perfil, TipoCardio } from '../datos/tipos'
 import { doloresDe } from './salud'
 import { imc } from './calculos'
+import { pasosEquivalentes } from './tendencias'
 import { t, tk } from '../i18n'
 
 export const TIPOS_CARDIO: { v: TipoCardio; t: string; ico: string }[] = [
@@ -13,6 +14,9 @@ export const TIPOS_CARDIO: { v: TipoCardio; t: string; ico: string }[] = [
   { v: 'correr', t: tk('Correr'), ico: 'person-simple-run' },
 ]
 export const nombreCardio = (v: TipoCardio) => t(TIPOS_CARDIO.find(x => x.v === v)?.t ?? v)
+
+/** Pasos que suma un cardio apuntado: correr cuenta como trote (por minutos); lo demás no son pasos. */
+export const pasosDeCardio = (tipo: TipoCardio, min: number) => (tipo === 'correr' ? pasosEquivalentes(min, 'min') : 0)
 
 /** ¿Es un día con pasos? Apuntar cardio un día sin pasos guarda el día con 0: no cuenta como «0 pasos andados». */
 export const hayPasos = (d: Pick<PasosDia, 'pasos' | 'cardio'>) => d.pasos > 0 || !d.cardio?.length

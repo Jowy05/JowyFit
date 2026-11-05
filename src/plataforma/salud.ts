@@ -1,4 +1,5 @@
-// Health Connect (solo Android): pasos del reloj y peso y % de grasa de la báscula.
+// Health Connect (solo Android): pasos del reloj y peso y % de grasa de la báscula (se leen) y los entrenos (se escriben).
+import { registerPlugin } from '@capacitor/core'
 import { esAndroid } from './dispositivo'
 
 export async function pasosDisponibles(): Promise<boolean> {
@@ -82,4 +83,51 @@ export async function leerBascula(desde: Date): Promise<{ pesos: MuestraBascula[
     } catch { return [] }
   }
   return { pesos: await leer('weight'), grasas: await leer('bodyFat') }
+}
+
+// Entrenos hacia Health Connect. @capgo/capacitor-health (8.11) solo lee sesiones de ejercicio: no sabe escribirlas.
+// Lo hace un plugin propio de la app (android/app/…/EntrenosSalud.java) con el mismo cliente de Health Connect.
+type PermisosEntrenos = { sesion: boolean; calorias: boolean }
+/** Un entreno terminado tal como va a Health Connect: marcas de tiempo en milisegundos y kcal solo si se saben. */
+export type EntrenoSalud = { id: string; inicio: number; fin: number; titulo: string; kcal?: number }
+type PluginEntrenos = {
+  permisos(): Promise<PermisosEntrenos>
+  pedirPermiso(): Promise<PermisosEntrenos>
+  guardar(e: EntrenoSalud): Promise<{ calorias: boolean }>
+  borrar(o: { id: string }): Promise<void>
+}
+const EntrenosSalud = registerPlugin<PluginEntrenos>('EntrenosSalud')
+
+/** Pide guardar los entrenos (y sus kcal) en Health Connect. Devuelve si al menos la sesión quedó permitida. */
+export async function pedirPermisoEntrenos(): Promise<boolean> {
+  if (!esAndroid()) return false
+  try { return (await EntrenosSalud.pedirPermiso()).sesion } catch { return false }
+}
+
+/** Si Health Connect deja guardar los entrenos ahora mismo (el permiso se puede quitar desde Health Connect). */
+export async function permisoEntrenos(): Promise<boolean> {
+  if (!esAndroid()) return false
+  try { return (await EntrenosSalud.permisos()).sesion } catch { return false }
+}
+
+/**
+ * Guarda un entreno en Health Connect como sesión de fuerza. Con el mismo `id` no se duplica: se sobrescribe.
+ * Devuelve si se guardó; nunca lanza (sin permiso o sin Health Connect, el entreno se queda solo en la app).
+ */
+export async function guardarEntrenoEnSalud(e: EntrenoSalud): Promise<boolean> {
+  if (!esAndroid() || !(e.fin > e.inicio)) return false
+  try {
+    const kcal = e.kcal != null && e.kcal > 0 ? { kcal: Math.round(e.kcal) } : {}
+    await EntrenosSalud.guardar({ id: e.id, inicio: e.inicio, fin: e.fin, titulo: e.titulo, ...kcal })
+    return true
+  } catch { return false }
+}
+
+/** Quita de Health Connect un entreno (y sus kcal) que se ha borrado en la app. Nunca lanza. */
+export async function borrarEntrenoDeSalud(id: string): Promise<boolean> {
+  if (!esAndroid()) return false
+  try {
+    await EntrenosSalud.borrar({ id })
+    return true
+  } catch { return false }
 }

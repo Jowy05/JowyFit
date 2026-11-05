@@ -10,9 +10,9 @@ import { cx, estilo, Ico, Stepper } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { CamposSerie, camposDe, comoSeApunta } from './CamposSerie'
-import { t, tk } from '../../i18n'
-
-const AYUDA_RPE: Record<number, string> = { 6: tk('6 = te quedaban 4 reps'), 7: tk('7 = te quedaban 3 reps'), 8: tk('8 = te quedaban 2 reps'), 9: tk('9 = te quedaba 1 rep'), 10: tk('10 = no podías ni una más') }
+import { t } from '../../i18n'
+import { useAjustes } from '../../datos/hooks'
+import { AYUDA_RPE, AyudaEsfuerzo } from './AyudaEsfuerzo'
 
 export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, total, onSaltar, onMas }: {
   s: Sesion; idx: number; e: EjercicioSesion; serie: Serie; lista: number[]; ultimaHecha?: Serie
@@ -28,6 +28,7 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
   const [v, setV] = useState<Campos>(() => ({ ...camposDe(serie, e), segundos: serie.segundos ?? e.repsMin }))
   const cambiar = (c: Partial<Campos>) => { setV(x => ({ ...x, ...c })); setFalta(null) }
   const setSeg = (segundos: number) => cambiar({ segundos })
+  const ayudaEsfuerzo = useAjustes().ayudaEsfuerzo !== false
   // El esfuerzo empieza vacío: solo se guarda si se marca.
   const [rpe, setRpe] = useState<number | null>(serie.calentamiento ? null : serie.rpe ?? null)
   const [crono, setCrono] = useState<number | null>(null)
@@ -79,6 +80,7 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
           </div>
           {/* «fácil» debajo del 6 y «no podía más» debajo del 10, en negro y legibles. */}
           <p className="ux-eff-esc" aria-hidden="true"><span>{t('fácil')}</span><span /><span /><span /><span className="fin">{t('no podía más')}</span></p>
+          {ayudaEsfuerzo && <AyudaEsfuerzo rpe={rpe} ideal={e.rpe} />}
         </div>
       )}
       {/* Nota, calentamiento y añadir o quitar series están en «Más», junto al nombre del ejercicio.

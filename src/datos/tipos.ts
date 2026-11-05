@@ -259,6 +259,10 @@ export type EjercicioSesion = {
   registro: TipoRegistro
   /** Se hizo con el peso rebajado por una molestia (revisión semanal): no cuenta para el peso que toca después. */
   cargaPct?: number
+  /** Molestó en este entreno («Me duele» o «¿Alguna molestia?» al acabar): varias seguidas proponen cambiarlo. */
+  molestia?: boolean
+  /** Se quita al pasar a la versión corta. Solo en el sábado armado, cuyos ejercicios no están en la rutina. */
+  fueraEnCorta?: boolean
 }
 
 export type Sesion = {
@@ -355,7 +359,8 @@ export type DiaSuplementos = { fecha: string; tomados: string[] }
 
 export type Meta = {
   id?: number
-  tipo: 'cintura' | 'ejercicio' | 'dominadas' | 'grasa' | 'peso' | 'libre'
+  /** «ejercicio»: los kg de un ejercicio; «reps»: las repeticiones seguidas en una serie de un ejercicio. */
+  tipo: 'cintura' | 'ejercicio' | 'reps' | 'dominadas' | 'grasa' | 'peso' | 'libre'
   titulo: string
   objetivo: number
   unidad: string
@@ -364,6 +369,22 @@ export type Meta = {
   inicio?: number
   hecha?: boolean
 }
+
+/**
+ * Qué consejo de la quincena tocó (sin depender del idioma: la frase se saca al pintarlo).
+ * La lista la usa también validarCopia: un consejo nuevo se añade solo aquí.
+ */
+export const TIPOS_CONSEJO = ['faltan-datos', 'proteina', 'sube-peso', 'peso-estable', 'baja-cintura', 'menos-picoteo', 'recorta-cenas', 'estable-picoteo', 'estable'] as const
+export type TipoConsejo = typeof TIPOS_CONSEJO[number]
+
+/** El objetivo del día en un momento: kcal, proteína y el peso con el que se calculó. */
+export type ObjetivoDia = { kcal: number; proteina: number; peso: number | null }
+
+/**
+ * Un ajuste de cada 2 semanas: el objetivo de antes y el de después, y por qué (el consejo de la quincena).
+ * El primero es el punto de partida (`antes` null, `porque` «inicio»). `manual`: el objetivo lo había puesto la persona.
+ */
+export type AjusteEnergia = { fecha: string; antes: ObjetivoDia | null; despues: ObjetivoDia; porque: TipoConsejo | 'inicio'; manual?: boolean }
 
 export type Ajustes = {
   id: 'app'
@@ -385,6 +406,8 @@ export type Ajustes = {
   fuenteBascula?: 'auto' | 'manual'
   /** Pesadas de Health Connect que se borraron en la app: no se vuelven a traer. */
   hcIgnorados?: string[]
+  /** Cada entreno terminado se guarda en Health Connect como sesión de fuerza (solo Android; apagado si falta). */
+  entrenosASalud?: boolean
   noti: {
     dormir: boolean
     pesarse: boolean
@@ -404,7 +427,16 @@ export type Ajustes = {
   /** Copias automáticas que se guardan (las más nuevas; 0 = todas). */
   copiasAuto: CopiasAuto
   ultimaCopia: string | null
+  /** Día del último ajuste de cada 2 semanas (el último de `historialEnergia`). */
   ultimoAjusteEnergia: string | null
+  /** Los ajustes de cada 2 semanas, del más viejo al más nuevo (los últimos HISTORIAL_MAX). */
+  historialEnergia?: AjusteEnergia[]
+  /** Explicar en el entreno qué significa cada número del esfuerzo. */
+  ayudaEsfuerzo?: boolean
+  /** A qué hora empieza cada comida del día: con ellas se elige sola la franja al apuntar. */
+  franjasHoras?: Record<Franja, string>
+  /** Pasos que cuenta 1 km de trote o carrera. */
+  pasosPorKm?: number
   /** Sesiones perdidas que se pasaron a otro día. */
   recolocadas: { fecha: string; letra: string; desde: string }[]
   /** Fecha de inicio (para «semana N»). */
@@ -413,11 +445,20 @@ export type Ajustes = {
   semanaSuave?: string | null
   /** «Ahora no» a la semana suave: no se vuelve a proponer hasta pasado este lunes. */
   suavePospuesta?: string | null
+  /** «Seguir igual» a cambiar un ejercicio que molesta: no se vuelve a proponer hasta otra molestia en un entreno posterior. */
+  molestiasVistas?: { ejercicio: string; sesion: number }[]
+  /**
+   * Celebraciones de Inicio ya enseñadas (claves de dominio/celebraciones). null: aún no se ha mirado nunca; la
+   * primera vez lo que ya había se da por visto, para no celebrar de golpe cosas de hace meses.
+   */
+  celebradas?: string[] | null
   /** Lo último que se eligió en «Informe en PDF» (de qué días y qué lleva). */
   informe?: {
     periodo: 'hoy' | 'ayer' | 'semana' | 'mes' | 'todo'
     secciones: { entrenos: boolean; comida: boolean; cuerpo: boolean; pasos: boolean; detalle: boolean }
   }
+  /** Lo último que se eligió al hacer las fotos de progreso: qué cámara y si se esperan 5 segundos. */
+  fotos?: { camara: 'delantera' | 'trasera'; esperar: boolean }
 }
 
 /** Revisión semanal: qué tal cada molestia, qué hay de nuevo y qué cambió en los entrenos que quedan. */

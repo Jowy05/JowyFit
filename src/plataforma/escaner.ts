@@ -14,7 +14,7 @@ export async function escanearNativo(): Promise<string | null | 'cancelado'> {
       return barcodes[0]?.rawValue ?? 'cancelado'
     } catch {
       // El escáner de Google ya se abrió: cerrarlo da «Failed to scan code» (no dice «cancel»).
-      // No se cae a la cámara web, que en Android no tiene permiso: se ofrece escribir el código.
+      // No se cae a la cámara web (la persona acaba de cerrar una cámara): se ofrece escribir el código.
       return 'cancelado'
     }
   } catch {

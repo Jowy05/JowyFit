@@ -108,4 +108,10 @@ export default {
   'revisiones': 'check-ins',
   'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': 'No permission to save to Documents. Allow it in your phone settings: Apps → JowyFit → Permissions.',
   'lastre {antes} → {ahora} kg': 'added {antes} → {ahora} kg',
+  // Any "Take photo" on Android without the camera permission
+  'La cámara no tiene permiso. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos → Cámara.': "The camera doesn't have permission. Turn it on in your phone's settings: Apps → JowyFit → Permissions → Camera.",
+  'Los entrenos ya no se guardan en Health Connect': 'Workouts are no longer saved to Health Connect',
+  'Sin permiso de Health Connect: los entrenos se quedan solo en la app': 'No Health Connect permission: workouts stay in the app only',
+  'Cada entreno que termines se guardará en Health Connect': 'Every workout you finish will be saved to Health Connect',
+  'Guardar entrenos · permiso: {si}': 'Save workouts · permission: {si}',
 } satisfies Diccionario

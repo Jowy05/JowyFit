@@ -14,6 +14,7 @@ import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { ElegirCuanto, Mini, baseDeApuntada, kp, type ParaElegir } from './comun'
 import { apuntar, apuntarPlantilla } from '../../datos/acciones/comida'
+import { useAjustes } from '../../datos/hooks'
 
 /** Comidas guardadas a la vista antes de «Ver todas». */
 const MAX_COMIDAS = 5
@@ -29,7 +30,10 @@ export function HojaAnadir({ ruta }: { ruta: Ruta<'hoja-anadir'> }) {
   const aviso = useAviso()
   const fecha = ruta.d?.fecha ?? hoyISO()
   const esHoy = fecha === hoyISO()
-  const [franja, setFranja] = useState<Franja>(ruta.d?.franja ?? franjaPorHora(horaActual()))
+  const horas = useAjustes().franjasHoras
+  // Hasta que se elija una, la de la hora con las horas de Ajustes (que llegan al cargar).
+  const [elegida, setFranja] = useState<Franja | null>(ruta.d?.franja ?? null)
+  const franja = elegida ?? franjaPorHora(horaActual(), horas)
   const [nota, setNota] = useState(!!ruta.d?.nota)
   const [texto, setTexto] = useState('')
   // «Escribir lo que he comido»: por defecto «Normal» (según el momento del día); los números, solo para quien quiera afinar.
@@ -75,7 +79,7 @@ export function HojaAnadir({ ruta }: { ruta: Ruta<'hoja-anadir'> }) {
   const unaVez = useUnaVez()
 
   const usar = unaVez(async (p: Plantilla, r: Racion) => {
-    const des = await apuntarPlantilla(p, r, fecha, p.tipo === 'comida' ? franja : esHoy ? franjaPorHora(hora) : franja)
+    const des = await apuntarPlantilla(p, r, fecha, p.tipo === 'comida' ? franja : esHoy ? franjaPorHora(hora, horas) : franja)
     const v = conRacion(p, r, p.tipo)
     listo(p.tipo === 'comida' ? `${t(p.nombre)}${r !== 'N' ? ` (${textoRacion(r)})` : ''}` : `${t(p.nombre)} (${kp(v.kcal, v.proteina, v.cafeina)})`, des)
   })

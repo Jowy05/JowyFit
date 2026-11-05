@@ -36,12 +36,14 @@ escenario('metas, pasos y trote', async () => {
 
 escenario('fotos de progreso', async () => {
   await altaRapida('2026-10-14T18:00:00')
+  await js(`Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined })`)
   await pestana('Progreso')
   await seg('Fotos')
   entorno.archivoParaElegir = path.join(RAIZ, 'public', 'iconos', 'icono-512.png')
   await pulsar(/Hacer la primera foto|^Foto$/)
   await ver('Foto guardada', 8000)
   await irA('2026-11-11T18:00:00')
+  await js(`Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined })`)
   await pestana('Progreso')
   await seg('Fotos')
   await pulsar(/^Foto/)
@@ -157,6 +159,7 @@ escenario('pasos, fuerza y fotos a fondo: pasos a mano de ayer, objetivo de paso
   await pestana('Progreso')
   await seg('Fotos')
   await revisarAqui('fotos vacío')
+  await js(`Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined })`)
   entorno.archivoParaElegir = path.join(RAIZ, 'public', 'iconos', 'icono-512.png')
   await pulsar(/Hacer la primera foto|^Foto$/)
   await ver('Foto guardada', 8000)
@@ -172,4 +175,46 @@ escenario('pasos, fuerza y fotos a fondo: pasos a mano de ayer, objetivo de paso
   await ver('¿Borrar esta foto?')
   await pulsar(/^Borrar$/, '.sheet')
   await leerHasta(() => tabla('fotos'), f => f.length === 1, 'No se borra la foto')
+})
+
+
+escenario('cámara de progreso en vivo: pose, frontal, temporizador, guardar y cerrar', async () => {
+  await altaRapida('2026-11-04T18:00:00')
+  // El vídeo viene de un lienzo: se ejecuta la captura real sin encender la cámara del ordenador.
+  await js(`
+    window.__camaraPrueba = { abiertas: 0, paradas: 0 }
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+      getUserMedia: async () => {
+        const lienzo = document.createElement('canvas'); lienzo.width = 640; lienzo.height = 480
+        const g = lienzo.getContext('2d'); g.fillStyle = '#408070'; g.fillRect(0, 0, 640, 480)
+        const flujo = lienzo.captureStream(10)
+        const reloj = setInterval(() => g.fillRect(0, 0, 640, 480), 100)
+        window.__camaraPrueba.abiertas++
+        for (const pista of flujo.getTracks()) {
+          const parar = pista.stop.bind(pista)
+          pista.stop = () => { clearInterval(reloj); window.__camaraPrueba.paradas++; parar() }
+        }
+        return flujo
+      }
+    } })
+  `)
+  await pestana('Progreso')
+  await seg('Fotos')
+  await pulsar('Hacer la primera foto')
+  await ver('Cámara de delante')
+  await pulsar('Cámara de delante')
+  await leerHasta(() => js('return window.__camaraPrueba.abiertas'), n => n === 2, 'No cambia a la cámara frontal')
+  await pulsar('Esperar 5 segundos')
+  await pulsar('Hacer foto en 5 s')
+  await ver('¿Se ve bien? Si no, repítela.', 10000)
+  await revisarAqui('Cámara, revisión de la foto')
+  await pulsar('Guardar')
+  await ver('Foto guardada')
+  await leerHasta(() => tabla('fotos'), fotos => fotos.length === 1, 'No guarda la foto')
+  await ver('Foto de perfil')
+  comprobar((await tabla('ajustes'))[0].fotos?.camara === 'delantera', 'No recuerda la cámara elegida')
+  await t('pulsarSel', '[aria-label="Cerrar"]')
+  await ver('Comparador')
+  const cam = await js('return window.__camaraPrueba')
+  comprobar(cam.abiertas === cam.paradas, 'Queda un flujo de cámara activo al cerrar: ' + JSON.stringify(cam))
 })

@@ -306,4 +306,13 @@ export default {
   'comes lo que gastas.': 'you eat what you burn.',
   'un poco más de lo que gastas, para construir músculo.': 'a bit more than you burn, to build muscle.',
   'un poco más de lo que gastas, para subir de peso con músculo.': 'a bit more than you burn, to gain weight with muscle.',
+  'Empiezas con ~{kcal} kcal y {proteina} g de proteína': 'You start with ~{kcal} kcal and {proteina} g of protein',
+  'Igual que antes: ~{kcal} kcal y {proteina} g de proteína': 'Same as before: ~{kcal} kcal and {proteina} g of protein',
+  '~{antes} → ~{despues} kcal · {pantes} → {pdespues} g de proteína': '~{antes} → ~{despues} kcal · {pantes} → {pdespues} g of protein',
+  'Tu peso: {antes} → {despues} kg': 'Your weight: {antes} → {despues} kg',
+  'Tu objetivo lo pones tú a mano: la app no lo cambia.': "You set your goal by hand: the app doesn't change it.",
+  'Punto de partida: calculado con tu peso, tu altura y tu actividad.': 'Starting point: worked out from your weight, height and activity.',
+  'Ajustes de cada 2 semanas': 'Two-week adjustments',
+  'Cada 2 semanas miramos tu cintura y tu peso, y aquí verás el objetivo que te toca.': "Every 2 weeks we look at your waist and weight, and you'll see your goal here.",
+  'Tu objetivo de comida y por qué cambió': 'Your food goal and why it changed',
 } satisfies Diccionario

@@ -1,7 +1,7 @@
 // Navegación de la app: 5 pestañas, cada una con su pila de pantallas, hojas inferiores
 // y pantallas completas (alta de usuario, entreno en curso). Sin dependencias (solo tipos): es un reducer.
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react'
-import type { Franja, Meta } from '../datos/tipos'
+import type { Foto, Franja, Meta } from '../datos/tipos'
 
 export type Pestana = 'ini' | 'rut' | 'com' | 'pro' | 'per'
 
@@ -33,6 +33,8 @@ export type Rutas = {
   cuerpo: undefined
   registrar: undefined
   fotos: undefined
+  /** Cámara de las fotos de progreso, con la pose y lo último elegido (qué cámara y si se esperan 5 s). */
+  'camara-foto': { pose: Foto['pose']; camara: 'delantera' | 'trasera'; esperar: boolean }
   objetivos: undefined
   pasos: undefined
   perfil: undefined
@@ -42,6 +44,8 @@ export type Rutas = {
   /** Revisión semanal de molestias (desde Ajustes o el aviso del domingo). */
   revision: undefined
   'hoja-peso': undefined
+  /** Resumen de un día de la semana de Inicio. */
+  'hoja-dia': { fecha: string }
   'hoja-empezar': { letra: string; version?: 'normal' | 'corta' | 'minima' }
   'hoja-ocupado': { idx: number }
   'hoja-lista': undefined
@@ -70,6 +74,7 @@ export type Rutas = {
   'hoja-modo-mayor': { quitar?: boolean; rehacer?: boolean } | undefined
   'hoja-cardio': { fecha?: string } | undefined
   'hoja-pregunta': undefined
+  'hoja-ajustes-energia': undefined
 }
 
 /** Para qué se elige el ejercicio; `q`, lo que sale ya escrito en la búsqueda. */

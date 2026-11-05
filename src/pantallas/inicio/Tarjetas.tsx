@@ -1,9 +1,9 @@
-// INI-01 · Tarjetas de Inicio que salen solo a veces: semana suave, «¿Voy bien?», pendientes de hoy, tu progreso y el cardio.
-import { useEffect, useState, type ReactElement } from 'react'
+// INI-01 · Tarjetas de Inicio que salen solo a veces: semana suave, «¿Voy bien?», pendientes de hoy, la meta, tu progreso y el cardio.
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { guardarAjustes } from '../../datos/repos'
-import { datosSemana, leerMetas, minutosCardio, sesionesHechas } from '../../datos/consultas'
-import type { Rutina, TipoCardio } from '../../datos/tipos'
+import { datosSemana, minutosCardio, sesionesHechas, type DatosMetas } from '../../datos/consultas'
+import type { Guardado, Meta, Rutina, TipoCardio } from '../../datos/tipos'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { DIAS, deISO, diaSemana, fechaCorta, hoyISO, lunesDe, semanaDe } from '../../dominio/fechas'
 import { nombreCardio, TIPOS_CARDIO } from '../../dominio/cardio'
@@ -12,11 +12,12 @@ import { racha } from '../../dominio/semana'
 import { resumenSemana } from '../../dominio/resumen'
 import { recordsEn, subidas } from '../../dominio/tendencias'
 import { textoMarca } from '../../dominio/formato'
+import { cifraMeta, metaPrincipal, unidadFalta, valorMeta, valorTxt, type EstadoMeta } from '../../dominio/metas'
 import { batidoDe, esBatido } from '../../dominio/comida'
-import { Barra, cx, Ico, Seccion, useUnaVez } from '../../ui/componentes'
+import { Barra, cx, Ico, LARGO, recortar, Seccion, useUnaVez } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useAjustes, usePerfil } from '../../datos/hooks'
+import { useAjustes, usePerfil, usePerfilCargado } from '../../datos/hooks'
 import { pendientesDeHoy } from '../../datos/pendientes'
 import { marcarSuplemento } from '../../datos/acciones/comida'
 import { capacidades } from '../../plataforma'
@@ -149,13 +150,52 @@ export function Pendientes() {
   )
 }
 
-/** Próximo objetivo, último récord y racha, uno detrás de otro. */
-export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
+type Principal = { meta: Guardado<Meta>; estado: EstadoMeta }
+
+/** La meta que se ve en Inicio (null si no hay ninguna por conseguir; undefined mientras carga). */
+export function useMetaPrincipal(historial: DatosMetas | undefined): Principal | null | undefined {
+  // Con el perfil de verdad: con el de por defecto la grasa por cinta saldría mal un momento.
+  const perfil = usePerfilCargado()
+  const hoy = hoyISO()
+  return useMemo(() => {
+    if (!perfil || !historial) return undefined
+    const { metas, ms, ses } = historial
+    return metaPrincipal(metas, m => valorMeta(m, ms, ses, perfil, hoy))
+  }, [perfil, historial, hoy])
+}
+
+/** La meta principal a la vista: «47,5 / 65 kg» (ahora / objetivo) con su barra. Toca para ver todas. */
+export function MetaALaVista({ p }: { p: Principal }) {
+  const nav = useNav()
+  const { meta, estado } = p
+  // Las cifras, igual que en Metas: «faltan 1 rep», «faltan 2 puntos».
+  const falta = estado.falta != null ? valorTxt(estado.falta, unidadFalta(meta)) : null
+  return (
+    <Seccion titulo={t('Tu meta')} accion={t('Metas')} onAccion={() => nav.ir('objetivos', undefined, 'pro')}>
+      <button className="card kpi w100" onClick={() => nav.ir('objetivos', undefined, 'pro')}>
+        <div className="row jb">
+          <span className="lbl">{recortar(meta.titulo, LARGO.nombre)}</span>
+          {meta.fecha && <span className="small muted">{t('Para el {fecha}', { fecha: fechaCorta(meta.fecha) })}</span>}
+        </div>
+        <p className="k">{estado.actual != null ? cifraMeta(estado.actual, meta.unidad) : '—'}<small>/ {valorTxt(meta.objetivo, meta.unidad)}</small></p>
+        <div className="mt8"><Barra v={estado.progreso} total={1} tono="ok" gruesa /></div>
+        <p className="d">{falta ? t('faltan {n}', { n: falta }) : t('Aún no hay datos para ver cómo vas')}</p>
+      </button>
+    </Seccion>
+  )
+}
+
+/**
+ * Próximo objetivo, último récord y racha, uno detrás de otro. `sinMeta`: la meta ya se ve arriba, en su tarjeta.
+ * `historial`: las metas y sesiones que Inicio ya lee una sola vez (undefined mientras carga).
+ */
+export function TuProgreso({ rutina, sinMeta, historial }: { rutina: Rutina | null; sinMeta?: boolean; historial: DatosMetas | undefined }) {
   const nav = useNav()
   const hoy = hoyISO()
-  const datos = useLiveQuery(async () => {
-    const metas = (await leerMetas()).filter(m => !m.hecha)
-    const sesiones = await sesionesHechas()
+  const datos = useMemo(() => {
+    if (!historial) return undefined
+    const metas = historial.metas.filter(m => !m.hecha)
+    const sesiones = historial.ses
     let logro = null as { nombre: string; peso: number; reps: number; fecha: string; lastre: boolean; porLado: boolean } | null
     for (const s of sesiones) {
       for (const e of s.ejercicios) for (const x of e.series) if (x.record && x.peso != null && x.reps != null) {
@@ -165,9 +205,9 @@ export function TuProgreso({ rutina }: { rutina: Rutina | null }) {
       if (logro) break
     }
     return { meta: metas[0], logro, racha: racha(rutina, sesiones, hoy) }
-  }, [rutina, hoy])
+  }, [historial, rutina, hoy])
   const items = [
-    datos?.meta && { k: 'meta', ir: () => nav.ir('objetivos', undefined, 'pro'), el: (
+    !sinMeta && datos?.meta && { k: 'meta', ir: () => nav.ir('objetivos', undefined, 'pro'), el: (
       <div className="pd">
         <span className="lbl">{t('Próximo objetivo')}</span>
         <p className="rot-big">{datos.meta.titulo}</p>

@@ -203,7 +203,7 @@ describe('clasificación', () => {
   })
   it('grupos de material sin claves repetidas; zonas y etiquetas', () => {
     expect(new Set(cl.TODAS_LAS_CLAVES).size).toBe(cl.TODAS_LAS_CLAVES.length)
-    expect(cl.GRUPOS_MATERIAL.map(g => g.id)).toEqual(['libre', 'poleas', 'pierna', 'torso', 'dominadas', 'cardio', 'accesorios'])
+    expect(cl.GRUPOS_MATERIAL.map(g => g.id)).toEqual(['libre', 'barras', 'poleas', 'pierna', 'torso', 'dominadas', 'cardio', 'accesorios'])
     expect(cl.ZONA_SEGURA).toEqual({ rodilla: 'knee_safe', lumbar: 'lower_back_safe', hombro: 'shoulder_safe' })
     expect(cl.ETIQUETAS_ES.knee_safe).toBe('Cuida la rodilla')
     expect(cl.ZONA_EVITAR.codo!.test('skull-crusher')).toBe(true)

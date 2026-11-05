@@ -34,6 +34,13 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Fotos de progreso con la cámara dentro de la app (silueta guía y temporizador): Capacitor pide este permiso
+         cuando la página abre la cámara. Sin cámara, la app sigue funcionando (no es obligatoria). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Con el permiso CAMERA, Google Play daría estas por obligatorias: tampoco se exigen (tabletas de foco fijo…). -->
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
     <!-- Copias en Documentos/JowyFit: en Android 10 o anterior hace falta este permiso (y en Android 10, el almacenamiento
          «legacy» de arriba). Desde Android 11 la app escribe ahí sus propios archivos sin pedir nada. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
@@ -42,7 +49,9 @@
     <!-- Temporizador de descanso: alarma exacta sin pedir permiso (app de uso personal, fuera de Google Play). -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <!-- Solo se leen pasos, peso y grasa (los que se dejan más abajo): fuera el resto de permisos de salud del plugin. -->
+    <!-- Se leen pasos, peso y grasa y se escriben los entrenos con sus kcal (los que se dejan más abajo; escribir
+         la sesión, WRITE_EXERCISE, lo pide EntrenosSalud.java, no el plugin): fuera el resto de permisos de salud del plugin. -->
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" tools:node="remove" />
@@ -66,7 +75,7 @@
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_VO2_MAX" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
-    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.WRITE_BASAL_BODY_TEMPERATURE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_BASAL_METABOLIC_RATE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" tools:node="remove" />

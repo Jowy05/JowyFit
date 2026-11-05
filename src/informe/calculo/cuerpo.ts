@@ -4,7 +4,7 @@ import { cinturaAltura, imc } from '../../dominio/calculos'
 import { conUnidad, kg, num, MENOS, conSigno, fijo } from '../../dominio/formato'
 import { basalDia } from '../../dominio/energia'
 import { fechaCorta, mesAnio, sumarDias } from '../../dominio/fechas'
-import { cambioDesdeInicio, faltaMeta, hitosDominadas, mediasSemanales, pendienteSemanal, pesoMaximo, progresoMeta, serieMedida, seriesDe, ultimoValor, veredictoCinturaAltura, veredictoGrasa, veredictoImc, type Tono, grasaEn } from '../../dominio/tendencias'
+import { actualEjercicio, cambioDesdeInicio, faltaMeta, hitosDominadas, mediasSemanales, pendienteSemanal, progresoMeta, serieMedida, ultimoValor, veredictoCinturaAltura, veredictoGrasa, veredictoImc, type Tono, grasaEn } from '../../dominio/tendencias'
 import { t, tk } from '../../i18n'
 import type { Cambio, ControlPeso, CuerpoInforme, Evaluacion, MetaInforme, PuntoCuerpo, ResumenInforme, SerieCuerpo, TonoInforme, ZonaCuerpo } from './tipos'
 import { dia10, entre, r1 } from './comun'
@@ -171,6 +171,7 @@ function tituloMeta(c: Ctx, m: Meta, val: (v: number, u: string) => string): str
     case 'grasa': return t('Grasa al {valor}', { valor: conUnidad(num(m.objetivo), '%') })
     case 'dominadas': return t('{n} dominadas estrictas', { n: m.objetivo })
     case 'ejercicio': return m.ejercicio ? t('{nombre}: {valor}', { nombre: nombreDe(c, m.ejercicio), valor: val(m.objetivo, m.unidad || 'kg') }) : m.titulo
+    case 'reps': return m.ejercicio ? t('{nombre}: {n} seguidas', { nombre: nombreDe(c, m.ejercicio), n: m.objetivo }) : m.titulo
     default: return m.titulo
   }
 }
@@ -189,9 +190,8 @@ export function metasInforme(c: Ctx): MetaInforme[] {
       // El primer hito es el de las asistidas y el segundo, el de las negativas (por su sitio: el título puede ir traducido).
       const act = d.hitos.findIndex(x => x.estado === 'actual')
       hito = d.hay && act >= 0 && d.estrictas === 0 ? (act === 0 ? t('vas por las asistidas') : act === 1 ? t('vas por las negativas') : null) : null
-    } else if (m.tipo === 'ejercicio' && m.ejercicio) {
-      const p = ses.map(s => pesoMaximo(seriesDe(s, m.ejercicio!))).filter((v): v is number => v != null)
-      actual = p.length ? Math.max(...p) : null
+    } else if ((m.tipo === 'ejercicio' || m.tipo === 'reps') && m.ejercicio) {
+      actual = actualEjercicio(ses, m.ejercicio, m.tipo === 'reps' ? 'reps' : 'kg')
     }
     const libre = m.tipo === 'libre'
     const falta = libre ? null : faltaMeta(m.inicio, actual, m.objetivo)

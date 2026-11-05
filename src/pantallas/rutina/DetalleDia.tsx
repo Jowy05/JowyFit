@@ -33,6 +33,7 @@ export function DetalleDia({ ruta }: { ruta: Ruta<'detalle-dia'> }) {
           <p><span className="lbl">{t('Con prisa')}</span><b>~{minutosDia(dia, true)} min</b></p>
           <p><span className="lbl">{t('Ejercicios')}</span><b>{dia.bloques.length}</b></p>
         </div>
+        {dia.opcional && <p className="note mt8"><Ico n="scales" /><span>{t('Al empezar se arma con lo que te falte de la semana. Si vas al día, es este.')}</span></p>}
         {dia.bloques.some(b => b.fueraEnCorta) && <p className="small muted mt8"><Ico n="scissors" className="warnc" /> {t('Con raya discontinua: lo que se quita si vas con prisa.')}</p>}
         {filas(dia.bloques).map((f, k, todas) => {
           if (Array.isArray(f)) {

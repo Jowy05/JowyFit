@@ -1,5 +1,5 @@
 // COM-08 · Tu objetivo de energía: arriba solo los dos números y el porqué; la fórmula, plegada.
-// El consejo de la quincena no va aquí: está en la tarjeta «Cómo vas» del Día.
+// El consejo de la quincena no va aquí: está en la tarjeta «Cómo vas» del Día. Abajo, el historial de los ajustes.
 import { useLiveQuery } from 'dexie-react-hooks'
 import { objetivosEnergia } from '../../datos/consultas'
 import { guardarAjustes } from '../../datos/repos'
@@ -11,6 +11,7 @@ import { useAviso } from '../../ui/aviso'
 import { useAjustes, usePerfil } from '../../datos/hooks'
 import { t, tk } from '../../i18n'
 import type { TipoObjetivo } from '../../datos/tipos'
+import { ListaAjustesEnergia } from './HistorialEnergia'
 
 // Marcados con tk(): se traducen al pintarlos.
 const TRABAJO = { sentado: tk('trabajo sentado'), depie: tk('de pie'), fisico: tk('trabajo físico') } as const
@@ -82,6 +83,11 @@ export function Energia() {
         {manual
           ? <button className="btn ln sm mt16" onClick={async () => { await guardarAjustes({ kcalManual: null, proteinaManual: null }); aviso(t('Vuelve a ser automático')) }}>{t('Volver a automático')}</button>
           : <button className="btn ln sm mt16" onClick={() => nav.ir('ajustes', { seccion: 'comida' })}>{t('Poner mi objetivo a mano')}</button>}
+
+        <div className="sec">
+          <div className="sec-h"><h2>{t('Ajustes de cada 2 semanas')}</h2></div>
+          <ListaAjustesEnergia historial={ajustes.historialEnergia ?? []} />
+        </div>
       </div>
     </Pantalla>
   )

@@ -1,5 +1,6 @@
 // Dónde se ejecuta la app y qué puede hacer ese aparato; botón atrás, volver a la app y pantalla encendida.
 import { Capacitor } from '@capacitor/core'
+import { hayCamaraEnVivo } from './camaraFoto'
 
 export const esAndroid = (): boolean => Capacitor.getPlatform() === 'android'
 export const esNativo = (): boolean => Capacitor.isNativePlatform()
@@ -42,6 +43,13 @@ export type Capacidades = {
   compartirNativo: boolean
   /** Escáner de códigos del sistema (ML Kit, con su propia pantalla): solo Android. En la web, la cámara en la página. */
   escanerNativo: boolean
+  /** La cámara se ve dentro de la app (fotos de progreso con silueta guía). Si no, se usa la cámara del sistema. */
+  camaraEnVivo: boolean
+  /**
+   * El permiso de la cámara es de la app (APK de Android): si se deniega, tampoco abre la cámara del sistema, y se
+   * vuelve a dar en los ajustes del móvil. En la web es del navegador y la cámara del sistema no lo necesita.
+   */
+  permisoCamaraDeLaApp: boolean
   /** Pasos apuntados a mano (se miran en la app Salud): iPhone y iPad, que no tienen Health Connect ni recordatorios. */
   pasosAMano: boolean
   /** Navegador de Apple: la copia sale por el menú Compartir y no se nombra nada que sea solo de Android. */
@@ -63,6 +71,8 @@ export function capacidades(): Capacidades {
     copiasEnDocumentos: esNativo(),
     compartirNativo: esNativo(),
     escanerNativo: esAndroid(),
+    camaraEnVivo: hayCamaraEnVivo(),
+    permisoCamaraDeLaApp: esAndroid(),
     pasosAMano: apple === 'iphone' || apple === 'ipad',
     apple: apple !== null,
     aparatoApple: apple,

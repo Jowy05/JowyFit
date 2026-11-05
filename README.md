@@ -62,7 +62,7 @@ La firma sale de `android/keystore.properties`, que no está en el repositorio. 
 | `datos/` | La base (`db.ts`, `tipos.ts`), lecturas (`consultas.ts`, `hooks.ts`, `repos.ts`), escrituras (`acciones/`), copias y su validación. |
 | `dominio/` | Lógica pura sin React ni base: generador de rutinas, progresión, tendencias, comida, energía, fechas y formatos. |
 | `informe/` | Informe en PDF: `calculo/` saca los números y textos, `pdf/` solo los dibuja. |
-| `plataforma/` | Lo que cambia entre Android y la web (`capacidades()`, avisos, Health Connect, escáner, archivos). Se importa siempre desde su `index.ts`. |
+| `plataforma/` | Lo que cambia entre Android y la web (`capacidades()`, avisos, Health Connect, escáner, archivos). Se importa siempre desde su `index.ts`. Los entrenos se escriben en Health Connect con un plugin propio, `android/app/src/main/java/com/jowy05/jowyfit/EntrenosSalud.java` (el de npm solo los lee). |
 | `catalogo/` | Catálogo de ejercicios de RepDB: carga, búsqueda, nombres y clasificación. |
 | `i18n/` | Idiomas de la app: `t()` y los diccionarios de catalán e inglés. |
 | `landing/`, `demo/` | La landing y la demo, sin React, con sus propios textos e idiomas. |
@@ -72,6 +72,17 @@ Lo leído de la base sale como `Guardado<T>` (`src/datos/tipos.ts`): el `id` que
 Dos reglas que comprueba `tests/capas.test.ts`: las pantallas, `ui/` y `app/` nunca importan `datos/db` (leen con `datos/consultas` o `datos/hooks` y escriben con `datos/acciones`), y no preguntan en qué plataforma están: preguntan qué se puede hacer con `capacidades()`.
 
 Los códigos de los comentarios (`// INI-01`, `// SES-04`, «§5 del diseño»…) son los de los documentos de diseño originales, que no están en el repositorio.
+
+### Entreno y seguimiento
+
+- Al terminar un entreno se puede indicar qué ejercicios molestaron. Si uno molesta en sus dos últimos entrenos, Inicio propone cambiarlo o quitarlo; «Seguir igual» espera a otra molestia. «Me duele», en las herramientas del entreno, lo cambia en el plan y la sesión; lo ya hecho se conserva. Los cambios se pueden deshacer.
+- El día opcional se arma con el volumen que falta esa semana. Inicio y «Empezar» usan el mismo día calculado; las versiones corta y mínima se aplican a ese día.
+- «Editar plan» permite ajustar descanso y esfuerzo por ejercicio. Al empezar se puede elegir otro gimnasio: la sesión adapta los ejercicios a su material y deja la rutina original. El catálogo distingue barras y accesorios de polea.
+- En Inicio, tocar un día abre sus entrenos, comida y pasos. La meta principal muestra su progreso y las celebraciones de primer entreno, récord, semana y metas se enseñan una vez.
+- Fotos de progreso con silueta guía, cámara frontal y temporizador; si no hay cámara en vivo, se usa el selector del móvil.
+- En Android, el envío opcional a Health Connect guarda los entrenos terminados y sus calorías cuando hay permiso. Borrar un entreno intenta quitar su copia remota.
+- Metas de repeticiones, historial quincenal del objetivo de energía y horas de las comidas configurables. Las copias que llevan esas metas o historial requieren el formato 6.
+- Las copias con molestias por ejercicio o datos del sábado armado usan el formato 5. El formato 4 sigue siendo el mínimo para series por lado, lastre y distancia; las copias antiguas se siguen leyendo.
 
 ### Recetas
 

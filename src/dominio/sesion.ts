@@ -2,6 +2,7 @@
 import type { Bloque, DiaRutina, EjercicioSesion, Serie, Sesion, TipoRegistro } from '../datos/tipos'
 import { hoyISO } from './fechas'
 import { esRecord, repsVolumen } from './progresion'
+import { diaMinimo } from './cola'
 
 /**
  * Lo más que se puede apuntar en una serie. Los mismos topes en los contadores del entreno y en las copias: con un
@@ -39,10 +40,30 @@ const pesoInicial = (peso: number | null | undefined, registro: TipoRegistro): n
   return peso ?? null
 }
 
-export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: Sesion['version']; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }> }): Sesion {
+/**
+ * Ejercicio que se hace en lugar del del plan porque el gimnasio de hoy no tiene su material. Si se apunta de otra
+ * forma (una plancha por segundos en lugar de un crunch por repeticiones), `pauta` trae sus reps y su descanso.
+ */
+export type CambioMaterial = { ejercicio: string; registro: TipoRegistro; pauta?: Pick<Bloque, 'repsMin' | 'repsMax' | 'descanso'> }
+
+/** El bloque del plan con el cambio puesto: otro ejercicio y, si se apunta distinto, sus reps y descanso. */
+export const conCambio = (b: Bloque, c: CambioMaterial): Bloque => ({ ...b, ...c.pauta, ejercicio: c.ejercicio, registro: c.registro })
+
+/** Los bloques que se hacen en cada versión: la mínima (lo más importante, a 2 series) o la corta (sin los del final). */
+export function bloquesDeVersion(dia: DiaRutina, version: Sesion['version']): Bloque[] {
+  if (version === 'minima') return diaMinimo(dia).bloques
+  return dia.bloques.filter(b => !(version === 'corta' && b.fueraEnCorta))
+}
+
+export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnasioId: number | null; version: Sesion['version']; horaLimite?: string; calibracion: boolean; ahora?: number; sugerencias?: Map<string, { peso: number | null; reps: number | null }>; cambios?: Map<string, CambioMaterial> }): Sesion {
   const ahora = o.ahora ?? Date.now()
   const bloques = dia.bloques.filter(b => !(o.version === 'corta' && b.fueraEnCorta))
-  const ejercicios = bloques.map(b => desdeBloque(b, o.sugerencias?.get(b.ejercicio)))
+  const ejercicios = bloques.map(b => {
+    const c = o.cambios?.get(b.uid)
+    if (!c) return desdeBloque(b, o.sugerencias?.get(b.ejercicio))
+    // Se apunta como un cambio: el del plan queda en `planificado` y la rutina no se toca.
+    return { ...desdeBloque({ ...conCambio(b, c), ejercicio: b.ejercicio }, o.sugerencias?.get(c.ejercicio), c.ejercicio), motivo: 'cambio' as const }
+  })
   if (ejercicios[0]) ejercicios[0].estado = 'curso'
   return {
     fecha: hoyISO(new Date(ahora)),
@@ -57,6 +78,37 @@ export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnas
     calibracion: o.calibracion,
     ejercicios,
   }
+}
+
+/**
+ * Qué cambiar para entrenar en un gimnasio sin el material de algún ejercicio: uid del bloque → la primera de sus
+ * alternativas (las del plan y luego `otras`) que se puede hacer y no está ya en el día. `sePuede` dice null si no
+ * conoce el ejercicio: uno desconocido del plan se deja como está. Sin alternativa posible, también.
+ */
+export function cambiosPorMaterial(bloques: readonly Bloque[], sePuede: (id: string) => boolean | null, otras: (b: Bloque) => string[]): Map<string, string> {
+  const m = new Map<string, string>()
+  const enDia = new Set(bloques.map(b => b.ejercicio))
+  for (const b of bloques) {
+    if (sePuede(b.ejercicio) !== false) continue
+    const alt = [...b.alternativas, ...otras(b)].find(id => !enDia.has(id) && sePuede(id) === true)
+    if (alt) { m.set(b.uid, alt); enDia.add(alt) }
+  }
+  return m
+}
+
+/**
+ * Lista de «Ocupado»: el ejercicio de ahora, la del plan y sus alternativas, en ese orden de preferencia. Quedan las
+ * que existen y se pueden hacer en el gimnasio de hoy (`vale`) y no están ya en el entreno. El de ahora siempre está
+ * (si no, se marcaría como actual otro). Si después de él no queda nada, o ya era un cambio por falta de material
+ * (las del plan no valían), se añaden las que busca `mas` con el material de este gimnasio.
+ */
+export function opcionesOcupado(e: Pick<EjercicioSesion, 'ejercicio' | 'planificado' | 'motivo'>, delPlan: readonly string[], enEntreno: ReadonlySet<string>, vale: (id: string) => boolean, mas: () => string[]): string[] {
+  const libre = (id: string) => id === e.ejercicio || (!enEntreno.has(id) && vale(id))
+  const lista = [...new Set([e.planificado, ...delPlan])].filter(libre)
+  if (!lista.includes(e.ejercicio)) lista.unshift(e.ejercicio)
+  const quedan = lista.length - 1 - lista.indexOf(e.ejercicio)
+  if (quedan === 0 || e.motivo === 'cambio') for (const id of mas()) if (!lista.includes(id) && libre(id)) lista.push(id)
+  return lista
 }
 
 export function seriesNuevas(n: number, peso: number | null, reps: number | null, registro: TipoRegistro): Serie[] {
@@ -276,13 +328,16 @@ export function saltar(s0: Sesion, idx: number): Sesion {
   return s
 }
 
-/** Pasa a la versión corta: salta los ejercicios aún pendientes que el día deja fuera en la corta. */
+/**
+ * Pasa a la versión corta: salta los ejercicios aún pendientes que el día deja fuera en la corta (o, en el sábado
+ * armado, que no está en la rutina, los que lo apuntan en la sesión).
+ */
 export function recortarACorta(s: Sesion, dia: DiaRutina | undefined): Sesion {
   let nueva: Sesion = { ...s, version: 'corta' }
-  for (const b of dia?.bloques ?? []) if (b.fueraEnCorta) {
-    const i = nueva.ejercicios.findIndex(x => x.uid === b.uid && x.estado === 'pendiente')
-    if (i >= 0) nueva = saltar(nueva, i)
-  }
+  const fuera = new Set((dia?.bloques ?? []).filter(b => b.fueraEnCorta).map(b => b.uid))
+  s.ejercicios.forEach((x, i) => {
+    if ((fuera.has(x.uid) || x.fueraEnCorta) && nueva.ejercicios[i]!.estado === 'pendiente') nueva = saltar(nueva, i)
+  })
   return nueva
 }
 

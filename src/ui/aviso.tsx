@@ -13,7 +13,8 @@ export function ProveedorAviso({ children }: { children: ReactNode }) {
   const mostrar = useCallback<Ctx>((texto, deshacer, boton) => {
     window.clearTimeout(temporizador.current)
     setAviso({ id: Date.now(), texto, deshacer, boton })
-    temporizador.current = window.setTimeout(() => setAviso(null), deshacer ? 4500 : 2800)
+    // Los textos largos se quedan más: da tiempo a leerlos con calma.
+    temporizador.current = window.setTimeout(() => setAviso(null), Math.max(deshacer ? 4500 : 2800, texto.length * 60))
   }, [])
   useEffect(() => () => window.clearTimeout(temporizador.current), [])
   // Al cambiar de pestaña o de pantalla el aviso ya no viene a cuento: se cierra.

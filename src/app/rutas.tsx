@@ -45,6 +45,7 @@ export const PANTALLAS: { [C in CodigoPantalla]: P<C> } = {
   cuerpo: perezosa(() => import('../pantallas/progreso/Cuerpo').then(m => m.Cuerpo)),
   registrar: perezosa(() => import('../pantallas/progreso/Registrar').then(m => m.Registrar)),
   fotos: perezosa(() => import('../pantallas/progreso/Fotos').then(m => m.Fotos)),
+  'camara-foto': perezosa(() => import('../pantallas/progreso/CamaraFoto').then(m => m.CamaraFoto)),
   objetivos: perezosa(() => import('../pantallas/progreso/Objetivos').then(m => m.Objetivos)),
   pasos: perezosa(() => import('../pantallas/progreso/Pasos').then(m => m.Pasos)),
   perfil: perezosa(() => import('../pantallas/perfil/Perfil').then(m => m.Perfil)),
@@ -56,6 +57,7 @@ export const PANTALLAS: { [C in CodigoPantalla]: P<C> } = {
 
 export const HOJAS: { [C in CodigoHoja]: P<C> } = {
   'hoja-peso': HojaPeso,
+  'hoja-dia': perezosa(() => import('../pantallas/inicio/HojaDia').then(m => m.HojaDia)),
   'hoja-empezar': perezosa(() => import('../pantallas/entreno/HojaEmpezar').then(m => m.HojaEmpezar)),
   'hoja-ocupado': perezosa(() => import('../pantallas/entreno/HojaOcupado').then(m => m.HojaOcupado)),
   'hoja-lista': perezosa(() => import('../pantallas/entreno/HojaLista').then(m => m.HojaLista)),
@@ -83,4 +85,5 @@ export const HOJAS: { [C in CodigoHoja]: P<C> } = {
   'hoja-modo-mayor': perezosa(() => import('../pantallas/rutina/HojasGenerar').then(m => m.HojaModoMayor)),
   'hoja-cardio': perezosa(() => import('../pantallas/progreso/HojaCardio').then(m => m.HojaCardio)),
   'hoja-pregunta': perezosa(() => import('../pantallas/perfil/Revision').then(m => m.HojaPregunta)),
+  'hoja-ajustes-energia': perezosa(() => import('../pantallas/comida/HistorialEnergia').then(m => m.HojaAjustesEnergia)),
 }

@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import type { Catalogo, Ejercicio, TextosCatalogo } from './tipos'
 import { propio } from '../dominio/claves'
+import { esAccesorioPolea, NOMBRE_ACCESORIO, tieneAccesorio } from './material'
 import { idioma, t, tk } from '../i18n'
 
 // El catálogo que ven las pantallas (`cache`) es el de RepDB más los ejercicios propios que no se han borrado.
@@ -118,8 +119,11 @@ export function useCatalogo(): Catalogo | null {
   return c
 }
 
-/** Se puede hacer en un gimnasio con este material. Los propios, siempre: el usuario los crea para lo que tiene. */
-export const hayEn = (e: Ejercicio, material: ReadonlySet<string>) => !!e.propio || !e.material || material.has(e.material)
+/**
+ * Se puede hacer en un gimnasio con este material, con el accesorio de polea que pida (ver catalogo/material). Los
+ * propios, siempre: el usuario los crea para lo que tiene.
+ */
+export const hayEn = (e: Ejercicio, material: ReadonlySet<string>) => !!e.propio || ((!e.material || material.has(e.material)) && tieneAccesorio(e, material))
 
 export function ejercicio(id: string | null | undefined): Ejercicio | undefined {
   return id ? indice.get(id) : undefined
@@ -153,7 +157,9 @@ export const NOMBRE_MATERIAL_PROPIO: Record<string, string> = { 'mio-maquina': t
 export function nombreMaterial(clave: string | null): string {
   if (!clave) return t('Peso corporal')
   const mio = propio(NOMBRE_MATERIAL_PROPIO, clave)
-  return mio ? t(mio) : (propio(cache?.material, clave)?.nombre ?? clave)
+  if (mio) return t(mio)
+  if (esAccesorioPolea(clave)) return t(NOMBRE_ACCESORIO[clave])
+  return propio(cache?.material, clave)?.nombre ?? clave
 }
 export const nombreMusculo = (clave: string) => propio(cache?.musculos, clave)?.nombre ?? clave
 export const etiqueta = (grupo: string, clave: string) => propio(propio(cache?.etiquetas, grupo), clave) ?? clave

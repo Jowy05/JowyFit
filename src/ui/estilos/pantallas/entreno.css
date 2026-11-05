@@ -152,6 +152,8 @@
 .ux-lista-otras .lnk{margin:0;padding:10px 2px;font-size:13.5px;font-weight:500;color:var(--muted)}
 .ux-lista-otras .lnk.ux-peligro{color:var(--bad)}
 
+/* «¿Dónde entrenas hoy?» (con más de un gimnasio) y el aviso de lo que se cambia, separados de «¿Cuánto tiempo tienes?». */
+.ux-gym-hoy{margin-bottom:16px}
 /* Hoja «Empezar»: la hora de salida como línea de texto («Sales a las 06:45 · cambiar»), sin recuadro. */
 .ux-sales{display:grid;gap:2px;padding:0 2px}
 .ux-sales p{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:15px;color:var(--ink)}

@@ -10,7 +10,7 @@ import { sugerenciaPara } from '../../datos/consultas'
 import { Chip, cx, Hoja, Ico, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta, type Rutas } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useGimnasio, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
+import { useGimnasio, useGimnasioDe, useMarcas, usePerfil, useRutina, useSesionEnCurso } from '../../datos/hooks'
 import { guardarRutina } from '../../datos/acciones/rutina'
 import { musculosComunes } from './comun'
 import { t, tk } from '../../i18n'
@@ -23,12 +23,15 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'hoja-elegir-ejercici
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
-  const g = useGimnasio()
   const marcas = useMarcas()
   const r = useRutina()
   const sesion = useSesionEnCurso()
   const d = ruta.d
   const modo = d.modo
+  // En el entreno manda el gimnasio de hoy (el elegido al empezar); en el plan, el activo.
+  const gActivo = useGimnasio()
+  const gSesion = useGimnasioDe(sesion?.gimnasioId)
+  const g = modo === 'sesion-anadir' || modo === 'sesion-cambiar' ? gSesion : gActivo
   const actual = ejercicio('id' in d ? d.id : undefined)
   const c = useCatalogo()
   // «Parecidos» compara el movimiento; uno propio solo dice su grupo, así que con él se ve todo.

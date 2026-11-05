@@ -4,15 +4,15 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { guardarSesion } from '../../datos/acciones/entreno'
 import { marcaDe } from '../../datos/repos'
 import { leerRutina, sugerenciaPara } from '../../datos/consultas'
-import { catalogoCargado, ejercicio, nombreMaterial } from '../../catalogo/catalogo'
+import { catalogoCargado, ejercicio, hayEn, nombreMaterial } from '../../catalogo/catalogo'
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import { alternativasDe } from '../../dominio/generador'
-import { irA, sustituir } from '../../dominio/sesion'
+import { irA, opcionesOcupado, sustituir } from '../../dominio/sesion'
 import { kg, textoKilos } from '../../dominio/formato'
 import { cx, Hoja, Ico, Th, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
-import { useGimnasio, useMarcas, usePerfil, useSesionEnCurso } from '../../datos/hooks'
+import { useGimnasioDe, useMarcas, usePerfil, useSesionEnCurso } from '../../datos/hooks'
 import { materialCorto } from '../rutina/comun'
 import { t } from '../../i18n'
 
@@ -21,7 +21,7 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'hoja-ocupado'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const s = useSesionEnCurso()
-  const g = useGimnasio()
+  const g = useGimnasioDe(s?.gimnasioId)
   const perfil = usePerfil()
   const marcas = useMarcas()
   const idx = ruta.d.idx
@@ -30,11 +30,16 @@ export function HojaOcupado({ ruta }: { ruta: Ruta<'hoja-ocupado'> }) {
     if (!s || !e) return [] as string[]
     const r = s.rutinaId != null ? await leerRutina(s.rutinaId) : undefined
     const b = r?.dias.flatMap(d => d.bloques).find(x => x.uid === e.uid)
-    const base = b?.alternativas.length ? b.alternativas : alternativasDe(e.planificado, { perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] })
-    // Solo alternativas que existen (un ejercicio propio de una copia de otra versión podría no estar).
-    return [e.planificado, ...base.filter(id => ejercicio(id))].filter((x, i, a) => a.indexOf(x) === i)
+    const entrada = { perfil, gimnasio: g ?? null, marcas, ejercicios: catalogoCargado()?.ejercicios ?? [] }
+    const base = b?.alternativas.length ? b.alternativas : alternativasDe(e.planificado, entrada)
+    // Solo alternativas que existen (un ejercicio propio de una copia de otra versión podría no estar) y que se pueden
+    // hacer en el gimnasio de hoy, con su accesorio de polea (las del plan se eligieron con el gimnasio de la rutina).
+    const material = g ? new Set(g.material) : null
+    const vale = (id: string) => { const x = ejercicio(id); return !!x && (id === e.ejercicio || !marcas.get(id)?.duele) && (!material || hayEn(x, material)) }
+    const enEntreno = new Set(s.ejercicios.filter((_, i) => i !== idx).map(x => x.ejercicio))
+    return opcionesOcupado(e, base, enEntreno, vale, () => alternativasDe(e.ejercicio, entrada))
     // El perfil, el gimnasio y las marcas llegan un instante después: hay que recalcular cuando llegan.
-  }, [s?.id, e?.uid, perfil, g?.id, marcas]) ?? []
+  }, [s?.id, e?.uid, e?.ejercicio, perfil, g?.id, marcas]) ?? []
   const actualEn = Math.max(0, plan.indexOf(e?.ejercicio ?? ''))
   const [paso, setPaso] = useState(actualEn + 1)
   useEffect(() => { setPaso(actualEn + 1) }, [plan.length, actualEn])

@@ -1,7 +1,9 @@
 // Catálogo de máquinas y material del gimnasio: tarjetas con imagen y casilla, por grupos.
 import { useMemo, useState } from 'react'
-import { catalogoCargado, imagenMaterial, nombreMaterial, normalizar } from '../../catalogo/catalogo'
+import { catalogoCargado, hayEn, imagenMaterial, nombreMaterial, normalizar } from '../../catalogo/catalogo'
 import { GRUPOS_MATERIAL } from '../../catalogo/clasificacion'
+import { conmutarMaterial, conmutarVarios, esAccesorioPolea, ICONO_ACCESORIO, materialConAccesorios, materialEfectivo, NOMBRE_BARRA } from '../../catalogo/material'
+import { propio } from '../../dominio/claves'
 import type { Gimnasio, Tramo } from '../../datos/tipos'
 import { mancuernasDisponibles } from '../../dominio/pesos'
 import { cx, Ico, Stepper, LARGO } from '../../ui/componentes'
@@ -16,15 +18,23 @@ function clavesUtiles(): Set<string> {
 
 export function ejerciciosDisponibles(material: string[]): number {
   const s = new Set(material)
-  return (catalogoCargado()?.ejercicios ?? []).filter(e => !e.material || s.has(e.material)).length
+  return (catalogoCargado()?.ejercicios ?? []).filter(e => hayEn(e, s)).length
 }
+
+/** Nombre en la tarjeta: las barras con su apellido («Barra olímpica»); el resto, como en toda la app. */
+const nombreTarjeta = (k: string) => { const b = propio(NOMBRE_BARRA, k); return b ? t(b) : nombreMaterial(k) }
 
 export function CatalogoMaterial({ material, onCambio }: { material: string[]; onCambio: (m: string[]) => void }) {
   const [q, setQ] = useState('')
   const utiles = useMemo(clavesUtiles, [])
-  const sel = new Set(material)
-  const conmutar = (k: string) => onCambio(sel.has(k) ? material.filter(x => x !== k) : [...material, k])
+  const conAccesorios = useMemo(() => materialConAccesorios(catalogoCargado()?.ejercicios ?? []), [])
+  // Sin ningún accesorio de polea marcado cuentan todos: así se ven.
+  const sel = new Set(materialEfectivo(material))
+  const conmutar = (k: string) => onCambio(conmutarMaterial(material, k))
   const filtro = normalizar(q)
+  // Los accesorios solo salen con la polea (o la máquina de jalón) marcada: sin ellas no sirven de nada.
+  const accesorios = [...conAccesorios].some(m => sel.has(m))
+  const visible = (k: string) => (esAccesorioPolea(k) ? accesorios : utiles.has(k)) && (!filtro || normalizar(nombreTarjeta(k)).includes(filtro))
   return (
     <>
       <label className="search">
@@ -33,16 +43,19 @@ export function CatalogoMaterial({ material, onCambio }: { material: string[]; o
       </label>
       <p className="small muted mt8">{t('Lo de peso corporal ya está siempre disponible.')}</p>
       {GRUPOS_MATERIAL.map((g, gi) => {
-        const claves = g.claves.filter(k => utiles.has(k) && (!filtro || normalizar(nombreMaterial(k)).includes(filtro)))
+        const claves = g.claves.filter(visible)
         if (!claves.length) return null
         const marcadas = claves.filter(k => sel.has(k)).length
-        const todo = () => onCambio(marcadas === claves.length ? material.filter(x => !claves.includes(x)) : [...new Set([...material, ...claves])])
+        const todo = () => onCambio(conmutarVarios(material, claves, marcadas !== claves.length))
         const rejilla = (
-          <div className="mqg">
-            {claves.map(k => <Tarjeta key={k} clave={k} on={sel.has(k)} onClick={() => conmutar(k)} />)}
-          </div>
+          <>
+            <div className="mqg">
+              {claves.map(k => <Tarjeta key={k} clave={k} on={sel.has(k)} onClick={() => conmutar(k)} />)}
+            </div>
+            {claves.some(esAccesorioPolea) && <p className="small muted mt8">{t('Lo que se engancha a la polea. Toda polea trae al menos un agarre.')}</p>}
+          </>
         )
-        if (gi < 2 || filtro) return (
+        if (gi < 3 || filtro) return (
           <div key={g.id}>
             <div className="grp-h"><b>{t(g.nombre)}</b><span className="mono small muted">{marcadas}/{claves.length}</span><button className="lnk" onClick={todo}>{marcadas === claves.length ? t('Quitar todo') : t('Marcar todo')}</button></div>
             {rejilla}
@@ -67,8 +80,8 @@ function Tarjeta({ clave, on, onClick }: { clave: string; on: boolean; onClick: 
   const img = imagenMaterial(clave)
   return (
     <button type="button" className={cx('mq', on && 'on')} aria-pressed={on} onClick={onClick}>
-      <span className="th c-gr">{img && !err ? <img src={img} alt="" loading="lazy" onError={() => setErr(true)} /> : <Ico n="barbell" b />}</span>
-      <b>{nombreMaterial(clave)}</b>
+      <span className="th c-gr">{img && !err ? <img src={img} alt="" loading="lazy" onError={() => setErr(true)} /> : <Ico n={esAccesorioPolea(clave) ? ICONO_ACCESORIO[clave] : 'barbell'} b />}</span>
+      <b>{nombreTarjeta(clave)}</b>
       <Ico n="check" b className="ck" />
     </button>
   )

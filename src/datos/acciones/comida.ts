@@ -1,16 +1,21 @@
 // Escrituras de la comida: lo apuntado, Mis comidas, los productos escaneados y los suplementos.
 import { db } from '../db'
-import type { Comida, Guardado, Perfil, Plantilla, Producto } from '../tipos'
+import type { Comida, Franja, Guardado, Perfil, Plantilla, Producto } from '../tipos'
 import { guardarPerfil } from '../repos'
 import { batidoDe, buscarOFF, conRacion, esBatido, franjaPorHora, type Racion } from '../../dominio/comida'
 import { horaActual, hoyISO } from '../../dominio/fechas'
 
 type Deshacer = () => void
 
+/** La franja de esa hora con las horas de inicio de Ajustes. */
+async function franjaDe(hora: string): Promise<Franja> {
+  return franjaPorHora(hora, (await db.ajustes.get('app'))?.franjasHoras)
+}
+
 /** Apunta una comida y devuelve cómo deshacerlo. */
 export async function apuntar(c: Omit<Comida, 'id' | 'hora' | 'franja'> & { hora?: string; franja?: Comida['franja'] }): Promise<Deshacer> {
   const hora = c.hora ?? horaActual()
-  const id = await db.comidas.add({ ...c, hora, franja: c.franja ?? franjaPorHora(hora) } as Comida)
+  const id = await db.comidas.add({ ...c, hora, franja: c.franja ?? (await franjaDe(hora)) } as Comida)
   return () => { void db.comidas.delete(id) }
 }
 
@@ -19,7 +24,7 @@ export async function apuntarPlantilla(p: Plantilla, r: Racion, fecha: string, f
   const v = conRacion(p, r, p.tipo)
   const tipo: Comida['tipo'] = p.tipo === 'comida' ? 'plantilla' : p.tipo
   const hora = horaActual()
-  const c = { fecha, hora, franja: franja ?? franjaPorHora(hora), nombre: p.nombre, ...v, racion: r, tipo, plantillaId: p.id, codigo: p.codigo, foto: p.foto } as Comida
+  const c = { fecha, hora, franja: franja ?? (await franjaDe(hora)), nombre: p.nombre, ...v, racion: r, tipo, plantillaId: p.id, codigo: p.codigo, foto: p.foto } as Comida
   const id = await db.transaction('rw', [db.comidas, db.plantillas], async () => {
     const id = await db.comidas.add(c)
     if (p.id != null) await db.plantillas.update(p.id, { usos: p.usos + 1 })
@@ -98,7 +103,8 @@ async function buscarAhora(): Promise<number> {
  * ya estaba tomado: mirar y marcar van en la misma transacción, así un doble toque no apunta dos batidos.
  */
 export async function marcarSuplemento(perfil: Perfil, fecha: string, s: string): Promise<Deshacer | null> {
-  const r = await db.transaction('rw', [db.suplementos, db.comidas], async () => {
+  // Con los ajustes en la transacción: la franja del batido sale de sus horas (y alternarSuplemento la abre igual).
+  const r = await db.transaction('rw', [db.suplementos, db.comidas, db.ajustes], async () => {
     const tomados = new Set((await db.suplementos.get(fecha))?.tomados ?? [])
     if (tomados.has(s)) return null
     tomados.add(s)
@@ -106,14 +112,14 @@ export async function marcarSuplemento(perfil: Perfil, fecha: string, s: string)
     if (!esBatido(s)) return { id: undefined }
     const b = batidoDe(perfil.batido)
     const hora = fecha === hoyISO() ? horaActual() : '17:30'
-    return { id: (await db.comidas.add({ fecha, hora, franja: franjaPorHora(hora), nombre: s, kcal: b.kcal, proteina: b.proteina, racion: 'N', tipo: 'plantilla', suplemento: s })) as number }
+    return { id: (await db.comidas.add({ fecha, hora, franja: await franjaDe(hora), nombre: s, kcal: b.kcal, proteina: b.proteina, racion: 'N', tipo: 'plantilla', suplemento: s })) as number }
   })
   return r && (() => { void desmarcarSuplemento(fecha, s, r.id) })
 }
 
 /** Un toque en el suplemento: si no estaba tomado lo marca (y devuelve cómo deshacerlo); si lo estaba, lo desmarca (null). */
 export async function alternarSuplemento(perfil: Perfil, fecha: string, s: string): Promise<Deshacer | null> {
-  return db.transaction('rw', [db.suplementos, db.comidas], async () => {
+  return db.transaction('rw', [db.suplementos, db.comidas, db.ajustes], async () => {
     if (!((await db.suplementos.get(fecha))?.tomados ?? []).includes(s)) return marcarSuplemento(perfil, fecha, s)
     await desmarcarSuplemento(fecha, s)
     return null

@@ -17,6 +17,28 @@ export function duracionPlan(r: Pick<Rutina, 'dias'>): string {
   return a === z ? `~${a} min` : `${a}-${z} min`
 }
 
+// Lo que la pareja de «dos seguidos» comparte: las series, si se quita con prisa y el descanso (va tras hacer los dos).
+const DE_LA_PAREJA = ['series', 'fueraEnCorta', 'descanso'] as const
+
+/** Cambia un bloque del día desde Editar plan (series, reps, descanso, esfuerzo…); su pareja de superserie le sigue. */
+export function editarBloque(bloques: Bloque[], uid: string, c: Partial<Bloque>): Bloque[] {
+  const comun: Partial<Bloque> = {}
+  for (const k of DE_LA_PAREJA) if (c[k] != null) Object.assign(comun, { [k]: c[k] })
+  const pareja = Object.keys(comun).length > 0
+  return bloques.map(b => (b.uid === uid ? { ...b, ...c } : pareja && b.superserie === uid ? { ...b, ...comun } : b))
+}
+
+/** Junta un bloque con el siguiente en «dos seguidos»: el segundo toma del primero lo que la pareja comparte. */
+export function unirConSiguiente(bloques: Bloque[], uid: string): Bloque[] {
+  const i = bloques.findIndex(x => x.uid === uid)
+  const b = bloques[i], sig = bloques[i + 1]
+  if (!b || !sig || sig.superserie || b.superserie) return bloques
+  const segundo: Bloque = { ...sig, superserie: b.uid }
+  // Lo que el primero no tiene (p. ej. sin «quitar con prisa») tampoco lo tiene el segundo.
+  for (const k of DE_LA_PAREJA) if (b[k] === undefined) delete (segundo as Partial<Bloque>)[k]; else Object.assign(segundo, { [k]: b[k] })
+  return bloques.map(x => (x.uid === b.uid ? { ...x, superserie: sig.uid } : x.uid === sig.uid ? segundo : x))
+}
+
 /** Agrupa los bloques en filas: sueltos o pares de superserie. */
 export function filas(bloques: Bloque[]): (Bloque | [Bloque, Bloque])[] {
   const out: (Bloque | [Bloque, Bloque])[] = []

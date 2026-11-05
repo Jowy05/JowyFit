@@ -7,19 +7,17 @@ import type { Foto, Guardado, Medicion } from '../../datos/tipos'
 import { num } from '../../dominio/formato'
 import { fechaCorta, horaActual, hoyISO, numeroSemana } from '../../dominio/fechas'
 import { ultimoValor } from '../../dominio/tendencias'
-import { hacerFoto } from '../../plataforma'
+import { ORDEN_POSES, siguientePose, type Pose } from '../../dominio/fotos'
+import { capacidades, hacerFoto } from '../../plataforma'
 import { Chip, cx, Ico, Pantalla, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useMediciones, usePerfil } from '../../datos/hooks'
-import { CabProgreso, useUrlsFotos } from './comun'
-import { t, tc, tn } from '../../i18n'
+import { CabProgreso, nombrePose, useUrlsFotos } from './comun'
+import { t, tn } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
-type Pose = Foto['pose']
-const POSES: { v: Pose }[] = [{ v: 'frente' }, { v: 'perfil' }, { v: 'espalda' }]
-/** Nombre de la pose en el idioma de la app («Perfil» de la foto no es la pestaña Perfil: va con contexto). */
-const nombrePose = (p: Pose) => (p === 'frente' ? t('Frente') : p === 'perfil' ? tc('pose', 'Perfil') : t('Espalda'))
+const POSES = ORDEN_POSES.map(v => ({ v }))
 const IMG = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' } as const
 
 export function Fotos() {
@@ -31,7 +29,8 @@ export function Fotos() {
   const ms = useMediciones() ?? []
   const urls = useUrlsFotos(fotos ?? [])
   const [pose, setPose] = useState<Pose>('frente')
-  const [poseNueva, setPoseNueva] = useState<Pose>('frente')
+  // La pose de la foto nueva: la elegida o, si no, la primera que falte hoy.
+  const [poseElegida, setPoseElegida] = useState<Pose | null>(null)
   const [idA, setIdA] = useState<number | null>(null)
   const [idB, setIdB] = useState<number | null>(null)
   const [corte, setCorte] = useState(50)
@@ -40,22 +39,26 @@ export function Fotos() {
   const hoy = hoyISO()
   const inicio = ajustes.inicio ?? perfil.creado.slice(0, 10)
   const cab = <CabProgreso actual="fotos" crumb={t('Lo que no dice la báscula')} />
+  const hechasHoy = (fotos ?? []).filter(f => f.fecha.startsWith(hoy)).map(f => f.pose)
+  const poseNueva = poseElegida ?? siguientePose(hechasHoy) ?? 'frente'
 
   const nueva = async () => {
-    const imagen = await hacerFoto()
+    // Con la cámara en vivo, su pantalla (silueta, temporizador y cámara delantera); si no, la cámara del sistema.
+    if (capacidades().camaraEnVivo) {
+      nav.ir('camara-foto', { pose: poseNueva, camara: ajustes.fotos?.camara ?? 'trasera', esperar: ajustes.fotos?.esperar ?? false })
+      return
+    }
+    const imagen = await hacerFoto(1280, ajustes.fotos?.camara)
     if (!imagen) return
     await guardarFoto({ fecha: `${hoy}T${horaActual()}`, pose: poseNueva, imagen })
     aviso(t('Foto guardada · {pose}', { pose: nombrePose(poseNueva).toLowerCase() }))
-    // Siguiente pose que falte hoy.
-    const hechasHoy = new Set([...(fotos ?? []).filter(f => f.fecha.startsWith(hoy)).map(f => f.pose), poseNueva])
-    const sig = POSES.find(p => !hechasHoy.has(p.v))
-    if (sig) setPoseNueva(sig.v)
+    setPoseElegida(siguientePose([...hechasHoy, poseNueva]))
   }
 
   const dock = (
     <div className="dock" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div className="chips mini" style={{ flex: 'none' }}>
-        {POSES.map(p => <Chip key={p.v} on={poseNueva === p.v} onClick={() => setPoseNueva(p.v)}>{nombrePose(p.v)}</Chip>)}
+        {POSES.map(p => <Chip key={p.v} on={poseNueva === p.v} onClick={() => setPoseElegida(p.v)}>{nombrePose(p.v)}</Chip>)}
       </div>
       <button className="btn" style={{ flex: 1, minWidth: 0 }} onClick={() => void nueva()} aria-label={t('Foto de {pose}', { pose: nombrePose(poseNueva).toLowerCase() })}><Ico n="camera" b />{t('Foto')}</button>
     </div>

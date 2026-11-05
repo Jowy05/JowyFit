@@ -5,8 +5,8 @@ import { cargarCatalogo } from '../catalogo/catalogo'
 import { cargarIdioma, t, tk } from '../i18n'
 import { leerPerfil, pedirPersistencia, prepararBase } from '../datos/repos'
 import { cargarPropios } from '../datos/acciones/propios'
-import { alPulsarAtras, alTocarAviso, ID_AVISO, marcarPlataforma, prepararSonido } from '../plataforma'
-import { ProveedorAviso } from '../ui/aviso'
+import { alFaltarPermisoCamara, alPulsarAtras, alTocarAviso, ID_AVISO, marcarPlataforma, prepararSonido } from '../plataforma'
+import { ProveedorAviso, useAviso } from '../ui/aviso'
 import { cx, Ico } from '../ui/componentes'
 import { letraGuardada } from '../ui/tema'
 import { ProveedorNav, queHaceAtras, useNav, type Pestana, type Ruta } from './nav'
@@ -86,6 +86,9 @@ function Marco() {
   enTutorial.current = tutorial
   const cerrarTutorial = useCallback(() => setTutorial(false), [])
   useEffect(() => alLanzarTutorial(() => setTutorial(true)), [])
+  // Cualquier «Hacer foto»: si la cámara no se abrió por falta de permiso, se dice por qué (sale la galería).
+  const aviso = useAviso()
+  useEffect(() => alFaltarPermisoCamara(() => aviso(t('La cámara no tiene permiso. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos → Cámara.'))), [aviso])
 
   useEffect(() => {
     const manejar = () => {
@@ -142,8 +145,8 @@ function Marco() {
   const Pant = PANTALLAS[ruta.p] as ComponentType<{ ruta: Ruta }>
   const hoja = nav.estado.hoja
   const Hoja = hoja ? (HOJAS[hoja.p] as ComponentType<{ ruta: Ruta }>) : undefined
-  // El escáner ocupa toda la pantalla: sin barra de pestañas tapando sus botones.
-  const full = !!nav.estado.completa || ruta.p === 'escaner'
+  // El escáner y la cámara de las fotos ocupan toda la pantalla: sin barra de pestañas tapando sus botones.
+  const full = !!nav.estado.completa || ruta.p === 'escaner' || ruta.p === 'camara-foto'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
   useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
   useEffect(() => { document.body.classList.toggle('con-hoja', !!hoja) }, [hoja])

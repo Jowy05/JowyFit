@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-11-0.cab': "<b>Versió 0.11.0</b> · 5 de novembre del 2026",
+  'nov.0-11-0.texto': "Entrenament i seguiment: apunta quins exercicis molesten i canvia’ls amb Desfer; el dissabte s’adapta al que falta aquella setmana. Tria gimnàs per a cada sessió i ajusta el descans i l’esforç al pla. Inici mostra el detall de cada dia, el progrés de la teva meta i celebracions. Fotos amb silueta, càmera frontal i temporitzador. A Android pots desar els entrenaments a Health Connect. A més, metes de repeticions, historial de l’objectiu d’energia i horaris dels àpats editables.",
   'nov.0-10-1.cab': "<b>Versió 0.10.1</b> · 3 de novembre del 2026",
   'nov.0-10-1.texto': "Arranjament: als mòbils amb Android 10 o anterior que no han actualitzat «Android System WebView», i als iPhone amb un iOS 15 o 16 antic, l’app ja no es queda en blanc: explica què cal actualitzar.",
   'nov.0-10-0.cab': "<b>Versió 0.10.0</b> · 3 de novembre del 2026",

@@ -108,4 +108,10 @@ export default {
   'revisiones': 'revisions',
   'Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.': "Sense permís per desar a Documents. Dona'l a la configuració del mòbil: Aplicacions → JowyFit → Permisos.",
   'lastre {antes} → {ahora} kg': 'llast {antes} → {ahora} kg',
+  // Cualquier «Hacer foto» en Android sin el permiso de la cámara
+  'La cámara no tiene permiso. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos → Cámara.': "La càmera no té permís. Dona'l als ajustos del mòbil: Aplicacions → JowyFit → Permisos → Càmera.",
+  'Los entrenos ya no se guardan en Health Connect': 'Els entrenaments ja no es desen a Health Connect',
+  'Sin permiso de Health Connect: los entrenos se quedan solo en la app': "Sense permís de Health Connect: els entrenaments es queden només a l'app",
+  'Cada entreno que termines se guardará en Health Connect': 'Cada entrenament que acabis es desarà a Health Connect',
+  'Guardar entrenos · permiso: {si}': 'Desar entrenaments · permís: {si}',
 } satisfies Diccionario

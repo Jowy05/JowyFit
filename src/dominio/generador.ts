@@ -3,6 +3,7 @@
 import type { Ejercicio } from '../catalogo/tipos'
 import { ES_LIBRE, ES_MAQUINA, HABITUALES, patron, tipoRegistro, type Patron } from '../catalogo/clasificacion'
 import { NOMBRE_NO_QUIERO, quitadoPor } from '../catalogo/grupos'
+import { hayEn } from '../catalogo/catalogo'
 import type { Bloque, Dia, DiaRutina, Gimnasio, MarcaEjercicio, Perfil, Rutina } from '../datos/tipos'
 import { DIAS } from './fechas'
 import { propio } from './claves'
@@ -86,10 +87,11 @@ const CON_APOYO = (e: Ejercicio) => ES_MAQUINA(e) || /(seated|supported|machine|
 
 const RANGO_HABITUAL = new Map(HABITUALES.map((id, i) => [id, i]))
 
-function disponible(e: Ejercicio, material: Set<string> | null): boolean {
-  if (e.propio || !e.material) return true
-  return material ? material.has(e.material) : ['dumbbell', 'barbell', 'cable', 'flat_bench', 'pull_up_bar', 'leg_press', 'smith_machine'].includes(e.material)
-}
+// Sin gimnasio: lo que tiene casi cualquiera (con la polea y todos sus accesorios).
+const MATERIAL_HABITUAL: ReadonlySet<string> = new Set(['dumbbell', 'barbell', 'cable', 'flat_bench', 'pull_up_bar', 'leg_press', 'smith_machine'])
+
+/** ¿Hay con qué hacerlo? El material del ejercicio y, en la polea, el accesorio que pide. */
+const disponible = (e: Ejercicio, material: Set<string> | null): boolean => hayEn(e, material ?? MATERIAL_HABITUAL)
 
 // Músculos que de verdad tiran en un remo o un jalón.
 const TIRAN = ['latissimus_dorsi', 'rhomboids', 'trapezius', 'posterior_deltoid', 'teres_major']
@@ -340,7 +342,7 @@ export function ajustarATiempo(bloques: Bloque[], prioridades: Map<string, numbe
  * Patrones parecidos para cuando el gimnasio no tiene nada para un hueco (sin material no hay remos y el día de
  * «Tirón» se quedaría solo con una plancha). Solo se usan si el patrón propio está vacío.
  */
-const RESPALDO: Partial<Record<Patron, Patron[]>> = {
+export const RESPALDO: Partial<Record<Patron, Patron[]>> = {
   rodilla: ['cuadriceps', 'cadera', 'gluteo'],
   cadera: ['gluteo', 'femoral', 'rodilla'],
   'empuje-h': ['pecho-aisl', 'empuje-v', 'triceps'],
@@ -499,7 +501,7 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   if (x.perfil.noQuiero?.length) porque.push(t('Sin lo que no quieres hacer: {grupos}.', { grupos: x.perfil.noQuiero.map(g => t(NOMBRE_NO_QUIERO[g])).join(', ').toLowerCase() }))
   const evitados = [...x.marcas.values()].filter(m => m.odiado || m.duele).length
   if (evitados) porque.push(tn(evitados, '{n} ejercicio que no te gusta o te duele, fuera.', '{n} ejercicios que no te gustan o te duelen, fuera.'))
-  if (opcionales.length) porque.push(t('{dia} opcional: brazos, hombros y core.', { dia: `${DIAS[opcionales[0]!]![0]!.toUpperCase()}${DIAS[opcionales[0]!]!.slice(1)}` }))
+  if (opcionales.length) porque.push(t('{dia} opcional: lo que te falte de la semana (si vas al día, brazos, hombros y core).', { dia: `${DIAS[opcionales[0]!]![0]!.toUpperCase()}${DIAS[opcionales[0]!]!.slice(1)}` }))
 
   return {
     creada: new Date().toISOString(),
@@ -580,6 +582,44 @@ export function tiemposReales(sesiones: { ejercicios: { ejercicio: string; super
     out.set(id, { serie: 40, descanso: Math.max(30, Math.round(medio - 40)) })
   }
   return out
+}
+
+// Sábado «lo que falte»: qué huecos llena cada zona. Brazos y hombros van en pareja, como en la sesión extra.
+const HUECOS_ZONA: Record<ZonaVolumen, { patron: Patron; papel: Papel; par?: number }[]> = {
+  pecho: [{ patron: 'empuje-h', papel: 'secundario' }, { patron: 'pecho-aisl', papel: 'accesorio' }],
+  espalda: [{ patron: 'tiron-v', papel: 'secundario' }, { patron: 'tiron-h', papel: 'secundario' }],
+  hombros: [{ patron: 'hombro-lat', papel: 'accesorio', par: 2 }, { patron: 'hombro-post', papel: 'accesorio', par: 2 }],
+  brazos: [{ patron: 'biceps', papel: 'accesorio', par: 1 }, { patron: 'triceps', papel: 'accesorio', par: 1 }],
+  abdomen: [{ patron: 'core', papel: 'core' }],
+  gluteo: [{ patron: 'cadera', papel: 'secundario' }, { patron: 'gluteo', papel: 'accesorio' }],
+  piernas: [{ patron: 'rodilla', papel: 'secundario' }, { patron: 'femoral', papel: 'accesorio' }],
+  gemelos: [{ patron: 'gemelo', papel: 'accesorio' }],
+}
+/** Ejercicios como mucho en el sábado «lo que falte» (luego ajustarATiempo recorta si no cabe). */
+const MAX_HUECOS_FALTA = 6
+
+/**
+ * El día opcional armado con lo que falta de la semana (`faltan`: series por zona, de más a menos). Cada zona pone un
+ * ejercicio (dos si faltan 6 o más, y siempre la pareja en brazos y hombros) con las series que faltan repartidas
+ * (2 a 4). Se prefieren ejercicios distintos a los de la semana (`semana`). Null si no falta nada.
+ */
+export function generarDiaFalta(x: EntradaGenerador, base: Pick<DiaRutina, 'letra' | 'nombre' | 'dia'>, faltan: { zona: ZonaVolumen; faltan: number }[], semana: Set<string> = new Set()): DiaRutina | null {
+  const huecos: Hueco[] = []
+  const series = contexto(x).series
+  for (const { zona, faltan: n } of faltan) {
+    const caben = MAX_HUECOS_FALTA - huecos.length
+    if (n <= 0 || caben <= 0) continue
+    const todos = HUECOS_ZONA[zona]
+    // Si a una zona de pareja solo le cabe uno, va suelto (sin «dos seguidos»).
+    const usar = (todos.some(h => h.par != null) || n >= 6 ? todos : todos.slice(0, 1)).slice(0, caben).map(h => (caben < 2 ? { ...h, par: undefined } : h))
+    series.set(zona, Math.min(Math.max(Math.round(n / usar.length), 2), 4))
+    // La zona a la que más le falta no se quita aunque no quepa en el tiempo; el resto, por orden.
+    for (const h of usar) huecos.push(P(h.patron, h.papel, huecos.length === 0 ? 1 : Math.min(2 + huecos.length, 5), h.par))
+  }
+  if (!huecos.length) return null
+  const material = x.gimnasio ? new Set(x.gimnasio.material) : null
+  const dia = generarDia({ letra: base.letra, nombre: base.nombre, huecos }, x, aptosPorPatron(x, material), new Set(semana), base.dia, true)
+  return dia.bloques.length ? dia : null
 }
 
 /** Alternativas B y C para un ejercicio cualquiera (mismo patrón, otro material, disponibles). */

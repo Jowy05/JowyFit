@@ -4,7 +4,10 @@ import { ajustesBD, altaRapida, cerrarHoja, comidas, comprobar, entorno, escenar
 escenario('inicio a fondo: días de la semana, atajos, + Peso con báscula, pendientes de hoy, pasar al sábado y ¿Voy bien?', async () => {
   await altaRapida('2026-10-13T05:20:00')
   await revisarAqui('inicio')
+  // Tocar un día abre su resumen: el entreno que toca, la comida y los pasos.
   await t('pulsarSel', '.wd.today')
+  await ver('Comida y pasos')
+  await cerrarHoja()
   await pulsar('+ Comer o beber')
   await ver('Toca lo que has tomado')
   await cerrarHoja()

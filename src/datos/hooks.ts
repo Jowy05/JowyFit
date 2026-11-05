@@ -47,6 +47,11 @@ export function useGimnasio(): Guardado<Gimnasio> | undefined {
   return useLiveQuery(gimnasioActivo, [])
 }
 
+/** El gimnasio de un entreno (el que se eligió en «Empezar»); si no tiene o ya no existe, el activo. */
+export function useGimnasioDe(id: number | null | undefined): Guardado<Gimnasio> | undefined {
+  return useLiveQuery(async () => (id != null ? await db.gimnasios.get(id) : undefined) ?? gimnasioActivo(), [id])
+}
+
 /** undefined = cargando · null = no hay */
 export function useRutina(): Guardado<Rutina> | undefined | null {
   return useLiveQuery(async () => (await rutinaActiva()) ?? null, [])

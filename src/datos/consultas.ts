@@ -1,16 +1,23 @@
 // Lecturas de la base para las pantallas (que nunca leen db directamente): las de una tabla, arriba, y las que
 // combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
+import { gimnasioActivo, rutinaActiva } from './repos'
 import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
-import { ejercicio } from '../catalogo/catalogo'
+import { catalogoCargado, ejercicio, hayEn } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
+import { quitadoPor } from '../catalogo/grupos'
+import type { Ejercicio } from '../catalogo/tipos'
 import { pesosPara } from '../dominio/pesos'
 import { bloqueObjetivo, conPartida, desdeReferencia, historialEn, sugerir, type Hecho, type Sugerencia } from '../dominio/progresion'
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
-import { edad, hoyISO, sumarDias } from '../dominio/fechas'
+import { edad, hoyISO, lunesDe, semanaDe, sumarDias } from '../dominio/fechas'
+import { generarDiaFalta, patronGenerador } from '../dominio/generador'
+import { alternativaSinMolestia, molestiasRepetidas, zonaMolestia } from '../dominio/molestias'
+import { restricciones } from '../dominio/salud'
+import { faltanSemana, ZONA_DE_PATRON, type ZonaVolumen } from '../dominio/volumen'
 import { objetivos } from '../dominio/calculos'
 import { basalDia, kcalPasos, kcalSesion, type GastoEntreno } from '../dominio/energia'
-import { grasaActual, hitosDominadas, pesoMaximo, seriesDe, ultimoValor } from '../dominio/tendencias'
+import { actualEjercicio, grasaActual, hitosDominadas, ultimoValor } from '../dominio/tendencias'
 import { kg } from '../dominio/formato'
 import { hayPasos } from '../dominio/cardio'
 import { t } from '../i18n'
@@ -194,12 +201,12 @@ type GastoDia = { basal: number; formula: 'katch' | 'mifflin'; peso: number; gra
  * (los pasos y los entrenos de ese día, contando solo las series hechas). Null si falta el peso o la altura.
  */
 export async function gastoDelDia(p: Perfil, fecha: string): Promise<GastoDia | null> {
-  const [ms, dia, delDia] = await Promise.all([db.mediciones.orderBy('fecha').toArray(), db.pasos.get(fecha), db.sesiones.where('fecha').equals(fecha).toArray()])
+  const [ms, dia, delDia, a] = await Promise.all([db.mediciones.orderBy('fecha').toArray(), db.pasos.get(fecha), db.sesiones.where('fecha').equals(fecha).toArray(), db.ajustes.get('app')])
   const peso = [...ms].reverse().find(m => m.pesoKg != null)?.pesoKg ?? null
   if (peso == null || !(p.alturaCm > 0)) return null
   const grasa = grasaActual(ms, p, hoyISO())
   const b = basalDia({ pesoKg: peso, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, grasaPct: grasa })
-  const pasos = dia ? kcalPasos(dia.pasos, peso, p.alturaCm, dia.troteKm ?? 0) : 0
+  const pasos = dia ? kcalPasos(dia.pasos, peso, p.alturaCm, dia.troteKm ?? 0, a?.pasosPorKm) : 0
   const sesiones = delDia.filter(s => s.estado !== 'cancelada')
   const entreno: GastoEntreno = { hecho: 0, plan: 0, saltado: 0 }
   for (const s of sesiones) {
@@ -223,17 +230,24 @@ export async function objetivosEnergia(p: Perfil): Promise<ObjetivosEnergia> {
 /** Valor actual de una meta (null si no se puede saber). */
 export async function valorActualMeta(tipo: Meta['tipo'], ejercicioId: string | undefined, perfil: Perfil): Promise<number | null> {
   if (tipo === 'libre') return null
-  if (tipo === 'ejercicio' || tipo === 'dominadas') {
+  if (tipo === 'ejercicio' || tipo === 'reps' || tipo === 'dominadas') {
     const ses = await sesionesHechas()
     if (tipo === 'dominadas') return hitosDominadas(ses).estrictas
     if (!ejercicioId) return null
-    const pesos = ses.map(s => pesoMaximo(seriesDe(s, ejercicioId))).filter((v): v is number => v != null)
-    return pesos.length ? Math.max(...pesos) : null
+    return actualEjercicio(ses, ejercicioId, tipo === 'reps' ? 'reps' : 'kg')
   }
   const ms = await db.mediciones.toArray()
   if (tipo === 'cintura') return ultimoValor(ms, m => m.perimetros?.cintura)?.valor ?? null
   if (tipo === 'peso') return ultimoValor(ms, m => m.pesoKg)?.valor ?? null
   return grasaActual(ms, perfil, hoyISO())
+}
+
+export type DatosMetas = { metas: Guardado<Meta>[]; ms: Guardado<Medicion>[]; ses: Guardado<Sesion>[] }
+
+/** Lo que hace falta para saber cómo va cada meta: las metas, las mediciones y las sesiones hechas. */
+export async function datosMetas(): Promise<DatosMetas> {
+  const [metas, ms, ses] = await Promise.all([leerMetas(), leerMediciones(), sesionesHechas()])
+  return { metas, ms, ses }
 }
 
 /**
@@ -252,4 +266,67 @@ export async function datosSemana(lunes: string, p: Perfil) {
 export async function sesionDeHoy(): Promise<Guardado<Sesion> | undefined> {
   const hoy = hoyISO()
   return (await db.sesiones.where('fecha').equals(hoy).toArray()).find(s => s.estado === 'hecha')
+}
+
+// ── Molestias y sábado «lo que falte» ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Ejercicios que la rutina podría poner en lugar de otro: los del gimnasio, sin lo que no quiere hacer, sin los
+ * marcados «no me gusta» o «me duele» y sin lo que quitan sus molestias y condiciones (como el generador).
+ */
+export async function candidatosRutina(gimnasio?: Gimnasio | null): Promise<Ejercicio[]> {
+  const c = catalogoCargado()
+  const [p, g, marcas] = await Promise.all([db.perfil.get('yo'), gimnasio === undefined ? gimnasioActivo() : gimnasio, db.marcas.toArray()])
+  if (!c || !p) return []
+  const material = new Set(g?.material ?? [])
+  const evitados = new Set(marcas.filter(m => m.odiado || m.duele).map(m => m.id))
+  const salud = restricciones(p)
+  return c.ejercicios.filter(e => e.categoria === 'strength' && !evitados.has(e.id) && (!g || hayEn(e, material)) && !quitadoPor(e, p.noQuiero)
+    && !salud.fuera(e) && (!e.propio || e.propio.rutinaAuto))
+}
+
+export type PropuestaMolestia = { ejercicio: string; sesion: number; otro: string | null; zona: ReturnType<typeof zonaMolestia> }
+
+/**
+ * Ejercicios de la rutina activa que han molestado varios entrenos seguidos, con el que se propone en su lugar (o
+ * null: no hay otro y se quitaría). Para la tarjeta de Inicio.
+ */
+export async function propuestasMolestia(): Promise<PropuestaMolestia[]> {
+  const r = await rutinaActiva()
+  if (!r) return []
+  const [sesiones, a] = await Promise.all([sesionesHechas(), db.ajustes.get('app')])
+  const plan = new Set(r.dias.flatMap(d => d.bloques.map(b => b.ejercicio)))
+  const repetidas = molestiasRepetidas(sesiones, plan, a?.molestiasVistas ?? [])
+  if (!repetidas.length) return []
+  const candidatos = await candidatosRutina()
+  return repetidas.map(({ ejercicio: id, sesion }) => {
+    const e = ejercicio(id)
+    const d = r.dias.find(x => x.bloques.some(b => b.ejercicio === id))
+    const b = d?.bloques.find(x => x.ejercicio === id)
+    const zona = e ? zonaMolestia(e) : null
+    const otro = e && d && b ? alternativaSinMolestia(e, candidatos, { zona, preferidos: b.alternativas, ocupados: new Set(d.bloques.map(x => x.ejercicio)) }) : null
+    return { ejercicio: id, sesion, otro: otro?.id ?? null, zona }
+  })
+}
+
+/** Zona de volumen que trabaja un ejercicio (por su patrón), para contar las series de la semana. */
+const zonaVolumen = (id: string): ZonaVolumen | undefined => { const e = ejercicio(id); return e ? ZONA_DE_PATRON[patronGenerador(e)] : undefined }
+
+/**
+ * El día opcional de hoy armado con lo que falta de la semana (series por zona hechas frente a las que tocan), y las
+ * zonas que llena. Null si no falta nada o no se puede armar (sin catálogo): entonces vale el día de la rutina.
+ */
+export async function loQueFalta(dia: DiaRutina, r: Rutina, hoy = hoyISO()): Promise<{ dia: DiaRutina; zonas: ZonaVolumen[] } | null> {
+  const c = catalogoCargado()
+  const p = await db.perfil.get('yo')
+  if (!c || !p || !dia.opcional) return null
+  const [sesiones, a, g, marcas] = await Promise.all([sesionesEntre(lunesDe(hoy), hoy), db.ajustes.get('app'), gimnasioActivo(), db.marcas.toArray()])
+  const faltan = faltanSemana({ rutina: r, perfil: p, sesiones, dias: semanaDe(hoy).filter(f => f <= hoy), zonaDe: zonaVolumen })
+  if (!faltan.length) return null
+  const descansos = a ? { compuesto: a.descansoCompuesto, aislamiento: a.descansoAislamiento } : undefined
+  const semana = new Set(r.dias.filter(d => !d.opcional).flatMap(d => d.bloques.map(b => b.ejercicio)))
+  const nuevo = generarDiaFalta({ perfil: p, gimnasio: g ?? null, marcas: new Map(marcas.map(m => [m.id, m])), ejercicios: c.ejercicios, calibracion: r.calibracion, descansos }, dia, faltan, semana)
+  if (!nuevo) return null
+  const zonas = faltan.map(f => f.zona).filter(z => nuevo.bloques.some(b => zonaVolumen(b.ejercicio) === z))
+  return { dia: nuevo, zonas }
 }

@@ -147,7 +147,9 @@ export function reducirNav(s: EstadoNav, a: AccionNav): EstadoNav {
     case 'pestana': {
       // Tocar la pestaña activa vuelve a su raíz.
       if (a.pestana === s.pestana) return { ...s, hoja: null, pilas: { ...s.pilas, [a.pestana]: [RAIZ[a.pestana]] } }
-      return { ...s, pestana: a.pestana, hoja: null }
+      // Al volver a otra pestaña se llega a su pantalla de entrada, no a lo que se abrió dentro (Pasos, Ajustes…).
+      // Solo se recuerda la subpestaña de arriba (Fuerza, Mis comidas…), que es la primera de la pila.
+      return { ...s, pestana: a.pestana, hoja: null, pilas: { ...s.pilas, [a.pestana]: s.pilas[a.pestana].slice(0, 1) } }
     }
     case 'raiz':
       return { ...s, pestana: a.pestana, hoja: null, completa: null, pilas: { ...s.pilas, [a.pestana]: [RAIZ[a.pestana]] } }

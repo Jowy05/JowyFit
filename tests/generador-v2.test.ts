@@ -13,9 +13,9 @@ import { cardioSinImpacto, hayPasos, metaMovimiento, pasosDePartida } from '../s
 import { proponerModoMayor } from '../src/dominio/modoMayor'
 import { aplicarCambios, cambiosRevision, CARGA_SUAVE, CARGA_VUELTA, doloresTrasRevision, textoCambio } from '../src/dominio/revision'
 import { tarjetaCola, type EstadoDia } from '../src/dominio/semana'
-import { generarRutina } from '../src/dominio/generador'
+import { generarRutina, patronGenerador } from '../src/dominio/generador'
 import { deGrupo, quitadoPor } from '../src/catalogo/grupos'
-import { ejercicio } from '../src/catalogo/catalogo'
+import { catalogoCargado, ejercicio } from '../src/catalogo/catalogo'
 
 const bloque = (uid: string, x: Partial<Bloque> = {}): Bloque => ({ uid, ejercicio: uid, alternativas: [], series: 3, repsMin: 8, repsMax: 12, rpe: 8, descanso: 90, registro: 'peso', ...x })
 const dia = (letra: string, bloques: Bloque[] = [bloque(`${letra}1`)], x: Partial<DiaRutina> = {}): DiaRutina => ({ letra, nombre: `Día ${letra}`, dia: null, opcional: false, bloques, ...x })
@@ -236,6 +236,21 @@ describe.skipIf(!hayCatalogo)('revisión semanal: los cambios en la rutina', () 
 
   it('el impacto se mira por palabras enteras: «crunch» no es correr', () => {
     expect(cargaZona('rodillas', ejercicio('cable-crunch')!)).toBe(false)
+  })
+
+  it('la sentadilla que la rodilla ya no permite pasa a uno de un patrón parecido, distinto de los del día', () => {
+    const todos = catalogoCargado()!.ejercicios.filter(e => e.categoria === 'strength')
+    const conDolor = { ...perfil, dolores: [dolor({ cuanto: 'regular' })] }
+    const salud = restricciones(conDolor)
+    expect(salud.fuera(ejercicio('squat')!)).toBe('rodillas')
+    const r = rut([bloque('b1', { ejercicio: 'squat' }), bloque('b2', { ejercicio: 'romanian-deadlift' })])
+    const [cambio] = cambiosRevision(r, conDolor, { ejercicio, candidatos: () => todos, zonasPeor: ['rodillas'], zonasMejor: [], activos: [] })
+    expect(cambio!.uid).toBe('b1')
+    const otro = ejercicio(cambio!.despues.ejercicio)!
+    expect(salud.fuera(otro)).toBeNull()
+    expect(['squat', 'romanian-deadlift']).not.toContain(otro.id)
+    expect(['rodilla', 'cuadriceps', 'cadera', 'gluteo']).toContain(patronGenerador(otro))
+    expect(cambio!.despues.series).toBe(3)
   })
 })
 

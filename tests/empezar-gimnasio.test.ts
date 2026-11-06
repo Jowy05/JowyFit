@@ -2,7 +2,7 @@
 // (apuntado como cambio, sin tocar la rutina) y usa sus pesos. Y las cuentas puras que lo deciden.
 import { beforeEach, describe, expect, it } from 'vitest'
 import { catalogoReal, hayCatalogo } from './ayuda'
-import { hayEn } from '../src/catalogo/catalogo'
+import { ejercicio, hayEn } from '../src/catalogo/catalogo'
 import { alternativasDe } from '../src/dominio/generador'
 import { TABLAS, db } from '../src/datos/db'
 import { gimnasioNuevo, guardarAjustes, perfilPorDefecto, rutinaActiva } from '../src/datos/repos'
@@ -138,6 +138,15 @@ describe.skipIf(!hayCatalogo)('empezar en otro gimnasio', () => {
     // En la corta no cuenta el que se quita.
     const corta = cambiosEnGimnasio(bloquesDeVersion(d, 'corta'), hotel, perfilPorDefecto(), new Map())
     expect(corta.has('b3')).toBe(false)
+  })
+  it('sin nada del mismo patrón en el gimnasio (jalón sin polea ni barra), uno de un patrón parecido', () => {
+    const casa = gym('Casa', { material: ['dumbbell', 'flat_bench'] })
+    const d = dia([bloque('b1', 'lat-pulldown'), bloque('b2', 'single-arm-chest-supported-dumbbell-row')])
+    const c = cambiosEnGimnasio(bloquesDeVersion(d, 'normal'), casa, perfilPorDefecto(), new Map())
+    const otro = c.get('b1')?.ejercicio
+    expect(otro).toBeDefined()
+    expect(otro).not.toBe('single-arm-chest-supported-dumbbell-row')
+    expect(hayEn(ejercicio(otro!)!, new Set(casa.material))).toBe(true)
   })
   it('«Ocupado» tras un cambio por material ofrece alternativas que se pueden hacer allí', async () => {
     const casa = (await db.gimnasios.add(gym('Basic', {}))) as number

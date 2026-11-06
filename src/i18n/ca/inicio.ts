@@ -7,9 +7,7 @@ export default {
   '{dia} {fecha} · semana {n}': '{dia} {fecha} · setmana {n}',
   'Ajustes': 'Configuració',
   'Hecho': 'Fet',
-  'Plan': 'Pla',
   'Opcional': 'Opcional',
-  'Perdido': 'Perdut',
   'Descanso': 'Descans',
   // Inicio: hoy te toca
   'Hoy te toca': 'Avui et toca',
@@ -426,7 +424,6 @@ export default {
   'Hoy no entrenes. Puedes terminar el alta, pero no te propondremos rutina hasta que lo desmarques en Perfil → Salud, cuando tu médico te dé el visto bueno.': "Avui no entrenis. Pots acabar de donar-te d'alta, però no et proposarem cap rutina fins que ho desmarquis a Perfil → Salut, quan el teu metge et doni el vistiplau.",
   '¿Te duele algo?': 'Et fa mal alguna cosa?',
   'Toca lo que te duela o te moleste. Si no te duele nada, sigue.': 'Toca el que et faci mal o et molesti. Si no et fa mal res, continua.',
-  'Sin entreno': 'Sense entrenament',
   'Te toca': 'Et toca',
   'Ver la cola': 'Veure la cua',
   'Hoy no entrenes': 'Avui no entrenis',

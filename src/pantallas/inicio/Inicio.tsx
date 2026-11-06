@@ -87,14 +87,6 @@ export function Inicio() {
             </button>
           ))}
         </div>
-        <p className="legend mt8">
-          <span><Ico n="check" b className="okc" />{t('Hecho')}</span>
-          <span><Ico n="circle" b className="blue" />{t('Plan')}</span>
-          <span><Ico n="circle-dashed" />{t('Opcional')}</span>
-          {!cola && <span><Ico n="x" b className="badc" />{t('Perdido')}</span>}
-          {cola && <span><Ico n="minus" b />{t('Sin entreno')}</span>}
-          {!cola && <span><Ico n="minus" b />{t('Descanso')}</span>}
-        </p>
       </Cab>
 
       <div className="pg">

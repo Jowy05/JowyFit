@@ -226,6 +226,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-12-0.cab': "<b>Versió 0.12.0</b> · 6 de novembre del 2026",
+  'nov.0-12-0.texto': "Entrenament: l’avís de final del descans arriba a l’hora a Android encara que el mòbil estigui en repòs. En acabar, «Una més?» et deixa afegir una sèrie o un altre exercici. El tauler de l’entrenament queda sempre a baix i, en canviar de pestanya, tornes a la seva pantalla principal. En un altre gimnàs, si un exercici no es pot fer i no n’hi ha un d’igual, es canvia per un de semblant; i la revisió setmanal substitueix els exercicis que una molèstia ja no permet.",
   'nov.0-11-0.cab': "<b>Versió 0.11.0</b> · 5 de novembre del 2026",
   'nov.0-11-0.texto': "Entrenament i seguiment: apunta quins exercicis molesten i canvia’ls amb Desfer; el dissabte s’adapta al que falta aquella setmana. Tria gimnàs per a cada sessió i ajusta el descans i l’esforç al pla. Inici mostra el detall de cada dia, el progrés de la teva meta i celebracions. Fotos amb silueta, càmera frontal i temporitzador. A Android pots desar els entrenaments a Health Connect. A més, metes de repeticions, historial de l’objectiu d’energia i horaris dels àpats editables.",
   'nov.0-10-1.cab': "<b>Versió 0.10.1</b> · 3 de novembre del 2026",

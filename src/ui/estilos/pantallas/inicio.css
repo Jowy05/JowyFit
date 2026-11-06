@@ -8,8 +8,6 @@
 .wd.off{background:transparent}
 .wd.today{background:var(--go);border-color:var(--go);color:var(--on-go)}
 .wd.today span,.wd.today i{color:var(--on-go)}
-.hd .legend{margin-top:8px}
-.hd .legend i{font-size:13px}
 .today{overflow:hidden}
 .today-hero{position:relative;padding:14px 14px 12px;background:linear-gradient(120deg,var(--blue-t),transparent 72%);border-bottom:1px solid var(--line);overflow:hidden}
 .today-hero h3{font-size:29px;margin-top:8px;position:relative}

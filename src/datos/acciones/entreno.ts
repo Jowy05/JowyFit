@@ -11,7 +11,7 @@ import { esRecord } from '../../dominio/progresion'
 import { apuntarSerie, bloquesDeVersion, cambiosPorMaterial, conCambio, corregirSerie, crearSesion, indiceActual, recortarACorta, type CambioMaterial, type DatosSerie } from '../../dominio/sesion'
 import { diaMinimo } from '../../dominio/cola'
 import { deISO, diaSemana, hoyISO, lunesDe, sumarDias } from '../../dominio/fechas'
-import { alternativasDe, bloqueNuevo, patronGenerador } from '../../dominio/generador'
+import { alternativasDe, bloqueNuevo, patronGenerador, respaldoDe } from '../../dominio/generador'
 import { ZONA_DE_PATRON } from '../../dominio/volumen'
 import { kcalSesion } from '../../dominio/energia'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -61,7 +61,11 @@ export function cambiosEnGimnasio(bloques: readonly Bloque[], g: Gimnasio, perfi
   const material = new Set(g.material)
   const sePuede = (id: string) => { const x = ejercicio(id); return x ? hayEn(x, material) : null }
   const entrada = { perfil: perfil ?? perfilPorDefecto(), gimnasio: g, marcas, ejercicios: c.ejercicios }
-  const ids = cambiosPorMaterial(bloques, sePuede, b => alternativasDe(b.ejercicio, entrada))
+  // Primero las del mismo patrón; si ninguna se puede, una de un patrón parecido antes que dejar uno imposible.
+  const ids = cambiosPorMaterial(bloques, sePuede, (b, enDia) => {
+    const otra = respaldoDe(b.ejercicio, entrada, enDia)
+    return [...alternativasDe(b.ejercicio, entrada), ...(otra ? [otra] : [])]
+  })
   const deUid = new Map(bloques.map(b => [b.uid, b]))
   return new Map([...ids].map(([uid, id]) => {
     const registro = tipoRegistro(ejercicio(id)!)

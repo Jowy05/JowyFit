@@ -21,6 +21,9 @@
             </intent-filter>
         </activity>
 
+        <!-- Fin del descanso: la alarma de reloj de AvisoDescanso.java llega aquí y saca la notificación. -->
+        <receiver android:name=".FinDescanso" android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

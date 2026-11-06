@@ -22,3 +22,14 @@ describe('botón atrás del móvil', () => {
     expect(queHaceAtras(reducirNav(estadoInicial(), { t: 'completa', ruta: { p: 'fin-entreno', d: { id: 1 } } }))).toBe('atras')
   })
 })
+
+describe('pestañas de abajo', () => {
+  it('al volver a una pestaña se llega a su entrada (con la subpestaña de arriba), no a lo que se abrió dentro', () => {
+    // Inicio → «Pasos» (dentro de Progreso, que estaba en «Fuerza») → Comida → Progreso: sale «Fuerza», sin Pasos.
+    const enFuerza = reducirNav(reducirNav(estadoInicial(), { t: 'pestana', pestana: 'pro' }), { t: 'reemplazar', ruta: { p: 'fuerza' } })
+    const enPasos = reducirNav(reducirNav(enFuerza, { t: 'pestana', pestana: 'ini' }), { t: 'ir', ruta: { p: 'pasos' }, pestana: 'pro' })
+    expect(enPasos.pilas.pro.map(r => r.p)).toEqual(['fuerza', 'pasos'])
+    const vuelto = reducirNav(reducirNav(enPasos, { t: 'pestana', pestana: 'com' }), { t: 'pestana', pestana: 'pro' })
+    expect(vuelto.pilas.pro.map(r => r.p)).toEqual(['fuerza'])
+  })
+})

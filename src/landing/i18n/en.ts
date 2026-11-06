@@ -226,6 +226,8 @@ const en: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'What’s new: what changed in each version',
 
   // Novedades de cada versión
+  'nov.0-12-0.cab': "<b>Version 0.12.0</b> · November 6, 2026",
+  'nov.0-12-0.texto': "Training: the end-of-rest alert now arrives on time on Android, even when the phone is idle. When you finish, “One more?” lets you add a set or another exercise. The workout panel always stays at the bottom, and switching tabs takes you back to that tab’s main screen. At another gym, an exercise you can’t do there is swapped for a similar one when no direct alternative exists; and the weekly check-in replaces exercises that a sore spot no longer allows.",
   'nov.0-11-0.cab': "<b>Version 0.11.0</b> · November 5, 2026",
   'nov.0-11-0.texto': "Training and tracking: log exercises that hurt and change them with Undo; Saturday adapts to the work left for the week. Choose a gym for each session and edit rest and effort in your plan. Home shows daily details, goal progress and celebrations. Photos with pose guides, front camera and a timer. On Android, you can save workouts to Health Connect. Also includes repetition goals, energy target history and editable meal times.",
   'nov.0-10-1.cab': "<b>Version 0.10.1</b> · November 3, 2026",

@@ -15,17 +15,28 @@ const fsNativo = vi.hoisted(() => ({
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: fsNativo, Directory: { Documents: 'DOCUMENTS' } }))
 // Por defecto, el navegador; las pruebas del permiso de Documentos se hacen pasar por el APK.
 const plataforma = vi.hoisted(() => ({ nativa: false }))
+// El plugin propio del aviso del descanso (AvisoDescanso.java) y el de notificaciones, simulados.
+const alarmaDescanso = vi.hoisted(() => ({ programar: vi.fn(), cancelar: vi.fn() }))
 vi.mock('@capacitor/core', async orig => {
   const m = await orig<typeof import('@capacitor/core')>()
-  return { ...m, Capacitor: { ...m.Capacitor, isNativePlatform: () => plataforma.nativa, getPlatform: () => (plataforma.nativa ? 'android' : 'web') } }
+  return {
+    ...m,
+    Capacitor: { ...m.Capacitor, isNativePlatform: () => plataforma.nativa, getPlatform: () => (plataforma.nativa ? 'android' : 'web') },
+    registerPlugin: (nombre: string) => (nombre === 'AvisoDescanso' ? alarmaDescanso : m.registerPlugin(nombre)),
+  }
 })
+const notificaciones = vi.hoisted(() => ({
+  checkPermissions: vi.fn(async () => ({ display: 'granted' })), requestPermissions: vi.fn(), createChannel: vi.fn(async () => {}),
+  checkExactNotificationSetting: vi.fn(async () => ({ exact_alarm: 'granted' })), schedule: vi.fn(async (_o: { notifications: { id: number }[] }) => {}), cancel: vi.fn(async () => {}),
+}))
+vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: notificaciones }))
 const detector = vi.hoisted(() => ({ lecturas: [] as string[][] }))
 vi.mock('barcode-detector/ponyfill', () => ({
   prepareZXingModule: () => {},
   BarcodeDetector: class { async detect() { return (detector.lecturas.shift() ?? []).map(rawValue => ({ rawValue })) } },
 }))
 
-import { borrarCopiaGuardada, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
+import { borrarCopiaGuardada, cancelar, ID_AVISO, programar, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
 import { abrirCamara } from '../src/plataforma/escanerWeb'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); plataforma.nativa = false })
@@ -202,5 +213,34 @@ describe('escáner con la cámara web', () => {
     c.parar()
     expect(parar).toHaveBeenCalled()
     expect(video.srcObject).toBeNull()
+  })
+})
+
+describe('aviso del fin del descanso en Android', () => {
+  const descanso = { id: ID_AVISO.descanso, titulo: 'Descanso terminado', texto: 'Siguiente serie', cuando: new Date(2026, 10, 5, 6, 15) }
+  const dormir = { id: ID_AVISO.dormir, titulo: 'A dormir', texto: 'Mañana entrenas', cuando: new Date(2026, 10, 5, 22, 0) }
+  const programados = () => notificaciones.schedule.mock.calls.flatMap(([o]) => o.notifications.map(n => n.id))
+
+  it('va por la alarma de reloj del plugin propio; los demás avisos, por el de notificaciones', async () => {
+    plataforma.nativa = true
+    alarmaDescanso.programar.mockResolvedValue(undefined)
+    alarmaDescanso.cancelar.mockResolvedValue(undefined)
+    await programar([descanso, dormir], [ID_AVISO.descanso])
+    expect(alarmaDescanso.cancelar).toHaveBeenCalled()
+    expect(alarmaDescanso.programar).toHaveBeenCalledWith({ hasta: descanso.cuando.getTime(), titulo: 'Descanso terminado', texto: 'Siguiente serie' })
+    expect(programados()).toEqual([ID_AVISO.dormir])
+    // «Saltar» quita la alarma del plugin propio.
+    alarmaDescanso.cancelar.mockClear()
+    await cancelar([ID_AVISO.descanso])
+    expect(alarmaDescanso.cancelar).toHaveBeenCalledTimes(1)
+  })
+
+  it('si el APK no tiene el plugin, el aviso sale igual por el de notificaciones', async () => {
+    plataforma.nativa = true
+    alarmaDescanso.programar.mockRejectedValue(new Error('not implemented'))
+    alarmaDescanso.cancelar.mockRejectedValue(new Error('not implemented'))
+    notificaciones.schedule.mockClear()
+    await programar([descanso], [ID_AVISO.descanso])
+    expect(programados()).toEqual([ID_AVISO.descanso])
   })
 })

@@ -49,6 +49,10 @@
 .set:not(.done):not(.cur):not(.wu) .sv{color:var(--muted)}
 .set:not(.done):not(.cur):not(.wu)>i{color:var(--line)}
 .panel{position:sticky;bottom:0;z-index:10;margin-top:4px;padding:12px 12px 18px;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.14);display:grid;gap:10px}
+/* El panel va siempre pegado abajo (sin hueco debajo); si lo de arriba no cabe, eso hace scroll por detrás. */
+.screen.ses-pant{display:flex;flex-direction:column;padding-bottom:0}
+.screen.ses-pant>*{flex-shrink:0}
+.screen.ses-pant>.panel{margin-top:auto;padding-bottom:calc(18px + var(--sa-b))}
 .pn-row{display:flex;gap:8px;align-items:flex-end}
 .pn-f{flex:1;min-width:0;display:grid;gap:4px}
 .pn-f.w{flex:1.45}

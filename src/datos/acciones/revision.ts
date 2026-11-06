@@ -5,7 +5,6 @@ import { leerPerfil, rutinaActiva, gimnasioActivo } from '../repos'
 import type { Dolor, Guardado, Revision, ZonaDolor } from '../tipos'
 import { catalogoCargado, ejercicio, hayEn } from '../../catalogo/catalogo'
 import { quitadoPor } from '../../catalogo/grupos'
-import { patronGenerador } from '../../dominio/generador'
 import { aplicarCambios, cambiosRevision, doloresTrasRevision } from '../../dominio/revision'
 import { doloresDe } from '../../dominio/salud'
 import { hoyISO } from '../../dominio/fechas'
@@ -33,13 +32,8 @@ export async function guardarRevision(o: { estado: Revision['estado']; respuesta
         zonasMejor: o.respuestas.filter(x => x.va === 'mejor' || x.va === 'ya').map(x => ({ zona: x.zona, del: x.va === 'ya' })),
         activos,
         ejercicio,
-        // Del mismo movimiento, que haya en el gimnasio y que se quiera hacer.
-        candidatos: b => {
-          const original = ejercicio(b.ejercicio)
-          if (!original) return []
-          const patron = patronGenerador(original)
-          return (catalogoCargado()?.ejercicios ?? []).filter(e => e.categoria === 'strength' && !evitados.has(e.id) && (!g || hayEn(e, material)) && !quitadoPor(e, p.noQuiero) && patronGenerador(e) === patron)
-        },
+        // Los que haya en el gimnasio y se quieran hacer; el parecido (mismo patrón o de respaldo) lo elige el dominio.
+        candidatos: () => (catalogoCargado()?.ejercicios ?? []).filter(e => e.categoria === 'strength' && !evitados.has(e.id) && (!g || hayEn(e, material)) && !quitadoPor(e, p.noQuiero)),
       })
       if (cambios.length) await db.rutinas.put(aplicarCambios(r, cambios))
     }

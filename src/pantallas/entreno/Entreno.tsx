@@ -156,7 +156,7 @@ function EntrenoEnCurso({ s }: { s: Guardado<Sesion> }) {
   }
 
   return (
-    <Pantalla full>
+    <Pantalla full className="ses-pant">
       {destello > 0 && <div key={destello} className="destello" role="status" aria-live="assertive"><b><Ico n="bell-ringing" b />{t('Siguiente serie')}</b></div>}
       <div className="float">
         {logro && (

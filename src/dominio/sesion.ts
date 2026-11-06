@@ -85,12 +85,12 @@ export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnas
  * alternativas (las del plan y luego `otras`) que se puede hacer y no está ya en el día. `sePuede` dice null si no
  * conoce el ejercicio: uno desconocido del plan se deja como está. Sin alternativa posible, también.
  */
-export function cambiosPorMaterial(bloques: readonly Bloque[], sePuede: (id: string) => boolean | null, otras: (b: Bloque) => string[]): Map<string, string> {
+export function cambiosPorMaterial(bloques: readonly Bloque[], sePuede: (id: string) => boolean | null, otras: (b: Bloque, enDia: ReadonlySet<string>) => string[]): Map<string, string> {
   const m = new Map<string, string>()
   const enDia = new Set(bloques.map(b => b.ejercicio))
   for (const b of bloques) {
     if (sePuede(b.ejercicio) !== false) continue
-    const alt = [...b.alternativas, ...otras(b)].find(id => !enDia.has(id) && sePuede(id) === true)
+    const alt = [...b.alternativas, ...otras(b, enDia)].find(id => !enDia.has(id) && sePuede(id) === true)
     if (alt) { m.set(b.uid, alt); enDia.add(alt) }
   }
   return m

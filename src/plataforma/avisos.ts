@@ -1,6 +1,7 @@
 // Notificaciones locales (solo Android): permiso, canales, programar y cancelar.
+import { registerPlugin } from '@capacitor/core'
 import { t } from '../i18n'
-import { esNativo } from './dispositivo'
+import { esAndroid, esNativo } from './dispositivo'
 
 /**
  * «dormir» y «pesarse» son el primero de una serie (uno por entreno o por día de pesaje).
@@ -39,13 +40,32 @@ export function programar(avisos: Aviso[], borrarIds: number[] = []): Promise<vo
   return enFila(() => programarYa(avisos, borrarIds))
 }
 
+/**
+ * En Android el del descanso lo programa un plugin propio (android/app/…/AvisoDescanso.java) como alarma de reloj:
+ * con la app en segundo plano o el móvil en reposo, las alarmas del plugin de notificaciones llegaban tarde o no
+ * llegaban. Usa el mismo id, así que cancelar cualquiera de los dos quita también la notificación ya salida.
+ */
+type PluginDescanso = {
+  programar(o: { hasta: number; titulo: string; texto: string }): Promise<void>
+  cancelar(): Promise<void>
+}
+const AvisoDescanso = registerPlugin<PluginDescanso>('AvisoDescanso')
+const porAlarmaDeReloj = () => esAndroid()
+
 async function programarYa(avisos: Aviso[], borrarIds: number[]) {
   if (!esNativo()) return
   const { LocalNotifications } = await import('@capacitor/local-notifications')
-  if (borrarIds.length) await LocalNotifications.cancel({ notifications: borrarIds.map(id => ({ id })) })
+  if (borrarIds.length) await quitar(LocalNotifications, borrarIds)
   if (!avisos.length) return
   if (!(await permisoNotificaciones(false))) return
   await crearCanales(LocalNotifications)
+  const descanso = porAlarmaDeReloj() ? avisos.find(a => a.id === ID_AVISO.descanso) : undefined
+  if (descanso) {
+    const ok = await AvisoDescanso.programar({ hasta: descanso.cuando.getTime(), titulo: descanso.titulo, texto: descanso.texto }).then(() => true, () => false)
+    // Si el plugin no está (un APK antiguo con la web nueva), va por el camino de siempre.
+    if (ok) avisos = avisos.filter(a => a !== descanso)
+    if (!avisos.length) return
+  }
   // Solo se piden alarmas exactas si el sistema ya las permite: si no, el plugin abriría
   // la pantalla de «Alarmas y recordatorios» sin avisar. Un recordatorio inexacto llega igual.
   const exacta = await LocalNotifications.checkExactNotificationSetting().then(s => s.exact_alarm === 'granted').catch(() => false)
@@ -62,9 +82,13 @@ async function programarYa(avisos: Aviso[], borrarIds: number[]) {
 export function cancelar(ids: number[]): Promise<void> {
   return enFila(async () => {
     if (!esNativo() || !ids.length) return
-    const { LocalNotifications } = await import('@capacitor/local-notifications')
-    await LocalNotifications.cancel({ notifications: ids.map(id => ({ id })) })
+    await quitar((await import('@capacitor/local-notifications')).LocalNotifications, ids)
   })
+}
+
+async function quitar(ln: typeof import('@capacitor/local-notifications').LocalNotifications, ids: number[]) {
+  if (porAlarmaDeReloj() && ids.includes(ID_AVISO.descanso)) await AvisoDescanso.cancelar().catch(() => {})
+  await ln.cancel({ notifications: ids.map(id => ({ id })) })
 }
 
 /** Al tocar un aviso: `fn` recibe su id (para abrir lo suyo). Devuelve cómo dejar de escuchar. */

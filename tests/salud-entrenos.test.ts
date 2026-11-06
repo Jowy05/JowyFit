@@ -16,6 +16,8 @@ vi.mock('@capacitor/core', async original => ({
   ...(await original<typeof import('@capacitor/core')>()),
   Capacitor: { getPlatform: () => nativo.plataforma, isNativePlatform: () => nativo.plataforma !== 'web' },
   registerPlugin: (nombre: string) => {
+    // El del aviso del descanso se registra al cargar la plataforma; aquí no se usa.
+    if (nombre === 'AvisoDescanso') return {}
     if (nombre !== 'EntrenosSalud') throw new Error(`plugin inesperado: ${nombre}`)
     return nativo.plugin
   },

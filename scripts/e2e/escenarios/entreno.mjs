@@ -39,6 +39,44 @@ escenario('entreno completo', async () => {
   await ver('Historial')
 })
 
+escenario('entreno: «¿Una más?» al acabar (una serie más o otro ejercicio)', async () => {
+  await altaRapida('2026-10-13T05:20:00')
+  await pulsar('Empezar rutina')
+  await pulsar('Empezar', '.sheet')
+  await ver('Hecho', 8000)
+  let vueltas = 0
+  while (!(await t('hay', 'Entreno terminado')) && vueltas++ < 80) {
+    if (await t('hay', /Saltar/)) await pulsar(/^Saltar$/).catch(() => {})
+    await ponerPesoSiFalta()
+    await pulsar(/^Hecho$/)
+    await esperar(150)
+  }
+  await ver('Entreno terminado')
+  const antes = await enCurso()
+  // Una serie más del primer ejercicio: vuelve al entreno con esa serie, y al hacerla, otra vez al resumen.
+  await pulsar('¿Una más?')
+  await ver('Una serie más de…')
+  const tocado = await js(`return [...document.querySelectorAll('.una-mas .list button.it b')].pop()?.textContent ?? ''`)
+  await t('pulsarSel', '.una-mas .list button.it')
+  await ver('Hecho', 6000)
+  const conSerie = await enCurso()
+  const i = conSerie.ejercicios.findIndex(e => e.estado === 'curso')
+  comprobar(i >= 0 && conSerie.ejercicios[i].series.length === antes.ejercicios[i].series.length + 1, 'No se ha añadido la serie de más (o no es la que toca)')
+  comprobar(conSerie.ejercicios.reduce((n, e) => n + e.series.length, 0) === antes.ejercicios.reduce((n, e) => n + e.series.length, 0) + 1, 'Debe haber una sola serie más')
+  const elegido = await js(`return document.querySelector('.exname')?.textContent ?? ''`)
+  comprobar(elegido === tocado, `Se ha abierto «${elegido}» en vez de «${tocado}»`)
+  if (await t('hay', /Saltar/)) await pulsar(/^Saltar$/).catch(() => {})
+  await pulsar(/^Hecho$/)
+  await ver('Entreno terminado', 6000)
+  // Otro ejercicio del gimnasio: se elige en la hoja y se vuelve al entreno para hacerlo.
+  await pulsar('¿Una más?')
+  await pulsar('Otro ejercicio de tu gimnasio')
+  await ver('Añadir al entreno')
+  await t('pulsarSel', '.sheet .list button.it')
+  await ver('Hecho', 6000)
+  comprobar((await enCurso()).ejercicios.length === antes.ejercicios.length + 1, 'No se ha añadido el ejercicio')
+})
+
 escenario('entreno: minimizar, recargar y seguir', async () => {
   await altaRapida('2026-10-13T05:20:00')
   await pulsar('Empezar rutina')

@@ -633,6 +633,22 @@ export function alternativasDe(id: string, x: EntradaGenerador): string[] {
   return alternativas(elegido, h, candidatos, x)
 }
 
+/**
+ * Para cuando el patrón no tiene nada en este gimnasio (el jalón sin polea ni barra): el más parecido de un patrón de
+ * respaldo, como hace el generador al llenar un hueco. Fuera los de `ocupados`. Null si tampoco hay.
+ */
+export function respaldoDe(id: string, x: EntradaGenerador, ocupados: ReadonlySet<string>): string | null {
+  const elegido = x.ejercicios.find(e => e.id === id)
+  if (!elegido) return null
+  const material = x.gimnasio ? new Set(x.gimnasio.material) : null
+  for (const p of RESPALDO[patronDe(elegido)] ?? []) {
+    const h: Hueco = { patron: p, papel: elegido.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
+    const [mejor] = alternativas(elegido, h, x.ejercicios.filter(e => patronDe(e) === p && !ocupados.has(e.id) && apto(e, x, material)), x)
+    if (mejor) return mejor
+  }
+  return null
+}
+
 /** Bloque nuevo con series y reps razonables para un ejercicio añadido a mano. */
 export function bloqueNuevo(id: string, x: Pick<EntradaGenerador, 'perfil' | 'ejercicios'> & Partial<EntradaGenerador>): Bloque {
   const e = x.ejercicios.find(z => z.id === id)

@@ -337,4 +337,7 @@ export default {
   'Al acabar la serie, piensa cuántas repeticiones más podrías haber hecho bien. Esa es la nota del esfuerzo (en los gimnasios lo llaman RPE).': 'When you finish the set, think how many more reps you could have done with good form. That is your effort score (gyms call it RPE).',
   'Lo ideal en este ejercicio: un {n}.': 'Ideal for this exercise: {n}.',
   'Es opcional: si no lo marcas, no pasa nada.': "It's optional: if you don't mark it, that's fine.",
+  '¿Una más?': 'One more?',
+  'Una serie más de…': 'One more set of…',
+  'Otro ejercicio de tu gimnasio': 'Another exercise from your gym',
 } satisfies Diccionario

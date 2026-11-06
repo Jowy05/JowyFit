@@ -337,4 +337,7 @@ export default {
   'Al acabar la serie, piensa cuántas repeticiones más podrías haber hecho bien. Esa es la nota del esfuerzo (en los gimnasios lo llaman RPE).': "En acabar la sèrie, pensa quantes repeticions més hauries pogut fer bé. Aquesta és la nota de l'esforç (als gimnasos en diuen RPE).",
   'Lo ideal en este ejercicio: un {n}.': "L'ideal en aquest exercici: un {n}.",
   'Es opcional: si no lo marcas, no pasa nada.': 'És opcional: si no el marques, no passa res.',
+  '¿Una más?': 'Una més?',
+  'Una serie más de…': 'Una sèrie més de…',
+  'Otro ejercicio de tu gimnasio': 'Un altre exercici del teu gimnàs',
 } satisfies Diccionario

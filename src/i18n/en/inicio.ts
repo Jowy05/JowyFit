@@ -7,9 +7,7 @@ export default {
   '{dia} {fecha} · semana {n}': '{dia} {fecha} · week {n}',
   'Ajustes': 'Settings',
   'Hecho': 'Done',
-  'Plan': 'Planned',
   'Opcional': 'Optional',
-  'Perdido': 'Missed',
   'Descanso': 'Rest',
   // Inicio: hoy te toca
   'Hoy te toca': "Today's workout",
@@ -424,7 +422,6 @@ export default {
   'Hoy no entrenes. Puedes terminar el alta, pero no te propondremos rutina hasta que lo desmarques en Perfil → Salud, cuando tu médico te dé el visto bueno.': "Don't work out today. You can finish setting up, but we won't suggest a routine until you uncheck it in Profile → Health, once your doctor gives you the OK.",
   '¿Te duele algo?': 'Does anything hurt?',
   'Toca lo que te duela o te moleste. Si no te duele nada, sigue.': 'Tap anything that hurts or bothers you. If nothing hurts, just continue.',
-  'Sin entreno': 'No workout',
   'Te toca': 'Up next',
   'Ver la cola': 'See the queue',
   'Hoy no entrenes': "Don't work out today",

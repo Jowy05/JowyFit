@@ -63,7 +63,7 @@ for (const dir of fs.readdirSync(RES).filter(x => x.startsWith('drawable'))) {
   const f = path.join(RES, dir, 'splash.png')
   if (!fs.existsSync(f)) continue
   const { width: w, height: h } = await sharp(f).metadata()
-  const fondo = dir.includes('night') ? '#10151C' : '#F2F4F7'
+  const fondo = dir.includes('night') ? '#110C1B' : '#F2F4F7'
   const t = Math.round(Math.min(w, h) * 0.3)
   const png = await (await centrado(fuente, t, w, h, fondo)).png(PNG).toBuffer()
   fs.writeFileSync(f, png)
@@ -74,7 +74,7 @@ await sharp(lleno).png(PNG).toFile(path.join(RAIZ, 'assets', 'icon-only.png'))
 await liso(1024, 1024, MORADO).toFile(path.join(RAIZ, 'assets', 'icon-background.png'))
 await (await centrado(lleno, 683, 1024, 1024)).png(PNG).toFile(path.join(RAIZ, 'assets', 'icon-foreground.png'))
 await (await centrado(fuente, 800, 2732, 2732, '#F2F4F7')).png(PNG).toFile(path.join(RAIZ, 'assets', 'splash.png'))
-await (await centrado(fuente, 800, 2732, 2732, '#10151C')).png(PNG).toFile(path.join(RAIZ, 'assets', 'splash-dark.png'))
+await (await centrado(fuente, 800, 2732, 2732, '#110C1B')).png(PNG).toFile(path.join(RAIZ, 'assets', 'splash-dark.png'))
 console.log('Iconos generados')
 
 // ---------------------------------------------------------------- logo del informe en PDF (va dentro del código del PDF)

@@ -1,6 +1,6 @@
 /* Pantalla Perfil y Ajustes (también los días y horarios, que usa el alta). */
 .prof{display:flex;align-items:center;gap:14px;margin-top:4px}
-.avatar{flex:none;width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#2C8FD0,#1E4163);color:#fff;display:grid;place-items:center;font:700 28px var(--font-display);letter-spacing:.04em;box-shadow:0 0 0 3px var(--surface)}
+.avatar{flex:none;width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#8F42FF,#41059C);color:#fff;display:grid;place-items:center;font:700 28px var(--font-display);letter-spacing:.04em;box-shadow:0 0 0 3px var(--surface)}
 .prof h1{font-size:30px}
 .q{width:40px;height:40px;margin:-10px -10px -10px 0;display:grid;place-items:center;border-radius:50%;color:var(--blue);font-size:18px}
 .prio .pn{flex:none;width:26px;height:26px;border-radius:6px;background:var(--go-t);color:var(--go);display:grid;place-items:center;font:700 13px var(--font-mono)}

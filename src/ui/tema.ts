@@ -31,7 +31,7 @@ function temaEfectivo(p: PreferenciaTema): 'light' | 'dark' {
 function aplicarTema(p: PreferenciaTema) {
   const t = temaEfectivo(p)
   document.documentElement.dataset.theme = t
-  const color = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || (t === 'dark' ? '#10151C' : '#F2F4F7')
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || (t === 'dark' ? '#110C1B' : '#F2F4F7')
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
 }
 

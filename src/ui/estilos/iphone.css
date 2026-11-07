@@ -12,7 +12,7 @@
 /* ---------- Muesca y barra de estado ---------- */
 /* App instalada en iPhone con el tema claro: la hora y la batería salen en blanco (la barra de estado
    «black-translucent» siempre es blanca); una franja oscura detrás para que se lean. */
-:root[data-plataforma=apple][data-instalada][data-theme=light] body::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--sb-h);z-index:200;background:#10151C;pointer-events:none}
+:root[data-plataforma=apple][data-instalada][data-theme=light] body::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--sb-h);z-index:200;background:#110C1B;pointer-events:none}
 
 /* Safari de iPhone acerca la página al tocar un campo con letra de menos de 16 px: nunca menos. */
 :root[data-plataforma=apple] .app :is(input:not([type=checkbox],[type=radio],[type=range]),select,textarea){font-size:max(16px,1em)}

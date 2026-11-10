@@ -747,4 +747,6 @@ export default {
   'Cuántos pasos cuenta 1 km corriendo. Si das pasos largos, pon menos': 'How many steps 1 km of running counts as. If you take long strides, use fewer',
   'Pasos por kilómetro': 'Steps per kilometer',
   'Pon la hora de cada comida': 'Set the time of each meal',
+  'Avisos con el móvil bloqueado': 'Alerts with the phone locked',
+  'Para que el aviso del descanso llegue a su hora': 'So the rest alert arrives on time',
 } satisfies Diccionario

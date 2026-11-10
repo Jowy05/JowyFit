@@ -340,4 +340,6 @@ export default {
   '¿Una más?': 'One more?',
   'Una serie más de…': 'One more set of…',
   'Otro ejercicio de tu gimnasio': 'Another exercise from your gym',
+  'Descansando': 'Resting',
+  'Calentando': 'Warming up',
 } satisfies Diccionario

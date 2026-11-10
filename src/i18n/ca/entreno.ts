@@ -340,4 +340,6 @@ export default {
   '¿Una más?': 'Una més?',
   'Una serie más de…': 'Una sèrie més de…',
   'Otro ejercicio de tu gimnasio': 'Un altre exercici del teu gimnàs',
+  'Descansando': 'Descansant',
+  'Calentando': 'Escalfant',
 } satisfies Diccionario

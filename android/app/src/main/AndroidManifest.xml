@@ -23,6 +23,10 @@
 
         <!-- Fin del descanso: la alarma de reloj de AvisoDescanso.java llega aquí y saca la notificación. -->
         <receiver android:name=".FinDescanso" android:exported="false" />
+        <!-- Cuenta atrás del descanso: mientras dura, el sistema no congela la app con el móvil bloqueado. -->
+        <service android:name=".DescansoEnCurso" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Cuenta atrás del descanso entre series del entreno" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -51,6 +55,11 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <!-- Temporizador de descanso: alarma exacta sin pedir permiso (app de uso personal, fuera de Google Play). -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Ajustes › «Avisos con el móvil bloqueado»: pide salir del ahorro de batería (fuera de Google Play). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <!-- Se leen pasos, peso y grasa y se escriben los entrenos con sus kcal (los que se dejan más abajo; escribir
          la sesión, WRITE_EXERCISE, lo pide EntrenosSalud.java, no el plugin): fuera el resto de permisos de salud del plugin. -->

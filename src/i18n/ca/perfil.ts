@@ -747,4 +747,6 @@ export default {
   'Cuántos pasos cuenta 1 km corriendo. Si das pasos largos, pon menos': "Quants passos compta 1 km corrent. Si fas passes llargues, posa'n menys",
   'Pasos por kilómetro': 'Passos per quilòmetre',
   'Pon la hora de cada comida': "Posa l'hora de cada àpat",
+  'Avisos con el móvil bloqueado': 'Avisos amb el mòbil bloquejat',
+  'Para que el aviso del descanso llegue a su hora': "Perquè l'avís del descans arribi a l'hora",
 } satisfies Diccionario

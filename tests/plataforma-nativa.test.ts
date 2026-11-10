@@ -217,7 +217,7 @@ describe('escáner con la cámara web', () => {
 })
 
 describe('aviso del fin del descanso en Android', () => {
-  const descanso = { id: ID_AVISO.descanso, titulo: 'Descanso terminado', texto: 'Siguiente serie', cuando: new Date(2026, 10, 5, 6, 15) }
+  const descanso = { id: ID_AVISO.descanso, titulo: 'Descanso terminado', texto: 'Siguiente serie', cuando: new Date(2026, 10, 5, 6, 15), durante: 'Descansando' }
   const dormir = { id: ID_AVISO.dormir, titulo: 'A dormir', texto: 'Mañana entrenas', cuando: new Date(2026, 10, 5, 22, 0) }
   const programados = () => notificaciones.schedule.mock.calls.flatMap(([o]) => o.notifications.map(n => n.id))
 
@@ -227,7 +227,7 @@ describe('aviso del fin del descanso en Android', () => {
     alarmaDescanso.cancelar.mockResolvedValue(undefined)
     await programar([descanso, dormir], [ID_AVISO.descanso])
     expect(alarmaDescanso.cancelar).toHaveBeenCalled()
-    expect(alarmaDescanso.programar).toHaveBeenCalledWith({ hasta: descanso.cuando.getTime(), titulo: 'Descanso terminado', texto: 'Siguiente serie' })
+    expect(alarmaDescanso.programar).toHaveBeenCalledWith({ hasta: descanso.cuando.getTime(), titulo: 'Descanso terminado', texto: 'Siguiente serie', durante: 'Descansando' })
     expect(programados()).toEqual([ID_AVISO.dormir])
     // «Saltar» quita la alarma del plugin propio.
     alarmaDescanso.cancelar.mockClear()

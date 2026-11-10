@@ -21,19 +21,19 @@ import { t } from '../../i18n'
 const ID = ID_AVISO.descanso
 
 /** Aviso del móvil al acabar el descanso (llega con la pantalla bloqueada); sustituye al anterior. */
-function avisarFin(hasta: number, titulo: string, texto: string) {
-  void programar([{ id: ID, titulo, texto, cuando: new Date(hasta) }], [ID])
+function avisarFin(hasta: number, titulo: string, texto: string, durante: string) {
+  void programar([{ id: ID, titulo, texto, cuando: new Date(hasta), durante }], [ID])
 }
 
 const avisarFinDeSerie = (s: Sesion, hasta: number) =>
-  avisarFin(hasta, t('Descanso terminado'), t('{ejercicio} · siguiente serie', { ejercicio: nombreEjercicio(s.ejercicios[indiceActual(s)]?.ejercicio) }))
+  avisarFin(hasta, t('Descanso terminado'), t('{ejercicio} · siguiente serie', { ejercicio: nombreEjercicio(s.ejercicios[indiceActual(s)]?.ejercicio) }), t('Descansando'))
 
 /** Al abrir la app o volver a ella: el aviso del descanso en marcha, otra vez (Android lo borra si cierra la app a la fuerza). */
 export async function reponerAvisoDescanso() {
   const s = await db.sesiones.where('estado').equals('curso').first()
   if (!s?.descansoHasta || s.descansoHasta <= Date.now()) return
   const calentando = !s.ejercicios.some(e => e.series.some(x => x.hecha))
-  if (calentando) avisarFin(s.descansoHasta, t('Calentamiento terminado'), t('A por la primera serie'))
+  if (calentando) avisarFin(s.descansoHasta, t('Calentamiento terminado'), t('A por la primera serie'), t('Calentando'))
   else avisarFinDeSerie(s, s.descansoHasta)
 }
 
@@ -147,7 +147,7 @@ export async function calentarAntes(id: number) {
   if (!s) return
   const hasta = Date.now() + 300_000
   await guardarSesion({ ...s, descansoHasta: hasta, descansoTotal: 300 })
-  avisarFin(hasta, t('Calentamiento terminado'), t('A por la primera serie'))
+  avisarFin(hasta, t('Calentamiento terminado'), t('A por la primera serie'), t('Calentando'))
 }
 
 /** +15 s al descanso en marcha (y el aviso, a la nueva hora). */
@@ -155,7 +155,7 @@ export async function alargarDescanso(s: Sesion, segundos = 15) {
   if (!s.descansoHasta) return
   const hasta = s.descansoHasta + segundos * 1000
   await guardarSesion({ ...s, descansoHasta: hasta, descansoTotal: (s.descansoTotal ?? 0) + segundos })
-  avisarFin(hasta, t('Descanso terminado'), t('Siguiente serie'))
+  avisarFin(hasta, t('Descanso terminado'), t('Siguiente serie'), t('Descansando'))
 }
 
 /** Saltar el descanso: fuera la cuenta atrás y su aviso. */

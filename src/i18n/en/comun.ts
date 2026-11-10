@@ -98,6 +98,8 @@ export default {
   // Canales de avisos de Android (plataforma/avisos.ts)
   'Fin del descanso': 'Rest over',
   'Avisa cuando toca la siguiente serie (también en el reloj)': "Lets you know when it's time for the next set (on your watch too)",
+  'Descanso en curso': 'Rest in progress',
+  'Cuenta atrás del descanso, sin sonido': 'Rest countdown, silent',
   'Recordatorios': 'Reminders',
   'Dormir, pesarse, suplementos, copias…': 'Sleep, weigh-ins, supplements, backups…',
 

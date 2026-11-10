@@ -9,7 +9,8 @@ import { esAndroid, esNativo } from './dispositivo'
  */
 export const ID_AVISO = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700, revision: 800, descanso: 9001 } as const
 
-export type Aviso = { id: number; titulo: string; texto: string; cuando: Date; repetirCada?: 'day' | 'week' }
+/** `durante`: título de la cuenta atrás que se ve mientras tanto (solo el del descanso, en Android). */
+export type Aviso = { id: number; titulo: string; texto: string; cuando: Date; repetirCada?: 'day' | 'week'; durante?: string }
 
 export async function permisoNotificaciones(pedir: boolean): Promise<boolean> {
   if (!esNativo()) return false
@@ -24,6 +25,7 @@ async function crearCanales(ln: typeof import('@capacitor/local-notifications').
   if (canales) return
   canales = true
   await ln.createChannel({ id: 'descanso', name: t('Fin del descanso'), description: t('Avisa cuando toca la siguiente serie (también en el reloj)'), importance: 5, visibility: 1, vibration: true }).catch(() => {})
+  await ln.createChannel({ id: 'descanso_curso', name: t('Descanso en curso'), description: t('Cuenta atrás del descanso, sin sonido'), importance: 2, visibility: 1, vibration: false }).catch(() => {})
   await ln.createChannel({ id: 'recordatorios', name: t('Recordatorios'), description: t('Dormir, pesarse, suplementos, copias…'), importance: 3, visibility: 1, vibration: true }).catch(() => {})
 }
 
@@ -46,8 +48,10 @@ export function programar(avisos: Aviso[], borrarIds: number[] = []): Promise<vo
  * llegaban. Usa el mismo id, así que cancelar cualquiera de los dos quita también la notificación ya salida.
  */
 type PluginDescanso = {
-  programar(o: { hasta: number; titulo: string; texto: string }): Promise<void>
+  programar(o: { hasta: number; titulo: string; texto: string; durante: string }): Promise<void>
   cancelar(): Promise<void>
+  segundoPlano(): Promise<{ permitido: boolean }>
+  pedirSegundoPlano(): Promise<void>
 }
 const AvisoDescanso = registerPlugin<PluginDescanso>('AvisoDescanso')
 const porAlarmaDeReloj = () => esAndroid()
@@ -61,7 +65,7 @@ async function programarYa(avisos: Aviso[], borrarIds: number[]) {
   await crearCanales(LocalNotifications)
   const descanso = porAlarmaDeReloj() ? avisos.find(a => a.id === ID_AVISO.descanso) : undefined
   if (descanso) {
-    const ok = await AvisoDescanso.programar({ hasta: descanso.cuando.getTime(), titulo: descanso.titulo, texto: descanso.texto }).then(() => true, () => false)
+    const ok = await AvisoDescanso.programar({ hasta: descanso.cuando.getTime(), titulo: descanso.titulo, texto: descanso.texto, durante: descanso.durante ?? '' }).then(() => true, () => false)
     // Si el plugin no está (un APK antiguo con la web nueva), va por el camino de siempre.
     if (ok) avisos = avisos.filter(a => a !== descanso)
     if (!avisos.length) return
@@ -89,6 +93,19 @@ export function cancelar(ids: number[]): Promise<void> {
 async function quitar(ln: typeof import('@capacitor/local-notifications').LocalNotifications, ids: number[]) {
   if (porAlarmaDeReloj() && ids.includes(ID_AVISO.descanso)) await AvisoDescanso.cancelar().catch(() => {})
   await ln.cancel({ notifications: ids.map(id => ({ id })) })
+}
+
+/**
+ * Si la app está fuera del ahorro de batería de Android: si no, algunos móviles (Nubia, Xiaomi…) la duermen con la
+ * pantalla bloqueada y los avisos no llegan. null = no aplica (no es Android o el APK no tiene el plugin).
+ */
+export async function avisosEnReposo(): Promise<boolean | null> {
+  if (!porAlarmaDeReloj()) return null
+  return AvisoDescanso.segundoPlano().then(r => r.permitido, () => null)
+}
+
+export async function pedirAvisosEnReposo(): Promise<void> {
+  if (porAlarmaDeReloj()) await AvisoDescanso.pedirSegundoPlano().catch(() => {})
 }
 
 /** Al tocar un aviso: `fn` recibe su id (para abrir lo suyo). Devuelve cómo dejar de escuchar. */

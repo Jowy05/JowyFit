@@ -13,7 +13,7 @@ import { useCatalogo } from '../../catalogo/catalogo'
 import { duracion, hoyISO } from '../../dominio/fechas'
 import { falloFranjas, FRANJAS, FRANJAS_HORAS, nombreFranja } from '../../dominio/comida'
 import { miles, num } from '../../dominio/formato'
-import { capacidades, permisoNotificaciones } from '../../plataforma'
+import { alVolverAPrimerPlano, avisosEnReposo, capacidades, pedirAvisosEnReposo, permisoNotificaciones } from '../../plataforma'
 import { cx, Cab, Elegir, FilaInterruptor, Ico, Interruptor, Pantalla, Stepper, useUnaVez } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -55,6 +55,15 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
   }, [])
 
   useEffect(() => { void permisoNotificaciones(false).then(setPermNoti) }, [])
+
+  // Se vuelve a mirar al volver de la pregunta del sistema (o de sus ajustes), que deja la app en segundo plano.
+  const [enReposo, setEnReposo] = useState<boolean | null>(null)
+  useEffect(() => {
+    const mirar = () => { void avisosEnReposo().then(setEnReposo) }
+    mirar()
+    const quitar = alVolverAPrimerPlano(mirar)
+    return () => { void quitar.then(f => f()) }
+  }, [])
 
   // Desde el aviso de Inicio («haz una copia») se abre directamente en «Datos y copias»;
   // desde «Tu objetivo de energía» («cambiar a objetivo manual»), en «Comida».
@@ -270,6 +279,8 @@ export function Ajustes({ ruta }: { ruta: Ruta<'ajustes'> }) {
               </button>
               {!cap.apple && <Permiso ico="bell" titulo={t('Notificaciones')} d={cap.recordatorios ? undefined : t('Solo en la app de Android')}
                 estado={cap.recordatorios ? permNoti : null} onActivar={() => void activarNoti()} />}
+              {enReposo !== null && <Permiso ico="lock" titulo={t('Avisos con el móvil bloqueado')} d={t('Para que el aviso del descanso llegue a su hora')}
+                estado={enReposo} onActivar={() => void pedirAvisosEnReposo()} />}
               {!cap.apple && <Permiso ico="footprints" titulo="Health Connect" d={t('Para contar los pasos')} estado={salud.hayPasos ? a.fuentePasos === 'auto' : null} onActivar={() => void salud.activarPasos()} />}
               <div className="it">
                 <span className="ico"><Ico n="camera" /></span>

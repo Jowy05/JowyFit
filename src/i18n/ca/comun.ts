@@ -98,6 +98,8 @@ export default {
   // Canales de avisos de Android (plataforma/avisos.ts)
   'Fin del descanso': 'Fi del descans',
   'Avisa cuando toca la siguiente serie (también en el reloj)': 'Avisa quan toca la sèrie següent (també al rellotge)',
+  'Descanso en curso': 'Descans en curs',
+  'Cuenta atrás del descanso, sin sonido': 'Compte enrere del descans, sense so',
   'Recordatorios': 'Recordatoris',
   'Dormir, pesarse, suplementos, copias…': 'Dormir, pesar-se, suplements, còpies…',
 

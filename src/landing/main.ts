@@ -26,20 +26,6 @@ function capturas(idioma: string = textos.idioma()) {
 // ven las capturas en castellano mientras carga el diccionario (la maqueta del hero las pide enseguida).
 if (/^(es|ca|en)$/.test(raiz.lang)) capturas(raiz.lang)
 
-/** «Letra grande»: la misma preferencia que la app (localStorage «jf-letra»). */
-function letra() {
-  const boton = document.querySelector<HTMLButtonElement>('[data-letra-boton]')
-  if (!boton) return
-  const pintar = () => boton.setAttribute('aria-pressed', String(raiz.dataset.letra === 'grande'))
-  pintar()
-  boton.addEventListener('click', () => {
-    const grande = raiz.dataset.letra !== 'grande'
-    if (grande) raiz.dataset.letra = 'grande'; else delete raiz.dataset.letra
-    try { localStorage.setItem('jf-letra', grande ? 'grande' : 'normal') } catch { /* sin almacenamiento: solo ahora */ }
-    pintar()
-  })
-}
-
 /** Línea bajo el botón: «Para Android 8 o superior · 27 MB · actualizada el 20 de octubre de 2026 · Novedades».
  *  El tamaño y la fecha salen de apk.ts, y solo si son de la versión de package.json (MAYOR.MENOR.PARCHE).
  *  La fecha, en el formato largo del idioma de la página. */
@@ -116,6 +102,6 @@ function idioma() {
 }
 
 // Cada paso por separado: si uno falla, los demás siguen (antes un fallo dejaba la página a medio arrancar).
-for (const paso of [idioma, letra, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, planes, arrancar, huella]) {
+for (const paso of [idioma, lineaVersion, notaOrdenador, dentroDeOtraApp, preguntas, planes, arrancar, huella]) {
   try { paso() } catch (e) { console.error('Landing:', e) }
 }

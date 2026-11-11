@@ -11,24 +11,22 @@ const en: Record<keyof typeof es, string> = {
   // Cabecera
   'cab.saltar': 'Skip to content',
   'cab.marca': 'JowyFit, home',
-  'cab.letra': 'Large text',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
   'idioma.boton': "{codigo} · Language: {nombre}",
 
   // Hero: lo primero que se ve
-  'hero.titulo.1': 'Less thinking.',
-  'hero.titulo.2': 'More <em class="subrayado">training.</em>',
+  'hero.titulo.1': "What's yours stays",
+  'hero.titulo.2': 'in your <em>locker.</em>',
   'hero.sub': "The free app that builds your routine around your days and your time, and raises your weights for you.",
   'hero.nota-android': 'It doesn’t come from Google Play: you install it with the file on this page, in 3 steps. <a href="#android" data-abrir="d-android">See how to install it</a>',
   'hero.nota-pc': 'You’re on a computer: open this page on your Android phone to install it there.',
   'hero.dentro-app': '<b>You’re inside another app.</b> To put JowyFit on your Home Screen, open it in Safari: tap “···” or the compass and choose “Open in Safari.”',
   'hero.nota-apple': 'Tap it and the app opens in Safari and shows you how to put it on your Home Screen, just like any other icon.',
   'hero.nota-appstore': 'It’s not on the App Store, and it doesn’t need to be: it works from Safari, free and with nothing to download. <a href="#appstore" data-abrir="d-appstore">Why?</a>',
-  'hero.otra-iphone': 'Have an iPhone? Use it from Safari, nothing to download',
   'hero.otra-android': "Have an Android phone? See how to download it",
 
-  // Botones (se repiten en el hero, en la franja del medio y en el cierre)
+  // Botones (se repiten en el principio y en el cierre)
   'cta.descargar': 'Download the free app',
   'cta.empezada': 'Download started',
   'cta.abrir': 'Open JowyFit for free',
@@ -51,7 +49,6 @@ const en: Record<keyof typeof es, string> = {
 
   // «¿Es seguro instalarla?» (Android)
   'segura.titulo': 'Is it safe to install?',
-  'segura.sub': 'What permissions it asks for and what it does with your data',
   'segura.p1': 'You install it with a file from this page, not from Google Play. That’s why your phone asks for permission and warns you: it does that with any app from outside the store.',
   'segura.permisos': '<b>It asks for very few permissions.</b> Notifications, so you hear when your rest is over; the camera, only to scan barcodes. And, only if you turn it on, reading your steps, weight, and body fat from Health Connect, Android’s health app.',
   'segura.no-pide': '<b>It doesn’t ask for</b> your location, your contacts, or the microphone.',
@@ -85,23 +82,12 @@ const en: Record<keyof typeof es, string> = {
   'pantallita.instalar.texto': 'Do you want to install this app?',
   'pantallita.instalar.si': 'Install',
 
-  // Móvil animado del hero
+  // La pantalla de dentro de la taquilla (la primera)
   'maqueta.alt': 'The JowyFit home screen on a Tuesday at 5:30 a.m.: “Today’s workout” is Full body A, about 48 minutes, with its exercises and the Start workout button.',
-  'maqueta.aviso': '<b>Rest over</b>Barbell Back Squat · next set',
-  'maqueta.pie': 'Real screenshots from the app.<span class="solo-otro"> The watch is a drawing: on Android, the notification reaches your watch too.</span>',
 
-  // Reloj dibujado y bloque «El descanso te avisa»
-  'reloj.terminado': 'Rest over',
+  // «El descanso te avisa»
   'reloj.titulo': 'Your rest timer alerts you, even on your watch.',
   'reloj.texto': 'It goes off when rest is over, even with your phone in your pocket. If you have a watch connected to your phone, it buzzes on your wrist.',
-  'reloj.serie': 'Set 2',
-  'reloj.etiqueta': 'Drawing · on Android',
-
-  // Botón de la animación del hero
-  'anim.ver': 'Play the animation',
-  'anim.pausar': 'Pause',
-  'anim.seguir': 'Resume',
-  'anim.otra': 'Watch again',
 
   // Lo que hace por ti
   'hace.titulo': "What it does for you.",
@@ -109,16 +95,10 @@ const en: Record<keyof typeof es, string> = {
   'hace.hoy.texto': 'Tell it which days you go and how much time you have. Your routine builds itself.',
   'hace.toques.titulo': 'Log it in two taps',
   'hace.toques.texto': "Tap “Done” or “Same as last,” then rest.",
-  'hace.peso.titulo': 'Adds weight when it’s time',
   'hace.peso.texto': 'When a set feels easy, it adds a little more next time.',
-
-  // Cifras
-  'cifras.ejercicios': 'exercises, each with its own drawing',
-  'cifras.mas-de': 'Over {n}',
 
   // Así empiezas
   'empiezas.titulo': "Your plan, in a few questions.",
-  'empiezas.dias.aria': 'Example: Tuesday, Thursday, and Friday',
   'empiezas.dias.l': 'M',
   'empiezas.dias.m': 'T',
   'empiezas.dias.x': 'W',
@@ -134,12 +114,6 @@ const en: Record<keyof typeof es, string> = {
   'empiezas.paso3.texto': 'The first week measures how long you really take and adjusts your routine.',
   'empiezas.paso4.titulo': 'Train and log it',
   'empiezas.paso4.texto': 'Each set in seconds. Your weights go up on their own.',
-  'empiezas.alt': 'The “Your schedule” step: Tuesday, Thursday, and Friday checked, at 5:30 a.m. for 60 minutes each day.',
-
-  // Llamada del medio
-
-  // Bloques de funciones
-  'funciones.aria': 'What the app does',
 
   // Máquina ocupada
   'ocupado.titulo': 'Machine taken? It finds you another.',
@@ -283,35 +257,16 @@ const en: Record<keyof typeof es, string> = {
   'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Free, with public code · <a href=\"#novedades\" data-abrir=\"d-novedades\">What’s new</a> · <a href=\"privacypolicy.html\">Privacy policy</a> (in Spanish)",
   'pie.creditos': 'Credits: the exercises and their drawings are from RepDB; the foods, from Open Food Facts. Phosphor icons and Barlow font. <span data-version-corta=""></span> · PolyForm Noncommercial License · <a href="https://github.com/Jowy05/JowyFit/tree/prod">Code</a>',
 
-  // Barra fija del móvil
-  // Landing «Historias»: cabecera, hora grande del hero, historias del móvil, tu plan y los ceros de privacidad.
+  // Cabecera, el descanso en iPhone, tu plan y los ceros de privacidad.
   'cab.secciones': "Sections",
   'cab.instalar': "How to install",
   'cab.privacidad': "Privacy",
   'cab.preguntas': "Questions",
-  'hora.0': "Tuesday. Your workout is ready.",
-  'hora.1': "You log the set in two taps.",
-  'hora.2': "Rest. It tells you when it’s over.",
   'hero.tienes-iphone': "Have an iPhone?",
-  'historias.aria': "What it does for you, in seven stories",
-  'historias.1': "Story 1 of 7",
-  'historias.2': "Story 2 of 7",
-  'historias.3': "Story 3 of 7",
-  'historias.4': "Story 4 of 7",
-  'historias.5': "Story 5 of 7",
-  'historias.6': "Story 6 of 7",
-  'historias.7': "Story 7 of 7",
-  'historias.saltar': "Skip the stories",
-  'historias.seguir': "Continue",
-  'historias.toques.titulo': "Log it in two taps.",
-  'historias.toques.texto': "Tap “Done” or “Same as last.” If it feels easy, it adds a little more next time.",
   'historias.toques.alt': "A squat set: last time 20 kg × 6; today, 20 kg, with the Taken and Done buttons.",
   'historias.descanso.titulo': "Rest tells you when it’s over.",
   'historias.descanso.iphone': "A countdown between sets. When it’s over, it beeps and the screen flashes: keep the app open.",
   'historias.descanso.alt': "Rest between sets: 2:29 to go, and next up is set 2, 20 kg × 6-10.",
-  'historias.ocupado.texto': "Tap “Taken” and it suggests another exercise that works the same muscles, with the weight already filled in.",
-  'historias.comida.texto': "Log it with <strong>A little</strong>, <strong>Normal</strong>, or <strong>A lot</strong>. You see protein first. And if it has a barcode, you scan it.",
-  'historias.cuerpo.texto': "Weight, waist, and body fat, with each week’s average: a single day’s weight can fool you.",
   'plan.aria': "Which days do you go? Tap to add or remove",
   'plan.menos': "Less time",
   'plan.mas': "More time",
@@ -319,8 +274,6 @@ const en: Record<keyof typeof es, string> = {
   'plan.n.uno': "1 day",
   'plan.n.varios': "{n} days",
   'plan.vacio': "Tap at least one day.",
-  'seis.ejercicios': "exercises.",
-  'seis.texto': "Each with its own drawing, including calisthenics and cardio. Tell it what your gym has and it picks from them.",
   'privacidad.cero.cuentas': "<span class=\"oculto\">Zero </span>accounts to create",
   'privacidad.cero.anuncios': "<span class=\"oculto\">Zero </span>ads",
   'privacidad.cero.nube': "<span class=\"oculto\">Zero </span>data in the cloud",

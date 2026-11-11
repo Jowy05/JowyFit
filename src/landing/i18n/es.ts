@@ -11,24 +11,22 @@ const es = {
   // Cabecera
   'cab.saltar': 'Ir al contenido',
   'cab.marca': 'JowyFit, inicio',
-  'cab.letra': 'Letra grande',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
   'idioma.boton': "{codigo} · Idioma: {nombre}",
 
   // Hero: lo primero que se ve
-  'hero.titulo.1': 'Menos pensar.',
-  'hero.titulo.2': 'Más <em class="subrayado">entrenar.</em>',
+  'hero.titulo.1': "Lo tuyo se queda",
+  'hero.titulo.2': 'en tu <em>taquilla.</em>',
   'hero.sub': "La app gratis que te hace la rutina según tus días y tu tiempo, y te sube los pesos sola.",
   'hero.nota-android': 'No viene de Google Play: se instala con el archivo de esta página, en 3 pasos. <a href="#android" data-abrir="d-android">Ver cómo se instala</a>',
   'hero.nota-pc': 'Estás en un ordenador: abre esta página en tu móvil Android para instalarla allí.',
   'hero.dentro-app': '<b>Estás dentro de otra app.</b> Para dejar JowyFit en tu pantalla, ábrela en Safari: toca «···» o la brújula y elige «Abrir en Safari».',
   'hero.nota-apple': 'Al tocarlo se abre la app en Safari y te enseña a dejarla en tu pantalla de inicio, como un icono más.',
   'hero.nota-appstore': 'No está en la App Store y no hace falta: funciona desde Safari, gratis y sin descargar nada. <a href="#appstore" data-abrir="d-appstore">¿Por qué?</a>',
-  'hero.otra-iphone': '¿Tienes iPhone? Se usa desde Safari, sin descargar nada',
   'hero.otra-android': '¿Tienes Android? Mira cómo se descarga',
 
-  // Botones (se repiten en el hero, en la franja del medio y en el cierre)
+  // Botones (se repiten en el principio y en el cierre)
   'cta.descargar': 'Descargar la app gratis',
   'cta.empezada': 'Descarga empezada',
   'cta.abrir': 'Abrir JowyFit gratis',
@@ -51,7 +49,6 @@ const es = {
 
   // «¿Es seguro instalarla?» (Android)
   'segura.titulo': '¿Es seguro instalarla?',
-  'segura.sub': 'Qué permisos pide y qué hace con tus datos',
   'segura.p1': 'Se instala con un archivo de esta página, no desde Google Play. Por eso el móvil te pide permiso y te avisa: lo hace con cualquier app de fuera de la tienda.',
   'segura.permisos': '<b>Pide pocos permisos.</b> Avisos, para que suene el final del descanso; la cámara, solo para escanear códigos de barras. Y, solo si tú lo activas, leer tus pasos, tu peso y tu grasa de Health Connect, la app de salud de Android.',
   'segura.no-pide': '<b>No pide</b> tu ubicación, tus contactos ni el micrófono.',
@@ -85,23 +82,12 @@ const es = {
   'pantallita.instalar.texto': '¿Quieres instalar esta aplicación?',
   'pantallita.instalar.si': 'Instalar',
 
-  // Móvil animado del hero
+  // La pantalla de dentro de la taquilla (la primera)
   'maqueta.alt': 'La pantalla de inicio de JowyFit un martes a las 5:30: «Hoy te toca» Cuerpo completo A, unos 48 minutos, con sus ejercicios y el botón Empezar rutina.',
-  'maqueta.aviso': '<b>Descanso terminado</b>Sentadilla Trasera con Barra · siguiente serie',
-  'maqueta.pie': 'Capturas reales de la app.<span class="solo-otro"> El reloj es un dibujo: en Android, el aviso llega también al reloj.</span>',
 
-  // Reloj dibujado y bloque «El descanso te avisa»
-  'reloj.terminado': 'Descanso terminado',
+  // «El descanso te avisa»
   'reloj.titulo': 'El descanso te avisa, también en el reloj.',
   'reloj.texto': 'Suena al acabar aunque lleves el móvil en el bolsillo. Si tienes un reloj conectado al móvil, vibra en la muñeca.',
-  'reloj.serie': 'Serie 2',
-  'reloj.etiqueta': 'Dibujo · en Android',
-
-  // Botón de la animación del hero
-  'anim.ver': 'Ver la animación',
-  'anim.pausar': 'Pausar',
-  'anim.seguir': 'Seguir',
-  'anim.otra': 'Ver otra vez',
 
   // Lo que hace por ti
   'hace.titulo': "Lo que hace por ti.",
@@ -109,16 +95,10 @@ const es = {
   'hace.hoy.texto': 'Le dices qué días vas y cuánto tiempo tienes. La rutina se hace sola.',
   'hace.toques.titulo': 'Apuntas en dos toques',
   'hace.toques.texto': "Tocas «Hecho» o «Igual que la anterior», y a descansar.",
-  'hace.peso.titulo': 'Sube el peso cuando toca',
   'hace.peso.texto': 'Cuando una serie te sale fácil, la próxima vez te pone un poco más.',
-
-  // Cifras
-  'cifras.ejercicios': 'ejercicios, cada uno con su dibujo',
-  'cifras.mas-de': 'Más de {n}',
 
   // Así empiezas
   'empiezas.titulo': "Tu plan, en unas preguntas.",
-  'empiezas.dias.aria': 'Ejemplo: martes, jueves y viernes',
   'empiezas.dias.l': 'L',
   'empiezas.dias.m': 'M',
   'empiezas.dias.x': 'X',
@@ -134,12 +114,6 @@ const es = {
   'empiezas.paso3.texto': 'La primera semana mide cuánto tardas de verdad y ajusta la rutina.',
   'empiezas.paso4.titulo': 'Entrena y apunta',
   'empiezas.paso4.texto': 'Cada serie en segundos. Los pesos suben solos.',
-  'empiezas.alt': 'El paso «Tus horarios»: martes, jueves y viernes marcados, a las 5:30 y 60 minutos cada día.',
-
-  // Llamada del medio
-
-  // Bloques de funciones
-  'funciones.aria': 'Lo que hace la app',
 
   // Máquina ocupada
   'ocupado.titulo': '¿Máquina ocupada? Te da otra.',
@@ -283,35 +257,16 @@ const es = {
   'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Gratis y con el código a la vista · <a href=\"#novedades\" data-abrir=\"d-novedades\">Novedades</a> · <a href=\"privacypolicy.html\">Política de privacidad</a>",
   'pie.creditos': 'Créditos: los ejercicios y sus dibujos son de RepDB; los alimentos, de Open Food Facts. Iconos Phosphor y letra Barlow. <span data-version-corta=""></span> · Licencia PolyForm Noncommercial · <a href="https://github.com/Jowy05/JowyFit/tree/prod">Código</a>',
 
-  // Barra fija del móvil
-  // Landing «Historias»: cabecera, hora grande del hero, historias del móvil, tu plan y los ceros de privacidad.
+  // Cabecera, el descanso en iPhone, tu plan y los ceros de privacidad.
   'cab.secciones': "Secciones",
   'cab.instalar': "Cómo se instala",
   'cab.privacidad': "Privacidad",
   'cab.preguntas': "Preguntas",
-  'hora.0': "Martes. Tu rutina ya está lista.",
-  'hora.1': "Apuntas la serie en dos toques.",
-  'hora.2': "Descanso. Te avisa al acabar.",
   'hero.tienes-iphone': "¿Tienes iPhone?",
-  'historias.aria': "Lo que hace por ti, en siete historias",
-  'historias.1': "Historia 1 de 7",
-  'historias.2': "Historia 2 de 7",
-  'historias.3': "Historia 3 de 7",
-  'historias.4': "Historia 4 de 7",
-  'historias.5': "Historia 5 de 7",
-  'historias.6': "Historia 6 de 7",
-  'historias.7': "Historia 7 de 7",
-  'historias.saltar': "Saltar historias",
-  'historias.seguir': "Seguir",
-  'historias.toques.titulo': "Apuntas en dos toques.",
-  'historias.toques.texto': "Tocas «Hecho» o «Igual que la anterior». Si te sale fácil, la próxima vez te pone un poco más.",
   'historias.toques.alt': "Una serie de sentadilla: la última vez 20 kg × 6; hoy, 20 kg, con los botones Ocupado y Hecho.",
   'historias.descanso.titulo': "El descanso te avisa.",
   'historias.descanso.iphone': "Una cuenta atrás entre series. Al acabar suena un pitido y la pantalla destella: déjala abierta.",
   'historias.descanso.alt': "El descanso entre series: quedan 2:29 y lo siguiente es la serie 2, 20 kg × 6-10.",
-  'historias.ocupado.texto': "Toca «Ocupado» y te propone otro ejercicio que trabaja lo mismo, con el peso ya puesto.",
-  'historias.comida.texto': "Apunta con <strong>Poco</strong>, <strong>Normal</strong> o <strong>Mucho</strong>. Primero ves la proteína. Y si tiene código de barras, lo escaneas.",
-  'historias.cuerpo.texto': "Peso, cintura y grasa, con la media de cada semana: el peso de un día suelto engaña.",
   'plan.aria': "¿Qué días vas? Toca para marcar o quitar",
   'plan.menos': "Menos tiempo",
   'plan.mas': "Más tiempo",
@@ -319,8 +274,6 @@ const es = {
   'plan.n.uno': "1 día",
   'plan.n.varios': "{n} días",
   'plan.vacio': "Toca al menos un día.",
-  'seis.ejercicios': "ejercicios.",
-  'seis.texto': "Cada uno con su dibujo, también de calistenia y cardio. Le dices qué hay en tu gimnasio y elige entre ellos.",
   'privacidad.cero.cuentas': "<span class=\"oculto\">Cero </span>cuentas que crear",
   'privacidad.cero.anuncios': "<span class=\"oculto\">Cero </span>anuncios",
   'privacidad.cero.nube': "<span class=\"oculto\">Cero </span>datos en la nube",

@@ -11,24 +11,22 @@ const ca: Record<keyof typeof es, string> = {
   // Cabecera
   'cab.saltar': 'Anar al contingut',
   'cab.marca': 'JowyFit, inici',
-  'cab.letra': 'Lletra gran',
 
   // Selector de idioma (el nombre de cada idioma no se traduce: va en su propio idioma)
   'idioma.boton': "{codigo} · Idioma: {nombre}",
 
   // Hero: lo primero que se ve
-  'hero.titulo.1': 'Menys pensar.',
-  'hero.titulo.2': 'Més <em class="subrayado">entrenar.</em>',
+  'hero.titulo.1': "El que és teu es queda",
+  'hero.titulo.2': 'a la teva <em>taquilla.</em>',
   'hero.sub': "L’app gratuïta que et fa la rutina segons els teus dies i el teu temps, i t’apuja els pesos tota sola.",
   'hero.nota-android': 'No ve de Google Play: s’instal·la amb el fitxer d’aquesta pàgina, en 3 passos. <a href="#android" data-abrir="d-android">Veure com s’instal·la</a>',
   'hero.nota-pc': "Ara ets a l’ordinador: obre aquesta pàgina al teu mòbil Android per instal·lar-la allà.",
   'hero.dentro-app': '<b>Ets dins d’una altra app.</b> Per tenir JowyFit a la teva pantalla, obre-la a Safari: toca «···» o la brúixola i tria «Obre a Safari».',
   'hero.nota-apple': "En tocar-lo, l’app s’obre a Safari i t’ensenya a deixar-la a la pantalla d’inici, com una icona més.",
   'hero.nota-appstore': 'No és a l’App Store i no cal: funciona des de Safari, gratis i sense baixar res. <a href="#appstore" data-abrir="d-appstore">Per què?</a>',
-  'hero.otra-iphone': 'Tens iPhone? Es fa servir des de Safari, sense baixar res',
   'hero.otra-android': 'Tens Android? Mira com es baixa',
 
-  // Botones (se repiten en el hero, en la franja del medio y en el cierre)
+  // Botones (se repiten en el principio y en el cierre)
   'cta.descargar': "Baixar l’app gratis",
   'cta.empezada': 'Baixada iniciada',
   'cta.abrir': 'Obrir JowyFit gratis',
@@ -51,7 +49,6 @@ const ca: Record<keyof typeof es, string> = {
 
   // «¿Es seguro instalarla?» (Android)
   'segura.titulo': 'És segur instal·lar-la?',
-  'segura.sub': 'Quins permisos demana i què fa amb les teves dades',
   'segura.p1': "S’instal·la amb un fitxer d’aquesta pàgina, no des de Google Play. Per això el mòbil et demana permís i t’avisa: ho fa amb qualsevol app de fora de la botiga.",
   'segura.permisos': '<b>Demana pocs permisos.</b> Avisos, perquè soni el final del descans; la càmera, només per escanejar codis de barres. I, només si tu ho actives, llegir els passos, el pes i el greix de Health Connect, l’app de salut d’Android.',
   'segura.no-pide': '<b>No demana</b> la teva ubicació, els teus contactes ni el micròfon.',
@@ -85,23 +82,12 @@ const ca: Record<keyof typeof es, string> = {
   'pantallita.instalar.texto': 'Vols instal·lar aquesta aplicació?',
   'pantallita.instalar.si': 'Instal·la',
 
-  // Móvil animado del hero
+  // La pantalla de dentro de la taquilla (la primera)
   'maqueta.alt': "La pantalla d’inici de JowyFit un dimarts a les 5:30: «Avui et toca» Cos complet A, uns 48 minuts, amb els seus exercicis i el botó Començar la rutina.",
-  'maqueta.aviso': '<b>Descans acabat</b>Esquat posterior amb barra · sèrie següent',
-  'maqueta.pie': 'Captures reals de l’app.<span class="solo-otro"> El rellotge és un dibuix: a Android, l’avís arriba també al rellotge.</span>',
 
-  // Reloj dibujado y bloque «El descanso te avisa»
-  'reloj.terminado': 'Descans acabat',
+  // «El descanso te avisa»
   'reloj.titulo': "El descans t’avisa, també al rellotge.",
   'reloj.texto': 'Sona en acabar encara que portis el mòbil a la butxaca. Si tens un rellotge connectat al mòbil, vibra al canell.',
-  'reloj.serie': 'Sèrie 2',
-  'reloj.etiqueta': 'Dibuix · a Android',
-
-  // Botón de la animación del hero
-  'anim.ver': "Veure l’animació",
-  'anim.pausar': 'Pausa',
-  'anim.seguir': 'Continuar',
-  'anim.otra': 'Tornar a veure',
 
   // Lo que hace por ti
   'hace.titulo': "El que fa per tu.",
@@ -109,16 +95,10 @@ const ca: Record<keyof typeof es, string> = {
   'hace.hoy.texto': 'Li dius quins dies hi vas i quant de temps tens. La rutina es fa sola.',
   'hace.toques.titulo': 'Ho apuntes en dos tocs',
   'hace.toques.texto': "Toques «Fet» o «Igual que l’anterior», i a descansar.",
-  'hace.peso.titulo': 'Apuja el pes quan toca',
   'hace.peso.texto': "Quan una sèrie et surt fàcil, la pròxima vegada t’hi posa una mica més.",
-
-  // Cifras
-  'cifras.ejercicios': 'exercicis, cadascun amb el seu dibuix',
-  'cifras.mas-de': 'Més de {n}',
 
   // Así empiezas
   'empiezas.titulo': "El teu pla, en unes preguntes.",
-  'empiezas.dias.aria': 'Exemple: dimarts, dijous i divendres',
   'empiezas.dias.l': 'Dl',
   'empiezas.dias.m': 'Dt',
   'empiezas.dias.x': 'Dc',
@@ -134,12 +114,6 @@ const ca: Record<keyof typeof es, string> = {
   'empiezas.paso3.texto': 'La primera setmana mesura quant trigues de veritat i ajusta la rutina.',
   'empiezas.paso4.titulo': 'Entrena i apunta',
   'empiezas.paso4.texto': 'Cada sèrie en segons. Els pesos pugen sols.',
-  'empiezas.alt': 'El pas «Els teus horaris»: dimarts, dijous i divendres marcats, a les 5:30 i 60 minuts cada dia.',
-
-  // Llamada del medio
-
-  // Bloques de funciones
-  'funciones.aria': "El que fa l’app",
 
   // Máquina ocupada
   'ocupado.titulo': "Màquina ocupada? Te’n dona una altra.",
@@ -283,35 +257,16 @@ const ca: Record<keyof typeof es, string> = {
   'pie.enlaces': "<b translate=\"no\">JowyFit</b> · Gratis i amb el codi a la vista · <a href=\"#novedades\" data-abrir=\"d-novedades\">Novetats</a> · <a href=\"privacypolicy.html\">Política de privadesa</a> (en castellà)",
   'pie.creditos': 'Crèdits: els exercicis i els seus dibuixos són de RepDB; els aliments, d’Open Food Facts. Icones Phosphor i lletra Barlow. <span data-version-corta=""></span> · Llicència PolyForm Noncommercial · <a href="https://github.com/Jowy05/JowyFit/tree/prod">Codi</a>',
 
-  // Barra fija del móvil
-  // Landing «Historias»: cabecera, hora grande del hero, historias del móvil, tu plan y los ceros de privacidad.
+  // Cabecera, el descanso en iPhone, tu plan y los ceros de privacidad.
   'cab.secciones': "Seccions",
   'cab.instalar': "Com s’instal·la",
   'cab.privacidad': "Privadesa",
   'cab.preguntas': "Preguntes",
-  'hora.0': "Dimarts. La teva rutina ja és a punt.",
-  'hora.1': "Apuntes la sèrie amb dos tocs.",
-  'hora.2': "Descans. T’avisa quan s’acaba.",
   'hero.tienes-iphone': "Tens iPhone?",
-  'historias.aria': "El que fa per tu, en set històries",
-  'historias.1': "Història 1 de 7",
-  'historias.2': "Història 2 de 7",
-  'historias.3': "Història 3 de 7",
-  'historias.4': "Història 4 de 7",
-  'historias.5': "Història 5 de 7",
-  'historias.6': "Història 6 de 7",
-  'historias.7': "Història 7 de 7",
-  'historias.saltar': "Saltar les històries",
-  'historias.seguir': "Continuar",
-  'historias.toques.titulo': "Ho apuntes en dos tocs.",
-  'historias.toques.texto': "Toques «Fet» o «Igual que l’anterior». Si et surt fàcil, la pròxima vegada t’hi posa una mica més.",
   'historias.toques.alt': "Una sèrie d’esquat: l’última vegada 20 kg × 6; avui, 20 kg, amb els botons Ocupada i Fet.",
   'historias.descanso.titulo': "El descans t’avisa.",
   'historias.descanso.iphone': "Un compte enrere entre sèries. En acabar se sent un bip i la pantalla parpelleja: deixa-la oberta.",
   'historias.descanso.alt': "El descans entre sèries: queden 2:29 i el següent és la sèrie 2, 20 kg × 6-10.",
-  'historias.ocupado.texto': "Toca «Ocupada» i et proposa un altre exercici que treballa el mateix, amb el pes ja posat.",
-  'historias.comida.texto': "Apunta amb <strong>Poc</strong>, <strong>Normal</strong> o <strong>Molt</strong>. Primer veus la proteïna. I si té codi de barres, l’escaneges.",
-  'historias.cuerpo.texto': "Pes, cintura i greix, amb la mitjana de cada setmana: el pes d’un sol dia enganya.",
   'plan.aria': "Quins dies hi vas? Toca per marcar o treure",
   'plan.menos': "Menys temps",
   'plan.mas': "Més temps",
@@ -319,8 +274,6 @@ const ca: Record<keyof typeof es, string> = {
   'plan.n.uno': "1 dia",
   'plan.n.varios': "{n} dies",
   'plan.vacio': "Toca almenys un dia.",
-  'seis.ejercicios': "exercicis.",
-  'seis.texto': "Cadascun amb el seu dibuix, també de calistènia i cardio. Li dius què hi ha al teu gimnàs i tria entre ells.",
   'privacidad.cero.cuentas': "<span class=\"oculto\">Zero </span>comptes per crear",
   'privacidad.cero.anuncios': "<span class=\"oculto\">Zero </span>anuncis",
   'privacidad.cero.nube': "<span class=\"oculto\">Zero </span>dades al núvol",

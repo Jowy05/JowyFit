@@ -21,12 +21,12 @@ const CACHE = path.join(RAIZ, '.cache', 'repdb')
 const ZIP = path.join(CACHE, 'repdb-free.zip')
 const SALIDA = path.join(RAIZ, 'public', 'repdb')
 const URL_ZIP = 'https://cdn.repdb.co/repdb-assets/site/repdb-free.zip'
-// Huella SHA-256 de la versión de RepDB con la que se ha probado la app (revisada el 20/10/2026: la del 18/10 solo
-// añade 7 ejercicios y retoca 3 textos; no quita ni cambia ningún id).
+// Huella SHA-256 de la versión de RepDB con la que se ha probado la app (revisada el 11/11/2026: la del 08/11 es igual
+// que la anterior salvo la fecha «generated_at»; mismas 1.331 entradas y mismas imágenes).
 // Si lo descargado no cuadra (el zip ha cambiado o alguien lo ha manipulado), la compilación se para:
 // así nunca se publica un catálogo que no se ha revisado. Para pasar a una versión nueva de RepDB, se revisa
 // y se pone aquí su huella (o se compila una vez con REPDB_SHA256=<huella nueva>).
-const SHA256_ZIP = process.env.REPDB_SHA256 || '5422288dc92a7a8ef002257cde978afeb02c90ea2dba10e495f2065587de85b0'
+const SHA256_ZIP = process.env.REPDB_SHA256 || '7991e4f168d90f422a3d63a09558a3dd72b650d915d381ac9b7b2f7f558504f1'
 
 export const huella = datos => createHash('sha256').update(datos).digest('hex')
 

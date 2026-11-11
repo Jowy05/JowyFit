@@ -6,8 +6,8 @@
 // sale el tamaño de un APK que no es el que se va a descargar.
 export const APK = {
   version: '0.12.0',
-  bytes: 29_930_940,
-  fecha: '2026-11-06',
+  bytes: 29_923_072,
+  fecha: '2026-11-11',
   /** SHA-256 del APK publicado (64 caracteres hexadecimales). Se rellena al publicar la release. */
-  sha256: '21febeca3c574d4fdf20745fa0ae1094794fca4f28b92a10d3b9451c571bfc16',
+  sha256: '1a4511f0ea86c4b87ecca4eefb576ff87902707f9d012af9c2621867503ddcbc',
 }

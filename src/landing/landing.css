@@ -48,7 +48,8 @@ html[data-plataforma='apple'] .solo-otro, html[data-plataforma='otro'] .solo-app
 
 /* ---------- Base ---------- */
 *, ::before, ::after { box-sizing: border-box; }
-html { font-size: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--suelo); scrollbar-color: var(--chapa-osc) var(--suelo); }
+html { font-size: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--suelo); scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 body { margin: 0; background: var(--suelo) radial-gradient(rgba(244, 241, 250, .035) 1px, transparent 1.6px) 0 0 / 14px 14px; color: var(--tinta); font-family: var(--f-txt); font-size: var(--t-body); line-height: 1.55; overflow-x: clip; -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--chapa); color: #fff; }
 img, svg { display: block; max-width: 100%; }

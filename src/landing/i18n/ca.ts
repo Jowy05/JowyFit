@@ -200,6 +200,8 @@ const ca: Record<keyof typeof es, string> = {
   'faq.novedades.pregunta': 'Novetats: què ha canviat a cada versió',
 
   // Novedades de cada versión (fechas como las pone el navegador en catalán: «21 d’octubre del 2026»)
+  'nov.0-12-1.cab': "<b>Versió 0.12.1</b> · 11 de novembre del 2026",
+  'nov.0-12-1.texto': "Pàgina web: sense barra de desplaçament a la vista.",
   'nov.0-12-0.cab': "<b>Versió 0.12.0</b> · 11 de novembre del 2026",
   'nov.0-12-0.texto': "Entrenament: l’avís de final del descans arriba a l’hora a Android encara que el mòbil estigui bloquejat: un compte enrere es queda a la pantalla de bloqueig, la pantalla s’encén en acabar i a Configuració pots fer que el mòbil no l’adormi. En acabar, «Una més?» et deixa afegir una sèrie o un altre exercici. El tauler de l’entrenament queda sempre a baix i, en canviar de pestanya, tornes a la seva pantalla principal. En un altre gimnàs, si un exercici no es pot fer i no n’hi ha un d’igual, es canvia per un de semblant; i la revisió setmanal substitueix els exercicis que una molèstia ja no permet. Nou mode fosc amb el lila del logotip. I aquesta pàgina estrena disseny.",
   'nov.0-11-0.cab': "<b>Versió 0.11.0</b> · 5 de novembre del 2026",

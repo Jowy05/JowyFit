@@ -200,6 +200,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
+  'nov.0-12-1.cab': "<b>Versión 0.12.1</b> · 11 de noviembre de 2026",
+  'nov.0-12-1.texto': "Página web: sin barra de desplazamiento a la vista.",
   'nov.0-12-0.cab': "<b>Versión 0.12.0</b> · 11 de noviembre de 2026",
   'nov.0-12-0.texto': "Entreno: el aviso de fin del descanso llega a su hora en Android aunque el móvil esté bloqueado: una cuenta atrás se queda en la pantalla de bloqueo, la pantalla se enciende al acabar y en Ajustes puedes dejar que el móvil no la duerma. Al acabar, «¿Una más?» te deja añadir una serie u otro ejercicio. El panel del entreno queda siempre abajo y, al cambiar de pestaña, vuelves a su pantalla principal. En otro gimnasio, si un ejercicio no se puede hacer y no hay uno igual, se cambia por uno parecido; y la revisión semanal sustituye los ejercicios que una molestia ya no permite. Nuevo modo oscuro con el morado del logo. Y esta página estrena diseño.",
   'nov.0-11-0.cab': "<b>Versión 0.11.0</b> · 5 de noviembre de 2026",

@@ -9,5 +9,5 @@ export const APK = {
   bytes: 29_923_072,
   fecha: '2026-11-11',
   /** SHA-256 del APK publicado (64 caracteres hexadecimales). Se rellena al publicar la release. */
-  sha256: '1a4511f0ea86c4b87ecca4eefb576ff87902707f9d012af9c2621867503ddcbc',
+  sha256: 'a78c55d2ac8e2a9f557f249e16fd170debd81426cc137ebc8d22edb65fd6367a',
 }

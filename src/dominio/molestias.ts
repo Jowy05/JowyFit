@@ -4,7 +4,7 @@
 import type { Ejercicio } from '../catalogo/tipos'
 import { tipoRegistro, type Patron } from '../catalogo/clasificacion'
 import type { Bloque, DiaRutina, Guardado, Rutina, Sesion, ZonaDolor } from '../datos/tipos'
-import { mismoMovimiento, patronGenerador, RESPALDO } from './generador'
+import { masParecido, patronGenerador, type Gustos } from './generador'
 import { restricciones } from './salud'
 
 /** Entrenos seguidos con molestia en un mismo ejercicio para proponer cambiarlo. */
@@ -42,30 +42,15 @@ const ZONA_MOLESTIA: Partial<Record<Patron, ZonaDolor>> = {
 export const zonaMolestia = (e: Ejercicio): ZonaDolor | null => ZONA_MOLESTIA[patronGenerador(e)] ?? null
 
 /**
- * Otro ejercicio para el sitio de `e` que no cargue la zona que molesta (o, sin zona, simplemente otro): del mismo tipo
- * o de uno parecido, que se apunte igual, primero los de «si está ocupado» (`preferidos`) y otro movimiento antes que
- * otra versión del mismo (si el press duele, el press con mancuernas suele doler también). Fuera los de `ocupados`
- * (los que ya hay en ese día). Null si no queda ninguno.
+ * Otro ejercicio para el sitio de `e` que no cargue la zona que molesta (o, sin zona, simplemente otro): el más parecido
+ * (`masParecido`) de lo que esa zona permite, con otro movimiento antes que otra versión del mismo. `preferidos`: los
+ * de «si está ocupado»; `ocupados`: los que ya hay en ese día. Null si no queda ninguno.
  */
-export function alternativaSinMolestia(e: Ejercicio, candidatos: Ejercicio[], o: { zona?: ZonaDolor | null; preferidos?: string[]; ocupados?: ReadonlySet<string> } = {}): Ejercicio | null {
-  const p = patronGenerador(e)
-  const parecidos = RESPALDO[p] ?? []
+export function alternativaSinMolestia(e: Ejercicio, candidatos: readonly Ejercicio[], x: Gustos, o: { zona?: ZonaDolor | null; preferidos?: readonly string[]; ocupados?: ReadonlySet<string> } = {}): Ejercicio | null {
   // Lo que se deja con una molestia «regular» de esa zona: solo lo seguro para ella (y lo estricto, nunca).
   const salud = o.zona ? restricciones({ dolores: [{ zona: o.zona, cuanto: 'regular', cuando: 'fuerza', desde: 'dias', inicio: '2026-01-01' }], zonasSensibles: [], creado: '' }) : null
-  const reg = tipoRegistro(e)
-  let mejor: Ejercicio | null = null, puntos = -Infinity
-  for (const c of candidatos) {
-    if (c.id === e.id || o.ocupados?.has(c.id)) continue
-    if (salud && (salud.fuera(c) || salud.penaliza(c) >= 1000)) continue
-    const pc = patronGenerador(c)
-    const tipo = pc === p ? 0 : parecidos.indexOf(pc)
-    if (tipo < 0) continue
-    const pref = o.preferidos?.indexOf(c.id) ?? -1
-    const s = (pc === p ? 100 : 60 - tipo * 5) + (tipoRegistro(c) === reg ? 30 : 0) + (mismoMovimiento(e, c) ? 0 : 20)
-      + (pref >= 0 ? 15 - pref : 0) + (c.principales.some(m => e.principales.includes(m)) ? 8 : 0) - (c.dificultad === 'advanced' ? 6 : 0)
-    if (s > puntos || (s === puntos && mejor && c.id.localeCompare(mejor.id) < 0)) { mejor = c; puntos = s }
-  }
-  return mejor
+  const permitidos = salud ? candidatos.filter(c => !salud.fuera(c) && salud.penaliza(c) < 1000) : candidatos
+  return masParecido(e, permitidos, x, { preferidos: o.preferidos, ocupados: o.ocupados, otroMovimiento: true })
 }
 
 /** Un bloque que sale del plan o cambia de ejercicio, para enseñarlo y deshacerlo. */

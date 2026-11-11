@@ -11,18 +11,16 @@ import { esRecord } from '../../dominio/progresion'
 import { apuntarSerie, bloquesDeVersion, cambiosPorMaterial, conCambio, corregirSerie, crearSesion, indiceActual, recortarACorta, type CambioMaterial, type DatosSerie } from '../../dominio/sesion'
 import { diaMinimo } from '../../dominio/cola'
 import { deISO, diaSemana, hoyISO, lunesDe, sumarDias } from '../../dominio/fechas'
-import { alternativasDe, bloqueNuevo, patronGenerador, respaldoDe } from '../../dominio/generador'
+import { bloqueNuevo, patronGenerador, sustitutoEnGimnasio } from '../../dominio/generador'
 import { ZONA_DE_PATRON } from '../../dominio/volumen'
 import { kcalSesion } from '../../dominio/energia'
 import { nombreEntreno } from '../../dominio/nombres'
-import { borrarEntrenoDeSalud, cancelar, guardarEntrenoEnSalud, ID_AVISO, programar } from '../../plataforma'
+import { avisarDescanso, borrarEntrenoDeSalud, guardarEntrenoEnSalud, quitarAvisoDescanso } from '../../plataforma'
 import { t } from '../../i18n'
-
-const ID = ID_AVISO.descanso
 
 /** Aviso del móvil al acabar el descanso (llega con la pantalla bloqueada); sustituye al anterior. */
 function avisarFin(hasta: number, titulo: string, texto: string, durante: string) {
-  void programar([{ id: ID, titulo, texto, cuando: new Date(hasta), durante }], [ID])
+  void avisarDescanso({ hasta, titulo, texto, durante })
 }
 
 const avisarFinDeSerie = (s: Sesion, hasta: number) =>
@@ -61,11 +59,8 @@ export function cambiosEnGimnasio(bloques: readonly Bloque[], g: Gimnasio, perfi
   const material = new Set(g.material)
   const sePuede = (id: string) => { const x = ejercicio(id); return x ? hayEn(x, material) : null }
   const entrada = { perfil: perfil ?? perfilPorDefecto(), gimnasio: g, marcas, ejercicios: c.ejercicios }
-  // Primero las del mismo patrón; si ninguna se puede, una de un patrón parecido antes que dejar uno imposible.
-  const ids = cambiosPorMaterial(bloques, sePuede, (b, enDia) => {
-    const otra = respaldoDe(b.ejercicio, entrada, enDia)
-    return [...alternativasDe(b.ejercicio, entrada), ...(otra ? [otra] : [])]
-  })
+  // Sin alternativa del plan posible, el más parecido de lo que hay allí (de un patrón parecido antes que dejar uno imposible).
+  const ids = cambiosPorMaterial(bloques, sePuede, (b, enDia) => sustitutoEnGimnasio(b.ejercicio, entrada, enDia))
   const deUid = new Map(bloques.map(b => [b.uid, b]))
   return new Map([...ids].map(([uid, id]) => {
     const registro = tipoRegistro(ejercicio(id)!)
@@ -161,7 +156,7 @@ export async function alargarDescanso(s: Sesion, segundos = 15) {
 /** Saltar el descanso: fuera la cuenta atrás y su aviso. */
 export async function quitarDescanso(s: Sesion) {
   await guardarSesion({ ...s, descansoHasta: undefined })
-  void cancelar([ID])
+  void quitarAvisoDescanso()
 }
 
 /** El descanso llegó a cero: el aviso ya salió (o está saliendo), no se cancela. */
@@ -172,12 +167,12 @@ export async function descansoCumplido(s: Sesion) {
 /** Cierra el entreno sin guardarlo; si había un descanso en marcha, su aviso ya no tiene sentido. */
 export async function descartarEntreno(id: number) {
   await db.sesiones.delete(id)
-  void cancelar([ID])
+  void quitarAvisoDescanso()
 }
 
 export async function terminarEntreno(s: Sesion, fin: number, respuestas: Sesion['respuestas']) {
   await guardarSesion({ ...s, estado: 'hecha', fin, descansoHasta: undefined, respuestas })
-  void cancelar([ID])
+  void quitarAvisoDescanso()
   // Sin esperar: Health Connect puede tardar y el entreno ya está guardado en la app.
   void entrenoASalud({ ...s, fin }).catch(() => {})
 }

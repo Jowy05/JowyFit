@@ -1,23 +1,28 @@
-export type Registro = 'peso' | 'mancuerna' | 'asistido' | 'corporal' | 'tiempo' | 'cardio'
+import type { CondicionSalud, Dia, Nivel, Perfil, Sexo, TipoObjetivo, TipoRegistro, Urgencia, Zona, ZonaDolor } from '../../src/datos/tipos'
+
 export type Conducta = 'normal' | 'facil' | 'dificil' | 'estancado' | 'sin-esfuerzo'
 export type Decision = 'aceptar' | 'posponer' | 'rechazar' | 'deshacer'
 
+/** Lo que se sabe de la persona virtual: los campos de salud usan el vocabulario del perfil real. */
 export type Persona = {
   edad: number
   imc?: number
   mesesSinEntrenar?: number
   semanasPosparto?: number
   pruebaSillaSegundos?: number
-  sexo: 'hombre' | 'mujer'
-  nivel: 'empiezo' | 'vuelvo' | 'intermedio'
-  objetivo: 'salud' | 'musculo' | 'fuerza' | 'perder'
+  sexo: Sexo
+  nivel: Nivel
+  objetivo: TipoObjetivo
   sesiones: number
   minutos: number
-  modo: 'dias' | 'cola'
+  modo: NonNullable<Perfil['modoRutina']>
   material: string[]
-  restricciones: string[]
-  excluidos: string[]
+  zonasSensibles: Zona[]
+  urgencias: Urgencia[]
+  condicionesSalud: CondicionSalud[]
+  /** Probabilidad de ir un día previsto (0-1). */
   asistencia: number
+  /** Ruido relativo del rendimiento (0-0,5). */
   variabilidad: number
 }
 
@@ -27,19 +32,23 @@ export type Evento =
   | { dia: number; tipo: 'sesion'; valor: 'corta' | 'abandonada' }
   | { dia: number; tipo: 'material'; quitar: string[] }
   | { dia: number; tipo: 'ocupado'; ejercicio: string }
-  | { dia: number; tipo: 'molestia'; zona: string; estado: 'mejor' | 'igual' | 'peor' | 'ya' }
+  | { dia: number; tipo: 'molestia'; zona: ZonaDolor; estado: 'mejor' | 'igual' | 'peor' | 'ya' }
   | { dia: number; tipo: 'decision'; valor: Decision }
 
 export type Escenario = {
   id: string
   nombre: string
   persona: Persona
-  dias: number[]
+  dias: Dia[]
+  /** Días de `dias` que van como opcionales en el perfil. */
+  diasOpcionales?: Dia[]
+  /** Al retirar material, la persona se apunta a otro gimnasio en vez de cambiar el suyo. */
+  otroGimnasio?: boolean
   eventos: Evento[]
 }
 
 export type Configuracion = {
-  version: 1
+  version: 2
   escenario: Escenario
   semilla: number
   semanas: number
@@ -60,7 +69,7 @@ export type ContextoDia = {
 export type Prescripcion = {
   id: string
   ejercicio: string
-  registro: Registro
+  registro: TipoRegistro
   series: number
   minimo: number
   maximo: number
@@ -109,16 +118,6 @@ export type Paso = {
   comprobaciones: Comprobacion[]
 }
 
-export type Adaptador = {
-  identidad: { nombre: string; version: string; objetivo: 'ficticio' | 'aplicacion'; huellaCatalogo: string | null }
-  iniciar: (configuracion: Configuracion) => void | Promise<void>
-  prepararDia: (contexto: ContextoDia) => void | Promise<void>
-  planificar: (contexto: ContextoDia) => PlanSesion | null | Promise<PlanSesion | null>
-  registrar: (contexto: ContextoDia, resultado: ResultadoSesion) => void | Promise<void>
-  cerrarDia: (contexto: ContextoDia) => Comprobacion[] | Promise<Comprobacion[]>
-  finalizar: () => void | Promise<void>
-}
-
 export type Metrica = { numerador: number; denominador: number; porcentaje: number | null }
 export type Resumen = {
   dias: number
@@ -133,10 +132,11 @@ export type Resumen = {
 }
 
 export type Informe = {
-  version: 2
+  version: 3
   modelo: 'guiones-1'
   configuracion: Configuracion
-  adaptador: Adaptador['identidad']
+  /** Versión de JowyFit (package.json) y huella SHA-256 del catálogo usado. */
+  aplicacion: { version: string; huellaCatalogo: string }
   resumen: Resumen
   pasos: Paso[]
 }

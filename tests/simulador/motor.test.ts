@@ -1,224 +1,155 @@
-import { describe, expect, it } from 'vitest'
+import '../../scripts/simulador/jowyfit/entorno.ts'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { IDBFactory } from 'fake-indexeddb'
+import { db } from '../../src/datos/db'
 import { simular } from '../../scripts/simulador/motor.ts'
-import { crearAdaptador } from '../../scripts/simulador/demostracion.ts'
-import { escenariosBase, escenariosLimite } from '../../scripts/simulador/escenarios.ts'
-import { adaptadorEjemplo, configuracionEjemplo, planEjemplo } from './ayuda.ts'
+import { escenarios } from '../../scripts/simulador/escenarios.ts'
+import { perfilSintetico } from '../../scripts/simulador/jowyfit/perfil.ts'
+import * as jowyfit from '../../scripts/simulador/jowyfit/recorrido.ts'
+import type { Informe } from '../../scripts/simulador/tipos.ts'
+import { configuracionEjemplo, planEjemplo } from './ayuda.ts'
 
-describe('motor aislado, sin importar JowyFit', () => {
-  it('recorre días, ordena llamadas y calcula resultados conocidos', async () => {
-    const adaptador = adaptadorEjemplo()
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(adaptador.iniciar).toHaveBeenCalledTimes(1)
-    expect(adaptador.prepararDia).toHaveBeenCalledTimes(14)
-    expect(adaptador.planificar).toHaveBeenCalledTimes(2)
-    expect(adaptador.registrar).toHaveBeenCalledTimes(2)
-    expect(adaptador.cerrarDia).toHaveBeenCalledTimes(14)
-    expect(adaptador.finalizar).toHaveBeenCalledTimes(1)
-    expect(adaptador.iniciar.mock.invocationCallOrder[0]).toBeLessThan(adaptador.prepararDia.mock.invocationCallOrder[0]!)
-    expect(adaptador.planificar.mock.invocationCallOrder[0]).toBeLessThan(adaptador.registrar.mock.invocationCallOrder[0]!)
-    expect(informe.resumen.asistencia).toEqual({ numerador: 2, denominador: 2, porcentaje: 100 })
-    expect(informe.resumen.tiempo).toEqual({ mediana: 6.4, p90: 6.4, excedidas: { numerador: 0, denominador: 2, porcentaje: 0 } })
-    expect(informe.resumen.seriesPorZona.espalda).toEqual({ prescritas: 4, completadas: 4, estimuloDias: 2, mayorIntervaloDias: 7 })
-    expect(informe.resumen.contratos.fallida).toBe(0)
-    expect(informe.resumen.contratos.pendiente).toBe(2)
+// Las fases reales, envueltas para contar llamadas y provocar fallos en una sola.
+vi.mock('../../scripts/simulador/jowyfit/recorrido.ts', async importOriginal => {
+  const real = await importOriginal<typeof import('../../scripts/simulador/jowyfit/recorrido.ts')>()
+  return {
+    ...real, iniciar: vi.fn(real.iniciar), prepararDia: vi.fn(real.prepararDia), planificar: vi.fn(real.planificar),
+    registrar: vi.fn(real.registrar), cerrarDia: vi.fn(real.cerrarDia), finalizar: vi.fn(real.finalizar),
+  }
+})
+
+const fase = {
+  iniciar: vi.mocked(jowyfit.iniciar), prepararDia: vi.mocked(jowyfit.prepararDia), planificar: vi.mocked(jowyfit.planificar),
+  registrar: vi.mocked(jowyfit.registrar), cerrarDia: vi.mocked(jowyfit.cerrarDia), finalizar: vi.mocked(jowyfit.finalizar),
+}
+
+const fallidas = (informe: Informe) => JSON.stringify(informe.pasos.flatMap(paso => paso.comprobaciones.filter(regla => regla.estado === 'fallida')))
+
+beforeEach(() => { vi.clearAllMocks() })
+
+describe('perfil sintético', () => {
+  it('lleva urgencias, condiciones y días opcionales a los campos reales del perfil', () => {
+    expect(perfilSintetico(configuracionEjemplo('bloqueo-pecho')).urgencias).toEqual(['pecho'])
+    expect(perfilSintetico(configuracionEjemplo('condiciones')).condicionesSalud).toEqual(['tension', 'osteoporosis'])
+    expect(perfilSintetico(configuracionEjemplo('posparto'))).toMatchObject({ condicionesSalud: ['embarazo'], urgencias: [] })
+    expect(perfilSintetico(configuracionEjemplo('casa-rodilla'))).toMatchObject({ zonasSensibles: ['rodilla'], modoMayor: { activo: true } })
+    expect(perfilSintetico(configuracionEjemplo('sabado-opcional'))).toMatchObject({ diasFijos: [0, 2, 4], diasOpcionales: [5] })
+  })
+})
+
+describe('recorrido contra JowyFit', () => {
+  it('usa una base temporal con el catálogo real, recorre las fases en orden y la borra al terminar', async () => {
+    expect(db.name).toBe('jowyfit-simulador')
+    expect(globalThis.indexedDB).toBeInstanceOf(IDBFactory)
+    const informe = await simular(configuracionEjemplo('musculo-gimnasio'))
+    expect(informe.resumen.contratos.fallida, fallidas(informe)).toBe(0)
+    expect(informe.aplicacion.huellaCatalogo).toMatch(/^[a-f0-9]{64}$/)
+    expect(informe.resumen.sesiones.completas).toBe(8)
+    expect(informe.resumen.reglas['calibracion.definitiva']!.aprobada).toBe(1)
+    expect(informe.resumen.reglas['sesion.persistencia']!.aprobada).toBe(8)
+    expect(informe.resumen.reglas['aplicacion.restricciones']!.aprobada).toBe(8)
+    expect([fase.iniciar, fase.prepararDia, fase.planificar, fase.registrar, fase.cerrarDia, fase.finalizar].map(llamada => llamada.mock.calls.length)).toEqual([1, 14, 8, 8, 14, 1])
+    expect(fase.iniciar.mock.invocationCallOrder[0]).toBeLessThan(fase.prepararDia.mock.invocationCallOrder[0]!)
+    expect(fase.planificar.mock.invocationCallOrder[0]).toBeLessThan(fase.registrar.mock.invocationCallOrder[0]!)
+    expect(db.isOpen()).toBe(false)
   })
 
-  it('no planifica ni registra ausencias, pero entrega eventos y cierra los días', async () => {
-    const configuracion = configuracionEjemplo()
-    configuracion.escenario.eventos = [{ dia: 0, tipo: 'ausencia', hasta: 7 }]
-    const adaptador = adaptadorEjemplo()
-    const informe = await simular(configuracion, adaptador)
-    expect(adaptador.planificar).not.toHaveBeenCalled()
-    expect(adaptador.registrar).not.toHaveBeenCalled()
-    expect(adaptador.cerrarDia).toHaveBeenCalledTimes(14)
-    expect(informe.resumen.asistencia.porcentaje).toBe(0)
-    expect(informe.resumen.tiempo.mediana).toBeNull()
+  it('la urgencia de pecho bloquea el alta real y todas las sesiones', async () => {
+    const informe = await simular(configuracionEjemplo('bloqueo-pecho'))
+    expect(informe.resumen.contratos.fallida, fallidas(informe)).toBe(0)
+    expect(informe.resumen.sesiones.completas).toBe(0)
+    expect(informe.resumen.reglas['alta.bloqueo']!.aprobada).toBe(1)
+    expect(informe.resumen.reglas['salud.bloqueo']!.aprobada).toBe(14)
     expect(informe.resumen.reglas['cobertura.prescripciones']!['no-evaluable']).toBe(1)
   })
 
-  it('distingue semanas transcurridas y calendario al empezar a mitad de semana', async () => {
-    const configuracion = { ...configuracionEjemplo(), inicio: '2026-01-07' }
-    const informe = await simular(configuracion, adaptadorEjemplo())
-    expect(informe.pasos[0]!.contexto.lunes).toBe('2026-01-05')
-    expect(informe.pasos[5]!.contexto.lunes).toBe('2026-01-12')
-    expect(informe.pasos[5]!.contexto.semana).toBe(0)
-    expect(informe.pasos[7]!.contexto.semana).toBe(1)
+  it('repite exactamente el mismo recorrido', async () => {
+    const entrada = configuracionEjemplo('musculo-gimnasio')
+    expect(await simular(entrada)).toEqual(await simular(entrada))
   })
 
-  it('no registra resultados cuando un objetivo desmesurado desborda los tiempos', async () => {
-    const adaptador = adaptadorEjemplo()
-    const plan = planEjemplo()
-    Object.assign(plan.ejercicios[0]!, { minimo: Number.MAX_VALUE, maximo: Number.MAX_VALUE })
-    adaptador.planificar.mockReturnValue(plan)
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(adaptador.registrar).not.toHaveBeenCalled()
-    expect(informe.resumen.contratos.fallida).toBe(1)
-    expect(informe.pasos[0]!.resultado).toBeNull()
+  it('descartar un entrenamiento no lo termina ni avanza la cola real', async () => {
+    const entrada = configuracionEjemplo('musculo-gimnasio', 1)
+    entrada.escenario.eventos = [{ dia: 0, tipo: 'sesion', valor: 'abandonada' }]
+    const informe = await simular(entrada)
+    expect(informe.pasos[0]!.plan!.letra).toBe(informe.pasos[1]!.plan!.letra)
+    expect(informe.resumen.sesiones.abandonadas).toBe(1)
+    expect(informe.resumen.reglas['sesion.persistencia']!.aprobada).toBe(4)
+    expect(informe.resumen.contratos.fallida, fallidas(informe)).toBe(0)
   })
 
-  it('conserva decisiones y material, sin repetir eventos de un solo día', async () => {
-    const configuracion = configuracionEjemplo()
-    configuracion.escenario.eventos = [{ dia: 1, tipo: 'material', quitar: ['dumbbell'] }, { dia: 2, tipo: 'decision', valor: 'posponer' }]
-    const adaptador = adaptadorEjemplo()
-    adaptador.planificar.mockReturnValue(null)
-    const informe = await simular(configuracion, adaptador)
+  it('aplica la progresión y las descargas a partir del historial real', async () => {
+    const informe = await simular(configuracionEjemplo('progresion-facil', 8))
+    expect(informe.resumen.acciones.subir).toBeGreaterThan(0)
+    expect(informe.resumen.reglas['descarga.aceptar']!.aprobada).toBeGreaterThan(0)
+    expect(informe.resumen.reglas['descarga.aplicada']!.aprobada).toBeGreaterThan(0)
+    expect(informe.resumen.contratos.fallida, fallidas(informe)).toBe(0)
+  })
+
+  it('no planifica ausencias, mantiene material y decisiones y separa semanas de calendario', async () => {
+    const entrada = { ...configuracionEjemplo('casa-rodilla'), inicio: '2026-01-07' }
+    entrada.escenario.eventos = [{ dia: 0, tipo: 'ausencia', hasta: 13 }, { dia: 1, tipo: 'material', quitar: ['dumbbell'] }, { dia: 2, tipo: 'decision', valor: 'posponer' }]
+    const informe = await simular(entrada)
+    expect(fase.planificar).not.toHaveBeenCalled()
+    expect(informe.resumen.asistencia.porcentaje).toBe(0)
     expect(informe.pasos[1]!.contexto.material).not.toContain('dumbbell')
     expect(informe.pasos[10]!.contexto.decision).toBe('posponer')
     expect(informe.pasos[3]!.contexto.eventos).toEqual([])
-    expect(informe.resumen.eventos).toEqual({ material: 1, decision: 1 })
+    expect(informe.pasos[0]!.contexto.lunes).toBe('2026-01-05')
+    expect(informe.pasos[5]!.contexto).toMatchObject({ lunes: '2026-01-12', semana: 0 })
+    expect(informe.pasos[7]!.contexto.semana).toBe(1)
+    expect(informe.resumen.reglas['cobertura.prescripciones']!['no-evaluable']).toBe(1)
   })
 
-  it('no entrega referencias mutables al adaptador', async () => {
-    const entrada = configuracionEjemplo()
-    const original = structuredClone(entrada)
-    const adaptador = adaptadorEjemplo()
-    adaptador.iniciar.mockImplementation(configuracion => { configuracion.escenario.persona.material.length = 0 })
-    adaptador.prepararDia.mockImplementation(contexto => { contexto.material.length = 0 })
-    adaptador.registrar.mockImplementation((_contexto, resultado) => { resultado.ejercicios.length = 0 })
-    const informe = await simular(entrada, adaptador)
-    expect(entrada).toEqual(original)
-    expect(informe.pasos[0]!.resultado!.ejercicios).toHaveLength(1)
-    expect(informe.pasos[0]!.contexto.material).toContain('dumbbell')
+  it.each(escenarios().map(escenario => [escenario.id] as const))('el escenario %s recorre una semana sin incumplimientos', async id => {
+    const informe = await simular(configuracionEjemplo(id, 1))
+    expect(informe.pasos).toHaveLength(7)
+    expect(informe.resumen.contratos.fallida, fallidas(informe)).toBe(0)
   })
+})
 
-  it.each(['iniciar', 'prepararDia', 'planificar', 'registrar', 'cerrarDia'] as const)('guarda una excepción de %s y libera recursos', async fase => {
-    const adaptador = adaptadorEjemplo()
-    adaptador[fase].mockImplementation(() => { throw new Error('fallo deliberado') })
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(adaptador.finalizar).toHaveBeenCalledTimes(1)
+describe('fallos dentro de la app', () => {
+  it.each(['iniciar', 'prepararDia', 'planificar', 'registrar', 'cerrarDia'] as const)('guarda una excepción de %s, para el recorrido y limpia', async nombre => {
+    fase[nombre].mockRejectedValueOnce(new Error('fallo deliberado'))
+    const informe = await simular(configuracionEjemplo('musculo-gimnasio'))
+    expect(fase.finalizar).toHaveBeenCalledTimes(1)
     expect(informe.resumen.contratos.fallida).toBe(1)
-    expect(informe.pasos.at(-1)!.comprobaciones).toContainEqual({ regla: 'motor.excepcion', estado: 'fallida', detalle: `${fase}: fallo deliberado` })
+    expect(informe.pasos.at(-1)!.comprobaciones).toContainEqual({ regla: 'motor.excepcion', estado: 'fallida', detalle: `${nombre}: fallo deliberado` })
+    expect(db.isOpen()).toBe(false)
   })
 
-  it('conserva el resultado generado sin contabilizarlo si el adaptador rechaza su registro', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.registrar.mockRejectedValue(new Error('Registro rechazado'))
-    const informe = await simular(configuracionEjemplo(), adaptador)
+  it('conserva el resultado sin contarlo si falla su registro', async () => {
+    fase.registrar.mockRejectedValueOnce(new Error('Registro rechazado'))
+    const informe = await simular(configuracionEjemplo('musculo-gimnasio'))
     expect(informe.pasos[0]!.resultado).not.toBeNull()
     expect(informe.pasos[0]!.registrada).toBe(false)
-    expect(informe.resumen.sesiones.completas).toBe(0)
-    expect(informe.resumen.sesiones.sinRegistrar).toBe(1)
-    expect(informe.resumen.seriesPorZona.espalda!.completadas).toBe(0)
+    expect(informe.resumen.sesiones).toMatchObject({ completas: 0, sinRegistrar: 1 })
     expect(informe.resumen.tiempo.mediana).toBeNull()
-    expect(informe.resumen.contratos.fallida).toBe(1)
+  })
+
+  it('no entrega a la persona ni registra una prescripción fuera de rango', async () => {
+    const plan = planEjemplo()
+    plan.ejercicios[0]!.series = Infinity
+    fase.planificar.mockResolvedValueOnce(plan)
+    const informe = await simular(configuracionEjemplo('musculo-gimnasio'))
+    expect(informe.pasos[0]!.resultado).toBeNull()
+    expect(informe.pasos[0]!.asistencia).toBe('bloqueada')
+    expect(informe.resumen.reglas['plan.valores']!.fallida).toBe(1)
+    expect(fase.registrar).toHaveBeenCalledTimes(7)
+  })
+
+  it('marca como no evaluables los días sin plan o sin ejercicios', async () => {
+    fase.planificar.mockResolvedValueOnce(null).mockResolvedValueOnce({ ...planEjemplo(), ejercicios: [] })
+    const informe = await simular(configuracionEjemplo('musculo-gimnasio', 1))
+    expect(informe.resumen.reglas['sesion.sin-plan']!['no-evaluable']).toBe(1)
+    expect(informe.resumen.reglas['sesion.sin-opciones']!['no-evaluable']).toBe(1)
+    expect(informe.resumen.contratos.fallida, fallidas(informe)).toBe(0)
   })
 
   it('registra el fallo de limpieza sin ocultar el original', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.iniciar.mockRejectedValue(new Error('inicio'))
-    adaptador.finalizar.mockRejectedValue(new Error('limpieza'))
-    expect((await simular(configuracionEjemplo(), adaptador)).resumen.contratos.fallida).toBe(2)
-  })
-
-  it('mantiene las sesiones ya confirmadas cuando falla un registro posterior', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.registrar.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Segundo registro rechazado'))
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(informe.resumen.sesiones.completas).toBe(1)
-    expect(informe.resumen.sesiones.sinRegistrar).toBe(1)
-    expect(informe.resumen.seriesPorZona.espalda!.completadas).toBe(2)
-    expect(informe.pasos[0]!.registrada).toBe(true)
-    expect(informe.pasos[7]!.registrada).toBe(false)
-  })
-
-  it('conserva un registro confirmado si después falla el cierre del día', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.cerrarDia.mockRejectedValueOnce(new Error('Cierre rechazado'))
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(informe.resumen.sesiones.completas).toBe(1)
-    expect(informe.resumen.sesiones.sinRegistrar).toBe(0)
-    expect(informe.resumen.seriesPorZona.espalda!.completadas).toBe(2)
-    expect(informe.resumen.contratos.fallida).toBe(1)
-  })
-
-  it('cuenta el intento de asistencia aunque falle la planificación', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.planificar.mockRejectedValueOnce(new Error('Plan rechazado'))
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(informe.resumen.asistencia).toEqual({ numerador: 1, denominador: 1, porcentaje: 100 })
-    expect(informe.resumen.sesiones.bloqueadas).toBe(1)
-  })
-
-  it('no simula ni registra planes de valores inválidos', async () => {
-    const adaptador = adaptadorEjemplo()
-    const plan = planEjemplo()
-    plan.ejercicios[0]!.series = Infinity
-    adaptador.planificar.mockReturnValue(plan)
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(adaptador.registrar).not.toHaveBeenCalled()
-    expect(informe.resumen.reglas['plan.valores']!.fallida).toBe(2)
-  })
-
-  it('marca planes nulos y vacíos como no evaluables', async () => {
-    for (const plan of [null, { ...planEjemplo(), ejercicios: [] }]) {
-      const adaptador = adaptadorEjemplo()
-      adaptador.planificar.mockReturnValue(plan)
-      const informe = await simular(configuracionEjemplo(), adaptador)
-      expect(adaptador.registrar).not.toHaveBeenCalled()
-      expect(informe.resumen.contratos['no-evaluable']).toBeGreaterThan(0)
-    }
-  })
-
-  it('conserva una excepción de estructura de plan sin romper el informe', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.planificar.mockReturnValue({ letra: 'A', minutosEstimados: 2, ejercicios: null } as unknown as ReturnType<typeof planEjemplo>)
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(informe.resumen.contratos.fallida).toBe(1)
-    expect(adaptador.registrar).not.toHaveBeenCalled()
-    expect(informe.pasos[0]!.plan).toBeNull()
-  })
-
-  it('sustituye solo el marcador pendiente cuando el adaptador evalúa la regla', async () => {
-    const adaptador = adaptadorEjemplo()
-    adaptador.cerrarDia.mockReturnValue([{ regla: 'aplicacion.restricciones', estado: 'aprobada', detalle: 'Evaluada por el adaptador' }])
-    const informe = await simular(configuracionEjemplo(), adaptador)
-    expect(informe.resumen.reglas['aplicacion.restricciones']!.pendiente).toBe(0)
-    expect(informe.resumen.reglas['aplicacion.restricciones']!.aprobada).toBe(14)
-  })
-
-  it('bloquea un objetivo de aplicación antes de inicializarlo', async () => {
-    const ficticio = adaptadorEjemplo()
-    const adaptador = { ...ficticio, identidad: { ...ficticio.identidad, objetivo: 'aplicacion' as const } }
-    await expect(simular(configuracionEjemplo(), adaptador)).rejects.toThrow('autorización explícita')
-    expect(adaptador.iniciar).not.toHaveBeenCalled()
-    await expect(simular(configuracionEjemplo(), adaptador, { permitirAplicacion: true })).rejects.toThrow('identificar el catálogo')
-    expect(adaptador.iniciar).not.toHaveBeenCalled()
-  })
-
-  it('la cola ficticia no avanza con abandono y sí con una sesión corta', async () => {
-    const configuracion = configuracionEjemplo()
-    configuracion.semanas = 3
-    configuracion.escenario.persona.sesiones = 2
-    configuracion.escenario.dias = [0, 2]
-    configuracion.escenario.eventos = [{ dia: 0, tipo: 'sesion', valor: 'abandonada' }, { dia: 2, tipo: 'sesion', valor: 'corta' }]
-    const informe = await simular(configuracion, crearAdaptador())
-    expect(informe.pasos[0]!.plan!.letra).toBe('A')
-    expect(informe.pasos[2]!.plan!.letra).toBe('A')
-    expect(informe.pasos[7]!.plan!.letra).toBe('B')
-    expect(informe.resumen.sesiones.abandonadas).toBe(1)
-    expect(informe.resumen.sesiones.cortas).toBe(1)
-  })
-
-  it('soporta 52 semanas y 20 semillas únicamente con el sistema ficticio', async () => {
-    const escenario = escenariosBase().find(candidato => candidato.id === 'turnos')!
-    const asistencias = new Set<number>()
-    for (let semilla = 1; semilla <= 20; semilla++) {
-      const informe = await simular({ ...configuracionEjemplo(), escenario, semanas: 52, semilla }, crearAdaptador())
-      expect(informe.pasos).toHaveLength(364)
-      expect(informe.resumen.contratos.fallida).toBe(0)
-      expect(informe.adaptador.objetivo).toBe('ficticio')
-      asistencias.add(informe.resumen.asistencia.numerador)
-    }
-    expect(asistencias.size).toBeGreaterThan(1)
-  })
-
-  it.each([...escenariosBase(), ...escenariosLimite()].map(escenario => [escenario.id, escenario] as const))('reproduce el escenario ficticio %s en dos instancias nuevas', async (_id, escenario) => {
-    const configuracion = { ...configuracionEjemplo(), escenario, semanas: 12 }
-    const primero = await simular(configuracion, crearAdaptador())
-    const segundo = await simular(configuracion, crearAdaptador())
-    expect(segundo).toEqual(primero)
-    expect(primero.pasos).toHaveLength(84)
-    expect(primero.resumen.contratos.fallida).toBe(0)
-    expect(primero.adaptador.objetivo).toBe('ficticio')
+    fase.iniciar.mockRejectedValueOnce(new Error('inicio'))
+    fase.finalizar.mockRejectedValueOnce(new Error('limpieza'))
+    expect((await simular(configuracionEjemplo('musculo-gimnasio'))).resumen.contratos.fallida).toBe(2)
+    await jowyfit.finalizar()
   })
 })

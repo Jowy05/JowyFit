@@ -95,11 +95,9 @@ export default {
   'Última pesada: {datos} ({fecha}, {fuente})': 'Last weigh-in: {datos} ({fecha}, {fuente})',
   '{n} % grasa': '{n}% body fat',
   'No hay pesadas en Health Connect de los últimos 30 días.': 'No weigh-ins in Health Connect in the last 30 days.',
-  // Canales de avisos de Android (plataforma/avisos.ts)
+  // Canales de avisos de Android (plataforma/avisos.ts y, los del descanso, plataforma/avisoDescanso.ts)
   'Fin del descanso': 'Rest over',
   'Avisa cuando toca la siguiente serie (también en el reloj)': "Lets you know when it's time for the next set (on your watch too)",
-  'Descanso en curso': 'Rest in progress',
-  'Cuenta atrás del descanso, sin sonido': 'Rest countdown, silent',
   'Recordatorios': 'Reminders',
   'Dormir, pesarse, suplementos, copias…': 'Sleep, weigh-ins, supplements, backups…',
 

@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { azar, diaSemana, fechaEn } from '../../scripts/simulador/azar.ts'
 import { asiste, realizar } from '../../scripts/simulador/persona.ts'
 import { validarConfiguracion } from '../../scripts/simulador/validar.ts'
-import type { ContextoDia, Evento, Registro } from '../../scripts/simulador/tipos.ts'
-import { configuracionEjemplo, planEjemplo } from './ayuda.ts'
-
-const contexto: ContextoDia = { indice: 0, fecha: '2026-01-05', lunes: '2026-01-05', semana: 0, programado: true, decision: 'aceptar', eventos: [], material: ['dumbbell'] }
+import type { Evento } from '../../scripts/simulador/tipos.ts'
+import type { TipoRegistro } from '../../src/datos/tipos.ts'
+import { configuracionEjemplo, contextoEjemplo as contexto, planEjemplo } from './ayuda.ts'
 
 describe('persona ficticia y calendario', () => {
   it('mantiene separados los flujos de azar y sus claves', () => {
@@ -53,7 +52,7 @@ describe('persona ficticia y calendario', () => {
     expect(resultado.ejercicios[0]!.series[0]).toEqual({ numero: 1, peso: 10, repeticiones, segundos: null, esfuerzo, hecha: true })
   })
 
-  it.each(['peso', 'mancuerna', 'asistido', 'corporal', 'tiempo', 'cardio'] satisfies Registro[])('representa correctamente el registro %s', registro => {
+  it.each(['peso', 'mancuerna', 'asistido', 'corporal', 'tiempo', 'cardio'] satisfies TipoRegistro[])('representa correctamente el registro %s', registro => {
     const plan = planEjemplo()
     plan.ejercicios[0]!.registro = registro
     plan.ejercicios[0]!.peso = registro === 'asistido' ? -10 : registro === 'corporal' || registro === 'tiempo' || registro === 'cardio' ? null : 10
@@ -84,7 +83,7 @@ describe('persona ficticia y calendario', () => {
   })
 })
 
-describe('validación previa a cualquier adaptador', () => {
+describe('validación de la configuración', () => {
   it.each([-1, 0x100000000, 1.2, NaN, Infinity])('rechaza semilla %s', semilla => {
     expect(() => validarConfiguracion({ ...configuracionEjemplo(), semilla })).toThrow()
   })
@@ -98,7 +97,7 @@ describe('validación previa a cualquier adaptador', () => {
     const configuracion = configuracionEjemplo()
     configuracion.escenario.dias = [0, 0]
     expect(() => validarConfiguracion(configuracion)).toThrow('Días')
-    configuracion.escenario.dias = [0]
+    configuracion.escenario.dias = [0, 3]
     configuracion.escenario.eventos = [{ dia: 4, tipo: 'decision', valor: 'aceptar' }, { dia: 3, tipo: 'decision', valor: 'rechazar' }]
     expect(() => validarConfiguracion(configuracion)).toThrow('Eventos')
   })

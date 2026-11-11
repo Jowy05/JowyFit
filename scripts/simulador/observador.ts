@@ -1,25 +1,22 @@
-import type { Comprobacion, ContextoDia, Escenario, Metrica, Paso, PlanSesion, Resumen } from './tipos.ts'
+import type { Comprobacion, ContextoDia, Escenario, Metrica, Paso, PlanSesion, Resumen } from './tipos'
 
 export function comprobar(regla: string, valido: boolean, detalle: string): Comprobacion {
   return { regla, estado: valido ? 'aprobada' : 'fallida', detalle }
 }
 
-export function observarPlan(plan: PlanSesion, contexto: ContextoDia, escenario: Escenario): Comprobacion[] {
+/** Comprobaciones de la prescripción que no dependen de la app: rangos, identificadores, material y cargas. */
+export function observarPlan(plan: PlanSesion, contexto: ContextoDia): Comprobacion[] {
   const numerosValidos = Number.isFinite(plan.minutosEstimados) && plan.minutosEstimados >= 0 && plan.ejercicios.length <= 100 && plan.ejercicios.every(ejercicio =>
     Number.isInteger(ejercicio.series) && ejercicio.series >= 1 && ejercicio.series <= 100 &&
     [ejercicio.minimo, ejercicio.maximo, ejercicio.esfuerzo, ejercicio.descanso].every(Number.isFinite) &&
     ejercicio.minimo >= 0 && ejercicio.maximo >= ejercicio.minimo && ejercicio.esfuerzo >= 1 && ejercicio.esfuerzo <= 10 && ejercicio.descanso >= 0 &&
-    (ejercicio.peso === null || (Number.isFinite(ejercicio.peso) && (ejercicio.peso >= 0 || ejercicio.registro === 'asistido'))) && ejercicio.pesos.every(Number.isFinite) &&
-    ['peso', 'mancuerna', 'asistido', 'corporal', 'tiempo', 'cardio'].includes(ejercicio.registro) &&
-    ['primera', 'subir', 'mantener', 'bajar'].includes(ejercicio.accion))
+    (ejercicio.peso === null || (Number.isFinite(ejercicio.peso) && (ejercicio.peso >= 0 || ejercicio.registro === 'asistido'))) && ejercicio.pesos.every(Number.isFinite))
   const detalleValores = numerosValidos ? 'Rangos y tipos de la prescripción' : `Prescripción fuera de contrato: ${JSON.stringify(plan, (_clave, valor: unknown) => typeof valor === 'number' && !Number.isFinite(valor) ? String(valor) : valor)}`
   return [
     comprobar('plan.valores', numerosValidos, detalleValores),
     comprobar('plan.identificadores', !!plan.letra && plan.ejercicios.every(ejercicio => !!ejercicio.id && !!ejercicio.ejercicio) && new Set(plan.ejercicios.map(ejercicio => ejercicio.id)).size === plan.ejercicios.length, 'Identificadores presentes y únicos dentro de la sesión'),
     comprobar('plan.material', plan.ejercicios.every(ejercicio => ejercicio.material.every(material => contexto.material.includes(material))), 'Material requerido disponible'),
-    comprobar('plan.exclusiones', plan.ejercicios.every(ejercicio => !escenario.persona.excluidos.includes(ejercicio.ejercicio)), 'Ejercicios excluidos ausentes'),
     comprobar('plan.pesos', plan.ejercicios.every(ejercicio => ejercicio.peso === null || !ejercicio.pesos.length || ejercicio.pesos.includes(ejercicio.peso)), 'Cargas dentro de la lista disponible cuando se conoce'),
-    { regla: 'aplicacion.restricciones', estado: 'pendiente', detalle: 'El adaptador debe comprobar restricciones y bloqueos en su capa responsable' },
   ]
 }
 

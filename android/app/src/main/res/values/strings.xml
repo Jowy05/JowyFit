@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">JowyFit</string>
-    <string name="title_activity_main">JowyFit</string>
-    <string name="package_name">com.jowy05.jowyfit</string>
-    <string name="custom_url_scheme">com.jowy05.jowyfit</string>
+    <string name="app_name" translatable="false">JowyFit</string>
+    <string name="title_activity_main" translatable="false">JowyFit</string>
+    <string name="package_name" translatable="false">com.jowy05.jowyfit</string>
+    <string name="custom_url_scheme" translatable="false">com.jowy05.jowyfit</string>
+    <!-- Canales de notificación del descanso (Ajustes del móvil › Notificaciones de JowyFit). -->
+    <string name="canal_fin_descanso">Fin del descanso</string>
+    <string name="canal_fin_descanso_desc">Avisa cuando toca la siguiente serie (también en el reloj)</string>
+    <string name="canal_descanso_curso">Descanso en curso</string>
+    <string name="canal_descanso_curso_desc">Cuenta atrás del descanso, sin sonido</string>
 </resources>

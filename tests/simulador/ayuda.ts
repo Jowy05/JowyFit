@@ -1,14 +1,12 @@
-import { vi } from 'vitest'
-import { escenariosBase } from '../../scripts/simulador/escenarios.ts'
-import type { Adaptador, Configuracion, PlanSesion } from '../../scripts/simulador/tipos.ts'
+import { escenarios } from '../../scripts/simulador/escenarios.ts'
+import type { Configuracion, ContextoDia, Paso, PlanSesion, ResultadoSesion } from '../../scripts/simulador/tipos.ts'
 
-export function configuracionEjemplo(): Configuracion {
-  const escenario = escenariosBase()[0]!
-  escenario.persona.sesiones = 1
-  escenario.persona.variabilidad = 0
-  escenario.dias = [0]
-  return { version: 1, escenario, semanas: 2, semilla: 1, inicio: '2026-01-05' }
+export function configuracionEjemplo(id = 'casa-rodilla', semanas = 2): Configuracion {
+  const escenario = escenarios().find(candidato => candidato.id === id)!
+  return { version: 2, escenario, semanas, semilla: 1, inicio: '2026-01-05' }
 }
+
+export const contextoEjemplo: ContextoDia = { indice: 0, fecha: '2026-01-05', lunes: '2026-01-05', semana: 0, programado: true, decision: 'aceptar', eventos: [], material: ['dumbbell'] }
 
 export function planEjemplo(): PlanSesion {
   return {
@@ -17,15 +15,7 @@ export function planEjemplo(): PlanSesion {
   }
 }
 
-export function adaptadorEjemplo() {
-  const adaptador = {
-    identidad: { nombre: 'Doble de prueba sin aplicación', version: '1', objetivo: 'ficticio', huellaCatalogo: null },
-    iniciar: vi.fn<Adaptador['iniciar']>(),
-    prepararDia: vi.fn<Adaptador['prepararDia']>(),
-    planificar: vi.fn<Adaptador['planificar']>(() => planEjemplo()),
-    registrar: vi.fn<Adaptador['registrar']>(),
-    cerrarDia: vi.fn<Adaptador['cerrarDia']>(() => []),
-    finalizar: vi.fn<Adaptador['finalizar']>(),
-  } satisfies Adaptador
-  return adaptador
+/** Un día con sesión registrada; los demás campos, los de un día previsto normal. */
+export function pasoEjemplo(indice: number, plan: PlanSesion | null, resultado: ResultadoSesion | null): Paso {
+  return { contexto: { ...contextoEjemplo, indice }, asistencia: plan ? 'asiste' : 'ausente', plan, resultado, registrada: !!resultado, comprobaciones: [] }
 }

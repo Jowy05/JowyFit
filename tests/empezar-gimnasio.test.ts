@@ -19,16 +19,22 @@ describe('qué se cambia por falta de material', () => {
   const sePuede = (id: string) => (id.startsWith('raro') ? null : hay.has(id))
   it('el que no se puede hacer pasa a su primera alternativa posible; los demás, igual', () => {
     const bs = [bloque('1', 'b-ok'), bloque('2', 'b-no', { alternativas: ['alt-no', 'alt-ok'] })]
-    expect([...cambiosPorMaterial(bs, sePuede, () => [])]).toEqual([['2', 'alt-ok']])
+    expect([...cambiosPorMaterial(bs, sePuede, () => 'otra-ok')]).toEqual([['2', 'alt-ok']])
   })
-  it('sin alternativa en el plan, busca otras; sin ninguna, se queda; uno desconocido no se toca', () => {
-    const bs = [bloque('1', 'b-no'), bloque('2', 'c-no'), bloque('3', 'raro')]
-    const m = cambiosPorMaterial(bs, sePuede, b => (b.uid === '1' ? ['otra-ok'] : ['nada']))
+  it('sin alternativa en el plan, busca otra; sin ninguna, se queda; uno desconocido no se toca', () => {
+    const bs = [bloque('1', 'b-no'), bloque('2', 'c-no'), bloque('3', 'raro'), bloque('4', 'd-no')]
+    const m = cambiosPorMaterial(bs, sePuede, b => (b.uid === '1' ? 'otra-ok' : b.uid === '2' ? 'nada' : null))
     expect([...m]).toEqual([['1', 'otra-ok']])
+  })
+  it('solo busca otra si ninguna del plan vale, y le pasa lo que ya hay en el día', () => {
+    const vistos: string[][] = []
+    const otra = (_: Bloque, enDia: ReadonlySet<string>) => { vistos.push([...enDia]); return 'otra-ok' }
+    cambiosPorMaterial([bloque('1', 'b-no', { alternativas: ['alt-ok'] }), bloque('2', 'c-no')], sePuede, otra)
+    expect(vistos).toEqual([['b-no', 'c-no', 'alt-ok']])
   })
   it('no repite un ejercicio que ya está en el día', () => {
     const bs = [bloque('1', 'alt-ok'), bloque('2', 'b-no', { alternativas: ['alt-ok', 'otra-ok'] }), bloque('3', 'c-no', { alternativas: ['otra-ok'] })]
-    expect([...cambiosPorMaterial(bs, sePuede, () => [])]).toEqual([['2', 'otra-ok']])
+    expect([...cambiosPorMaterial(bs, sePuede, () => null)]).toEqual([['2', 'otra-ok']])
   })
   it('la sesión hace la alternativa, apuntada como cambio, con su forma de apuntar y el peso que le toca', () => {
     const s = crearSesion(dia([bloque('1', 'press'), bloque('2', 'remo')]), {

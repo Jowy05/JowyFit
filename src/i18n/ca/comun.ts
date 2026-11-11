@@ -95,11 +95,9 @@ export default {
   'Última pesada: {datos} ({fecha}, {fuente})': 'Última pesada: {datos} ({fecha}, {fuente})',
   '{n} % grasa': '{n} % de greix',
   'No hay pesadas en Health Connect de los últimos 30 días.': 'No hi ha pesades a Health Connect dels últims 30 dies.',
-  // Canales de avisos de Android (plataforma/avisos.ts)
+  // Canales de avisos de Android (plataforma/avisos.ts y, los del descanso, plataforma/avisoDescanso.ts)
   'Fin del descanso': 'Fi del descans',
   'Avisa cuando toca la siguiente serie (también en el reloj)': 'Avisa quan toca la sèrie següent (també al rellotge)',
-  'Descanso en curso': 'Descans en curs',
-  'Cuenta atrás del descanso, sin sonido': 'Compte enrere del descans, sense so',
   'Recordatorios': 'Recordatoris',
   'Dormir, pesarse, suplementos, copias…': 'Dormir, pesar-se, suplements, còpies…',
 

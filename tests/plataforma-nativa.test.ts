@@ -36,7 +36,7 @@ vi.mock('barcode-detector/ponyfill', () => ({
   BarcodeDetector: class { async detect() { return (detector.lecturas.shift() ?? []).map(rawValue => ({ rawValue })) } },
 }))
 
-import { borrarCopiaGuardada, cancelar, ID_AVISO, programar, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
+import { avisarDescanso, borrarCopiaGuardada, cancelar, ID_AVISO, programar, quitarAvisoDescanso, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
 import { abrirCamara } from '../src/plataforma/escanerWeb'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); plataforma.nativa = false })
@@ -217,30 +217,54 @@ describe('escáner con la cámara web', () => {
 })
 
 describe('aviso del fin del descanso en Android', () => {
-  const descanso = { id: ID_AVISO.descanso, titulo: 'Descanso terminado', texto: 'Siguiente serie', cuando: new Date(2026, 10, 5, 6, 15), durante: 'Descansando' }
+  const descanso = { hasta: new Date(2026, 10, 5, 6, 15).getTime(), titulo: 'Descanso terminado', texto: 'Siguiente serie', durante: 'Descansando' }
   const dormir = { id: ID_AVISO.dormir, titulo: 'A dormir', texto: 'Mañana entrenas', cuando: new Date(2026, 10, 5, 22, 0) }
   const programados = () => notificaciones.schedule.mock.calls.flatMap(([o]) => o.notifications.map(n => n.id))
+  const canales = () => notificaciones.schedule.mock.calls.flatMap(([o]) => o.notifications.map(n => (n as { channelId?: string }).channelId))
 
-  it('va por la alarma de reloj del plugin propio; los demás avisos, por el de notificaciones', async () => {
+  it('va por la alarma de reloj del plugin propio, sin tocar el de notificaciones; «Saltar» la quita', async () => {
     plataforma.nativa = true
     alarmaDescanso.programar.mockResolvedValue(undefined)
     alarmaDescanso.cancelar.mockResolvedValue(undefined)
-    await programar([descanso, dormir], [ID_AVISO.descanso])
-    expect(alarmaDescanso.cancelar).toHaveBeenCalled()
-    expect(alarmaDescanso.programar).toHaveBeenCalledWith({ hasta: descanso.cuando.getTime(), titulo: 'Descanso terminado', texto: 'Siguiente serie', durante: 'Descansando' })
-    expect(programados()).toEqual([ID_AVISO.dormir])
-    // «Saltar» quita la alarma del plugin propio.
-    alarmaDescanso.cancelar.mockClear()
-    await cancelar([ID_AVISO.descanso])
+    notificaciones.schedule.mockClear()
+    await avisarDescanso(descanso)
+    expect(alarmaDescanso.programar).toHaveBeenCalledWith(descanso)
+    expect(programados()).toEqual([])
+    await quitarAvisoDescanso()
     expect(alarmaDescanso.cancelar).toHaveBeenCalledTimes(1)
   })
 
-  it('si el APK no tiene el plugin, el aviso sale igual por el de notificaciones', async () => {
+  it('los demás avisos van por el de notificaciones, en su canal, y no tocan el del descanso', async () => {
+    plataforma.nativa = true
+    alarmaDescanso.cancelar.mockClear()
+    notificaciones.schedule.mockClear()
+    await programar([dormir], [ID_AVISO.dormir])
+    await cancelar([ID_AVISO.dormir])
+    expect(programados()).toEqual([ID_AVISO.dormir])
+    expect(canales()).toEqual(['recordatorios'])
+    expect(alarmaDescanso.cancelar).not.toHaveBeenCalled()
+  })
+
+  it('si el APK no tiene el plugin, el aviso sale igual por el de notificaciones, en el canal del descanso', async () => {
     plataforma.nativa = true
     alarmaDescanso.programar.mockRejectedValue(new Error('not implemented'))
     alarmaDescanso.cancelar.mockRejectedValue(new Error('not implemented'))
     notificaciones.schedule.mockClear()
-    await programar([descanso], [ID_AVISO.descanso])
-    expect(programados()).toEqual([ID_AVISO.descanso])
+    notificaciones.cancel.mockClear()
+    await avisarDescanso(descanso)
+    expect(programados()).toHaveLength(1)
+    expect(canales()).toEqual(['descanso'])
+    const [id] = programados()
+    await quitarAvisoDescanso()
+    expect(notificaciones.cancel).toHaveBeenLastCalledWith({ notifications: [{ id }] })
+  })
+
+  it('«Saltar» justo después de programar: la fila respeta el orden y el aviso queda quitado', async () => {
+    plataforma.nativa = true
+    const orden: string[] = []
+    alarmaDescanso.programar.mockImplementation(async () => { await new Promise(r => setTimeout(r, 20)); orden.push('programar') })
+    alarmaDescanso.cancelar.mockImplementation(async () => { orden.push('cancelar') })
+    await Promise.all([avisarDescanso(descanso), quitarAvisoDescanso()])
+    expect(orden).toEqual(['programar', 'cancelar'])
   })
 })

@@ -130,6 +130,7 @@ describe.skipIf(!hayCatalogo)('con el catálogo real', () => {
   const zonaVol = (id: string) => { const x = ejercicio(id); return x ? ZONA_DE_PATRON[patronGenerador(x)] : undefined }
 
   describe('otro ejercicio que no cargue la zona que molesta', () => {
+    const gustos = { perfil: perfilEjemplo(), marcas: new Map(), gimnasio: null }
     it('la zona de cada tipo: rodillas en la sentadilla, hombros en el press, codos en el curl', () => {
       expect(zonaMolestia(e('squat'))).toBe('rodillas')
       expect(zonaMolestia(e('bench-press'))).toBe('hombros')
@@ -137,16 +138,16 @@ describe.skipIf(!hayCatalogo)('con el catálogo real', () => {
     })
     it('primero uno del mismo tipo que cuide la zona; si no hay, uno parecido; si tampoco, ninguno', () => {
       const pool = [e('front-squat'), e('goblet-squat'), e('leg-press'), e('hip-thrust'), e('romanian-deadlift')]
-      const a = alternativaSinMolestia(e('squat'), pool, { zona: 'rodillas', preferidos: ['front-squat', 'leg-press'] })!
+      const a = alternativaSinMolestia(e('squat'), pool, gustos, { zona: 'rodillas', preferidos: ['front-squat', 'leg-press'] })!
       // La frontal también carga la rodilla (sin etiqueta que la cuide): fuera. De las que la cuidan, la de «si está ocupado».
       expect(a.id).toBe('leg-press')
-      expect(alternativaSinMolestia(e('squat'), pool, { zona: 'rodillas', ocupados: new Set(['leg-press', 'goblet-squat']) })!.id).toMatch(/hip-thrust|romanian-deadlift/)
-      expect(alternativaSinMolestia(e('squat'), [e('front-squat'), e('bench-press')], { zona: 'rodillas' })).toBeNull()
+      expect(alternativaSinMolestia(e('squat'), pool, gustos, { zona: 'rodillas', ocupados: new Set(['leg-press', 'goblet-squat']) })!.id).toMatch(/hip-thrust|romanian-deadlift/)
+      expect(alternativaSinMolestia(e('squat'), [e('front-squat'), e('bench-press')], gustos, { zona: 'rodillas' })).toBeNull()
     })
     it('con todo el catálogo, lo que propone no carga la zona (o la cuida) y no es el mismo ejercicio', () => {
       for (const id of ['squat', 'bench-press', 'barbell-row', 'barbell-curl', 'romanian-deadlift']) {
         const o = e(id), zona = zonaMolestia(o)!
-        const a = alternativaSinMolestia(o, fuerza(), { zona })
+        const a = alternativaSinMolestia(o, fuerza(), gustos, { zona })
         expect(a, id).not.toBeNull()
         expect(a!.id).not.toBe(id)
         const cuida = { rodillas: 'knee_safe', hombros: 'shoulder_safe', lumbar: 'lower_back_safe' } as Record<string, string>

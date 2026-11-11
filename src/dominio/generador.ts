@@ -73,10 +73,13 @@ type EntradaGenerador = {
   evitar?: Set<string>
 }
 
+/** Lo del usuario que cuenta al puntuar un ejercicio: su perfil, sus marcas y si entrena en un gimnasio. */
+export type Gustos = Pick<EntradaGenerador, 'perfil' | 'marcas' | 'gimnasio' | 'evitar'>
+
 /** Lo que se calcula una vez por rutina a partir del perfil: salud, series por zona y huecos sin cubrir. */
 type Contexto = { salud: Restricciones; series: Map<ZonaVolumen, number>; sinCubrir: Set<Patron> }
-const contextos = new WeakMap<EntradaGenerador, Contexto>()
-function contexto(x: EntradaGenerador): Contexto {
+const contextos = new WeakMap<Pick<EntradaGenerador, 'perfil'>, Contexto>()
+function contexto(x: Pick<EntradaGenerador, 'perfil'>): Contexto {
   let c = contextos.get(x)
   if (!c) { c = { salud: restricciones(x.perfil), series: new Map(), sinCubrir: new Set() }; contextos.set(x, c) }
   return c
@@ -178,7 +181,7 @@ function apto(e: Ejercicio, x: EntradaGenerador, material: Set<string> | null, c
   return true
 }
 
-function puntuar(e: Ejercicio, h: Hueco, x: EntradaGenerador, usadosOtros: Set<string>): number {
+function puntuar(e: Ejercicio, h: Hueco, x: Gustos, usadosOtros: Set<string>): number {
   let s = 0
   const m = x.marcas.get(e.id)
   // Una molestia leve resta: se elige otro si lo hay (la dolorida penaliza, la lesionada excluye).
@@ -211,13 +214,7 @@ function alternativas(elegido: Ejercicio, h: Hueco, candidatos: Ejercicio[], x: 
   const out: Ejercicio[] = []
   const ordenados = candidatos
     .filter(e => e.id !== elegido.id && !e.propio)
-    .map(e => {
-      let s = puntuar(e, h, x, new Set())
-      if (e.material !== elegido.material) s += 12
-      if (!e.material && h.papel !== 'core') s -= 14
-      if (e.principales.some(mm => elegido.principales.includes(mm))) s += 8
-      return { e, s }
-    })
+    .map(e => ({ e, s: puntosParecido(e, elegido, h, x) }))
     .sort((a, b) => b.s - a.s || a.e.id.localeCompare(b.e.id))
   for (const { e } of ordenados) {
     if (out.length >= 2) break
@@ -225,6 +222,44 @@ function alternativas(elegido: Ejercicio, h: Hueco, candidatos: Ejercicio[], x: 
     out.push(e)
   }
   return out.map(e => e.id)
+}
+
+/** Lo bien que sustituye `e` a `elegido` en su hueco: lo que gusta al usuario, mejor con otro material y que mueva los mismos músculos. */
+function puntosParecido(e: Ejercicio, elegido: Ejercicio, h: Hueco, x: Gustos): number {
+  let s = puntuar(e, h, x, new Set())
+  if (e.material !== elegido.material) s += 12
+  if (!e.material && h.papel !== 'core') s -= 14
+  if (e.principales.some(m => elegido.principales.includes(m))) s += 8
+  if (tipoRegistro(e) === tipoRegistro(elegido)) s += 6
+  return s
+}
+
+/**
+ * El ejercicio más parecido a `e` de entre `candidatos` para ponerlo en su sitio: del mismo patrón si hay alguno y, si
+ * no, del primer patrón de respaldo que tenga (como hace el generador al llenar un hueco). Dentro de un patrón, el
+ * primero de `preferidos` que esté (los de «si está ocupado») y si no, el que mejor puntúa como alternativa.
+ * `otroMovimiento`: antes otro movimiento que otra versión del mismo (si el press duele, con mancuernas suele doler
+ * también). Fuera los de `ocupados` y los propios, que solo dicen su grupo. Null si no queda ninguno.
+ */
+export function masParecido(e: Ejercicio, candidatos: readonly Ejercicio[], x: Gustos, o: { ocupados?: ReadonlySet<string>; preferidos?: readonly string[]; otroMovimiento?: boolean } = {}): Ejercicio | null {
+  const p = patronDe(e)
+  const libres = candidatos.filter(c => c.id !== e.id && !c.propio && !o.ocupados?.has(c.id))
+  for (const patron of [p, ...(RESPALDO[p] ?? [])]) {
+    const delPatron = libres.filter(c => patronDe(c) === patron)
+    const grupos = o.otroMovimiento ? [delPatron.filter(c => !mismoMovimiento(e, c)), delPatron] : [delPatron]
+    for (const grupo of grupos) {
+      const preferido = o.preferidos?.map(id => grupo.find(c => c.id === id)).find(c => c)
+      if (preferido) return preferido
+      const h: Hueco = { patron, papel: e.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
+      let mejor: Ejercicio | null = null, puntos = -Infinity
+      for (const c of grupo) {
+        const s = puntosParecido(c, e, h, x)
+        if (s > puntos || (s === puntos && mejor && c.id.localeCompare(mejor.id) < 0)) { mejor = c; puntos = s }
+      }
+      if (mejor) return mejor
+    }
+  }
+  return null
 }
 
 /** Ajusta el descanso a los de Ajustes: los compuestos escalan con «compuestos» y el resto con «aislamiento». */
@@ -634,19 +669,14 @@ export function alternativasDe(id: string, x: EntradaGenerador): string[] {
 }
 
 /**
- * Para cuando el patrón no tiene nada en este gimnasio (el jalón sin polea ni barra): el más parecido de un patrón de
- * respaldo, como hace el generador al llenar un hueco. Fuera los de `ocupados`. Null si tampoco hay.
+ * El sustituto de `id` en el gimnasio de `x` (el jalón sin polea ni barra): el más parecido de lo que allí se puede
+ * hacer y vale para el perfil (`masParecido`), fuera los de `ocupados`. Null si no hay ninguno.
  */
-export function respaldoDe(id: string, x: EntradaGenerador, ocupados: ReadonlySet<string>): string | null {
+export function sustitutoEnGimnasio(id: string, x: EntradaGenerador, ocupados: ReadonlySet<string>): string | null {
   const elegido = x.ejercicios.find(e => e.id === id)
   if (!elegido) return null
   const material = x.gimnasio ? new Set(x.gimnasio.material) : null
-  for (const p of RESPALDO[patronDe(elegido)] ?? []) {
-    const h: Hueco = { patron: p, papel: elegido.mecanica === 'compound' ? 'secundario' : 'accesorio', prioridad: 3 }
-    const [mejor] = alternativas(elegido, h, x.ejercicios.filter(e => patronDe(e) === p && !ocupados.has(e.id) && apto(e, x, material)), x)
-    if (mejor) return mejor
-  }
-  return null
+  return masParecido(elegido, x.ejercicios.filter(e => apto(e, x, material)), x, { ocupados })?.id ?? null
 }
 
 /** Bloque nuevo con series y reps razonables para un ejercicio añadido a mano. */

@@ -27,8 +27,11 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "AvisoDescanso")
 public class AvisoDescanso extends Plugin {
 
-    /** El mismo id que usa la app para el aviso del descanso (ID_AVISO.descanso). */
-    static final int ID = 9001;
+    /** Con menos margen no se arranca la cuenta atrás: el servicio llegaría a la vez que la alarma que lo para. */
+    private static final long MARGEN_CUENTA_ATRAS_MS = 1_500;
+
+    /** Lo último programado (hora y textos): al volver a la app se pide otra vez el mismo y no hay que tocar nada. */
+    private static volatile String programado;
 
     @PluginMethod
     public void programar(PluginCall call) {
@@ -37,19 +40,30 @@ public class AvisoDescanso extends Plugin {
             call.reject("Falta la hora");
             return;
         }
+        String titulo = call.getString("titulo", "");
+        String texto = call.getString("texto", "");
+        String durante = call.getString("durante", "");
+        String clave = hasta + "\n" + titulo + "\n" + texto + "\n" + durante;
         Context c = getContext();
+        // Quitar y volver a poner el mismo aviso haría parpadear la cuenta atrás.
+        if (clave.equals(programado) && DescansoEnCurso.enMarcha()) {
+            call.resolve();
+            return;
+        }
         AlarmManager alarmas = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
-        PendingIntent alAcabar = alAcabar(c, call.getString("titulo", ""), call.getString("texto", ""));
+        PendingIntent alAcabar = alAcabar(c, titulo, texto);
         alarmas.cancel(alAcabar);
-        NotificationManagerCompat.from(c).cancel(ID);
+        NotificationManagerCompat.from(c).cancel(NotificacionDescanso.ID);
         boolean exacta = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmas.canScheduleExactAlarms();
         if (exacta) {
-            alarmas.setAlarmClock(new AlarmManager.AlarmClockInfo(hasta, abrirApp(c)), alAcabar);
+            alarmas.setAlarmClock(new AlarmManager.AlarmClockInfo(hasta, NotificacionDescanso.abrirApp(c)), alAcabar);
         } else {
             // Sin permiso de alarmas exactas (no debería pasar con USE_EXACT_ALARM): llega igual, algo más tarde.
             alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, hasta, alAcabar);
         }
-        DescansoEnCurso.empezar(c, hasta, call.getString("durante", ""), call.getString("texto", ""));
+        if (hasta - System.currentTimeMillis() > MARGEN_CUENTA_ATRAS_MS) DescansoEnCurso.empezar(c, hasta, durante, texto);
+        else DescansoEnCurso.parar(c);
+        programado = clave;
         call.resolve();
     }
 
@@ -58,8 +72,9 @@ public class AvisoDescanso extends Plugin {
         Context c = getContext();
         AlarmManager alarmas = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         alarmas.cancel(alAcabar(c, "", ""));
-        NotificationManagerCompat.from(c).cancel(ID);
+        NotificationManagerCompat.from(c).cancel(NotificacionDescanso.ID);
         DescansoEnCurso.parar(c);
+        programado = null;
         call.resolve();
     }
 
@@ -94,11 +109,6 @@ public class AvisoDescanso extends Plugin {
         Intent i = new Intent(c, FinDescanso.class)
             .putExtra(FinDescanso.TITULO, titulo)
             .putExtra(FinDescanso.TEXTO, texto);
-        return PendingIntent.getBroadcast(c, ID, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    static PendingIntent abrirApp(Context c) {
-        Intent i = new Intent(c, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        return PendingIntent.getActivity(c, ID, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getBroadcast(c, NotificacionDescanso.ID, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

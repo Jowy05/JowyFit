@@ -77,11 +77,14 @@ export type Rutas = {
   'hoja-ajustes-energia': undefined
 }
 
-/** Para qué se elige el ejercicio; `q`, lo que sale ya escrito en la búsqueda. */
+/**
+ * Para qué se elige el ejercicio; `q`, lo que sale ya escrito en la búsqueda. `despues: 'entreno'` (desde el fin del
+ * entreno): se vuelve al entreno a hacer el añadido.
+ */
 type ElegirEjercicio = (
   | { modo: 'anadir'; letra: string }
   | { modo: 'cambiar' | 'alternativa'; letra: string; uid: string; id: string }
-  | { modo: 'sesion-anadir' }
+  | { modo: 'sesion-anadir'; despues?: 'entreno' }
   | { modo: 'sesion-cambiar'; idx: number; id?: string }
 ) & { q?: string }
 

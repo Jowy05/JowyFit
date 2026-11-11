@@ -1,7 +1,7 @@
 // Lecturas de la base para las pantallas (que nunca leen db directamente): las de una tabla, arriba, y las que
 // combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
-import { gimnasioActivo, rutinaActiva } from './repos'
+import { gimnasioActivo, leerPerfil, perfilPorDefecto, rutinaActiva } from './repos'
 import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
 import { catalogoCargado, ejercicio, hayEn } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
@@ -11,7 +11,7 @@ import { pesosPara } from '../dominio/pesos'
 import { bloqueObjetivo, conPartida, desdeReferencia, historialEn, sugerir, type Hecho, type Sugerencia } from '../dominio/progresion'
 import { estancado, pesoReinicio, SESIONES_ESTANCADO } from '../dominio/descarga'
 import { edad, hoyISO, lunesDe, semanaDe, sumarDias } from '../dominio/fechas'
-import { generarDiaFalta, patronGenerador } from '../dominio/generador'
+import { generarDiaFalta, patronGenerador, type Gustos } from '../dominio/generador'
 import { alternativaSinMolestia, molestiasRepetidas, zonaMolestia } from '../dominio/molestias'
 import { restricciones } from '../dominio/salud'
 import { faltanSemana, ZONA_DE_PATRON, type ZonaVolumen } from '../dominio/volumen'
@@ -285,6 +285,12 @@ export async function candidatosRutina(gimnasio?: Gimnasio | null): Promise<Ejer
     && !salud.fuera(e) && (!e.propio || e.propio.rutinaAuto))
 }
 
+/** Lo que cuenta para elegir el sustituto más parecido: el perfil, las marcas y el gimnasio (si no, el activo). */
+export async function gustosActuales(gimnasio?: Gimnasio | null): Promise<Gustos> {
+  const [p, g, marcas] = await Promise.all([leerPerfil(), gimnasio === undefined ? gimnasioActivo() : gimnasio, db.marcas.toArray()])
+  return { perfil: p ?? perfilPorDefecto(), marcas: new Map(marcas.map(m => [m.id, m])), gimnasio: g ?? null }
+}
+
 export type PropuestaMolestia = { ejercicio: string; sesion: number; otro: string | null; zona: ReturnType<typeof zonaMolestia> }
 
 /**
@@ -298,13 +304,13 @@ export async function propuestasMolestia(): Promise<PropuestaMolestia[]> {
   const plan = new Set(r.dias.flatMap(d => d.bloques.map(b => b.ejercicio)))
   const repetidas = molestiasRepetidas(sesiones, plan, a?.molestiasVistas ?? [])
   if (!repetidas.length) return []
-  const candidatos = await candidatosRutina()
+  const [candidatos, gustos] = await Promise.all([candidatosRutina(), gustosActuales()])
   return repetidas.map(({ ejercicio: id, sesion }) => {
     const e = ejercicio(id)
     const d = r.dias.find(x => x.bloques.some(b => b.ejercicio === id))
     const b = d?.bloques.find(x => x.ejercicio === id)
     const zona = e ? zonaMolestia(e) : null
-    const otro = e && d && b ? alternativaSinMolestia(e, candidatos, { zona, preferidos: b.alternativas, ocupados: new Set(d.bloques.map(x => x.ejercicio)) }) : null
+    const otro = e && d && b ? alternativaSinMolestia(e, candidatos, gustos, { zona, preferidos: b.alternativas, ocupados: new Set(d.bloques.map(x => x.ejercicio)) }) : null
     return { ejercicio: id, sesion, otro: otro?.id ?? null, zona }
   })
 }

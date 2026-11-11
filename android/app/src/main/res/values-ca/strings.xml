@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="canal_fin_descanso">Fi del descans</string>
+    <string name="canal_fin_descanso_desc">Avisa quan toca la sèrie següent (també al rellotge)</string>
+    <string name="canal_descanso_curso">Descans en curs</string>
+    <string name="canal_descanso_curso_desc">Compte enrere del descans, sense so</string>
+</resources>

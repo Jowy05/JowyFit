@@ -1,4 +1,4 @@
-import type { Informe, Metrica } from './tipos.ts'
+import type { Informe, Metrica } from './tipos'
 
 function proporcion(metrica: Metrica): string {
   return `${metrica.numerador}/${metrica.denominador} (${metrica.porcentaje === null ? 'no evaluable' : `${metrica.porcentaje}%`})`
@@ -13,9 +13,9 @@ export function markdown(informe: Informe): string {
   const lineas = [
     `# Simulación: ${celda(informe.configuracion.escenario.nombre)}`,
     '',
-    informe.adaptador.objetivo === 'ficticio' ? '**Demostración ficticia. No se ha probado JowyFit.**' : '**Evaluación de software. No demuestra eficacia fisiológica.**',
+    '**Evaluación de software. No demuestra eficacia fisiológica.**',
     '',
-    `Adaptador: ${celda(informe.adaptador.nombre)} (${celda(informe.adaptador.version)}).`,
+    `JowyFit ${celda(informe.aplicacion.version)}: acciones y dominio reales con IndexedDB temporal; catálogo ${informe.aplicacion.huellaCatalogo.slice(0, 12)}.`,
     `Escenario: ${informe.configuracion.escenario.id}; semilla: ${informe.configuracion.semilla}; inicio: ${informe.configuracion.inicio}; semanas: ${informe.configuracion.semanas}.`,
     `Días recorridos: ${resumen.dias}/${informe.configuracion.semanas * 7}.`,
     '',

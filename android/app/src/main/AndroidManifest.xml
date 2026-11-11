@@ -58,6 +58,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- FinDescanso enciende la pantalla al acabar el descanso (wakelock con ACQUIRE_CAUSES_WAKEUP). -->
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" />
     <!-- Ajustes › «Avisos con el móvil bloqueado»: pide salir del ahorro de batería (fuera de Google Play). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />

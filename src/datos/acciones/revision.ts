@@ -33,7 +33,8 @@ export async function guardarRevision(o: { estado: Revision['estado']; respuesta
         activos,
         ejercicio,
         // Los que haya en el gimnasio y se quieran hacer; el parecido (mismo patrón o de respaldo) lo elige el dominio.
-        candidatos: () => (catalogoCargado()?.ejercicios ?? []).filter(e => e.categoria === 'strength' && !evitados.has(e.id) && (!g || hayEn(e, material)) && !quitadoPor(e, p.noQuiero)),
+        candidatos: (catalogoCargado()?.ejercicios ?? []).filter(e => e.categoria === 'strength' && !evitados.has(e.id) && (!g || hayEn(e, material)) && !quitadoPor(e, p.noQuiero)),
+        gustos: { perfil, marcas: new Map(marcas.map(m => [m.id, m])), gimnasio: g ?? null },
       })
       if (cambios.length) await db.rutinas.put(aplicarCambios(r, cambios))
     }

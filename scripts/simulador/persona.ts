@@ -1,5 +1,5 @@
-import { azar } from './azar.ts'
-import type { Conducta, Configuracion, ContextoDia, PlanSesion, ResultadoSesion, SerieVirtual } from './tipos.ts'
+import { azar } from './azar'
+import type { Conducta, Configuracion, ContextoDia, PlanSesion, ResultadoSesion, SerieVirtual } from './tipos'
 
 export function asiste(configuracion: Configuracion, contexto: ContextoDia): boolean {
   const ausente = configuracion.escenario.eventos.some(evento => evento.tipo === 'ausencia' && evento.dia <= contexto.indice && evento.hasta >= contexto.indice)

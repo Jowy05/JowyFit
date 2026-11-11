@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["node"],
-    "incremental": false
-  },
-  "include": ["./**/*.ts", "../../tests/simulador/**/*.ts"],
-  "exclude": ["./jowyfit/**"]
-}

@@ -1,3 +1,5 @@
+import type { Dia } from '../../src/datos/tipos'
+
 export function huella(texto: string): number {
   let valor = 2166136261
   for (const caracter of texto) {
@@ -20,6 +22,6 @@ export function fechaEn(inicio: string, desplazamiento: number): string {
   return fecha.toISOString().slice(0, 10)
 }
 
-export function diaSemana(fecha: string): number {
-  return (new Date(`${fecha}T12:00:00.000Z`).getUTCDay() + 6) % 7
+export function diaSemana(fecha: string): Dia {
+  return ((new Date(`${fecha}T12:00:00.000Z`).getUTCDay() + 6) % 7) as Dia
 }

@@ -82,16 +82,18 @@ export function crearSesion(dia: DiaRutina, o: { rutinaId: number | null; gimnas
 
 /**
  * Qué cambiar para entrenar en un gimnasio sin el material de algún ejercicio: uid del bloque → la primera de sus
- * alternativas (las del plan y luego `otras`) que se puede hacer y no está ya en el día. `sePuede` dice null si no
- * conoce el ejercicio: uno desconocido del plan se deja como está. Sin alternativa posible, también.
+ * alternativas del plan que se puede hacer y no está ya en el día o, si ninguna vale, la que busque `otra` (le llega lo
+ * que ya hay en el día, con los cambios hechos). `sePuede` dice null si no conoce el ejercicio: uno desconocido del
+ * plan se deja como está. Sin alternativa posible, también.
  */
-export function cambiosPorMaterial(bloques: readonly Bloque[], sePuede: (id: string) => boolean | null, otras: (b: Bloque, enDia: ReadonlySet<string>) => string[]): Map<string, string> {
+export function cambiosPorMaterial(bloques: readonly Bloque[], sePuede: (id: string) => boolean | null, otra: (b: Bloque, enDia: ReadonlySet<string>) => string | null): Map<string, string> {
   const m = new Map<string, string>()
   const enDia = new Set(bloques.map(b => b.ejercicio))
+  const vale = (id: string | null): id is string => id != null && !enDia.has(id) && sePuede(id) === true
   for (const b of bloques) {
     if (sePuede(b.ejercicio) !== false) continue
-    const alt = [...b.alternativas, ...otras(b, enDia)].find(id => !enDia.has(id) && sePuede(id) === true)
-    if (alt) { m.set(b.uid, alt); enDia.add(alt) }
+    const alt = b.alternativas.find(vale) ?? otra(b, enDia)
+    if (vale(alt)) { m.set(b.uid, alt); enDia.add(alt) }
   }
   return m
 }
@@ -236,6 +238,18 @@ export function corregirSerie(s0: Sesion, idx: number, n: number, datos: Omit<Da
     for (const y of e.series.slice(n + 1)) if (!y.hecha && !y.calentamiento && y.peso === pesoAntes) y.peso = datos.peso
   }
   return s
+}
+
+/**
+ * Los ejercicios a los que se puede añadir una serie más al acabar («¿Una más?»): los que tienen todas sus series de
+ * trabajo hechas (y alguna), con su posición y la última de esas series.
+ */
+export function repetibles(s: Sesion): { e: EjercicioSesion; i: number; ultima: Serie }[] {
+  return s.ejercicios.flatMap((e, i) => {
+    const trabajo = e.series.filter(x => !x.calentamiento)
+    const ultima = trabajo.at(-1)
+    return ultima && trabajo.every(x => x.hecha) ? [{ e, i, ultima }] : []
+  })
 }
 
 export function anadirSerie(s0: Sesion, idx: number): Sesion {

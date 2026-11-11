@@ -4,7 +4,7 @@ process.env.TZ = 'Europe/Madrid'
 import { describe, expect, it } from 'vitest'
 import {
   anadirCalentamiento, anadirSerie, cambiarSerie, crearSesion, desdeBloque, hecha, indiceActual, irA, mover, quitarSerie, quitarUnaSerie,
-  resumen, saltar, serieActual, seriesNuevas, sustituir, terminada,
+  repetibles, resumen, saltar, serieActual, seriesNuevas, sustituir, terminada,
 } from '../src/dominio/sesion'
 import type { Bloque, DiaRutina, Sesion, EjercicioSesion } from '../src/datos/tipos'
 import { restanteSesion } from '../src/dominio/tiempos'
@@ -256,6 +256,20 @@ describe('cambiar de ejercicio, reordenar y saltar', () => {
     s = hecha(s, 0, { peso: 10, reps: 8, rpe: null, segundos: null }).sesion
     s = saltar(s, 1)
     expect(terminada(s)).toBe(true)
+  })
+})
+
+describe('«¿Una más?»: a qué se puede añadir una serie', () => {
+  it('solo a los que tienen todas sus series de trabajo hechas (el calentamiento no cuenta), con la última', () => {
+    let s = nueva([bloque('a', { series: 2 }), bloque('b', { series: 2 }), bloque('c', { series: 0 })])
+    s = anadirCalentamiento(s, 0, [{ peso: 20, reps: 10 }])
+    // El calentamiento sin hacer no lo deja fuera; «b» a medias, sí; «c» sin series, también.
+    const trabajo = (i: number) => s.ejercicios[i]!.series.findIndex(x => !x.calentamiento && !x.hecha)
+    for (const peso of [40, 42]) s = cambiarSerie(s, 0, trabajo(0), { peso, reps: 8, hecha: true })
+    s = cambiarSerie(s, 1, 0, { peso: 30, reps: 10, hecha: true })
+    const r = repetibles(s)
+    expect(r.map(x => x.i)).toEqual([0])
+    expect(r[0]!.ultima).toMatchObject({ peso: 42, reps: 8 })
   })
 })
 

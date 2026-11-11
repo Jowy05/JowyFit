@@ -5,7 +5,7 @@ import { buscar, ejercicio, hayEn, nombreMaterial, useCatalogo } from '../../cat
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import type { Ejercicio } from '../../catalogo/tipos'
 import { alternativasDe, bloqueNuevo, patronGenerador } from '../../dominio/generador'
-import { desdeBloque, sustituir } from '../../dominio/sesion'
+import { desdeBloque, irA, sustituir } from '../../dominio/sesion'
 import { sugerenciaPara } from '../../datos/consultas'
 import { Chip, cx, Hoja, Ico, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta, type Rutas } from '../../app/nav'
@@ -61,16 +61,17 @@ export function HojaElegirEjercicio({ ruta }: { ruta: Ruta<'hoja-elegir-ejercici
       if (!sesion?.id) return
       const b = bloqueNuevo(e.id, entrada())
       const sug = await sugerenciaPara(e.id, b, g, sesion.id)
+      const alEntreno = d.modo === 'sesion-anadir' && d.despues === 'entreno'
       if (d.modo === 'sesion-anadir') {
-        const nueva = structuredClone(sesion)
-        const ej = desdeBloque(b, { peso: sug.peso, reps: sug.reps })
-        if (!nueva.ejercicios.some(x => x.estado === 'curso')) ej.estado = 'curso'
-        nueva.ejercicios.push(ej)
-        await guardarSesion(nueva)
+        const nueva = { ...sesion, ejercicios: [...sesion.ejercicios, desdeBloque(b, { peso: sug.peso, reps: sug.reps })] }
+        // Pasa a ser el de ahora si no había ninguno o si se vuelve al entreno a hacerlo (aunque quedara otro a medias).
+        const enCurso = !alEntreno && nueva.ejercicios.some(x => x.estado === 'curso')
+        await guardarSesion(enCurso ? nueva : irA(nueva, nueva.ejercicios.length - 1))
       } else {
         await guardarSesion(sustituir(sesion, d.idx, e.id, 'cambio', { peso: sug.peso, reps: sug.reps }, tipoRegistro(e)))
       }
-      nav.hoja(null)
+      if (alEntreno) nav.completa('entreno')
+      else nav.hoja(null)
       aviso(modo === 'sesion-anadir' ? t('Añadido: {nombre}', { nombre: e.nombre }) : t('Cambiado por {nombre}', { nombre: e.nombre }))
       return
     }

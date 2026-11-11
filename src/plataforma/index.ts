@@ -3,6 +3,7 @@
 export * from './dispositivo'
 export * from './sonido'
 export * from './avisos'
+export * from './avisoDescanso'
 export * from './salud'
 export * from './escaner'
 export * from './archivos'

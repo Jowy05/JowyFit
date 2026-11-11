@@ -4,10 +4,11 @@
 import { db } from '../db'
 import type { MarcaEjercicio, Rutina, Sesion } from '../tipos'
 import { gimnasioActivo, guardarAjustes, leerAjustes, rutinaActiva } from '../repos'
-import { candidatosRutina, sugerenciaPara } from '../consultas'
+import { candidatosRutina, gustosActuales, sugerenciaPara } from '../consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { tipoRegistro } from '../../catalogo/clasificacion'
 import type { Ejercicio } from '../../catalogo/tipos'
+import type { Gustos } from '../../dominio/generador'
 import { alternativaSinMolestia, cambiarEnPlan, zonaMolestia } from '../../dominio/molestias'
 import { saltar, sustituir } from '../../dominio/sesion'
 import { t } from '../../i18n'
@@ -18,11 +19,11 @@ export type HechoMolestia = { texto: string; otro: string | null; deshacer: () =
 const iguales = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 /** La rutina sin ese ejercicio: en su sitio, uno que no cargue la zona que molesta (o nada si no hay ninguno). */
-function sinEjercicio(r: Rutina, id: string, candidatos: Ejercicio[]) {
+function sinEjercicio(r: Rutina, id: string, candidatos: Ejercicio[], gustos: Gustos) {
   const original = ejercicio(id)
   const zona = original ? zonaMolestia(original) : null
   return cambiarEnPlan(r, id, (b, d) => (original
-    ? alternativaSinMolestia(original, candidatos, { zona, preferidos: b.alternativas, ocupados: new Set(d.bloques.map(x => x.ejercicio)) })
+    ? alternativaSinMolestia(original, candidatos, gustos, { zona, preferidos: b.alternativas, ocupados: new Set(d.bloques.map(x => x.ejercicio)) })
     : null))
 }
 
@@ -31,9 +32,9 @@ function sinEjercicio(r: Rutina, id: string, candidatos: Ejercicio[]) {
  * curso, que también deja de hacerlo (lo cambia si aún no había hecho ninguna serie; si no, lo salta).
  */
 async function quitarPorMolestia(id: string, sesion?: { s: Sesion; idx: number }): Promise<HechoMolestia> {
-  const [r, candidatos, activo] = await Promise.all([rutinaActiva(), candidatosRutina(), gimnasioActivo()])
+  const [r, candidatos, gustos, activo] = await Promise.all([rutinaActiva(), candidatosRutina(), gustosActuales(), gimnasioActivo()])
   const g = (sesion?.s.gimnasioId != null ? await db.gimnasios.get(sesion.s.gimnasioId) : undefined) ?? activo
-  const cambio = r ? sinEjercicio(r, id, candidatos) : null
+  const cambio = r ? sinEjercicio(r, id, candidatos, gustos) : null
   const enPlan = cambio?.cambios.find(c => c.despues)?.despues?.ejercicio ?? null
   const quitado = !!cambio?.cambios.length && !enPlan
   let sesionNueva: Sesion | null = null
@@ -43,9 +44,9 @@ async function quitarPorMolestia(id: string, sesion?: { s: Sesion; idx: number }
     // El que se pone en el plan para ese día; en un entreno libre o el sábado armado, uno que valga aquí.
     const delDia = cambio?.cambios.find(c => c.uid === e.uid && c.letra === s.letra)
     const original = ejercicio(id)
-    const enSesion = g?.id === activo?.id ? candidatos : await candidatosRutina(g ?? null)
+    const [enSesion, gustosSesion] = g?.id === activo?.id ? [candidatos, gustos] : await Promise.all([candidatosRutina(g ?? null), gustosActuales(g ?? null)])
     const delPlan = delDia?.despues && enSesion.find(x => x.id === delDia.despues!.ejercicio)
-    const otro = delPlan || (original ? alternativaSinMolestia(original, enSesion, { zona: zonaMolestia(original), ocupados: new Set(s.ejercicios.map(x => x.ejercicio)) }) ?? undefined : undefined)
+    const otro = delPlan || (original ? alternativaSinMolestia(original, enSesion, gustosSesion, { zona: zonaMolestia(original), ocupados: new Set(s.ejercicios.map(x => x.ejercicio)) }) ?? undefined : undefined)
     if (otro && !e.series.some(x => x.hecha)) {
       const sug = await sugerenciaPara(otro.id, e, g, s.id)
       sesionNueva = sustituir(s, idx, otro.id, 'cambio', { peso: sug.peso ?? null, reps: sug.reps ?? null }, tipoRegistro(otro))

@@ -1,10 +1,10 @@
 // SES-10 · Fin del entreno
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { letrasHechasDeRutina, leerSesion, sesionesHechas } from '../../datos/consultas'
 import { historialEn } from '../../dominio/progresion'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
-import { anadirSerie, irA, resumen } from '../../dominio/sesion'
+import { anadirSerie, irA, repetibles, resumen } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO } from '../../dominio/fechas'
 import { entrenosPrevistos } from '../../dominio/semana'
 import { capital, kg, textoMarca, textoSerie, textoSubida } from '../../dominio/formato'
@@ -39,7 +39,6 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const unaVez = useUnaVez()
   // «¿Una más?»: una serie más de algo de hoy, u otro ejercicio del gimnasio, antes de guardar.
   const [unaMas, setUnaMas] = useState(false)
-  const ejerciciosAlAbrir = useRef<number | null>(null)
   const subidas = useLiveQuery(async () => {
     if (!s) return []
     const out: { id: string; antes: number; ahora: number; lastre: boolean }[] = []
@@ -61,13 +60,6 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
     return r.dias.filter(d => !d.opcional).every(d => letras.has(d.letra))
   }, [r?.id, s?.id])
 
-  // Al añadir otro ejercicio desde la hoja (el entreno sigue en curso hasta guardar), se vuelve al entreno a hacerlo.
-  useEffect(() => {
-    if (!s) return
-    if (ejerciciosAlAbrir.current == null) ejerciciosAlAbrir.current = s.ejercicios.length
-    else if (s.estado === 'curso' && s.ejercicios.length > ejerciciosAlAbrir.current) nav.completa('entreno')
-  }, [s, nav])
-
   if (!s) return <Pantalla full><div className="cargando">…</div></Pantalla>
   const ultimaSerie = Math.max(0, ...s.ejercicios.flatMap(e => e.series.map(x => x.ts ?? 0)))
   const fin = ultimaSerie && abierto - ultimaSerie > 30 * 60_000 ? ultimaSerie + 2 * 60_000 : abierto
@@ -79,9 +71,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const hechosHoy = s.ejercicios.filter(e => e.molestia || e.series.some(x => x.hecha))
   const conMolestia = hayMolestia ?? s.ejercicios.some(e => e.molestia)
   const marcados = molestos ?? s.ejercicios.filter(e => e.molestia).map(e => e.uid)
-  // Los ejercicios con todas sus series hechas: la serie de más se pone como la que toca ahora.
-  const trabajo = (e: (typeof s.ejercicios)[number]) => e.series.filter(x => !x.calentamiento)
-  const repetibles = s.ejercicios.flatMap((e, i) => (trabajo(e).length > 0 && trabajo(e).every(x => x.hecha) ? [{ e, i }] : []))
+  const deMas = repetibles(s)
+  // La serie de más se pone como la que toca ahora.
   const otraSerie = unaVez(async (i: number) => {
     await guardarSesion(irA(anadirSerie(s, i), i))
     nav.completa('entreno')
@@ -163,22 +154,19 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
               <button className="btn gry" onClick={() => setUnaMas(true)}><Ico n="plus" b />{t('¿Una más?')}</button>
             ) : (
               <div className="card pd una-mas">
-                {repetibles.length > 0 && <>
+                {deMas.length > 0 && <>
                   <p className="lbl">{t('Una serie más de…')}</p>
                   <div className="list">
-                    {repetibles.map(({ e, i }) => {
-                      const ultima = trabajo(e).at(-1)!
-                      return (
-                        <button key={e.uid} className="it" onClick={() => void otraSerie(i)}>
-                          <Th ej={ejercicio(e.ejercicio)} size="s" />
-                          <span className="tx"><b>{nombreEjercicio(e.ejercicio)}</b><small className="mono">{textoSerie(ultima, e.registro, 'corto', e.ejercicio)}</small></span>
-                          <Ico n="plus" b />
-                        </button>
-                      )
-                    })}
+                    {deMas.map(({ e, i, ultima }) => (
+                      <button key={e.uid} className="it" onClick={() => void otraSerie(i)}>
+                        <Th ej={ejercicio(e.ejercicio)} size="s" />
+                        <span className="tx"><b>{nombreEjercicio(e.ejercicio)}</b><small className="mono">{textoSerie(ultima, e.registro, 'corto', e.ejercicio)}</small></span>
+                        <Ico n="plus" b />
+                      </button>
+                    ))}
                   </div>
                 </>}
-                <button className="btn gry mt12" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-anadir' })}><Ico n="magnifying-glass" b />{t('Otro ejercicio de tu gimnasio')}</button>
+                <button className="btn gry mt12" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-anadir', despues: 'entreno' })}><Ico n="magnifying-glass" b />{t('Otro ejercicio de tu gimnasio')}</button>
               </div>
             )}
           </div>

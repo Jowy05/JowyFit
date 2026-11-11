@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="canal_fin_descanso">Rest over</string>
+    <string name="canal_fin_descanso_desc">Lets you know when it\'s time for the next set (on your watch too)</string>
+    <string name="canal_descanso_curso">Rest in progress</string>
+    <string name="canal_descanso_curso_desc">Rest countdown, silent</string>
+</resources>

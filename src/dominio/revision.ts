@@ -2,9 +2,11 @@
 // rutina. Una zona que va peor (o una lesión nueva) suaviza los ejercicios que la cargan; cuando mejora, vuelven poco
 // a poco. Todo con el bloque de antes guardado, para deshacerlo. Reglas: elección nuestra ([O]).
 import type { Ejercicio } from '../catalogo/tipos'
+import { tipoRegistro } from '../catalogo/clasificacion'
 import type { Bloque, CambioRevision, Dolor, Perfil, Revision, Rutina, ZonaDolor } from '../datos/tipos'
 import { cargaZona, nivelDolor, restricciones } from './salud'
 import { alternativaSinMolestia } from './molestias'
+import type { Gustos } from './generador'
 import { t } from '../i18n'
 
 /** Peso con una molestia que va peor: −20 %. Al mejorar, primero −10 % y luego el normal. */
@@ -14,7 +16,9 @@ export const CARGA_VUELTA = 0.9
 type Contexto = {
   ejercicio: (id: string) => Ejercicio | undefined
   /** Ejercicios que se pueden poner en su lugar (los del gimnasio, sin «no quiero» ni marcas de dolor). */
-  candidatos: (b: Bloque) => Ejercicio[]
+  candidatos: Ejercicio[]
+  /** Para puntuar cuál se parece más (sus marcas, preferencia y gimnasio). */
+  gustos: Gustos
 }
 
 /** Las molestias del perfil tras la revisión: las que «ya no duelen» se quitan; las que van peor suben un nivel. */
@@ -57,11 +61,15 @@ export function cambiosRevision(r: Rutina, perfil: Pick<Perfil, 'dolores' | 'zon
     }
   }
   // Suavizar: los ejercicios que cargan una zona que va peor.
-  const enDia = new Map(r.dias.map(d => [d.letra, new Set(d.bloques.map(b => b.ejercicio))]))
-  for (const zona of o.zonasPeor) {
+  const peor = o.zonasPeor.map(zona => {
     const dolor = perfil.dolores?.find(d => d.zona === zona)
-    const fuera = dolor ? nivelDolor(dolor) !== 'menos' : true
-    for (const d of r.dias) for (const b of d.bloques) {
+    return { zona, fuera: dolor ? nivelDolor(dolor) !== 'menos' : true }
+  })
+  const candidatos = o.candidatos.filter(x => !salud.fuera(x))
+  for (const d of r.dias) {
+    // Lo que ya hay en el día, con los sustitutos que se van poniendo: ninguno se repite.
+    const ocupados = new Set(d.bloques.map(b => b.ejercicio))
+    for (const { zona, fuera } of peor) for (const b of d.bloques) {
       if (tocados.has(b.uid)) continue
       const e = o.ejercicio(b.ejercicio)
       if (!e || !cargaZona(zona, e)) continue
@@ -69,10 +77,9 @@ export function cambiosRevision(r: Rutina, perfil: Pick<Perfil, 'dolores' | 'zon
       if (fuera && salud.fuera(e)) {
         // Ya no puede salir: el más parecido que la zona permita, del mismo patrón o de uno de respaldo (en el de la
         // sentadilla todos cargan la rodilla), primero los de «si está ocupado». Si no hay ninguno, más suave.
-        const ocupados = enDia.get(d.letra)!
-        const otro = alternativaSinMolestia(e, o.candidatos(b).filter(x => !salud.fuera(x)), { zona, preferidos: b.alternativas, ocupados })
+        const otro = alternativaSinMolestia(e, candidatos, o.gustos, { zona, preferidos: b.alternativas, ocupados })
         if (otro) ocupados.add(otro.id)
-        despues = otro ? { ...b, ejercicio: otro.id, alternativas: b.alternativas.filter(a => a !== otro.id) } : { ...b, series: Math.max(1, b.series - 1), cargaPct: CARGA_SUAVE }
+        despues = otro ? { ...b, ejercicio: otro.id, alternativas: b.alternativas.filter(a => a !== otro.id), registro: tipoRegistro(otro) } : { ...b, series: Math.max(1, b.series - 1), cargaPct: CARGA_SUAVE }
       } else if (e.mecanica === 'compound') despues = { ...b, cargaPct: Math.min(b.cargaPct ?? 1, CARGA_SUAVE) }
       else despues = { ...b, series: Math.max(1, b.series - 1) }
       if (iguales(b, despues)) continue

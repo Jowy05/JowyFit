@@ -10,7 +10,7 @@ import { ZONA_DE_PATRON } from '../../../src/dominio/volumen'
 import { pesosPara } from '../../../src/dominio/pesos'
 import { opcionesOcupado, sustituir } from '../../../src/dominio/sesion'
 import type { ContextoDia, PlanSesion, ResultadoSesion } from '../tipos'
-import { vi } from 'vitest'
+import { fijarMomento } from './entorno'
 
 export async function aplicarOcupado(sesion: Guardado<Sesion>, contexto: ContextoDia, gimnasio: Gimnasio, perfil: Perfil, catalogo: Catalogo): Promise<Guardado<Sesion>> {
   const eventos = contexto.eventos.filter(evento => evento.tipo === 'ocupado')
@@ -67,7 +67,7 @@ export async function registrarResultado(sesion: Guardado<Sesion>, resultado: Re
     const previas = (await historialDe(elemento.ejercicio, sesion.id)).flatMap(hecho => hecho.series)
     for (const serie of elemento.series.filter(candidata => candidata.hecha)) {
       momento += intervalo
-      vi.setSystemTime(momento)
+      fijarMomento(momento)
       const actual = await db.sesiones.get(sesion.id)
       if (!actual) throw new Error('Sesión desaparecida antes de registrar')
       await apuntarHecha(actual, indice, { peso: serie.peso, reps: serie.repeticiones, segundos: serie.segundos, rpe: serie.esfuerzo }, previas)

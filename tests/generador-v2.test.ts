@@ -180,7 +180,8 @@ describe('revisión semanal', () => {
 describe.skipIf(!hayCatalogo)('revisión semanal: los cambios en la rutina', () => {
   if (hayCatalogo) catalogoReal()
   // La prensa (compuesto) y la extensión (aislamiento) cargan la rodilla.
-  const ctx = { ejercicio, candidatos: () => [] }
+  const gustos = { perfil: perfilEjemplo(), marcas: new Map(), gimnasio: null }
+  const ctx = { ejercicio, candidatos: [], gustos }
   const rut = (bloques: Bloque[]): Rutina => ({ id: 1, creada: '2026-10-01', activa: true, estructura: '', porque: [], calibracion: false, gimnasioId: null, dias: [dia('A', bloques)] })
   const perfil = { zonasSensibles: [], creado: '2026-01-01', dolores: [dolor({ cuanto: 'poco', cuando: 'aveces' })] }
 
@@ -244,7 +245,7 @@ describe.skipIf(!hayCatalogo)('revisión semanal: los cambios en la rutina', () 
     const salud = restricciones(conDolor)
     expect(salud.fuera(ejercicio('squat')!)).toBe('rodillas')
     const r = rut([bloque('b1', { ejercicio: 'squat' }), bloque('b2', { ejercicio: 'romanian-deadlift' })])
-    const [cambio] = cambiosRevision(r, conDolor, { ejercicio, candidatos: () => todos, zonasPeor: ['rodillas'], zonasMejor: [], activos: [] })
+    const [cambio] = cambiosRevision(r, conDolor, { ejercicio, candidatos: todos, gustos, zonasPeor: ['rodillas'], zonasMejor: [], activos: [] })
     expect(cambio!.uid).toBe('b1')
     const otro = ejercicio(cambio!.despues.ejercicio)!
     expect(salud.fuera(otro)).toBeNull()

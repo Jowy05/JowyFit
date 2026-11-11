@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Morado del logo: color del icono en las notificaciones (la app usa el mismo en src/plataforma/avisos.ts y avisoDescanso.ts). -->
+    <color name="morado">#7F26FB</color>
+</resources>

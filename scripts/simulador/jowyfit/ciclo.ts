@@ -9,7 +9,6 @@ import { propuestaDescarga } from '../../../src/dominio/descarga'
 import { rutinaDefinitiva, tiemposReales } from '../../../src/dominio/generador'
 import type { Comprobacion, ContextoDia } from '../tipos'
 import { comprobar } from '../observador'
-import { zonaReal } from './perfiles'
 
 export async function revisar(contexto: ContextoDia): Promise<Comprobacion[]> {
   const perfil = (await leerPerfil())!
@@ -17,13 +16,13 @@ export async function revisar(contexto: ContextoDia): Promise<Comprobacion[]> {
   const eventos = contexto.eventos.filter(evento => evento.tipo === 'molestia')
   const revisiones: Comprobacion[] = []
   if (eventos.length || new Date(`${contexto.fecha}T12:00:00`).getDay() === 0) {
-    const nuevos = eventos.filter(evento => !anteriores.some(dolor => dolor.zona === zonaReal(evento.zona)) && evento.estado !== 'ya')
-      .map(evento => ({ zona: zonaReal(evento.zona), cuanto: 'poco' as const, cuando: 'fuerza' as const, desde: 'dias' as const, inicio: contexto.fecha }))
+    const nuevos = eventos.filter(evento => !anteriores.some(dolor => dolor.zona === evento.zona) && evento.estado !== 'ya')
+      .map(evento => ({ zona: evento.zona, cuanto: 'poco' as const, cuando: 'fuerza' as const, desde: 'dias' as const, inicio: contexto.fecha }))
     await guardarPerfil({ dolores: [...anteriores, ...nuevos], zonasSensibles: [] })
     const revision = await guardarRevision({
       estado: eventos.length ? 'seguimiento' : 'bien',
       zonasAntes: anteriores.map(dolor => dolor.zona),
-      respuestas: eventos.map(evento => ({ zona: zonaReal(evento.zona), va: evento.estado })),
+      respuestas: eventos.map(evento => ({ zona: evento.zona, va: evento.estado })),
     })
     revisiones.push(comprobar('revision.persistencia', !!(await db.revisiones.get(revision.id)), `Revisión guardada; cambios: ${revision.cambios.length}`))
     if (revision.cambios.length) revisiones.push({ regla: 'revision.cambios', estado: 'aprobada', detalle: `${revision.cambios.length} cambios mediante la acción real` })

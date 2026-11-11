@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TABLAS, db } from '../src/datos/db'
 import type { Sesion } from '../src/datos/tipos'
 
-const { programar, nativo } = vi.hoisted(() => ({ programar: vi.fn(() => Promise.resolve()), nativo: { si: false } }))
+const { programar, avisarDescanso, nativo } = vi.hoisted(() => ({ programar: vi.fn(() => Promise.resolve()), avisarDescanso: vi.fn(() => Promise.resolve()), nativo: { si: false } }))
 vi.mock('../src/plataforma', async original => ({
   ...(await original<typeof import('../src/plataforma')>()),
   programar,
+  avisarDescanso,
   cancelar: vi.fn(() => Promise.resolve()),
+  quitarAvisoDescanso: vi.fn(() => Promise.resolve()),
   esNativo: () => nativo.si,
 }))
 
@@ -25,10 +27,13 @@ const sesion = (x: Partial<Sesion>): Sesion => ({
 })
 type Programado = { id: number; titulo: string; cuando: Date }
 const programados = () => (programar.mock.calls as unknown as [Programado[]][]).flatMap(([avisos]) => avisos)
+type Descanso = { hasta: number; titulo: string; durante: string }
+const descansos = () => (avisarDescanso.mock.calls as unknown as [Descanso][]).map(([a]) => a)
 
 beforeEach(async () => {
   for (const t of TABLAS) await db.table(t).clear()
   programar.mockClear()
+  avisarDescanso.mockClear()
   nativo.si = false
 })
 afterEach(() => { vi.useRealTimers() })
@@ -39,16 +44,14 @@ describe('reponerAvisoDescanso', () => {
     const serie = { n: 1, peso: 20, reps: 8, rpe: 8, calentamiento: false, hecha: true, ts: 1 }
     await db.sesiones.add(sesion({ descansoHasta: hasta, ejercicios: [{ ...sesion({}).ejercicios[0]!, series: [serie] }] }))
     await reponerAvisoDescanso()
-    const [aviso] = programados()
-    expect(aviso?.id).toBe(ID_AVISO.descanso)
-    expect(aviso?.titulo).toBe('Descanso terminado')
-    expect(aviso?.cuando.getTime()).toBe(hasta)
+    expect(descansos()).toHaveLength(1)
+    expect(descansos()[0]).toMatchObject({ hasta, titulo: 'Descanso terminado', durante: 'Descansando' })
   })
 
   it('sin ninguna serie hecha es el calentamiento, y su aviso lo dice', async () => {
     await db.sesiones.add(sesion({ descansoHasta: Date.now() + 60_000 }))
     await reponerAvisoDescanso()
-    expect(programados()[0]?.titulo).toBe('Calentamiento terminado')
+    expect(descansos()[0]).toMatchObject({ titulo: 'Calentamiento terminado', durante: 'Calentando' })
   })
 
   it('sin descanso, con el descanso ya pasado o sin entreno en curso, no programa nada', async () => {
@@ -58,7 +61,7 @@ describe('reponerAvisoDescanso', () => {
     await db.sesiones.clear()
     await db.sesiones.add(sesion({ estado: 'hecha', descansoHasta: Date.now() + 60_000 }))
     await reponerAvisoDescanso()
-    expect(programar).not.toHaveBeenCalled()
+    expect(avisarDescanso).not.toHaveBeenCalled()
   })
 })
 

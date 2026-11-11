@@ -200,8 +200,8 @@ const es = {
   'faq.novedades.pregunta': 'Novedades: qué ha cambiado en cada versión',
 
   // Novedades de cada versión
-  'nov.0-12-0.cab': "<b>Versión 0.12.0</b> · 6 de noviembre de 2026",
-  'nov.0-12-0.texto': "Entreno: el aviso de fin del descanso llega a su hora en Android aunque el móvil esté en reposo. Al acabar, «¿Una más?» te deja añadir una serie u otro ejercicio. El panel del entreno queda siempre abajo y, al cambiar de pestaña, vuelves a su pantalla principal. En otro gimnasio, si un ejercicio no se puede hacer y no hay uno igual, se cambia por uno parecido; y la revisión semanal sustituye los ejercicios que una molestia ya no permite.",
+  'nov.0-12-0.cab': "<b>Versión 0.12.0</b> · 11 de noviembre de 2026",
+  'nov.0-12-0.texto': "Entreno: el aviso de fin del descanso llega a su hora en Android aunque el móvil esté bloqueado: una cuenta atrás se queda en la pantalla de bloqueo, la pantalla se enciende al acabar y en Ajustes puedes dejar que el móvil no la duerma. Al acabar, «¿Una más?» te deja añadir una serie u otro ejercicio. El panel del entreno queda siempre abajo y, al cambiar de pestaña, vuelves a su pantalla principal. En otro gimnasio, si un ejercicio no se puede hacer y no hay uno igual, se cambia por uno parecido; y la revisión semanal sustituye los ejercicios que una molestia ya no permite. Nuevo modo oscuro con el morado del logo. Y esta página estrena diseño.",
   'nov.0-11-0.cab': "<b>Versión 0.11.0</b> · 5 de noviembre de 2026",
   'nov.0-11-0.texto': "Entreno y seguimiento: apunta qué ejercicios molestan y cámbialos con Deshacer; el sábado se adapta a lo que falta esa semana. Elige gimnasio para cada sesión y ajusta el descanso y el esfuerzo en el plan. Inicio muestra el detalle de cada día, el progreso de tu meta y celebraciones. Fotos con silueta, cámara frontal y temporizador. En Android puedes guardar tus entrenos en Health Connect. Además, metas de repeticiones, historial del objetivo de energía y horarios de comida editables.",
   'nov.0-10-1.cab': "<b>Versión 0.10.1</b> · 3 de noviembre de 2026",

@@ -98,6 +98,17 @@ data class CatalogoCargado(
         return "file:///android_asset/repdb/img/${e.id}-$p.webp"
     }
 
+    fun todasImagenesAsset(e: EjercicioCatalogo): List<Pair<String, String>> {
+        val poses = e.poses.ifEmpty { listOf("main") }
+        return poses.map { pose -> pose to imagenAsset(e, pose) }
+    }
+
+    fun imagenMusculoAsset(clave: String): String? =
+        musculos[clave]?.imagen?.takeIf { it.isNotBlank() }?.let { "file:///android_asset/repdb/mus/$it" }
+
+    fun imagenMaterialAsset(clave: String?): String? =
+        clave?.let { material[it]?.imagen }?.takeIf { it.isNotBlank() }?.let { "file:///android_asset/repdb/maq/$it" }
+
     fun buscar(consulta: String, zonaFiltro: String? = null): List<EjercicioCatalogo> {
         val q = normalizar(consulta.trim())
         val partes = if (q.isEmpty()) emptyList() else q.split(Regex("\\s+"))

@@ -1,5 +1,6 @@
 package com.jowy05.jowyfit
 
+import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
 import com.jowy05.jowyfit.datos.catalogo.CatalogoJson
 import com.jowy05.jowyfit.datos.copias.CifradoCopia
 import com.jowy05.jowyfit.datos.copias.GestorCopias
@@ -356,5 +357,57 @@ class JowyFitNativoTest {
         val todosBloques = r4.dias.flatMap { it.bloques }
         assertTrue(todosBloques.none { it.superserie != null })
         assertTrue(todosBloques.all { it.descanso >= 120 })
+    }
+
+    @Test
+    fun catalogoTodasLasImagenesPosesMusculosYMaterialExisten() {
+        val dirRepdb = File("../../public/repdb")
+        val ficheroCatalogo = File(dirRepdb, "catalogo.json")
+        assertTrue("Falta public/repdb/catalogo.json", ficheroCatalogo.exists())
+        val base = JsonJowyFit.decodeFromString<CatalogoJson>(ficheroCatalogo.readText())
+        val cat = CatalogoCargado(
+            idioma = "es",
+            ejercicios = base.ejercicios,
+            porId = base.ejercicios.associateBy { it.id },
+            musculos = base.musculos,
+            material = base.material,
+        )
+
+        var conVariasPoses = 0
+        var totalImagenesPose = 0
+        for (ej in cat.ejercicios) {
+            val imgs = cat.todasImagenesAsset(ej)
+            assertTrue("Ejercicio ${ej.id} sin imágenes", imgs.isNotEmpty())
+            if (imgs.size >= 2) conVariasPoses++
+            for ((_, uri) in imgs) {
+                val rel = uri.removePrefix("file:///android_asset/repdb/")
+                assertTrue("Falta imagen de pose $rel", File(dirRepdb, rel).exists())
+                totalImagenesPose++
+            }
+        }
+        assertTrue("Debe haber >500 ejercicios con 2+ poses (hay $conVariasPoses)", conVariasPoses > 500)
+        assertTrue("Debe haber >1200 imágenes de pose (hay $totalImagenesPose)", totalImagenesPose > 1200)
+
+        var musConImg = 0
+        for (clave in cat.musculos.keys) {
+            val uri = cat.imagenMusculoAsset(clave)
+            if (uri != null) {
+                val rel = uri.removePrefix("file:///android_asset/repdb/")
+                assertTrue("Falta imagen de músculo $rel", File(dirRepdb, rel).exists())
+                musConImg++
+            }
+        }
+        assertTrue("Debe haber imágenes de músculos", musConImg > 10)
+
+        var matConImg = 0
+        for (clave in cat.material.keys) {
+            val uri = cat.imagenMaterialAsset(clave)
+            if (uri != null) {
+                val rel = uri.removePrefix("file:///android_asset/repdb/")
+                assertTrue("Falta imagen de material $rel", File(dirRepdb, rel).exists())
+                matConImg++
+            }
+        }
+        assertTrue("Debe haber imágenes de material", matConImg > 10)
     }
 }

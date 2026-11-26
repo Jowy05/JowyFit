@@ -444,7 +444,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         estado = estado,
                         catalogo = catalogo,
                         alAbrirFicha = { ejId -> fichaEjercicioId = ejId },
-                        alAbrirGimnasios = { enGimnasios = true },
+                        alGuardarGimnasio = vm::guardarGimnasio,
+                        alActivarGimnasio = vm::activarGimnasio,
+                        alBorrarGimnasio = vm::borrarGimnasio,
                         alGenerarVariante = { vm.generarNuevaRutina(calibracion = false, evitarActual = estado.rutinaActiva != null) },
                         alEmpezarDia = ::pedirEmpezarDia,
                         alEmpezarLibre = {

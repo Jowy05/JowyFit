@@ -93,6 +93,7 @@ fun ContenidoRetosEnRutina(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Spacer(Modifier.height(2.dp))
         Tarjeta(padding = PaddingValues(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(

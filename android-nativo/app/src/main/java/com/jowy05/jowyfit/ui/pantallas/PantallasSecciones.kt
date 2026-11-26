@@ -1,5 +1,6 @@
 package com.jowy05.jowyfit.ui.pantallas
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -24,16 +27,17 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,12 +46,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
+import com.jowy05.jowyfit.datos.modelo.Gimnasio
 import com.jowy05.jowyfit.datos.modelo.PlantillaEntreno
 import com.jowy05.jowyfit.dominio.CalculosDominio
 import com.jowy05.jowyfit.dominio.RetosDominio
@@ -58,9 +64,11 @@ import com.jowy05.jowyfit.ui.componentes.CabeceraPantalla
 import com.jowy05.jowyfit.ui.componentes.EtiquetaTag
 import com.jowy05.jowyfit.ui.componentes.MiniaturaEjercicio
 import com.jowy05.jowyfit.ui.componentes.NotaAviso
+import com.jowy05.jowyfit.ui.componentes.PestanasSuperiores
 import com.jowy05.jowyfit.ui.componentes.SeparadorLista
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
 import com.jowy05.jowyfit.ui.componentes.TonoNota
+import com.jowy05.jowyfit.ui.componentes.iconoBarbell
 import com.jowy05.jowyfit.ui.i18n.t
 import com.jowy05.jowyfit.ui.tema.FuenteCuerpo
 import com.jowy05.jowyfit.ui.tema.FuenteMono
@@ -72,7 +80,9 @@ fun PantallaRutina(
     estado: EstadoPrincipal,
     catalogo: CatalogoCargado?,
     alAbrirFicha: (String) -> Unit,
-    alAbrirGimnasios: () -> Unit,
+    alGuardarGimnasio: (Gimnasio, Boolean) -> Unit,
+    alActivarGimnasio: (Long) -> Unit,
+    alBorrarGimnasio: (Long) -> Unit,
     alGenerarVariante: () -> Unit,
     alEmpezarDia: (DiaRutina) -> Unit,
     alEmpezarLibre: () -> Unit,
@@ -97,24 +107,47 @@ fun PantallaRutina(
             .background(p.bg),
     ) {
         CabeceraPantalla(
-            crumb = t("Rutina"),
-            titulo = when (subtab) {
-                "plan" -> "Mi plan"
-                "retos" -> "Retos 3D"
-                else -> "Ejercicios"
-            },
-            sub = estado.rutinaActiva?.estructura?.ifBlank { null },
-            extra = {
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = subtab == "plan", onClick = { subtab = "plan" }, label = { Text("Mi plan") })
-                    FilterChip(selected = subtab == "retos", onClick = { subtab = "retos" }, label = { Text("Retos") })
-                    FilterChip(
-                        selected = subtab == "ejercicios",
-                        onClick = { subtab = "ejercicios" },
-                        label = { Text("Ejercicios (${catalogo?.ejercicios?.size ?: 0})") },
-                    )
+            titulo = t("Rutina"),
+            derecha = {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = p.surface,
+                    border = BorderStroke(1.dp, p.line),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { subtab = "gimnasios" },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = p.blue, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = estado.gimnasioActivo?.nombre ?: "Sin gimnasio",
+                            color = p.ink,
+                            fontFamily = FuenteCuerpo,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 150.dp),
+                        )
+                        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = p.muted, modifier = Modifier.size(16.dp))
+                    }
                 }
+            },
+            pestanas = {
+                PestanasSuperiores(
+                    opciones = listOf(
+                        "plan" to "Mi plan",
+                        "retos" to "Retos",
+                        "ejercicios" to "Ejercicios",
+                        "gimnasios" to "Gimnasios",
+                    ),
+                    activa = subtab,
+                    alCambiar = { subtab = it },
+                )
             },
         )
 
@@ -124,6 +157,15 @@ fun PantallaRutina(
                 alIniciarReto = alIniciarReto,
                 alBorrarIntento = alBorrarIntentoReto,
             )
+        } else if (subtab == "gimnasios") {
+            ContenidoGimnasios(
+                estado = estado,
+                catalogo = catalogo,
+                alGuardarGimnasio = alGuardarGimnasio,
+                alActivarGimnasio = alActivarGimnasio,
+                alBorrarGimnasio = alBorrarGimnasio,
+                espacioInferior = if (estado.sesionEnCurso != null) 156.dp else 112.dp,
+            )
         } else if (subtab == "plan") {
             Column(
                 modifier = Modifier
@@ -132,13 +174,13 @@ fun PantallaRutina(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                Spacer(Modifier.height(2.dp))
                 val rutina = estado.rutinaActiva
                 if (rutina == null) {
-                    Spacer(Modifier.height(4.dp))
                     NotaAviso(
                         texto = "Aún no tienes rutina activa. Puedes generarla automáticamente según tu perfil y material o importar tu .jowyfit en Ajustes.",
                         tono = TonoNota.INFO,
-                        icono = Icons.Rounded.FitnessCenter,
+                        icono = iconoBarbell(bold = true),
                     )
                     BotonPrincipal(
                         texto = "Crear mi rutina",
@@ -295,7 +337,7 @@ fun PantallaRutina(
                 BloqueGeneradorYLibres(
                     estado = estado,
                     alGenerarVariante = alGenerarVariante,
-                    alAbrirGimnasios = alAbrirGimnasios,
+                    alAbrirGimnasios = { subtab = "gimnasios" },
                     alEmpezarLibre = alEmpezarLibre,
                     alEmpezarPlantilla = alEmpezarPlantilla,
                     alBorrarPlantilla = alBorrarPlantilla,
@@ -306,10 +348,11 @@ fun PantallaRutina(
         } else {
             val lista = remember(catalogo, busqueda) { catalogo?.buscar(busqueda).orEmpty() }
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                Spacer(Modifier.height(14.dp))
                 OutlinedTextField(
                     value = busqueda,
                     onValueChange = { busqueda = it },
-                    placeholder = { Text("Buscar ejercicio, músculo o material…") },
+                    placeholder = { Text("Buscar entre ${catalogo?.ejercicios?.size ?: 0} ejercicios, músculo o material…") },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),

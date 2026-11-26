@@ -76,6 +76,7 @@ import com.jowy05.jowyfit.ui.componentes.EtiquetaTag
 import com.jowy05.jowyfit.ui.componentes.FilaLista
 import com.jowy05.jowyfit.ui.componentes.ListaAgrupada
 import com.jowy05.jowyfit.ui.componentes.NotaAviso
+import com.jowy05.jowyfit.ui.componentes.PestanasSuperiores
 import com.jowy05.jowyfit.ui.componentes.SeccionTitulo
 import com.jowy05.jowyfit.ui.componentes.SeparadorLista
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
@@ -152,17 +153,12 @@ fun PantallaComidaCompleta(
             .background(p.bg),
     ) {
         CabeceraPantalla(
-            crumb = t("Comida"),
-            titulo = when (subtab) {
-                "dia" -> etiquetaFecha
-                "mis" -> "Mis comidas"
-                else -> "Energía"
-            },
-            sub = "${tot.proteina} / ${energia.proteina} g proteína" +
+            titulo = t("Comida"),
+            sub = "$etiquetaFecha · ${tot.proteina} / ${energia.proteina} g proteína" +
                 if (estado.ajustes.mostrarKcal) " · ${tot.kcal} / ~${energia.kcal} kcal" else "",
-            derecha = if (subtab == "dia") {
-                {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            derecha = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (subtab == "dia") {
                         IconButton(onClick = { fechaSel = fechaSel.minusDays(1) }) {
                             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = "Día anterior", tint = p.ink)
                         }
@@ -179,19 +175,21 @@ fun PantallaComidaCompleta(
                             )
                         }
                     }
+                    IconButton(onClick = { alAbrirEscaner(fechaIso, franjaActual) }) {
+                        Icon(Icons.Rounded.QrCodeScanner, contentDescription = "Escanear", tint = p.ink)
+                    }
                 }
-            } else null,
-            extra = {
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = subtab == "dia", onClick = { subtab = "dia" }, label = { Text("Día") })
-                    FilterChip(
-                        selected = subtab == "mis",
-                        onClick = { subtab = "mis" },
-                        label = { Text("Mis comidas (${estado.plantillas.size})") },
-                    )
-                    FilterChip(selected = subtab == "energia", onClick = { subtab = "energia" }, label = { Text("Energía") })
-                }
+            },
+            pestanas = {
+                PestanasSuperiores(
+                    opciones = listOf(
+                        "dia" to "Día",
+                        "mis" to "Mis comidas",
+                        "energia" to "Energía",
+                    ),
+                    activa = subtab,
+                    alCambiar = { subtab = it },
+                )
             },
         )
 
@@ -204,6 +202,7 @@ fun PantallaComidaCompleta(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     // Resumen proteína + calorías
                     Tarjeta {
                         Row(
@@ -425,6 +424,7 @@ fun PantallaComidaCompleta(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     OutlinedTextField(
                         value = filtroPlantillas,
                         onValueChange = { filtroPlantillas = it },
@@ -528,6 +528,7 @@ fun PantallaComidaCompleta(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     Tarjeta {
                         Text("TU GASTO ESTIMADO", color = p.muted, fontFamily = FuenteTitulo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         Spacer(Modifier.height(8.dp))

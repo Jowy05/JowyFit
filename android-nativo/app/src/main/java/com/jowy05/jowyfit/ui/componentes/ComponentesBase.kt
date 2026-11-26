@@ -56,12 +56,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.jowy05.jowyfit.R
 import com.jowy05.jowyfit.dominio.CalculosDominio
 import com.jowy05.jowyfit.ui.i18n.LocalIdioma
 import com.jowy05.jowyfit.ui.i18n.diasCortos
@@ -80,6 +82,10 @@ enum class Pestana(val icono: ImageVector, val etiquetaEs: String) {
     PERFIL(Icons.Rounded.Person, "Perfil"),
 }
 
+@Composable
+fun iconoBarbell(bold: Boolean = true): ImageVector =
+    ImageVector.vectorResource(if (bold) R.drawable.ic_barbell_bold else R.drawable.ic_barbell)
+
 /** Cabecera 1:1 con .hd de componentes.css (degradado --hd hasta --bg). */
 @Composable
 fun CabeceraPantalla(
@@ -89,6 +95,7 @@ fun CabeceraPantalla(
     alVolver: (() -> Unit)? = null,
     derecha: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
+    pestanas: (@Composable () -> Unit)? = null,
 ) {
     val p = LocalPaleta.current
     Column(
@@ -101,55 +108,140 @@ fun CabeceraPantalla(
                     1f to p.bg,
                 ),
             )
-            .statusBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 14.dp),
+            .statusBarsPadding(),
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = if (pestanas != null) 0.dp else 14.dp,
+                ),
+        ) {
+            if (alVolver != null || !crumb.isNullOrBlank() || derecha != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 44.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (alVolver != null) {
+                        IconButton(onClick = alVolver, modifier = Modifier.size(44.dp)) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = p.ink)
+                        }
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    if (!crumb.isNullOrBlank()) {
+                        Text(
+                            text = crumb.uppercase(),
+                            color = p.blue,
+                            fontFamily = FuenteTitulo,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.5.sp,
+                            letterSpacing = 1.1.sp,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    if (derecha != null) derecha()
+                }
+            } else {
+                Spacer(Modifier.height(6.dp))
+            }
+            if (!titulo.isNullOrBlank()) {
+                Text(
+                    text = titulo,
+                    color = p.ink,
+                    fontFamily = FuenteTitulo,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 30.sp,
+                    lineHeight = 33.sp,
+                )
+            }
+            if (!sub.isNullOrBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(text = sub, color = p.muted, fontFamily = FuenteCuerpo, fontSize = 14.5.sp)
+            }
+            if (extra != null) {
+                extra()
+            }
+        }
+        if (pestanas != null) {
+            Spacer(Modifier.height(10.dp))
+            pestanas()
+        }
+    }
+}
+
+/** Pestañas horizontales de ancho completo divididas en secciones 1:1 con .seg.fill de componentes.css. */
+@Composable
+fun <T> PestanasSuperiores(
+    opciones: List<Pair<T, String>>,
+    activa: T,
+    alCambiar: (T) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val p = LocalPaleta.current
+    val compactas = opciones.size >= 5
+    val tamTexto = if (compactas) 14.5.sp else 16.sp
+    val margenIndicador = if (compactas) 6.dp else 10.dp
+
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 44.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            if (alVolver != null) {
-                IconButton(onClick = alVolver, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = p.ink)
-                }
-                Spacer(Modifier.width(4.dp))
-            }
-            if (!crumb.isNullOrBlank()) {
-                Text(
-                    text = crumb.uppercase(),
-                    color = p.blue,
-                    fontFamily = FuenteTitulo,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.5.sp,
-                    letterSpacing = 1.1.sp,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            opciones.forEach { (clave, etiqueta) ->
+                val on = clave == activa
+                val colorTexto by animateColorAsState(
+                    targetValue = if (on) p.ink else p.muted,
+                    animationSpec = tween(180),
+                    label = "seg_fg",
                 )
-            } else {
-                Spacer(Modifier.weight(1f))
+                val colorBarra by animateColorAsState(
+                    targetValue = if (on) p.go else Color.Transparent,
+                    animationSpec = tween(180),
+                    label = "seg_bar",
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clickable { alCambiar(clave) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = etiqueta,
+                        color = colorTexto,
+                        fontFamily = FuenteTitulo,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = tamTexto,
+                        letterSpacing = 0.25.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = margenIndicador)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(colorBarra),
+                    )
+                }
             }
-            if (derecha != null) derecha()
         }
-        if (!titulo.isNullOrBlank()) {
-            Text(
-                text = titulo,
-                color = p.ink,
-                fontFamily = FuenteTitulo,
-                fontWeight = FontWeight.Bold,
-                fontSize = 30.sp,
-                lineHeight = 33.sp,
-            )
-        }
-        if (!sub.isNullOrBlank()) {
-            Spacer(Modifier.height(4.dp))
-            Text(text = sub, color = p.muted, fontFamily = FuenteCuerpo, fontSize = 14.5.sp)
-        }
-        if (extra != null) {
-            extra()
-        }
+        HorizontalDivider(color = p.line, thickness = 1.dp)
     }
 }
 
@@ -293,7 +385,8 @@ fun BarraInferiorFlotante(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
                     ) {
-                        Icon(tab.icono, contentDescription = t(tab.etiquetaEs), tint = fg, modifier = Modifier.size(21.dp))
+                        val iconoTab = if (tab == Pestana.RUTINA) iconoBarbell(bold = on) else tab.icono
+                        Icon(iconoTab, contentDescription = t(tab.etiquetaEs), tint = fg, modifier = Modifier.size(21.dp))
                         Text(
                             text = t(tab.etiquetaEs),
                             color = fg,
@@ -683,7 +776,7 @@ fun MiniaturaEjercicio(
                 modifier = Modifier.size(tamano),
             )
         } else {
-            Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = p.th, modifier = Modifier.size(tamano * 0.5f))
+            Icon(iconoBarbell(bold = true), contentDescription = null, tint = p.th, modifier = Modifier.size(tamano * 0.5f))
         }
     }
 }

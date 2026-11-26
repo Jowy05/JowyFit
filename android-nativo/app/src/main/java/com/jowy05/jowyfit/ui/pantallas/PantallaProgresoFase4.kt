@@ -84,6 +84,7 @@ import com.jowy05.jowyfit.ui.componentes.EtiquetaTag
 import com.jowy05.jowyfit.ui.componentes.FilaLista
 import com.jowy05.jowyfit.ui.componentes.ListaAgrupada
 import com.jowy05.jowyfit.ui.componentes.NotaAviso
+import com.jowy05.jowyfit.ui.componentes.PestanasSuperiores
 import com.jowy05.jowyfit.ui.componentes.SeccionTitulo
 import com.jowy05.jowyfit.ui.componentes.SeparadorLista
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
@@ -131,31 +132,19 @@ fun PantallaProgresoCompleta(
 
     Column(modifier = Modifier.fillMaxSize().background(p.bg)) {
         CabeceraPantalla(
-            crumb = t("Progreso"),
-            titulo = when (subtab) {
-                "semana" -> "Semana"
-                "fuerza" -> "Fuerza"
-                "cuerpo" -> "Cuerpo"
-                "metas" -> "Metas"
-                else -> "Fotos y pasos"
-            },
-            sub = "${hechas.size} entrenos · ${estado.metas.size} metas · ${estado.retos.size} retos",
-            extra = {
-                Spacer(Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    listOf(
+            titulo = t("Progreso"),
+            pestanas = {
+                PestanasSuperiores(
+                    opciones = listOf(
                         "semana" to "Semana",
                         "fuerza" to "Fuerza",
                         "cuerpo" to "Cuerpo",
+                        "fotos" to "Fotos",
                         "metas" to "Metas",
-                        "fotos" to "Fotos y pasos",
-                    ).forEach { (k, lbl) ->
-                        FilterChip(selected = subtab == k, onClick = { subtab = k }, label = { Text(lbl) })
-                    }
-                }
+                    ),
+                    activa = subtab,
+                    alCambiar = { subtab = it },
+                )
             },
         )
 
@@ -179,6 +168,7 @@ fun PantallaProgresoCompleta(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Tarjeta(modifier = Modifier.weight(1f), padding = PaddingValues(12.dp)) {
                             Text("ENTRENOS", color = p.muted, fontFamily = FuenteTitulo, fontSize = 11.5.sp)
@@ -254,6 +244,7 @@ fun PantallaProgresoCompleta(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     propuesta?.let { pr ->
                         NotaAviso(texto = pr.motivo, tono = TonoNota.WARN, icono = Icons.Rounded.Warning)
                     }
@@ -349,6 +340,7 @@ fun PantallaProgresoCompleta(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BotonPrincipal(texto = "+ Medida", icono = Icons.Rounded.Add, onClick = { hojaMedicion = true }, modifier = Modifier.weight(1f))
                         BotonSecundario(texto = "Health Connect", icono = Icons.Rounded.Sync, onClick = alSincronizarHC, modifier = Modifier.weight(1f))
@@ -411,6 +403,7 @@ fun PantallaProgresoCompleta(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     BotonPrincipal(texto = "+ Nueva meta", icono = Icons.Rounded.Add, onClick = { hojaNuevaMeta = true })
 
                     if (estado.metas.isEmpty()) {
@@ -482,6 +475,7 @@ fun PantallaProgresoCompleta(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Spacer(Modifier.height(2.dp))
                     // Pasos + Cardio + Health Connect
                     Tarjeta {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {

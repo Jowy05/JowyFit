@@ -66,11 +66,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
 import com.jowy05.jowyfit.datos.modelo.EjercicioSesion
 import com.jowy05.jowyfit.datos.modelo.Gimnasio
@@ -89,6 +91,7 @@ import com.jowy05.jowyfit.ui.componentes.NotaAviso
 import com.jowy05.jowyfit.ui.componentes.SeparadorLista
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
 import com.jowy05.jowyfit.ui.componentes.TonoNota
+import com.jowy05.jowyfit.ui.componentes.iconoBarbell
 import com.jowy05.jowyfit.ui.tema.FuenteCuerpo
 import com.jowy05.jowyfit.ui.tema.FuenteMono
 import com.jowy05.jowyfit.ui.tema.FuenteTitulo
@@ -139,6 +142,7 @@ fun PantallaEntrenoEnVivo(
     var hojaLista by remember { mutableStateOf(false) }
     var hojaOcupado by remember { mutableStateOf(false) }
     var hojaDiscos by remember { mutableStateOf(false) }
+    var hojaInstrucciones by remember { mutableStateOf(false) }
     var hojaAnadirEj by remember { mutableStateOf(false) }
     var dialogoSalir by remember { mutableStateOf(false) }
 
@@ -253,7 +257,9 @@ fun PantallaEntrenoEnVivo(
                 val sug = remember(ejActual.uid, ejActual.ejercicio) { sugerenciaPara(ejActual) }
                 Tarjeta(onClick = { alAbrirFicha(ejActual.ejercicio) }) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MiniaturaEjercicio(urlAsset = ejCat?.let { catalogo?.miniaturaAsset(it) }, tamano = 64.dp)
+                        Box(modifier = Modifier.clickable { hojaInstrucciones = true }) {
+                            MiniaturaEjercicio(urlAsset = ejCat?.let { catalogo?.miniaturaAsset(it) }, tamano = 64.dp)
+                        }
                         Column(modifier = Modifier.weight(1f)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 EtiquetaTag("Ejercicio ${idx + 1} de ${sesion.ejercicios.size}", colorFondo = p.blueT, colorTexto = p.blue)
@@ -287,7 +293,7 @@ fun PantallaEntrenoEnVivo(
                         Progresion.AccionSugerencia.BAJAR -> TonoNota.WARN
                         else -> TonoNota.INFO
                     },
-                    icono = Icons.Rounded.FitnessCenter,
+                    icono = iconoBarbell(bold = true),
                 )
 
                 // Lista de series del ejercicio actual
@@ -576,6 +582,67 @@ fun PantallaEntrenoEnVivo(
         }
     }
 
+    // Hoja «Cómo se hace»: muestra todas las poses RepDB lado a lado + instrucciones sin salir del entreno
+    if (hojaInstrucciones && ejCat != null && catalogo != null) {
+        val imgs = remember(ejCat, catalogo) { catalogo.todasImagenesAsset(ejCat) }
+        ModalBottomSheet(onDismissRequest = { hojaInstrucciones = false }, containerColor = p.surface) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text("Cómo se hace", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
+                Text(ejCat.nombre, color = p.muted, fontSize = 14.5.sp)
+                if (imgs.isNotEmpty()) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        imgs.forEach { (pose, url) ->
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFD9F0FC)),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = etiquetaPose(pose),
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(148.dp)
+                                        .padding(6.dp),
+                                )
+                                Text(
+                                    text = etiquetaPose(pose),
+                                    color = Color(0xFF16202B),
+                                    fontFamily = FuenteTitulo,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(bottom = 6.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+                ejCat.instrucciones.forEachIndexed { i, paso ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        EtiquetaTag("${i + 1}", colorFondo = p.raised, colorTexto = p.blue)
+                        Text(paso, color = p.ink, fontFamily = FuenteCuerpo, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    }
+                }
+                if (ejCat.consejos.isNotEmpty()) {
+                    Text("CONSEJOS", color = p.muted, fontFamily = FuenteTitulo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    ejCat.consejos.forEach { c -> Text("• $c", color = p.muted, fontSize = 13.5.sp) }
+                }
+                BotonSecundario(texto = "Cerrar", onClick = { hojaInstrucciones = false })
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+    }
+
     // Hoja buscador para añadir un ejercicio a la sesión
     if (hojaAnadirEj && catalogo != null) {
         HojaBuscadorEjercicio(
@@ -713,7 +780,7 @@ fun MiniBarraEntreno(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = p.go, modifier = Modifier.size(22.dp))
+            Icon(iconoBarbell(bold = true), contentDescription = null, tint = p.go, modifier = Modifier.size(22.dp))
             Text(sesion.nombre, color = p.ink, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("Volver", color = p.go, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold)
         }

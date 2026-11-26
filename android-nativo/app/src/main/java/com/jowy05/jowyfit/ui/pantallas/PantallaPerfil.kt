@@ -1,5 +1,7 @@
 package com.jowy05.jowyfit.ui.pantallas
 
+import com.jowy05.jowyfit.BuildConfig
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -258,6 +260,16 @@ fun PantallaPerfil(
                     alPulsar = alAbrirAjustes,
                 )
             }
+
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = "JowyFit v${BuildConfig.VERSION_APP} (r${BuildConfig.KOTLIN_BUILD})",
+                color = p.muted,
+                fontFamily = FuenteMono,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
 
             Spacer(Modifier.height(if (estado.sesionEnCurso != null) 156.dp else 112.dp))
         }

@@ -316,7 +316,7 @@ fun PantallaAjustes(
 
             Spacer(Modifier.height(14.dp))
             NotaAviso(
-                texto = "JowyFit Kotlin Nativo (Fases 1–5 completas). Coexiste en paralelo con tu JowyFit actual sin tocar sus datos.",
+                texto = "JowyFit Kotlin Nativo · v${BuildConfig.VERSION_APP} (r${BuildConfig.KOTLIN_BUILD}). Coexiste en paralelo con tu JowyFit actual sin tocar sus datos.",
                 tono = TonoNota.INFO,
                 icono = Icons.Rounded.Download,
             )

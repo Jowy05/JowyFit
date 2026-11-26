@@ -21,12 +21,10 @@ import { MolestiaRepetida } from './MolestiaRepetida'
 import { t, tc } from '../../i18n'
 import { tr } from '../../i18n/jsx'
 
-/** Icono de cada día en la tira de la semana; el día de hoy con entreno lleva una pesa. */
-const ICONO_DIA: Record<EstadoDia['estado'], string> = {
-  hecho: 'ph-bold ph-check okc', plan: 'ph-bold ph-circle', perdido: 'ph-bold ph-x badc', movido: 'ph-bold ph-arrow-right',
-  opcional: 'ph ph-circle-dashed', descanso: 'ph-bold ph-minus',
+/** Clase de punto por estado del día en la tira de la semana. */
+const CLASE_DIA: Record<EstadoDia['estado'], string> = {
+  hecho: 'done', plan: 'plan', perdido: 'miss', movido: 'moved', opcional: 'opt', descanso: 'off',
 }
-const iconoDia = (e: EstadoDia) => (e.hoy && e.estado === 'plan' ? 'ph-bold ph-barbell' : ICONO_DIA[e.estado])
 
 export function Inicio() {
   const nav = useNav()
@@ -80,10 +78,10 @@ export function Inicio() {
       >
         <div className="week mt12" role="list" data-tour="semana">
           {semana.map((e, i) => (
-            <button key={e.fecha} role="listitem" className={cx('wd', e.hoy ? 'today' : e.estado === 'plan' ? 'plan' : e.estado === 'opcional' ? 'opt' : 'off')} aria-label={capital(fechaLarga(e.fecha))} onClick={() => nav.hoja('hoja-dia', { fecha: e.fecha })}>
+            <button key={e.fecha} role="listitem" className={cx('wd', CLASE_DIA[e.estado], e.hoy && 'today')} aria-label={capital(fechaLarga(e.fecha))} onClick={() => nav.hoja('hoja-dia', { fecha: e.fecha })}>
               <span>{DIAS_CORTOS[i]}</span>
               <b>{deISO(e.fecha).getDate()}</b>
-              <i className={iconoDia(e)} />
+              <i className="wd-dot" aria-hidden="true" />
             </button>
           ))}
         </div>
@@ -118,21 +116,21 @@ export function Inicio() {
 
         <Seccion tour="numeros" titulo={t('Hoy en números')} accion={t('Comida')} onAccion={() => nav.pestana('com')}>
           <div className="grid2">
-            <div className="card kpi span2">
-              <div className="row jb">
+            <button className="card kpi span2" onClick={() => nav.pestana('com')}>
+              <span className="row jb">
                 <span className="lbl">{t('Proteína')}</span>
                 {energia && <span className="small muted">{tot.proteina >= energia.proteina ? t('Objetivo cumplido') : t('Faltan {n} g', { n: Math.round(energia.proteina - tot.proteina) })}</span>}
-              </div>
+              </span>
               <p className="k">{Math.round(tot.proteina)}<small>/ {energia?.proteina ?? '—'} g</small></p>
               <div className="mt8"><Barra v={tot.proteina} total={energia?.proteina ?? 1} tono="ok" gruesa /></div>
-            </div>
+            </button>
             {ajustes.mostrarKcal && (
-              <div className="card kpi">
+              <button className="card kpi" onClick={() => nav.ir('energia', undefined, 'com')}>
                 <span className="lbl">{t('Calorías')}</span>
                 <p className="k">{num(tot.kcal, 0)}<small>/ ~{energia ? num(energia.kcal, 0) : '—'}</small></p>
                 <div className="mt8"><Barra v={tot.kcal} total={energia?.kcal ?? 1} /></div>
                 <p className="d">{t('kcal · orientativo')}</p>
-              </div>
+              </button>
             )}
             {(
               <button className={cx('card kpi steps', !ajustes.mostrarKcal && 'span2')} onClick={() => nav.ir('pasos', undefined, 'pro')}>
@@ -163,13 +161,13 @@ export function Inicio() {
             )}
             {!!perfil.cardioMin && <CardioSemana meta={perfil.cardioMin} />}
             {tot.cafeina > 0 && (
-              <div className="card kpi span2 row">
+              <button className="card kpi span2 row" onClick={() => nav.pestana('com')}>
                 <span className="ico"><Ico n="coffee" /></span>
                 <div className="grow">
                   <div className="row jb"><span className="lbl">{t('Cafeína')}</span><span className="mono small">{tot.cafeina} / {ajustes.cafeinaLimite} mg</span></div>
-                  <div className="mt8"><Barra v={tot.cafeina} total={ajustes.cafeinaLimite} tono={tot.cafeina > ajustes.cafeinaLimite ? 'go' : 'warn'} /></div>
+                  <div className="mt8"><Barra v={tot.cafeina} total={ajustes.cafeinaLimite} tono={tot.cafeina > ajustes.cafeinaLimite ? 'bad' : 'warn'} /></div>
                 </div>
-              </div>
+              </button>
             )}
           </div>
         </Seccion>

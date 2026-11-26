@@ -3,12 +3,13 @@ import type { Sesion } from '../../datos/tipos'
 import { kg, num, conSigno, textoMarca } from '../../dominio/formato'
 import { MESES, deISO, fechaCorta, lunesDe, sumarDias } from '../../dominio/fechas'
 import { mejorMarca, volumen } from '../../dominio/progresion'
-import { ejerciciosHechos, nivelSeries, seriesDe, seriesPorGrupo } from '../../dominio/tendencias'
+import { ejerciciosEstancados, ejerciciosHechos, nivelSeries, seriesDe, seriesPorGrupo } from '../../dominio/tendencias'
+import { mejorMarcaReto, rachaRetos, RETOS, textoMarcaReto } from '../../dominio/retos'
 import { nombreEntreno } from '../../dominio/nombres'
 import { t, tn } from '../../i18n'
 import type {
-  Direccion, EntrenosInforme, EsfuerzoEjercicio, EsfuerzoInforme, FilaEntreno, FilaSemanaEntrenos, FuerzaInforme, GraficaFuerza, MejorSerie,
-  MesInforme, PuntoEsfuerzo, RecordSesion, SemanaInforme, SubidaInforme, TonoInforme,
+  Direccion, EntrenosInforme, EsfuerzoEjercicio, EsfuerzoInforme, FilaEntreno, FilaRetoInforme, FilaSemanaEntrenos, FuerzaInforme, GraficaFuerza, MejorSerie,
+  MesInforme, PuntoEsfuerzo, RecordSesion, RetosInforme, SemanaInforme, SubidaInforme, TonoInforme,
 } from './tipos'
 import { agrupar, entre, esfuerzoDe, etiquetaSemana, fechaDia, minutosSesion, palabraEsfuerzo, pctCambio, queDiceEsfuerzo, r1, serieFuerza, suma, textoDuracion, textoPct, textoSerie, trabajo, unidadCorta, unidadFuerza } from './comun'
 import { cuentaEntrenos, nombreDe, type Ctx } from './contexto'
@@ -199,9 +200,40 @@ export function fuerzaInforme(c: Ctx, semanas: SemanaInforme[], meses: MesInform
     const nivel = nivelSeries(v, g.zona)
     return { n: g.n, v, zona: g.zona, nivel, tono: (nivel === 'bien' ? 'ok' : 'warn') as TonoInforme }
   })
+  const estancados = ejerciciosEstancados(c.hechas, c.ajustes?.semanaSuave)
+    .map(x => ({ id: x.ejercicio, nombre: nombreDe(c, x.ejercicio), peso: x.peso, sesiones: x.sesiones }))
   return {
     ejercicios: ejerciciosHechos(c.enPeriodo).slice(0, 6).map(id => graficaFuerza(c, id)).filter((x): x is GraficaFuerza => !!x),
     semanas: semanas.map(s => ({ lunes: s.lunes, etiqueta: s.etiqueta, kg: s.kg, toneladas: s.toneladas, enCurso: s.enCurso })),
-    grupos, mejores: mejoresSeries(c), contraNota: anteriorIncompleto(c, c.hechas.map(s => s.fecha)), meses,
+    grupos, mejores: mejoresSeries(c), estancados, contraNota: anteriorIncompleto(c, c.hechas.map(s => s.fecha)), meses,
+  }
+}
+
+/** Resumen de los retos diarios completados en el periodo (mejores marcas, récords y racha). */
+export function retosInforme(c: Ctx): RetosInforme | null {
+  if (!c.retosEnPeriodo.length) return null
+  const rachaR = rachaRetos(c.retos, c.fin)
+  const filas: FilaRetoInforme[] = []
+  for (const def of RETOS) {
+    const enP = c.retosEnPeriodo.filter(x => x.reto === def.id)
+    if (!enP.length) continue
+    const mejor = mejorMarcaReto(enP, def.id)
+    if (!mejor) continue
+    filas.push({
+      reto: def.id,
+      titulo: t(def.titulo),
+      intentos: enP.length,
+      mejor: textoMarcaReto(mejor.valor, def.modo),
+      mejorFecha: fechaCorta(mejor.fecha.slice(0, 10)),
+      recordEnPeriodo: enP.some(x => !!x.record),
+    })
+  }
+  if (!filas.length) return null
+  return {
+    intentos: c.retosEnPeriodo.length,
+    records: c.retosEnPeriodo.filter(x => !!x.record).length,
+    rachaActual: rachaR.actual,
+    mejorRacha: rachaR.mejor,
+    filas,
   }
 }

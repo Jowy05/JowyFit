@@ -12,6 +12,7 @@ async function conAlgo(jf: Jf) {
   await jf.ver('Añadido: Batido')
   await jf.pestana('Perfil')
   await jf.pulsarSel('button[aria-label="Ajustes"]')
+  await jf.pulsar('Datos y copias')
   await jf.ver('Copia de seguridad')
 }
 

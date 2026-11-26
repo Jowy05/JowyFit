@@ -173,7 +173,7 @@ export function FilaInterruptor({ titulo, d, on, onCambio, ico, etiqueta = titul
   )
 }
 
-export function Barra({ v, total, tono, gruesa }: { v: number; total: number; tono?: 'go' | 'ok' | 'warn' | 'gold'; gruesa?: boolean }) {
+export function Barra({ v, total, tono, gruesa }: { v: number; total: number; tono?: 'go' | 'ok' | 'warn' | 'bad' | 'gold'; gruesa?: boolean }) {
   return <span className={cx('bar', tono, gruesa && 'thick')}><i style={estilo({ '--w': pct(v, total) })} /></span>
 }
 

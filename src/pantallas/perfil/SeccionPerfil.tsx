@@ -5,7 +5,7 @@ import { contarEvitados, leerMetas, medicionesPorFecha } from '../../datos/consu
 import { PERIMETROS } from '../../dominio/medidas'
 import { guardarPerfil } from '../../datos/repos'
 import type { Bascula, Dia, Perfil } from '../../datos/tipos'
-import { kg, num } from '../../dominio/formato'
+import { kg, miles, num } from '../../dominio/formato'
 import { DIAS_CORTOS, edad, fechaCorta, fechaDeCampo } from '../../dominio/fechas'
 import { cx, Cab, Chip, Elegir, FilaInterruptor, Ico, Pantalla, Stepper, TextoGuardado, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type ClaveSeccion, type Ruta } from '../../app/nav'
@@ -24,7 +24,7 @@ import { tr } from '../../i18n/jsx'
 type Props = { p: Perfil; guardar: (c: Partial<Perfil>) => void }
 
 /** Secciones cuyos cambios afectan a la rutina: al final se ofrece regenerarla. */
-const AFECTAN_RUTINA: ClaveSeccion[] = ['horario', 'objetivos', 'preferencias', 'salud', 'experiencia']
+const AFECTAN_RUTINA: ClaveSeccion[] = ['horario', 'objetivos', 'preferencias', 'salud', 'experiencia', 'sueno']
 
 const alternar = <T,>(lista: T[], v: T): T[] => (lista.includes(v) ? lista.filter(x => x !== v) : [...lista, v])
 
@@ -217,7 +217,7 @@ function Objetivos({ p, guardar }: Props) {
       </div>
 
       <div className="sec">
-        <div className="sec-h"><h2>{t('Prioridades')}</h2><span className="lbl">{t('la 1 es la más importante')}</span></div>
+        <div className="sec-h"><h2>{t('Prioridades')}</h2><span className="lbl">{t('recordatorio personal')}</span></div>
         {p.prioridades.length > 0 && (
           <div className="list prio">
             {p.prioridades.map((x, i) => (
@@ -319,6 +319,7 @@ function Experiencia({ p, guardar }: Props) {
 
 // PER-07 · Preferencias de entreno
 function Preferencias({ p, guardar }: Props) {
+  const nav = useNav()
   return (
     <div className="fields mt16">
       <Grupo titulo={t('Prefieres')} ayuda={t('Si no lo sabes, deja «Mezcla».')}>
@@ -330,8 +331,12 @@ function Preferencias({ p, guardar }: Props) {
       <div className="list">
         <FilaInterruptor titulo={t('Dos seguidos')} d={t('Dos ejercicios sin descanso entre ellos: ahorran tiempo')} on={p.superseries} onCambio={v => guardar({ superseries: v })} />
         <FilaInterruptor titulo={t('Abdominales')} d={t('Unos minutos al final de las sesiones')} on={p.core} onCambio={v => guardar({ core: v })} />
+        <button className="it" onClick={() => nav.ir('pasos', undefined, 'pro')}>
+          <span className="tx"><b>{t('Objetivo de pasos')}</b><small>{t('Toca para cambiarlo')}</small></span>
+          <span className="end small">{miles(p.pasosObjetivo)}</span>
+          <Ico n="caret-right" className="car" />
+        </button>
       </div>
-      <p className="small muted">{t('El objetivo de pasos se cambia tocando «Pasos» en Inicio.')}</p>
     </div>
   )
 }

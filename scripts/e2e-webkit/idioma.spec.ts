@@ -7,9 +7,9 @@ import { expect, ms, test, type Jf } from './ayuda'
 type Idioma = 'es' | 'ca' | 'en'
 // Los mismos textos en cada idioma (con su traducción de src/i18n).
 const IDIOMA = {
-  es: { nombre: 'Español', pestanas: ['Inicio', 'Rutina', 'Comida', 'Progreso', 'Perfil'], hoy: 'Hoy te toca', empezar: 'Empezar rutina', hoja: '¿Cuánto tiempo tienes?', cerrar: 'Cerrar', ajustes: 'Ajustes', apariencia: 'Apariencia', copia: 'Copia de seguridad', tutorial: 'Ver el tutorial', tut1: 'Así funciona JowyFit', siguiente: 'Siguiente', tut2: 'Tu semana de un vistazo' },
-  ca: { nombre: 'Català', pestanas: ['Inici', 'Rutina', 'Menjar', 'Progrés', 'Perfil'], hoy: 'Avui et toca', empezar: 'Començar la rutina', hoja: 'Quant de temps tens?', cerrar: 'Tancar', ajustes: 'Configuració', apariencia: 'Aparença', copia: 'Còpia de seguretat', tutorial: 'Veure el tutorial', tut1: 'Així funciona JowyFit', siguiente: 'Següent', tut2: "La teva setmana d'un cop d'ull" },
-  en: { nombre: 'English', pestanas: ['Home', 'Routine', 'Food', 'Progress', 'Profile'], hoy: "Today's workout", empezar: 'Start workout', hoja: 'How much time do you have?', cerrar: 'Close', ajustes: 'Settings', apariencia: 'Appearance', copia: 'Backup', tutorial: 'Take the tour', tut1: 'How JowyFit works', siguiente: 'Next', tut2: 'Your week at a glance' },
+  es: { nombre: 'Español', pestanas: ['Inicio', 'Rutina', 'Comida', 'Progreso', 'Perfil'], hoy: 'Hoy te toca', empezar: 'Empezar rutina', hoja: '¿Cuánto tiempo tienes?', cerrar: 'Cerrar', volver: 'Volver', ajustes: 'Ajustes', apariencia: 'Apariencia e idioma', copia: 'Datos y copias', tutorial: 'Ver el tutorial', tut1: 'Así funciona JowyFit', siguiente: 'Siguiente', tut2: 'Tu semana de un vistazo' },
+  ca: { nombre: 'Català', pestanas: ['Inici', 'Rutina', 'Menjar', 'Progrés', 'Perfil'], hoy: 'Avui et toca', empezar: 'Començar la rutina', hoja: 'Quant de temps tens?', cerrar: 'Tancar', volver: 'Tornar', ajustes: 'Configuració', apariencia: 'Aparença i idioma', copia: 'Dades i còpies', tutorial: 'Veure el tutorial', tut1: 'Així funciona JowyFit', siguiente: 'Següent', tut2: "La teva setmana d'un cop d'ull" },
+  en: { nombre: 'English', pestanas: ['Home', 'Routine', 'Food', 'Progress', 'Profile'], hoy: "Today's workout", empezar: 'Start workout', hoja: 'How much time do you have?', cerrar: 'Close', volver: 'Back', ajustes: 'Settings', apariencia: 'Appearance & language', copia: 'Data & backups', tutorial: 'Take the tour', tut1: 'How JowyFit works', siguiente: 'Next', tut2: 'Your week at a glance' },
 } as const
 /** Castellano que no debe quedar en Inicio con la app en otro idioma. */
 const CASTELLANO_INICIO = ['Hoy te toca', 'Empezar rutina', 'Buenos días', 'Buenas tardes', 'Buenas noches', 'Primeros pasos', 'Pendientes de hoy']
@@ -23,17 +23,24 @@ async function enIdioma(page: Page, jf: Jf, i: Idioma) {
   await jf.listo()
 }
 
-/** Abre Ajustes desde Inicio si no está ya a la vista. */
+/** Abre el menú de Ajustes desde Inicio si no está ya a la vista. */
 async function abrirAjustes(jf: Jf, i: Idioma) {
-  if (await jf.js<boolean>(`return !!document.querySelector('[data-idioma]')`)) return
+  if (await jf.js<boolean>(`return document.body.innerText.includes(${JSON.stringify(IDIOMA[i].apariencia)}) && document.body.innerText.includes(${JSON.stringify(IDIOMA[i].copia)})`)) return
   await jf.pestana(IDIOMA[i].pestanas[0])
   await jf.pulsarSel(`button[aria-label="${IDIOMA[i].ajustes}"]`)
   await jf.ver(IDIOMA[i].apariencia)
 }
 
-/** Ajustes → Idioma → el que se pida: la app se vuelve a abrir en ese idioma. */
+/** Abre Ajustes → Apariencia e idioma (donde está el selector de idioma). */
+async function abrirApariencia(jf: Jf, i: Idioma) {
+  if (await jf.js<boolean>(`return !!document.querySelector('[data-idioma]')`)) return
+  await abrirAjustes(jf, i)
+  await jf.pulsar(IDIOMA[i].apariencia)
+}
+
+/** Ajustes → Apariencia e idioma → el que se pida: la app se vuelve a abrir en ese idioma. */
 async function cambiarIdioma(page: Page, jf: Jf, de: Idioma, a: Idioma) {
-  await abrirAjustes(jf, de)
+  await abrirApariencia(jf, de)
   const recarga = page.waitForEvent('load', { timeout: ms(15000) })
   await page.locator('[data-idioma] button', { hasText: IDIOMA[a].nombre }).tap()
   await recarga
@@ -57,8 +64,10 @@ async function repasar(page: Page, jf: Jf, i: Idioma) {
   await jf.pulsarSel(`button[aria-label="${x.ajustes}"]`)
   await jf.ver(x.apariencia)
   await jf.ver(x.copia)
-  await expect(page.locator('[data-idioma] [aria-checked="true"]')).toHaveText(x.nombre)
   await jf.revisar(`ajustes (${i})`)
+  await jf.pulsar(x.apariencia)
+  await expect(page.locator('[data-idioma] [aria-checked="true"]')).toHaveText(x.nombre)
+  await jf.pulsarSel(`button[aria-label="${x.volver}"]`)
   // El tutorial: dos pasos y se cierra con Esc.
   await jf.pulsar(x.tutorial)
   await jf.ver(x.tut1)
@@ -113,6 +122,7 @@ test('una copia hecha en catalán se recupera con la app en inglés', async ({ p
   await expect.poll(async () => (await jf.tabla<{ pesoKg?: number }>('mediciones')).some(m => m.pesoKg === 75.5)).toBe(true)
   // La copia, con el menú Compartir.
   await abrirAjustes(jf, 'ca')
+  await jf.pulsar(IDIOMA.ca.copia)
   await jf.pulsar('Fer una còpia ara')
   await jf.ver('Còpia feta')
   const c = (await jf.registro()).compartido!
@@ -125,6 +135,7 @@ test('una copia hecha en catalán se recupera con la app en inglés', async ({ p
   const [perfil] = await jf.tabla('perfil')
   await jf.meter('perfil', [{ ...perfil, nombre: 'Cambiado' }])
   await abrirAjustes(jf, 'en')
+  await jf.pulsar(IDIOMA.en.copia)
   const fc = page.waitForEvent('filechooser')
   await jf.pulsar('Restore a backup')
   await (await fc).setFiles(archivo)

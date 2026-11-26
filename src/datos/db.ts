@@ -1,7 +1,7 @@
 // Base de datos local (IndexedDB con Dexie). Nada sale del móvil.
 import Dexie, { type EntityTable } from 'dexie'
 import type {
-  Ajustes, Comida, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Sesion,
+  Ajustes, Comida, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, IntentoReto, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Sesion,
 } from './tipos'
 
 export class BaseJowyFit extends Dexie {
@@ -21,6 +21,7 @@ export class BaseJowyFit extends Dexie {
   metas!: EntityTable<Guardado<Meta>, 'id'>
   propios!: EntityTable<EjercicioPropio, 'id'>
   revisiones!: EntityTable<Guardado<Revision>, 'id'>
+  retos!: EntityTable<Guardado<IntentoReto>, 'id'>
 
   constructor(nombre = 'jowyfit') {
     super(nombre)
@@ -42,10 +43,11 @@ export class BaseJowyFit extends Dexie {
     })
     this.version(2).stores({ propios: 'id, creado' })
     this.version(3).stores({ revisiones: '++id, fecha' })
+    this.version(4).stores({ retos: '++id, fecha, reto' })
   }
 }
 
 export const db = new BaseJowyFit()
 
-export const TABLAS = ['perfil', 'ajustes', 'mediciones', 'fotos', 'gimnasios', 'marcas', 'rutinas', 'sesiones', 'comidas', 'plantillas', 'productos', 'pasos', 'suplementos', 'metas', 'propios', 'revisiones'] as const
+export const TABLAS = ['perfil', 'ajustes', 'mediciones', 'fotos', 'gimnasios', 'marcas', 'rutinas', 'sesiones', 'comidas', 'plantillas', 'productos', 'pasos', 'suplementos', 'metas', 'propios', 'revisiones', 'retos'] as const
 export type NombreTabla = (typeof TABLAS)[number]

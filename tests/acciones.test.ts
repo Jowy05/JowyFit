@@ -6,8 +6,8 @@ import { gimnasioNuevo, guardarAjustes, leerAjustes, perfilPorDefecto } from '..
 import { completarAlta, type DatosAlta } from '../src/datos/acciones/alta'
 import { alternarSuplemento, apuntarPlantilla, desmarcarSuplemento, guardarSuplemento, marcarSuplemento, plantillaDeProducto } from '../src/datos/acciones/comida'
 import { borrarMedicion, guardarLecturasBascula, guardarPasos, guardarPasosAuto, sumarTrote } from '../src/datos/acciones/cuerpo'
-import { alargarDescanso, apuntarHecha, descartarEntreno, iniciarEntreno, pasarACorta, quitarDescanso, terminarEntreno } from '../src/datos/acciones/entreno'
-import { activarRutina, borrarGimnasio, guardarMaquinaPropia, recolocarSesion, SIN_DIA } from '../src/datos/acciones/rutina'
+import { alargarDescanso, apuntarHecha, calentarAntes, descartarEntreno, iniciarEntreno, pasarACorta, quitarDescanso, terminarEntreno } from '../src/datos/acciones/entreno'
+import { activarRutina, borrarGimnasio, borrarMaquinaPropia, guardarMaquinaPropia, recolocarSesion, SIN_DIA } from '../src/datos/acciones/rutina'
 import { hoyISO } from '../src/dominio/fechas'
 import type { DiaRutina, Plantilla, Rutina } from '../src/datos/tipos'
 
@@ -232,6 +232,11 @@ describe('rutina y gimnasios', () => {
     expect(g?.propias.map(m => m.nombre)).toEqual(['Prensa'])
     expect(g?.material).toEqual(['leg_press'])
     expect(await guardarMaquinaPropia(999, { id: 'm2', nombre: 'x', parecida: null })).toBe(false)
+    const deshacer = await borrarMaquinaPropia(id, 'm1')
+    expect((await db.gimnasios.get(id))?.propias).toEqual([])
+    deshacer!()
+    await esperar()
+    expect((await db.gimnasios.get(id))?.propias.map(m => m.id)).toEqual(['m1'])
   })
 })
 
@@ -268,8 +273,10 @@ describe('entreno', () => {
     await terminarEntreno(s4, s4.inicio + 60_000, { minutosReales: 1 })
     expect(await db.sesiones.get(id)).toMatchObject({ estado: 'hecha', fin: s4.inicio + 60_000, respuestas: { minutosReales: 1 } })
   })
-  it('descartar borra el entreno en curso', async () => {
+  it('descartar borra el entreno en curso y calentarAntes respeta la duración pedida', async () => {
     const id = await iniciarEntreno({ libre: true })
+    await calentarAntes(id, 600)
+    expect((await db.sesiones.get(id))?.descansoTotal).toBe(600)
     await descartarEntreno(id)
     expect(await db.sesiones.count()).toBe(0)
   })

@@ -166,25 +166,31 @@ export function HojaPregunta() {
 
 const EXTRA = (s: string) => s === 'sueno' || s === 'deportes' || s === 'experiencia'
 
-/** La pregunta se elige al abrir: al contestarla el perfil cambia y no debe saltar a otra (ni a nada) a mitad. */
+/** La pregunta se elige al abrir: los cambios quedan en borrador y solo se guardan al pulsar «Guardar» («Saltar» descarta). */
 function Pregunta({ inicial }: { inicial: Perfil }) {
   const nav = useNav()
   const [{ falta, n, total }] = useState(() => {
     const items = fichaCompleta(inicial)
     return { falta: items.find(x => !x.hecha && EXTRA(x.s))?.s, n: items.filter(x => x.hecha).length + 1, total: items.length }
   })
-  const p = usePerfilCargado() ?? inicial
+  const base = usePerfilCargado() ?? inicial
+  const [borrador, setBorrador] = useState<Partial<Perfil>>({})
+  const p = { ...base, ...borrador }
   useEffect(() => { if (!falta) nav.hoja(null) }, [falta]) // sin nada que preguntar, la hoja se cierra
   if (!falta) return null
-  const guardar = (c: Partial<Perfil>) => void guardarPerfil(c)
+  const cambiar = (c: Partial<Perfil>) => setBorrador(prev => ({ ...prev, ...c }))
+  const confirmar = async () => {
+    if (Object.keys(borrador).length > 0) await guardarPerfil(borrador)
+    nav.hoja(null)
+  }
   return (
     <Hoja titulo={t('Una pregunta más, si quieres')} sub={t('{n} de {total}', { n, total })}>
-      {falta === 'sueno' && <Sueno p={p} guardar={guardar} />}
-      {falta === 'deportes' && <Deportes p={p} guardar={guardar} />}
-      {falta === 'experiencia' && <ExperienciaPrevia p={p} guardar={guardar} />}
+      {falta === 'sueno' && <Sueno p={p} guardar={cambiar} />}
+      {falta === 'deportes' && <Deportes p={p} guardar={cambiar} />}
+      {falta === 'experiencia' && <ExperienciaPrevia p={p} guardar={cambiar} />}
       <div className="btns mt16">
         <button className="btn gry sm" onClick={() => nav.hoja(null)}>{t('Saltar')}</button>
-        <button className="btn sm" onClick={() => nav.hoja(null)}>{t('Guardar')}</button>
+        <button className="btn sm" onClick={() => void confirmar()}>{t('Guardar')}</button>
       </div>
     </Hoja>
   )

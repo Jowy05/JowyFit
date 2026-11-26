@@ -316,4 +316,13 @@ describe.skipIf(!hayCatalogo)('alternativas y bloques nuevos con el catálogo re
     const a = bloqueNuevo('bench-press', { perfil: perfilEjemplo(), ejercicios: c!.ejercicios })
     expect(a.uid).not.toBe(b.uid)
   })
+  it('dormir poco baja el esfuerzo máximo a 7,5 y lo explica en el por qué', () => {
+    const r = generarRutina({ perfil: { ...perfilEjemplo(), sueno: 'poco' }, gimnasio: gym, marcas: new Map(), ejercicios: c!.ejercicios })
+    const rpes = r.dias.flatMap(d => d.bloques.map(b => b.rpe))
+    expect(rpes.length).toBeGreaterThan(0)
+    expect(Math.max(...rpes)).toBeLessThanOrEqual(7.5)
+    expect(r.porque.some(p => /Duermes poco/i.test(p))).toBe(true)
+    const def = rutinaDefinitiva(r, { perfil: { ...perfilEjemplo(), sueno: 'poco' }, compuesto: () => true })
+    expect(Math.max(...def.dias.flatMap(d => d.bloques.map(b => b.rpe)))).toBeLessThanOrEqual(7.5)
+  })
 })

@@ -79,3 +79,38 @@ it('la meta de repeticiones progresa y se consigue también en Inicio', () => {
   expect(estadoMeta(m, v).conseguida).toBe(true)
   expect(metaPrincipal([m], () => v)).toBeNull()
 })
+
+describe('avance manual en metas (dominadas, reps, ejercicio y libre)', () => {
+  const perfil = perfilPorDefecto()
+  it('dominadas sin entrenos: avanza con actual desde 0 hasta el objetivo y entra en Inicio', () => {
+    const m = meta({ id: 9, tipo: 'dominadas', titulo: '15 dominadas estrictas', objetivo: 15, unidad: 'reps', actual: 8 })
+    const v = valorMeta(m, [], [], perfil, HOY)
+    expect(v).toBe(8)
+    const e = estadoMeta(m, v)
+    expect(e).toEqual({ actual: 8, falta: 7, progreso: 8 / 15, conseguida: false })
+    expect(metaPrincipal([m], () => v)?.meta.id).toBe(9)
+    expect(estadoMeta(m, 15).conseguida).toBe(true)
+  })
+  it('toma el mayor entre los entrenos y el avance manual', () => {
+    const m1 = meta({ id: 10, tipo: 'ejercicio', ejercicio: 'bench-press', objetivo: 80, actual: 60 })
+    const m2 = meta({ id: 11, tipo: 'ejercicio', ejercicio: 'bench-press', objetivo: 80, actual: 45 })
+    expect(valorMeta(m1, [], [banca], perfil, HOY)).toBe(60)
+    expect(valorMeta(m2, [], [banca], perfil, HOY)).toBe(55)
+  })
+  it('meta libre con objetivo y avance numérico muestra barra y se completa al llegar', () => {
+    const m = meta({ id: 12, tipo: 'libre', titulo: 'Correr 10 km', objetivo: 10, unidad: 'km', actual: 4 })
+    const v = valorMeta(m, [], [], perfil, HOY)
+    expect(v).toBe(4)
+    expect(estadoMeta(m, v)).toEqual({ actual: 4, falta: 6, progreso: 0.4, conseguida: false })
+    expect(metaPrincipal([m], () => v)?.meta.id).toBe(12)
+    expect(estadoMeta(m, 10).conseguida).toBe(true)
+  })
+  it('dominadas creadas como ejercicio propio también cuentan por su nombre', () => {
+    const sesPropia: Sesion = {
+      ...banca,
+      ejercicios: [{ ...banca.ejercicios[0]!, ejercicio: 'mio-dom', registro: 'corporal', series: [{ n: 1, peso: null, reps: 6, rpe: null, calentamiento: false, hecha: true }] }],
+    }
+    const m = meta({ id: 13, tipo: 'dominadas', objetivo: 15, unidad: 'reps' })
+    expect(valorMeta(m, [], [sesPropia], perfil, HOY, id => (id === 'mio-dom' ? 'Dominadas estrictas' : id))).toBe(6)
+  })
+})

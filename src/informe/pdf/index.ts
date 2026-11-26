@@ -8,7 +8,7 @@ import { ESTILO_POR_DEFECTO, temaDe, type NombreEstilo, type Tema } from './lien
 import { ICONO_PNG } from './icono'
 import { Maqueta } from './piezas'
 import { paginaResumen } from './paginas/resumen'
-import { paginaEntrenos, paginaFuerza, paginaMeses } from './paginas/entrenos'
+import { paginaEntrenos, paginaFuerza, paginaMeses, seccionRetos } from './paginas/entrenos'
 import { paginaComidaCuerpoPasos } from './paginas/comidaCuerpoPasos'
 import { paginaAnexo } from './paginas/anexo'
 import { paginaTuDia } from './paginas/tuDia'
@@ -52,7 +52,8 @@ async function dibujar(lib: typeof import('pdf-lib'), inf: Informe, o: OpcionesP
     paginaResumen(maq)
     const fe = inf.entrenos ? paginaEntrenos(maq, inf.entrenos) : null
     // En la semana hay poco de cada: la fuerza sigue debajo de los entrenos en vez de dejar media página en blanco.
-    if (inf.fuerza) paginaFuerza(maq, inf.fuerza, inf.periodo === 'semana' ? fe : null)
+    const ff = inf.fuerza ? paginaFuerza(maq, inf.fuerza, inf.periodo === 'semana' ? fe : null) : fe
+    if (inf.retos) seccionRetos(maq, inf.retos, ff)
     // Mes a mes (Todo, 60 días o más): después de la fuerza; sin entrenos, después del cuerpo.
     const meses = inf.meses && (inf.fuerza || inf.cuerpo) ? inf.meses : null
     if (meses && inf.fuerza) paginaMeses(maq, meses, true, !!inf.cuerpo)

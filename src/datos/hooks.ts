@@ -7,7 +7,7 @@ import { ajustesPorDefecto, gimnasioActivo, perfilPorDefecto, rutinaActiva } fro
 import { leerMediciones, sesionesEntre } from './consultas'
 import { colaDe, DIAS_COLA, enCola, letrasCola, type Cola } from '../dominio/cola'
 import { sumarDias } from '../dominio/fechas'
-import type { Ajustes, Gimnasio, Guardado, MarcaEjercicio, Medicion, Perfil, Rutina, Sesion } from './tipos'
+import type { Ajustes, Gimnasio, Guardado, IntentoReto, MarcaEjercicio, Medicion, Perfil, Rutina, Sesion } from './tipos'
 
 /**
  * Perfil (o el de por defecto mientras carga). El de por defecto se crea una sola vez por pantalla:
@@ -80,4 +80,9 @@ export function useMarcas(): Map<string, MarcaEjercicio> {
   const lista = useLiveQuery(() => db.marcas.toArray(), [])
   // El mapa solo cambia cuando cambian las marcas (si no, los useMemo que dependen de él se recalculan en cada render).
   return useMemo(() => new Map((lista ?? []).map(m => [m.id, m])), [lista])
+}
+
+/** Intentos de retos del más reciente al más antiguo. */
+export function useRetos(): Guardado<IntentoReto>[] {
+  return useLiveQuery(() => db.retos.orderBy('fecha').reverse().toArray(), []) ?? []
 }

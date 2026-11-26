@@ -1,5 +1,5 @@
 // Tipos del informe en PDF: lo que calcula informe/calculo y pinta informe/pdf.
-import type { Ajustes, Comida, DiaSuplementos, Franja, Medicion, Meta, PasosDia, Perfil, Revision, Rutina, Sesion, TipoRegistro } from '../../datos/tipos'
+import type { Ajustes, Comida, DiaSuplementos, Franja, IntentoReto, Medicion, Meta, PasosDia, Perfil, Revision, Rutina, Sesion, TipoRegistro, TipoReto } from '../../datos/tipos'
 import type { EstadoDia } from '../../dominio/semana'
 import type { PuntoFecha, Tono } from '../../dominio/tendencias'
 
@@ -187,6 +187,8 @@ export type MetaInforme = {
   fecha: string | null
   /** «junio 2027» */
   mes: string | null
+  /** Últimos avances apuntados con fecha y nota opcional. */
+  historial?: { fecha: string; valorTexto: string; nota: string | null }[]
 }
 
 export type CasillaDia = {
@@ -337,9 +339,28 @@ export type FuerzaInforme = {
   semanas: { lunes: string; etiqueta: string; kg: number; toneladas: number; enCurso: boolean }[]
   grupos: { n: string; v: number; zona: [number, number]; nivel: 'poco' | 'bien' | 'mucho'; tono: TonoInforme }[]
   mejores: MejorSerie[]
+  /** Ejercicios que llevan 3 o más sesiones seguidas sin mejorar el 1RM. */
+  estancados: { id: string; nombre: string; peso: number; sesiones: number }[]
   /** «Contra el … anterior» con el periodo anterior a medias (los datos empiezan dentro de él): se avisa. */
   contraNota: string | null
   meses: MesInforme[] | null
+}
+
+export type FilaRetoInforme = {
+  reto: TipoReto
+  titulo: string
+  intentos: number
+  mejor: string
+  mejorFecha: string
+  recordEnPeriodo: boolean
+}
+
+export type RetosInforme = {
+  intentos: number
+  records: number
+  rachaActual: number
+  mejorRacha: number
+  filas: FilaRetoInforme[]
 }
 
 export type DiaComidaInforme = { fecha: string; apuntado: boolean; kcal: number | null; proteina: number | null; cafeina: number | null; picoteo: boolean; tonoProteina: TonoInforme; kcalSemana: number | null }
@@ -492,6 +513,7 @@ export type Informe = {
   meses: MesInforme[] | null
   entrenos: EntrenosInforme | null
   fuerza: FuerzaInforme | null
+  retos: RetosInforme | null
   comida: ComidaInforme | null
   cuerpo: CuerpoInforme | null
   pasos: PasosInforme | null
@@ -529,6 +551,7 @@ export type TablasInforme = {
   pasos: PasosDia[]
   metas: Meta[]
   revisiones?: Revision[]
+  retos?: IntentoReto[]
 }
 
 export type EntradaInforme = TablasInforme & { periodo: PeriodoInforme; ahora: Date; secciones?: Partial<SeccionesInforme>; catalogo?: CatalogoInforme }

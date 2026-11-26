@@ -123,5 +123,15 @@ export function destacado(c: Ctx, cuerpo: CuerpoInforme, rachaV: number): LineaD
     })
   }
   if (rachaV > 0) out.push({ icono: 'igual', tono: 'tinta', texto: tn(rachaV, 'Racha: {n} semana cumplida', 'Racha: {n} semanas cumplidas') })
+  if (c.retosEnPeriodo.length > 0) {
+    const recR = c.retosEnPeriodo.filter(x => x.record).length
+    out.push({
+      icono: recR > 0 ? 'estrella' : 'igual',
+      tono: recR > 0 ? 'oro' : 'tinta',
+      texto: recR > 0
+        ? t('{intentos} · {records}', { intentos: tn(c.retosEnPeriodo.length, '{n} reto', '{n} retos'), records: tn(recR, '{n} récord', '{n} récords') })
+        : tn(c.retosEnPeriodo.length, '{n} reto completado', '{n} retos completados'),
+    })
+  }
   return out
 }

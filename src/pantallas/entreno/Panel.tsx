@@ -6,7 +6,8 @@ import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { datosDeCampos, indiceActual, saltar, TOPE_SERIE, type CamposSerie as Campos, type DatosSerie } from '../../dominio/sesion'
 import { duracion } from '../../dominio/fechas'
 import { textoSerie, textoSerieEnCurso } from '../../dominio/formato'
-import { cx, estilo, Ico, Stepper } from '../../ui/componentes'
+import { pitido, vibrar } from '../../plataforma'
+import { Barra, cx, estilo, Ico, Stepper } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { CamposSerie, camposDe, comoSeApunta } from './CamposSerie'
@@ -28,16 +29,35 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
   const [v, setV] = useState<Campos>(() => ({ ...camposDe(serie, e), segundos: serie.segundos ?? e.repsMin }))
   const cambiar = (c: Partial<Campos>) => { setV(x => ({ ...x, ...c })); setFalta(null) }
   const setSeg = (segundos: number) => cambiar({ segundos })
-  const ayudaEsfuerzo = useAjustes().ayudaEsfuerzo !== false
+  const ajustes = useAjustes()
+  const ayudaEsfuerzo = ajustes.ayudaEsfuerzo !== false
   // El esfuerzo empieza vacío: solo se guarda si se marca.
   const [rpe, setRpe] = useState<number | null>(serie.calentamiento ? null : serie.rpe ?? null)
-  const [crono, setCrono] = useState<number | null>(null)
+  // Temporizador en vivo para tiempo (segundos) y cardio (minutos): cronómetro (sube) o cuenta atrás (baja a 0).
+  const [modoTimer, setModoTimer] = useState<'crono' | 'cuenta'>('crono')
+  const [crono, setCrono] = useState<{ inicio: number; objetivoS: number; modo: 'crono' | 'cuenta' } | null>(null)
   const [ahora, setAhora] = useState(Date.now())
   const pulsado = useRef<number | undefined>(undefined)
+  const timerFinAvisado = useRef<number | null>(null)
   // Un panel por serie: una vez enviado «Hecho», los toques siguientes (doble toque) no apuntan otra serie.
   const enviado = useRef(false)
   useEffect(() => { if (crono == null) return; const reloj = setInterval(() => setAhora(Date.now()), 250); return () => clearInterval(reloj) }, [crono])
   useEffect(() => () => clearTimeout(pulsado.current), [])
+
+  const transcurridoS = crono != null ? Math.max(0, Math.floor((ahora - crono.inicio) / 1000)) : 0
+  const restanteS = crono != null && crono.modo === 'cuenta' ? Math.max(0, crono.objetivoS - transcurridoS) : 0
+
+  useEffect(() => {
+    if (!crono || crono.modo !== 'cuenta' || restanteS > 0 || timerFinAvisado.current === crono.inicio) return
+    timerFinAvisado.current = crono.inicio
+    if (ajustes.vibrar) void vibrar('fin')
+    if (ajustes.sonido) pitido()
+    if (e.registro === 'tiempo') setSeg(Math.min(TOPE_SERIE.segundos, Math.max(1, crono.objetivoS)))
+    else if (e.registro === 'cardio') cambiar({ reps: Math.min(TOPE_SERIE.reps, Math.max(1, Math.round(crono.objetivoS / 60))) })
+    setCrono(null)
+    aviso(t('¡Tiempo cumplido!'))
+  }, [crono, restanteS, ajustes.vibrar, ajustes.sonido, e.registro])
+
   const datos = (): DatosSerie => ({ ...datosDeCampos(v, como), rpe: serie.calentamiento ? null : rpe })
   const enviar = (d: DatosSerie) => {
     if (enviado.current) return
@@ -55,19 +75,67 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
 
   if (resto > 0) return <Descanso s={s} e={e} serie={serie} resto={resto} total={total} onSaltar={onSaltar} onMas={onMas} />
 
-  const segundosCrono = crono != null ? Math.round((ahora - crono) / 1000) : 0
+  const objetivoTiempoS = Math.max(5, v.segundos || e.repsMax || e.repsMin || 30)
+  const objetivoCardioS = Math.max(60, (v.reps ?? e.repsMin ?? 10) * 60)
+  const alternarTimer = (objetivoS: number, esCardio: boolean) => {
+    if (crono == null) {
+      const ya = Date.now()
+      setAhora(ya)
+      setCrono({ inicio: ya, objetivoS, modo: modoTimer })
+    } else {
+      const hechoS = Math.max(1, transcurridoS)
+      if (esCardio) cambiar({ reps: Math.min(TOPE_SERIE.reps, Math.max(1, Math.round(hechoS / 60))) })
+      else setSeg(Math.min(TOPE_SERIE.segundos, hechoS))
+      setCrono(null)
+    }
+  }
+  const segundosMostrados = crono == null ? v.segundos : crono.modo === 'cuenta' ? restanteS : transcurridoS
   return (
     <div className="panel">
       {e.registro === 'tiempo' ? (
-        <div className="pn-row">
-          <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}><span className="lbl ux-pn-lbl">{falta === 'reps' ? t('Pon aquí los segundos') : t('¿Cuántos segundos?')}</span><Stepper className="tall" valor={crono != null ? segundosCrono : v.segundos} paso={5} min={5} max={TOPE_SERIE.segundos} onCambio={setSeg} etiqueta={t('Segundos')} /></div>
-          <div className="pn-f"><span className="lbl ux-pn-lbl">{t('Cronómetro')}</span>
-            <button className={cx('btn', crono != null ? 'badf' : 'gry')} style={{ minHeight: 60 }} onClick={() => { if (crono == null) { setCrono(Date.now()); setAhora(Date.now()) } else { setSeg(segundosCrono); setCrono(null) } }}>
-              <Ico n={crono != null ? 'pause' : 'play'} b />{crono != null ? t('Parar') : t('Empezar')}
-            </button>
+        <div className="pn-timer">
+          <div className="segc pn-timer-seg" role="radiogroup" aria-label={t('Modo de temporizador')}>
+            <button type="button" role="radio" aria-checked={modoTimer === 'crono'} className={cx(modoTimer === 'crono' && 'on')} disabled={crono != null} onClick={() => setModoTimer('crono')}>{t('Cronómetro')}</button>
+            <button type="button" role="radio" aria-checked={modoTimer === 'cuenta'} className={cx(modoTimer === 'cuenta' && 'on')} disabled={crono != null} onClick={() => setModoTimer('cuenta')}>{t('Cuenta atrás')}</button>
           </div>
+          <div className="pn-row">
+            <div className={cx('pn-f w', falta === 'reps' && 'ux-falta')}>
+              <span className="lbl ux-pn-lbl">{falta === 'reps' ? t('Pon aquí los segundos') : modoTimer === 'cuenta' && crono == null ? t('Objetivo (segundos)') : t('¿Cuántos segundos?')}</span>
+              <Stepper className="tall" valor={segundosMostrados} paso={5} min={crono != null ? 0 : 5} max={TOPE_SERIE.segundos} onCambio={setSeg} etiqueta={t('Segundos')} />
+            </div>
+            <div className="pn-f">
+              <span className="lbl ux-pn-lbl">{modoTimer === 'cuenta' ? t('Cuenta atrás') : t('Cronómetro')}</span>
+              <button type="button" className={cx('btn', crono != null ? 'badf' : 'gry')} style={{ minHeight: 60 }} onClick={() => alternarTimer(objetivoTiempoS, false)}>
+                <Ico n={crono != null ? 'pause' : 'play'} b />{crono != null ? t('Parar') : t('Empezar')}
+              </button>
+            </div>
+          </div>
+          {crono != null && crono.modo === 'cuenta' && (
+            <div className="pn-timer-bar"><Barra v={crono.objetivoS - restanteS} total={crono.objetivoS} tono="ok" /></div>
+          )}
         </div>
-      ) : <CamposSerie e={e} como={como} lista={lista} v={v} cambiar={cambiar} falta={falta} />}
+      ) : (
+        <>
+          <CamposSerie e={e} como={como} lista={lista} v={v} cambiar={cambiar} falta={falta} />
+          {e.registro === 'cardio' && (
+            <div className="pn-timer pn-cardio-timer">
+              <div className="row jb">
+                <div className="segc pn-timer-seg" role="radiogroup" aria-label={t('Modo de temporizador')}>
+                  <button type="button" role="radio" aria-checked={modoTimer === 'crono'} className={cx(modoTimer === 'crono' && 'on')} disabled={crono != null} onClick={() => setModoTimer('crono')}>{t('Cronómetro')}</button>
+                  <button type="button" role="radio" aria-checked={modoTimer === 'cuenta'} className={cx(modoTimer === 'cuenta' && 'on')} disabled={crono != null} onClick={() => setModoTimer('cuenta')}>{t('Cuenta atrás')}</button>
+                </div>
+                <span className="mono pn-timer-clock">{crono != null ? duracion(crono.modo === 'cuenta' ? restanteS : transcurridoS) : duracion(modoTimer === 'cuenta' ? objetivoCardioS : 0)}</span>
+                <button type="button" className={cx('btn sm auto', crono != null ? 'badf' : 'gry')} onClick={() => alternarTimer(objetivoCardioS, true)}>
+                  <Ico n={crono != null ? 'pause' : 'play'} b />{crono != null ? t('Parar') : t('Empezar')}
+                </button>
+              </div>
+              {crono != null && crono.modo === 'cuenta' && (
+                <div className="pn-timer-bar"><Barra v={crono.objetivoS - restanteS} total={crono.objetivoS} tono="ok" /></div>
+              )}
+            </div>
+          )}
+        </>
+      )}
       {!serie.calentamiento && e.registro !== 'cardio' && (
         <div className="pn-eff">
           <span className="lbl ux-pn-lbl">{t('¿Cuánto te ha costado?')} <span className="hint">{t('· opcional · lo ideal: {n}', { n: e.rpe })}</span></span>
@@ -96,8 +164,16 @@ export function Panel({ s, idx, e, serie, lista, ultimaHecha, onHecho, resto, to
       <div className="pn-main">
         <button className="btn gry busy" onClick={() => nav.hoja('hoja-ocupado', { idx })}><Ico n="hand-palm" b />{t('Ocupado')}</button>
         <button className="btn xl" onClick={() => {
-          const d = crono != null ? { ...datos(), segundos: segundosCrono } : datos()
-          if (crono != null) { setSeg(segundosCrono); setCrono(null) }
+          const hechoS = crono != null ? Math.max(1, transcurridoS) : null
+          const d = hechoS == null ? datos()
+            : e.registro === 'tiempo' ? { ...datos(), segundos: Math.min(TOPE_SERIE.segundos, hechoS) }
+              : e.registro === 'cardio' ? { ...datos(), reps: Math.min(TOPE_SERIE.reps, Math.max(1, Math.round(hechoS / 60))) }
+                : datos()
+          if (crono != null) {
+            if (e.registro === 'tiempo') setSeg(d.segundos ?? v.segundos)
+            else if (e.registro === 'cardio' && d.reps != null) cambiar({ reps: d.reps })
+            setCrono(null)
+          }
           if (comprobar(d)) enviar(d)
         }}><Ico n="check" b />{t('Hecho')}</button>
       </div>

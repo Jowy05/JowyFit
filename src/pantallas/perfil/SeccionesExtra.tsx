@@ -60,7 +60,7 @@ export function Movimiento({ p, guardar }: Props) {
 // PER · Calorías al día (7a). Ningún consejo de qué comer: solo el número, cómo sale y cambiarlo.
 export function Calorias({ p }: Props) {
   const a = useAjustes()
-  const e = useLiveQuery(() => objetivosEnergia(p), [p, a.kcalManual])
+  const e = useLiveQuery(() => objetivosEnergia(p), [p, a.kcalManual, a.proteinaManual])
   if (!e) return <div className="cargando">{t('Cargando…')}</div>
   const objetivo = t(NOMBRE_OBJETIVO[p.objetivo]).toLowerCase()
   const fila = (nombre: ReactNode, valor: number, signo = true) => <p><span>{nombre}</span><b className="mono">{signo && valor > 0 ? '+' : ''}{num(valor, 0)}</b></p>
@@ -69,6 +69,7 @@ export function Calorias({ p }: Props) {
       <div className="card pd mt12 g2-kc">
         <span className="tag">{e.manual ? t('Lo has puesto tú') : t('Recomendado para ti')}</span>
         <p className="k mono">{num(e.kcal, 0)}<small> kcal</small></p>
+        <p className="small okc mt4"><b className="mono">{e.proteina}</b> {t('g de proteína al día')}</p>
         <p className="how">{e.ajuste
           ? tr('Gastas unas {gasto} al día por tu edad, tu peso y lo que te mueves; {ajuste} para {objetivo}.', { gasto: <b>{num(e.gasto, 0)}</b>, ajuste: <b>{e.ajuste > 0 ? '+' : '−'}{num(Math.abs(e.ajuste), 0)}</b>, objetivo })
           : tr('Gastas unas {gasto} al día por tu edad, tu peso y lo que te mueves.', { gasto: <b>{num(e.gasto, 0)}</b> })}</p>
@@ -87,8 +88,11 @@ export function Calorias({ p }: Props) {
       </details>
       <div className="sec">
         <div className="sec-h"><h2>{t('¿Lo quieres cambiar?')}</h2></div>
+        <span className="lbl fl">{t('Calorías')}</span>
         <Stepper valor={e.kcal} paso={50} min={Math.ceil(e.basal / 50) * 50} max={6000} decimales={0} sufijo="kcal" etiqueta={t('Calorías al día')} onCambio={v => void guardarAjustes({ kcalManual: v })} />
-        {e.manual && <button className="btn ln sm mt12" onClick={() => void guardarAjustes({ kcalManual: null })}>{t('Volver al recomendado')} ({num(e.recomendado, 0)})</button>}
+        <span className="lbl fl mt12">{t('Proteína')}</span>
+        <Stepper valor={e.proteina} paso={5} min={40} max={300} decimales={0} sufijo="g" etiqueta={t('Proteína al día')} onCambio={v => void guardarAjustes({ proteinaManual: v })} />
+        {e.manual && <button className="btn ln sm mt12" onClick={() => void guardarAjustes({ kcalManual: null, proteinaManual: null })}>{t('Volver al recomendado')} ({num(e.recomendado, 0)} kcal · {e.proteinaRecomendada} g)</button>}
       </div>
       <p className="note plain mt16"><Ico n="info" /><span>{t('Es un número orientativo. JowyFit no te dice qué comer.')}</span></p>
     </>
@@ -103,7 +107,7 @@ export function Sueno({ p, guardar }: Props) {
     <>
       <p className="lbl fl mt16">{t('¿Cuántas horas duermes normalmente?')}</p>
       <Elegir eq opciones={SUENO.map(x => ({ v: x.v, t: t(x.t) }))} valor={p.sueno ?? ([] as NonNullable<Perfil['sueno']>[])} onCambio={v => guardar({ sueno: v })} />
-      <p className="small muted mt8">{tr('Si duermes poco varias noches, esa semana la rutina sale <b>más suave</b>.', { b: x => <b>{x}</b> })}</p>
+      <p className="small muted mt8">{tr('Si duermes menos de 6 horas habitualmente, al generar tu rutina sale <b>más suave</b> para recuperar mejor.', { b: x => <b>{x}</b> })}</p>
     </>
   )
 }

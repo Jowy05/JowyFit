@@ -178,3 +178,11 @@
 .ux-pn-extra{display:flex;flex-wrap:wrap;justify-content:center;gap:0 18px;margin-top:-4px}
 .ux-pn-extra .lnk{margin:0;padding:0 4px;min-height:44px;font-size:15px}
 .ux-ritmo{margin:-4px 0 0;text-align:center;font-size:15px;font-weight:600;color:var(--muted)}
+.pn-timer{display:grid;gap:8px}
+.pn-timer-seg{min-height:36px}
+.pn-timer-seg>button{min-height:34px;font-size:13px;transition:background-color .2s ease-in-out,color .2s ease-in-out}
+.pn-timer-clock{font-size:18px;font-weight:700;padding:0 6px}
+.pn-cardio-timer{padding:8px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.pn-cardio-timer .row{gap:8px;flex-wrap:wrap}
+.pn-timer-bar .bar i{transition:width .25s ease-in-out}
+@media (prefers-reduced-motion:reduce){.pn-timer-seg>button,.pn-timer-bar .bar i{transition:none}}

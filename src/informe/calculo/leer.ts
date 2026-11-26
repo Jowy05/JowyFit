@@ -10,7 +10,7 @@ import { calcularInforme } from './index'
 
 /** Todo lo que necesita el informe, leído de una vez. */
 export async function tablasInforme(): Promise<TablasInforme> {
-  const [perfil, ajustes, mediciones, sesiones, rutina, comidas, suplementos, pasos, metas, revisiones] = await Promise.all([
+  const [perfil, ajustes, mediciones, sesiones, rutina, comidas, suplementos, pasos, metas, revisiones, retos] = await Promise.all([
     db.perfil.get('yo'),
     db.ajustes.get('app'),
     db.mediciones.toArray(),
@@ -21,9 +21,10 @@ export async function tablasInforme(): Promise<TablasInforme> {
     db.pasos.toArray(),
     db.metas.toArray(),
     db.revisiones.toArray(),
+    db.retos.toArray(),
   ])
   // Los días que solo traen cardio (sin pasos) no cuentan como días de 0 pasos.
-  return { perfil, ajustes, mediciones, sesiones, rutina: rutina ?? null, comidas, suplementos, pasos: pasos.filter(hayPasos), metas, revisiones }
+  return { perfil, ajustes, mediciones, sesiones, rutina: rutina ?? null, comidas, suplementos, pasos: pasos.filter(hayPasos), metas, revisiones, retos }
 }
 
 /** Nombres, grupos y MET de los ejercicios (RepDB). Sin catálogo (sin conexión la primera vez), el informe sale igual con lo que haya. */

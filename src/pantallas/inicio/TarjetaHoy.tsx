@@ -1,12 +1,12 @@
 // INI-01 · «Hoy te toca»: la tarjeta del día (en curso, sin rutina, entreno, opcional, perdido, hecho o descanso).
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { recolocarSesion, SIN_DIA } from '../../datos/acciones/rutina'
 import { loQueFalta, sugerenciasDia } from '../../datos/consultas'
 import type { DiaRutina, Guardado, Perfil, Rutina, Sesion } from '../../datos/tipos'
 import { ejercicio, nombreEjercicio, useCatalogo } from '../../catalogo/catalogo'
 import { indiceActual } from '../../dominio/sesion'
-import { DIAS, deISO, diaSemana, fechaCorta, formatoHora } from '../../dominio/fechas'
+import { DIAS, deISO, diaSemana, fechaCorta, formatoHora, hoyISO } from '../../dominio/fechas'
 import { duracionDia } from '../../dominio/generador'
 import type { Tarjeta } from '../../dominio/semana'
 import type { Cola } from '../../dominio/cola'
@@ -26,14 +26,20 @@ import { tr } from '../../i18n/jsx'
 /** La palabra que da el movimiento: «Curl» de «Curl de Bíceps…»; en inglés va al final («Dumbbell Bicep Curl»). */
 const palabraClave = (nombre?: string) => String(idioma() === 'en' ? nombre?.split(' ').at(-1) : nombre?.split(' ')[0])
 
+const CLAVE_OPCIONAL_NO = 'jf-opcional-no'
+
 export function TarjetaHoy({ tar, cola, rutina, enCurso, gym }: { tar: Tarjeta<Guardado<Sesion>>; cola: Cola | null; rutina: Rutina | null; enCurso: Sesion | null; gym?: string }) {
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
   const g = useGimnasio()
+  const hoy = hoyISO()
+  const [opcionalRechazada, setOpcionalRechazada] = useState(() => {
+    try { return localStorage.getItem(CLAVE_OPCIONAL_NO) === hoy } catch { return false }
+  })
   // El día opcional se arma con lo que falta de la semana (lo mismo que saldrá al empezar).
   const cat = useCatalogo()
-  const opcional = tar.tipo === 'opcional' ? tar.dia : null
+  const opcional = tar.tipo === 'opcional' && !opcionalRechazada ? tar.dia : null
   const falta = useLiveQuery(() => (opcional && rutina && cat ? loQueFalta(opcional, rutina) : Promise.resolve(null)), [opcional, rutina, cat])
   const dia = tar.tipo === 'hoy' ? tar.dia : opcional ? falta?.dia ?? opcional : null
   const sug = useLiveQuery(() => (dia ? sugerenciasDia(dia, g) : Promise.resolve(undefined)), [dia, g])
@@ -104,7 +110,12 @@ export function TarjetaHoy({ tar, cola, rutina, enCurso, gym }: { tar: Tarjeta<G
       </div>
     )
   }
-  if (tar.tipo === 'opcional') {
+  if (tar.tipo === 'opcional' && !opcionalRechazada) {
+    const saltarHoy = () => {
+      try { localStorage.setItem(CLAVE_OPCIONAL_NO, hoy) } catch { /* sin almacenamiento */ }
+      setOpcionalRechazada(true)
+      aviso(t('Vale, hoy no. Buen día'))
+    }
     return (
       <div className="card today">
         <div className="today-hero opt">
@@ -114,7 +125,7 @@ export function TarjetaHoy({ tar, cola, rutina, enCurso, gym }: { tar: Tarjeta<G
         </div>
         <FilasDia dia={falta?.dia ?? tar.dia} sug={sug} />
         <div className="pd btns">
-          <button className="btn gry sm" onClick={() => aviso(t('Vale, hoy no. Buen día'))}>{t('Hoy no')}</button>
+          <button className="btn gry sm" onClick={saltarHoy}>{t('Hoy no')}</button>
           <button className="btn sm" onClick={() => empezar('normal')}>{t('Empezar')}</button>
         </div>
       </div>

@@ -1,13 +1,18 @@
 /* Pantalla Inicio. */
-.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.wd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 8px;border-radius:8px;background:var(--surface);border:1px solid var(--line);min-height:68px;color:var(--ink)}
-.wd span{font:600 11.5px var(--font-display);letter-spacing:.08em;color:var(--muted)}
-.wd b{font:700 16px var(--font-mono)}
-.wd i{font-size:13px;color:var(--muted)}
-.wd.plan i,.wd.opt i{color:var(--blue)}
-.wd.off{background:transparent}
-.wd.today{background:var(--go);border-color:var(--go);color:var(--on-go)}
-.wd.today span,.wd.today i{color:var(--on-go)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:5px;border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:inset 0 1px 0 var(--card-edge),var(--card-sh)}
+.wd{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 0 8px;border-radius:13px;background:transparent;border:0;min-height:60px;color:var(--ink);transition:background .18s ease-in-out,color .18s ease-in-out}
+.wd span{font:600 12px/1 var(--font-display);letter-spacing:.04em;color:var(--muted)}
+.wd b{font:700 15.5px/1.15 var(--font-mono);color:var(--ink)}
+.wd .wd-dot{width:6px;height:6px;border-radius:50%;background:transparent;display:block}
+.wd.done .wd-dot{background:var(--ok)}
+.wd.plan .wd-dot{background:var(--blue)}
+.wd.opt .wd-dot{box-shadow:inset 0 0 0 1.5px var(--blue)}
+.wd.miss .wd-dot{background:var(--bad)}
+.wd.moved .wd-dot{background:var(--warn)}
+.wd.today{background:var(--go);color:var(--on-go);box-shadow:0 4px 14px var(--go-t)}
+.wd.today span{color:rgba(255,255,255,.88)}
+.wd.today b{color:var(--on-go)}
+.wd.today:not(.off) .wd-dot{background:var(--on-go);box-shadow:none}
 .today{overflow:hidden}
 .today-hero{position:relative;padding:14px 14px 12px;background:linear-gradient(120deg,var(--blue-t),transparent 72%);border-bottom:1px solid var(--line);overflow:hidden}
 .today-hero h3{font-size:29px;margin-top:8px;position:relative}

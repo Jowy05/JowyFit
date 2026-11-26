@@ -68,7 +68,9 @@ function FormEmpezar({ dia, perfil, version }: { dia: DiaRutina; perfil: Perfil;
   // La hora de salida es la del perfil (coche o andando, según lo que tenga elegido); aquí solo se ve y se cambia.
   const horaPerfil = perfil.horaLimite[perfil.transporte]
   const [hora, setHora] = useState(horaPerfil)
-  const [calentar, setCalentar] = useState(false)
+  const asma = !!perfil.condicionesSalud?.includes('asma')
+  const diabetes = !!perfil.condicionesSalud?.includes('diabetes')
+  const [calentar, setCalentar] = useState(asma)
   // La hora de salida es una línea de texto («Sales a las 06:45 · cambiar»): no parece una opción más para marcar.
   const [cambiarHora, setCambiarHora] = useState(false)
   // Con más de un gimnasio se elige dónde se entrena hoy (por defecto, el activo); la sesión usa su material.
@@ -94,7 +96,7 @@ function FormEmpezar({ dia, perfil, version }: { dia: DiaRutina; perfil: Perfil;
     if (capacidades().recordatorios && !(await permisoNotificaciones(true))) aviso(t('Sin permiso de notificaciones: no te avisaremos al acabar el descanso (actívalo en Ajustes)'))
     if (hora !== horaPerfil) await guardarPerfil({ horaLimite: { ...perfil.horaLimite, [perfil.transporte]: hora } })
     const id = await iniciarEntreno({ letra: dia.letra, version: modo, horaLimite: hora, gimnasioId: gymId })
-    if (calentar) await calentarAntes(id)
+    if (calentar) await calentarAntes(id, asma ? 600 : 300)
     nav.hoja(null)
     nav.completa('entreno')
   })
@@ -126,8 +128,9 @@ function FormEmpezar({ dia, perfil, version }: { dia: DiaRutina; perfil: Perfil;
         <small>{disponibles ? t('Te quedan {n} min · te avisamos si vas tarde', { n: disponibles }) : t('Esa hora ya ha pasado: cámbiala si hoy es otra')}</small>
       </div>
       {noDa && <p className="note warn mt8"><Ico n="clock-countdown" /><span>{t('Con {n} min no te da para la normal: elige la corta.', { n: disponibles })}</span></p>}
+      {diabetes && <p className="note warn mt12"><Ico n="first-aid" /><span>{t('Diabetes: recuerda llevar algo de azúcar a mano por si te baja durante el entreno.')}</span></p>}
       <div className="list mt12">
-        <FilaInterruptor ico="timer" titulo={t('Calentamiento general')} d={t('Temporizador de 5 min · opcional')} on={calentar} onCambio={setCalentar} />
+        <FilaInterruptor ico="timer" titulo={t('Calentamiento general')} d={asma ? t('Temporizador de 10 min · recomendado por asma') : t('Temporizador de 5 min · opcional')} on={calentar} onCambio={setCalentar} />
       </div>
       <button className="btn xl mt16" onClick={() => void empezar()}><Ico n="play" b />{t('Empezar')}</button>
     </Hoja>

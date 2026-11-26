@@ -13,7 +13,8 @@ import { duracionPlan, filas, minutosDia } from '../../dominio/rutina'
 import { nombreEjercicio } from '../../catalogo/catalogo'
 import { capital } from '../../dominio/formato'
 import { nombreEntreno, nombreEstructura } from '../../dominio/nombres'
-import { iniciarEntreno } from '../../datos/acciones/entreno'
+import { borrarPlantillaEntreno, iniciarEntreno } from '../../datos/acciones/entreno'
+import type { PlantillaEntreno } from '../../datos/tipos'
 import { t, tn } from '../../i18n'
 
 /** Lo que añade el CSS tras las series de lo que se quita con prisa (va en data-cut para poder traducirlo). */
@@ -55,6 +56,12 @@ export function MiPlan() {
     await iniciarEntreno({ libre: true })
     nav.completa('entreno')
   })
+  const iniciarPlantilla = unaVez(async (pl: PlantillaEntreno) => {
+    if (enCurso) { aviso(t('Ya tienes un entreno en curso')); nav.abrirEntreno(); return }
+    await iniciarEntreno({ plantilla: pl })
+    nav.completa('entreno')
+  })
+  const plantillasLibres = a.entrenosLibres ?? []
   const faltan = fijos.filter(d => !letrasHechas.has(d.letra)).length
   const conDia = fijos.filter(d => d.dia != null).map(d => d.dia!)
   // «Dos seguidos» (superserie) se explica la primera vez que sale en la pantalla.
@@ -143,6 +150,28 @@ export function MiPlan() {
                 </div>
                 <button className="it" onClick={() => void libre()}><span className="ico"><Ico n="lightning" /></span><span className="tx"><b>{t('Entreno libre')}</b><small>{t('Sin plan: añades ejercicios sobre la marcha')}</small></span><Ico n="caret-right" className="car" /></button>
               </div>
+              {plantillasLibres.length > 0 && (
+                <div className="mt12">
+                  <p className="lbl">{t('Tus plantillas libres')}</p>
+                  <div className="list mt8">
+                    {plantillasLibres.map(pl => (
+                      <div key={pl.id} className="it tpl">
+                        <button type="button" className="tpl-m" onClick={() => void iniciarPlantilla(pl)}>
+                          <span className="ico"><Ico n="bookmark-simple" /></span>
+                          <span className="tx">
+                            <b>{pl.nombre}</b>
+                            <small>{tn(pl.ejercicios.length, '{n} ejercicio', '{n} ejercicios')} · {pl.ejercicios.slice(0, 2).map(x => nombreEjercicio(x.ejercicio)).join(', ')}{pl.ejercicios.length > 2 ? '…' : ''}</small>
+                          </span>
+                        </button>
+                        <button type="button" className="ib" aria-label={t('Borrar plantilla {nombre}', { nombre: pl.nombre })} onClick={async () => {
+                          const deshacer = await borrarPlantillaEntreno(pl.id)
+                          aviso(t('Plantilla borrada: {nombre}', { nombre: pl.nombre }), deshacer)
+                        }}><Ico n="trash" /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </details>
         </div>

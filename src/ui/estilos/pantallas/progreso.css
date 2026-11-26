@@ -53,6 +53,14 @@
 .foto-mandos .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff;min-height:48px;font-size:15px}
 .foto-mandos .chip.on{background:#fff;color:#111;border-color:#fff}
 .goal b{font-size:16px}
+.goal-main{display:block;width:100%;text-align:left;color:var(--ink)}
+.goal-act{display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
+.goal-act .btn{min-height:42px;font-size:14.5px}
+.goal-act .btn.auto{min-width:56px}
+.goal-hist{display:flex;align-items:center;gap:10px;padding-top:6px;border-top:1px dashed var(--line)}
+.goal-spark{flex:none;width:88px;height:22px;overflow:visible}
+.goal-spark polyline{fill:none;stroke:var(--go);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.goal-hist .small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mile{list-style:none;margin:0;padding:0}
 .mile li{display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:16px}
 .mile li::before{content:"";position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--line)}

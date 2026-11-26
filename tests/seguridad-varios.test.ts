@@ -75,10 +75,10 @@ describe('seguridad · Content-Security-Policy de la compilación', () => {
     const lf = '<head></head><script>\nuno()\n</script>'
     expect(cspPara(lf.replace(/\n/g, '\r\n'))).toBe(cspPara(lf))
   })
-  it('las imágenes y las conexiones solo a la app y a Open Food Facts', () => {
+  it('las imágenes y las conexiones solo a la app, Open Food Facts y actualizaciones de GitHub', () => {
     const csp = cspPara(app)
     expect(valor(csp, 'img-src')).toBe("'self' data: blob: https://images.openfoodfacts.org https://static.openfoodfacts.org")
-    expect(valor(csp, 'connect-src')).toBe("'self' https://world.openfoodfacts.org")
+    expect(valor(csp, 'connect-src')).toBe("'self' https://world.openfoodfacts.org https://api.github.com")
     expect(valor(csp, 'object-src')).toBe("'none'")
     expect(valor(csp, 'form-action')).toBe("'none'")
     expect(csp).not.toMatch(/googleapis|gstatic|\*/)

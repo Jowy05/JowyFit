@@ -1,15 +1,15 @@
 // Idiomas: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
 import * as fsx from 'node:fs'
 import path from 'node:path'
-import { altaRapida, cdp, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, esperar, hastaQue, js, leerHasta, meter, noVer, pestana, pulsar, revisarAqui, seg, t, tabla, ver, volcar } from '../ayudantes.mjs'
+import { altaRapida, cdp, comprobar, deCero, descargado, DESCARGAS, entorno, escenario, esperar, hastaQue, js, leerHasta, meter, noVer, pestana, pulsar, revisarAqui, seg, t, tabla, ver, volcar, volver } from '../ayudantes.mjs'
 import { trasCarga } from '../navegador.mjs'
 
 // Lo que se comprueba en cada idioma: el nombre de las pestañas y unos textos de Inicio, de una hoja, del tutorial
 // y de Ajustes (los mismos que en castellano, con su traducción de src/i18n).
 const IDIOMA = {
-  es: { nombre: 'Español', pestanas: ['Inicio', 'Rutina', 'Comida', 'Progreso', 'Perfil'], hoy: 'Hoy te toca', empezar: 'Empezar rutina', hoja: '¿Cuánto tiempo tienes?', cerrar: 'Cerrar', ajustes: 'Ajustes', apariencia: 'Apariencia', copia: 'Copia de seguridad', tutorial: 'Ver el tutorial', tut1: 'Así funciona JowyFit', siguiente: 'Siguiente', tut2: 'Tu semana de un vistazo' },
-  ca: { nombre: 'Català', pestanas: ['Inici', 'Rutina', 'Menjar', 'Progrés', 'Perfil'], hoy: 'Avui et toca', empezar: 'Començar la rutina', hoja: 'Quant de temps tens?', cerrar: 'Tancar', ajustes: 'Configuració', apariencia: 'Aparença', copia: 'Còpia de seguretat', tutorial: 'Veure el tutorial', tut1: 'Així funciona JowyFit', siguiente: 'Següent', tut2: "La teva setmana d'un cop d'ull" },
-  en: { nombre: 'English', pestanas: ['Home', 'Routine', 'Food', 'Progress', 'Profile'], hoy: "Today's workout", empezar: 'Start workout', hoja: 'How much time do you have?', cerrar: 'Close', ajustes: 'Settings', apariencia: 'Appearance', copia: 'Backup', tutorial: 'Take the tour', tut1: 'How JowyFit works', siguiente: 'Next', tut2: 'Your week at a glance' },
+  es: { nombre: 'Español', pestanas: ['Inicio', 'Rutina', 'Comida', 'Progreso', 'Perfil'], hoy: 'Hoy te toca', empezar: 'Empezar rutina', hoja: '¿Cuánto tiempo tienes?', cerrar: 'Cerrar', volver: 'Volver', ajustes: 'Ajustes', apariencia: 'Apariencia e idioma', copia: 'Datos y copias', tutorial: 'Ver el tutorial', tut1: 'Así funciona JowyFit', siguiente: 'Siguiente', tut2: 'Tu semana de un vistazo' },
+  ca: { nombre: 'Català', pestanas: ['Inici', 'Rutina', 'Menjar', 'Progrés', 'Perfil'], hoy: 'Avui et toca', empezar: 'Començar la rutina', hoja: 'Quant de temps tens?', cerrar: 'Tancar', volver: 'Tornar', ajustes: 'Configuració', apariencia: 'Aparença i idioma', copia: 'Dades i còpies', tutorial: 'Veure el tutorial', tut1: 'Així funciona JowyFit', siguiente: 'Següent', tut2: "La teva setmana d'un cop d'ull" },
+  en: { nombre: 'English', pestanas: ['Home', 'Routine', 'Food', 'Progress', 'Profile'], hoy: "Today's workout", empezar: 'Start workout', hoja: 'How much time do you have?', cerrar: 'Close', volver: 'Back', ajustes: 'Settings', apariencia: 'Appearance & language', copia: 'Data & backups', tutorial: 'Take the tour', tut1: 'How JowyFit works', siguiente: 'Next', tut2: 'Your week at a glance' },
 }
 
 /** JSON con las claves de cada objeto en orden (la base puede devolver los campos en otro orden tras recuperar). */
@@ -34,17 +34,25 @@ async function esperarIdioma(i, ms = 15000) {
   throw new Error(`La app no queda en «${i}»: ${JSON.stringify(ultimo)}`)
 }
 
-/** Abre Ajustes (desde Inicio) si no está ya a la vista. */
+/** Abre el menú principal de Ajustes (desde Inicio) si no está ya a la vista. */
 async function abrirAjustes(i) {
-  if (await js(`return !!document.querySelector('[data-idioma]')`)) return
+  if (await js(`return document.body.innerText.includes(${JSON.stringify(IDIOMA[i].apariencia)}) && document.body.innerText.includes(${JSON.stringify(IDIOMA[i].copia)})`)) return
   await pestana(IDIOMA[i].pestanas[0])
   await t('pulsarSel', `button[aria-label="${IDIOMA[i].ajustes}"]`)
   await ver(IDIOMA[i].apariencia)
 }
 
-/** Ajustes → Idioma → el que se pida (la app se vuelve a abrir en ese idioma). */
+/** Abre Ajustes → Apariencia e idioma (donde está el selector de idioma). */
+async function abrirApariencia(i) {
+  if (await js(`return !!document.querySelector('[data-idioma]')`)) return
+  await abrirAjustes(i)
+  await pulsar(IDIOMA[i].apariencia)
+  await hastaQue(() => js(`return !!document.querySelector('[data-idioma]')`), 'No se abre Apariencia e idioma')
+}
+
+/** Ajustes → Apariencia e idioma → el que se pida (la app se vuelve a abrir en ese idioma). */
 async function cambiarIdioma(de, a) {
-  await abrirAjustes(de)
+  await abrirApariencia(de)
   // La app se recarga al tocarlo: el toque va en diferido para que la llamada vuelva antes de recargar.
   let hay = false
   await trasCarga(cdp, async () => {
@@ -69,12 +77,14 @@ async function repasarIdioma(i) {
   if (i !== 'es') await noVer('¿Cuánto tiempo tienes?')
   await t('pulsarSel', `.sheet button[aria-label="${x.cerrar}"]`)
   await hastaQue(async () => !(await js(`return !!document.querySelector('.sheet')`)), `La hoja no se cierra con «${x.cerrar}»`)
-  // Ajustes y el tutorial (dos pasos y Esc).
+  // Ajustes, subpantalla de idioma y el tutorial (dos pasos y Esc).
   await t('pulsarSel', `button[aria-label="${x.ajustes}"]`)
   await ver(x.apariencia)
   await ver(x.copia)
-  comprobar(await js(`return document.querySelector('[data-idioma] [aria-checked="true"]')?.textContent`) === x.nombre, `En Ajustes no sale marcado «${x.nombre}»`)
   await revisarAqui(`ajustes (${i})`)
+  await pulsar(x.apariencia)
+  comprobar(await js(`return document.querySelector('[data-idioma] [aria-checked="true"]')?.textContent`) === x.nombre, `En Ajustes no sale marcado «${x.nombre}»`)
+  await t('pulsarSel', `button[aria-label="${x.volver}"]`)
   await pulsar(x.tutorial)
   await ver(x.tut1)
   await pulsar(x.siguiente, '.tut')
@@ -127,6 +137,7 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   await pulsar('Desar', '.sheet')
   await leerHasta(() => js(`return [...window.__avisos]`), avisos => avisos.some(a => a.startsWith('Desat: 75,5 kg')), avisos => 'No sale el aviso «Desat: 75,5 kg»: ' + JSON.stringify(avisos), 6000)
   await abrirAjustes('ca')
+  await pulsar(IDIOMA.ca.copia)
   const yaHabia = new Set(fsx.readdirSync(DESCARGAS))
   await pulsar('Fer una còpia ara')
   const archivo = (await descargado(f => f.endsWith('.jowyfit'), yaHabia))?.nombre
@@ -143,6 +154,7 @@ escenario('idioma: catalán e inglés desde Ajustes, se recuerda al recargar, ca
   await meter('mediciones', [{ id: 999, fecha: '2026-10-13T05:00', origen: 'casa', pesoKg: 90 }])
   entorno.archivoParaElegir = path.join(DESCARGAS, archivo)
   await abrirAjustes('en')
+  await pulsar(IDIOMA.en.copia)
   await pulsar('Restore a backup')
   await ver(/Restore jowyfit-[\d-]+\.jowyfit\?/)
   // Al restaurar, la app avisa y se recarga sola enseguida: el aviso lo apunta la propia página (sessionStorage

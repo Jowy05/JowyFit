@@ -14,20 +14,25 @@ export function HojaComida({ ruta }: { ruta: Ruta<'hoja-comida'> }) {
   const nav = useNav()
   const aviso = useAviso()
   const { id } = ruta.d
-  const [c, setC] = useState<Guardado<Comida> | null>(null)
+  const [c, setC] = useState<Guardado<Comida> | null | undefined>(undefined)
   const [original, setOriginal] = useState<Guardado<Comida> | null>(null)
   // Lo escrito a mano («nota» o «foto»): el tamaño elegido, o null si los números se afinaron a mano.
   const [tam, setTam] = useState<TamanoNota | null>(null)
   const fotoUrl = useUrlBlob(c?.foto)
   useEffect(() => {
+    let vivo = true
+    setC(undefined)
     void leerComida(id).then(x => {
+      if (!vivo) return
       // El nombre en el idioma de la app (lo apuntado de una comida de partida está en castellano); deshacer usa el original.
       setC(x ? { ...x, nombre: t(x.nombre) } : null)
       setOriginal(x ?? null)
       setTam(x ? tamanoDe(x.kcal, x.proteina, x.franja) : null)
     })
+    return () => { vivo = false }
   }, [id])
-  if (!c || !original) return <Hoja titulo={t('Editar')}><p className="muted">{t('Cargando…')}</p></Hoja>
+  if (c === undefined) return <Hoja titulo={t('Editar')}><p className="muted">{t('Cargando…')}</p></Hoja>
+  if (!c || !original) return <Hoja titulo={t('Editar')}><p className="muted">{t('Esta comida ya no está.')}</p></Hoja>
   const cambia = (x: Partial<Comida>) => setC({ ...c, ...x })
   // Lo que viene de algo guardado (Mis comidas, un producto, picoteo o bebida) se agranda o achica con la ración;
   // lo escrito a mano, con los mismos tamaños que al apuntarlo.

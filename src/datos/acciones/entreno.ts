@@ -1,7 +1,7 @@
 // Escrituras del entreno: la sesión en curso, sus descansos (con el aviso del móvil) y el final.
 import { db } from '../db'
-import type { Bloque, DiaRutina, Gimnasio, MarcaEjercicio, Perfil, Serie, Sesion } from '../tipos'
-import { gimnasioActivo, leerAjustes, leerPerfil, perfilPorDefecto, rutinaActiva } from '../repos'
+import type { Bloque, DiaRutina, EjercicioSesion, Gimnasio, MarcaEjercicio, Perfil, PlantillaEntreno, Serie, Sesion } from '../tipos'
+import { gimnasioActivo, guardarAjustes, leerAjustes, leerPerfil, perfilPorDefecto, rutinaActiva } from '../repos'
 import { historialDe, loQueFalta, sugerenciasDia, ultimaMedicion } from '../consultas'
 import { catalogoCargado, ejercicio, hayEn, nombreEjercicio } from '../../catalogo/catalogo'
 import { tipoRegistro } from '../../catalogo/clasificacion'
@@ -75,7 +75,7 @@ export function cambiosEnGimnasio(bloques: readonly Bloque[], g: Gimnasio, perfi
  * Crea el entreno en curso desde la rutina activa (o uno libre), en el gimnasio elegido (si no, el activo). Si ya hay
  * uno en curso, devuelve ese.
  */
-export async function iniciarEntreno(o: { letra?: string; version?: Sesion['version']; horaLimite?: string; libre?: boolean; gimnasioId?: number | null }): Promise<number> {
+export async function iniciarEntreno(o: { letra?: string; version?: Sesion['version']; horaLimite?: string; libre?: boolean; plantilla?: PlantillaEntreno; gimnasioId?: number | null }): Promise<number> {
   const ya = await db.sesiones.where('estado').equals('curso').first()
   if (ya?.id) return ya.id
   const g = (o.gimnasioId != null ? await db.gimnasios.get(o.gimnasioId) : undefined) ?? (await gimnasioActivo())
@@ -83,7 +83,30 @@ export async function iniciarEntreno(o: { letra?: string; version?: Sesion['vers
   const r = await rutinaActiva()
   const horaLimite = o.horaLimite ?? (perfil ? perfil.horaLimite[perfil.transporte] : undefined)
   let s: Sesion
-  if (o.libre || !r) {
+  if (o.plantilla) {
+    const diaPlantilla: DiaRutina = {
+      letra: 'L',
+      nombre: o.plantilla.nombre,
+      dia: null,
+      opcional: true,
+      bloques: o.plantilla.ejercicios.map((x, i): Bloque => ({
+        uid: `pl-${i + 1}`,
+        ejercicio: x.ejercicio,
+        alternativas: [],
+        series: Math.max(1, x.series),
+        repsMin: x.repsMin,
+        repsMax: x.repsMax,
+        rpe: 8,
+        descanso: x.descanso,
+        registro: x.registro,
+      })),
+    }
+    const sug = await sugerenciasDia(diaPlantilla, g)
+    s = crearSesion(diaPlantilla, {
+      rutinaId: r?.id ?? null, gimnasioId: g?.id ?? null, version: 'normal', horaLimite, calibracion: false,
+      sugerencias: new Map([...sug].map(([k, v]) => [k, { peso: v.peso, reps: v.reps }])),
+    })
+  } else if (o.libre || !r) {
     s = { fecha: hoyISO(), rutinaId: r?.id ?? null, letra: 'L', nombre: t('Entreno libre'), gimnasioId: g?.id ?? null, inicio: Date.now(), horaLimite, version: 'normal', estado: 'curso', calibracion: false, ejercicios: [] }
   } else {
     const delPlan = r.dias.find(d => d.letra === o.letra) ?? r.dias[0]!
@@ -136,12 +159,12 @@ export async function apuntarHecha(s: Sesion, idx: number, datos: DatosSerie, pr
   return r.record
 }
 
-/** Cinco minutos de calentamiento antes de la primera serie, con su aviso. */
-export async function calentarAntes(id: number) {
+/** Calentamiento antes de la primera serie (5 min por defecto; 10 min con asma), con su aviso. */
+export async function calentarAntes(id: number, segundos = 300) {
   const s = await db.sesiones.get(id)
   if (!s) return
-  const hasta = Date.now() + 300_000
-  await guardarSesion({ ...s, descansoHasta: hasta, descansoTotal: 300 })
+  const hasta = Date.now() + segundos * 1000
+  await guardarSesion({ ...s, descansoHasta: hasta, descansoTotal: segundos })
   avisarFin(hasta, t('Calentamiento terminado'), t('A por la primera serie'), t('Calentando'))
 }
 
@@ -235,4 +258,34 @@ export async function pasarACorta(s: Sesion) {
     const r = await db.rutinas.get(s.rutinaId ?? -1)
     await guardarSesion(recortarACorta(s, r?.dias.find(d => d.letra === s.letra)))
   })
+}
+
+/** Guarda los ejercicios de un entreno como plantilla reutilizable en «Otras formas de entrenar». */
+export async function guardarPlantillaEntreno(nombre: string, ejercicios: EjercicioSesion[]): Promise<PlantillaEntreno> {
+  const limpios = ejercicios.filter(e => e.estado !== 'saltado').map(e => ({
+    ejercicio: e.ejercicio,
+    series: Math.max(1, e.series.filter(x => !x.calentamiento).length || 3),
+    repsMin: e.repsMin,
+    repsMax: e.repsMax,
+    descanso: e.descanso,
+    registro: e.registro,
+  }))
+  const nueva: PlantillaEntreno = {
+    id: `pl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    nombre: nombre.trim() || t('Entreno libre'),
+    ejercicios: limpios,
+    creado: hoyISO(),
+  }
+  await db.transaction('rw', db.ajustes, async () => {
+    const prev = (await leerAjustes()).entrenosLibres ?? []
+    await guardarAjustes({ entrenosLibres: [nueva, ...prev].slice(0, 50) })
+  })
+  return nueva
+}
+
+/** Borra una plantilla de entreno libre y devuelve cómo deshacerlo. */
+export async function borrarPlantillaEntreno(id: string): Promise<() => void> {
+  const prev = (await leerAjustes()).entrenosLibres ?? []
+  await guardarAjustes({ entrenosLibres: prev.filter(p => p.id !== id) })
+  return () => { void guardarAjustes({ entrenosLibres: prev }) }
 }

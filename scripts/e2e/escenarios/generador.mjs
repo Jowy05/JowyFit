@@ -1,5 +1,5 @@
 // Generador v2: escenarios de extremo a extremo (se registran con escenario() y los pasa correr.mjs).
-import { alta, comprobar, escenario, deCero, js, leerHasta, meter, perfilBD, pestana, pulsar, recargar, revisarAqui, t, tabla, ver } from '../ayudantes.mjs'
+import { alta, comprobar, escenario, deCero, js, leerHasta, meter, perfilBD, pestana, pulsar, recargar, revisarAqui, t, tabla, ver, volver } from '../ayudantes.mjs'
 
 escenario('en orden: «Te toca», sesión mínima, «Me encuentro mal» y Mi plan con la cola', async () => {
   await deCero('2026-10-13T05:20:00') // martes
@@ -51,7 +51,8 @@ escenario('revisión de la semana: todo bien, una molestia que va peor con su «
   await alta({ cola: true })
   // Sin molestias: «Todo bien» la cierra de un toque.
   await t('pulsarSel', '[aria-label="Ajustes"]')
-  await ver('Tu rutina y tu salud')
+  await pulsar('Cuerpo y salud')
+  await ver('Salud y rutina adaptada')
   await pulsar('Revisión de la semana')
   await ver('¿Qué tal estás?')
   await revisarAqui('revisión sin molestias')
@@ -64,6 +65,7 @@ escenario('revisión de la semana: todo bien, una molestia que va peor con su «
   await meter('perfil', [{ ...p, dolores: [{ zona: 'rodillas', cuanto: 'poco', cuando: 'aveces', desde: 'dias', inicio: '2026-10-13' }] }])
   await recargar()
   await t('pulsarSel', '[aria-label="Ajustes"]')
+  await pulsar('Cuerpo y salud')
   await pulsar('Revisión de la semana')
   await ver('Lo que te dolía')
   await pulsar(/^Peor$/)
@@ -78,7 +80,13 @@ escenario('revisión de la semana: todo bien, una molestia que va peor con su «
   await ver('Deshecho')
   await leerHasta(async () => (await tabla('revisiones')).find(r => r.id === rev.id), otra => otra.cambios.some(c => c.deshecho), '«Deshacer» no marca el cambio como deshecho')
   await pulsar(/^Vale$/)
-  // «Lo que no quieres hacer» desde Ajustes.
+  await ver('Una pregunta más, si quieres')
+  await pulsar('Saltar', '.sheet')
+  await ver('Cuerpo y salud')
+  // «Lo que no quieres hacer» desde Ajustes → Entreno y rutina.
+  await volver()
+  await ver('Entreno y rutina')
+  await pulsar('Entreno y rutina')
   await pulsar('Lo que no quieres hacer')
   await ver('¿Qué no quieres hacer?')
   await pulsar('Poleas', '.sheet')

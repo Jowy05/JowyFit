@@ -5,9 +5,9 @@ import { expect, ms, test } from './ayuda'
 test('entreno de principio a fin', async ({ page, jf }) => {
   await jf.deCero('2026-10-13T05:20:00') // martes, día de entreno
   await jf.alta()
-  // Sonido al acabar el descanso (en Más ajustes). En iPhone no se ofrece vibrar.
+  // Sonido al acabar el descanso (en Entreno y rutina). En iPhone no se ofrece vibrar.
   await jf.pulsarSel('button[aria-label="Ajustes"]')
-  await jf.pulsar('Más ajustes')
+  await jf.pulsar('Entreno y rutina')
   await jf.ver('Sonido al acabar el descanso')
   await jf.noVer('Vibrar al acabar el descanso')
   // En iPhone el sonido viene encendido de serie (no hay vibración ni aviso con el móvil bloqueado).

@@ -12,7 +12,7 @@ import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes, useMediciones, usePerfil } from '../../datos/hooks'
 import { CabComida, Deslizable, Mini } from './comun'
-import { alternarSuplemento, borrarComida } from '../../datos/acciones/comida'
+import { alternarSuplemento, borrarComida, copiarComidasDia } from '../../datos/acciones/comida'
 
 
 export function DiaComida() {
@@ -22,7 +22,9 @@ export function DiaComida() {
   const ajustes = useAjustes()
   const hoy = hoyISO()
   const [fecha, setFecha] = useState(hoy)
+  const ayer = sumarDias(fecha, -1)
   const comidas = useLiveQuery(() => comidasDe(fecha), [fecha]) ?? []
+  const comidasAyer = useLiveQuery(() => comidasDe(ayer), [ayer]) ?? []
   const energia = useLiveQuery(() => objetivosEnergia(perfil), [perfil])
   const semana = semanaDe(fecha)
   const semanaAnt = semanaDe(sumarDias(semana[0]!, -1))
@@ -44,9 +46,15 @@ export function DiaComida() {
   const borrar = async (c: Guardado<Comida>) => {
     aviso(t('Borrado: {nombre}', { nombre: t(c.nombre) }), await borrarComida(c))
   }
-  // El batido, al marcarlo, se apunta con su proteína (suma al día); al desmarcarlo, se quita.
-  // Un doble toque no mete dos batidos ni lo desmarca: una sola vez, y lo tomado se mira dentro de la transacción.
   const unaVez = useUnaVez()
+  const repetirDeAyer = unaVez(async (franja?: Comida['franja']) => {
+    const r = await copiarComidasDia(ayer, fecha, franja)
+    if (!r) return
+    const msg = franja
+      ? t('Copiado {franja} de ayer ({n})', { franja: nombreFranja(franja).toLowerCase(), n: r.n })
+      : tn(r.n, 'Copiada {n} comida de ayer', 'Copiadas {n} comidas de ayer')
+    aviso(msg, r.deshacer)
+  })
   const tocarSuplemento = unaVez(async (s: string) => {
     const deshacer = await alternarSuplemento(perfil, fecha, s)
     if (deshacer && esBatido(s)) aviso(t('Apuntado: {nombre} · {n} g proteína', { nombre: t(s), n: batidoDe(perfil.batido).proteina }), deshacer)
@@ -89,15 +97,24 @@ export function DiaComida() {
           )}
         </div>
 
+        {comidas.length === 0 && comidasAyer.length > 0 && (
+          <div className="sec">
+            <button type="button" className="btn gry" onClick={() => void repetirDeAyer()}>
+              <Ico n="copy" b />{tn(comidasAyer.length, 'Repetir día de ayer ({n} comida)', 'Repetir día de ayer ({n} comidas)')}
+            </button>
+          </div>
+        )}
+
         <div className="sec">
           {FRANJAS.map((f, i) => {
             const lista = ordenadas.filter(c => c.franja === f.v)
             const tf = totalesComida(lista)
+            const deAyerFranja = comidasAyer.filter(c => c.franja === f.v)
             return (
               <details key={f.v} className={cx('fold slot', i > 0 && 'mt8')} open>
                 <summary>
                   <Ico n={f.icono} className="blue" />{nombreFranja(f.v)}
-                  <span className="slot-n mono">{t('{g} g prot. · {kcal} kcal', { g: Math.round(tf.proteina), kcal: Math.round(tf.kcal) })}</span>
+                  <span className="slot-n mono">{ajustes.mostrarKcal ? t('{g} g prot. · {kcal} kcal', { g: Math.round(tf.proteina), kcal: Math.round(tf.kcal) }) : t('{g} g prot.', { g: Math.round(tf.proteina) })}</span>
                   <Ico n="caret-down" />
                 </summary>
                 <div className="in">
@@ -108,11 +125,18 @@ export function DiaComida() {
                         <b>{recortar(t(c.nombre))}</b>
                         <small>{c.hora.replace(/^0/, '')}{c.racion !== 'N' ? ` · ${textoRacion(c.racion)}` : ''}{c.cafeina ? ` · ${t('{n} mg cafeína', { n: c.cafeina })}` : ''}{c.foto ? ` · ${t('con foto')}` : ''}</small>
                       </span>
-                      <span className="end"><em>{Math.round(c.proteina)} g</em><small> {t('prot.')}</small><br /><small>{Math.round(c.kcal)} kcal</small></span>
+                      <span className="end"><em>{Math.round(c.proteina)} g</em><small> {t('prot.')}</small>{ajustes.mostrarKcal && <><br /><small>{Math.round(c.kcal)} kcal</small></>}</span>
                     </Deslizable>
                   ))}
                   {!lista.length && (
-                    <button className="lnk" onClick={() => nav.hoja('hoja-anadir', { fecha, franja: f.v })}><Ico n="plus" b /> {t('Añadir')}</button>
+                    <div className="row" style={{ gap: 14, flexWrap: 'wrap' }}>
+                      <button className="lnk" onClick={() => nav.hoja('hoja-anadir', { fecha, franja: f.v })}><Ico n="plus" b /> {t('Añadir')}</button>
+                      {deAyerFranja.length > 0 && (
+                        <button type="button" className="lnk" onClick={() => void repetirDeAyer(f.v)}>
+                          <Ico n="copy" /> {t('Repetir {franja} de ayer', { franja: nombreFranja(f.v).toLowerCase() })}
+                        </button>
+                      )}
+                    </div>
                   )}
                   {lista.length > 0 && f.v === primera && <p className="small muted mt4"><Ico n="hand-swipe-left" /> {t('Desliza para borrar · toca para editar')}</p>}
                 </div>

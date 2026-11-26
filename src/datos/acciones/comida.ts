@@ -50,6 +50,23 @@ export async function borrarComida(c: Guardado<Comida>): Promise<Deshacer> {
   return () => { void db.comidas.put(c) }
 }
 
+/**
+ * Copia las comidas de un día a otro (todas o solo las de una franja) y devuelve cuántas copió + cómo deshacerlo.
+ * Las copias entran sin marca de suplemento automático para no chocar con los interruptores del día.
+ */
+export async function copiarComidasDia(desde: string, hacia: string, franja?: Franja): Promise<{ n: number; deshacer: Deshacer } | null> {
+  const origen = (await db.comidas.where('fecha').equals(desde).toArray())
+    .filter(c => !franja || c.franja === franja)
+    .sort((a, b) => String(a.hora).localeCompare(String(b.hora)))
+  if (!origen.length) return null
+  const copias: Comida[] = origen.map(({ id: _id, suplemento: _s, ...resto }) => ({ ...resto, fecha: hacia }))
+  const ids = (await db.transaction('rw', db.comidas, () => db.comidas.bulkAdd(copias, { allKeys: true }))) as number[]
+  return {
+    n: ids.length,
+    deshacer: () => { void db.comidas.bulkDelete(ids) },
+  }
+}
+
 export async function guardarPlantilla(p: Plantilla): Promise<number> {
   return (await db.plantillas.put(p)) as number
 }

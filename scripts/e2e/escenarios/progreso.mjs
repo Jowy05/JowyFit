@@ -119,6 +119,21 @@ escenario('progreso a fondo: registrar todas las medidas (báscula, origen y fec
   comprobar(!(await tabla('metas')).some(x => x.id === meta.id), 'No se borra la meta')
   await pulsar('Deshacer')
   await leerHasta(() => tabla('metas'), m => m.some(x => x.id === meta.id), '«Deshacer» no devuelve la meta')
+  // Meta de dominadas: crear «15 dominadas estrictas», sumar +1 y apuntar avance manual.
+  await pulsar('Crear otra meta')
+  await pulsar('Dominadas', '.sheet')
+  for (let i = 0; i < 10; i++) await t('pulsarSel', '.sheet [aria-label="Objetivo"] button[aria-label="Más"]')
+  await pulsar('Crear meta', '.sheet')
+  await ver('15 dominadas estrictas')
+  await t('pulsarSel', 'button[aria-label="Sumar 1 a 15 dominadas estrictas"]')
+  await leerHasta(() => tabla('metas'), ms => ms.some(x => x.tipo === 'dominadas' && x.actual === 1), '«+1» no guarda el avance en dominadas')
+  await pulsar('Apuntar avance')
+  await ver('¿Cuánto llevas ahora?')
+  await pulsar('+5', '.sheet')
+  await pulsar('Guardar avance', '.sheet')
+  await leerHasta(() => tabla('metas'), ms => ms.some(x => x.tipo === 'dominadas' && x.actual === 6), '«Apuntar avance» no guarda 6 dominadas')
+  await ver('10 estrictas')
+  await ver('15 estrictas')
 })
 
 escenario('pasos, fuerza y fotos a fondo: pasos a mano de ayer, objetivo de pasos, trote en minutos, gráficas y comparador', async () => {

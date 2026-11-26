@@ -83,6 +83,8 @@ export function ajustesPorDefecto(): Ajustes {
       domingo: false,
       revision: true,
       revisionHora: '19:00',
+      pasos: false,
+      pasosHora: '18:00',
     },
     copiaAuto: true,
     copiasAuto: COPIAS_AUTO,

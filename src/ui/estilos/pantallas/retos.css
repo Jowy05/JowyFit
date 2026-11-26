@@ -1,0 +1,73 @@
+/* Pantalla Retos: resumen de racha, tarjetas de retos de 60 s y cámara de postura en vivo. */
+.ret-racha{display:flex;align-items:center;gap:14px}
+.ret-racha-v{font-size:20px;line-height:1.15;margin-top:2px}
+.ret-racha-v b{font-family:var(--font-mono);font-size:24px}
+.goldb{background:var(--gold-t);color:var(--gold)}
+
+.ret-grid{display:grid;gap:10px}
+.ret-card{transition:border-color .2s ease-in-out}
+.ret-card.con-rec{border-color:color-mix(in srgb,var(--gold) 45%,var(--line));background:linear-gradient(120deg,var(--gold-t),transparent 65%),var(--surface)}
+.ret-ico{background:var(--go-t);color:var(--go)}
+.ret-t{font-size:21px;line-height:1.15}
+.ret-obj{display:flex;align-items:center;gap:6px;font-weight:600;font-size:14.5px;color:var(--ink)}
+.ret-obj i{color:var(--go);font-size:17px}
+
+/* Pantalla completa del reto activo */
+.ret-cam{justify-content:space-between}
+.ret-visor{flex:1 1 auto;min-height:220px;display:grid;place-items:center;padding:8px 12px 0;container-type:size}
+.ret-marco{position:relative;width:min(100%,56vh);width:min(100cqw,76cqh);aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:#0D0A14}
+.ret-marco video,.ret-esqueleto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ret-marco.espejo video,.ret-marco.espejo .ret-esqueleto{transform:scaleX(-1)}
+
+.ret-estado{
+  position:absolute;left:10px;right:10px;top:10px;z-index:2;
+  display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;
+  background:rgba(17,12,27,.78);color:#fff;font-size:13.5px;font-weight:600;
+  transition:background .2s ease-in-out,border-color .2s ease-in-out;
+  border:1px solid rgba(255,255,255,.16);
+}
+.ret-estado.ok i{color:var(--ok)}
+.ret-estado.warn{border-color:var(--warn)}
+.ret-estado.warn i{color:var(--warn)}
+.ret-ang{font-size:12.5px;color:rgba(255,255,255,.78);flex:none}
+
+.ret-hud-wrap{
+  position:absolute;left:10px;right:10px;bottom:10px;z-index:2;
+  display:flex;flex-direction:column;gap:6px;
+}
+.ret-prof{
+  height:7px;border-radius:99px;background:rgba(17,12,27,.72);
+  border:1px solid rgba(255,255,255,.16);overflow:hidden;
+}
+.ret-prof>span{
+  display:block;height:100%;border-radius:99px;background:var(--go);
+  transition:width .1s ease-in-out,background .12s ease-in-out;
+}
+.ret-prof.llena>span{background:#B6FF3B}
+.ret-hud{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.ret-hud-n,.ret-hud-t{
+  background:rgba(17,12,27,.8);border:1px solid rgba(255,255,255,.16);
+  border-radius:10px;padding:8px 12px;text-align:center;color:#fff;
+}
+.ret-hud small{display:block;font:600 11px var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.ret-hud b{display:block;font-size:32px;line-height:1.1;margin-top:2px}
+.ret-hud-n b{color:#B6FF3B}
+
+.ret-manual-zona{
+  flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px 16px;text-align:center;gap:6px;
+}
+.ret-big-clock{font-size:64px;font-weight:700;line-height:1;color:#fff;margin-top:8px}
+.ret-big-sub{font-size:14px;color:rgba(255,255,255,.72)}
+.ret-big-reps{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.ret-big-reps b{font-size:54px;line-height:1;color:#B6FF3B}
+.ret-big-reps span{font-size:15px;color:rgba(255,255,255,.85);font-weight:600}
+
+.ret-panel-t{font:700 18px/1.2 var(--font-display);color:var(--ink)}
+.mb8{margin-bottom:8px}
+
+/* Cuatro pestañas en CabRutina en móviles de 360 px: letra ligeramente más compacta para evitar desborde. */
+@media (max-width:380px){.seg.fill button{padding:0 5px;font-size:14px}}
+@media (prefers-reduced-motion:reduce){.ret-card,.ret-estado{transition:none}}

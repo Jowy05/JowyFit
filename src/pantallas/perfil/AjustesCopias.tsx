@@ -1,6 +1,6 @@
 // AJU-01 · Copia de seguridad en Ajustes: hacerla, recuperarla, cuántas automáticas guardar y, aparte, la contraseña
 // (ProtegerCopias) y las guardadas en Documentos/JowyFit (CopiasGuardadas, solo Android).
-import { useCallback, useEffect, useState, type Ref } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { guardarAjustes } from '../../datos/repos'
 import { importar } from '../../datos/copias'
 import { OPCIONES_COPIAS_AUTO } from '../../dominio/copias'
@@ -11,6 +11,7 @@ import { useCopiaCifrada } from '../../ui/HojaCopiaCifrada'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes } from '../../datos/hooks'
 import { copiaCompartiendo, hacerCopiaAhora, type CopiaPreparada } from '../../app/copias'
+import { exportarLigero, type TipoExportLigero } from '../../app/exportar'
 import { CopiasGuardadas, cuando } from './CopiasGuardadas'
 import { ProtegerCopias } from './ProtegerCopias'
 import { t } from '../../i18n'
@@ -18,8 +19,8 @@ import { tr } from '../../i18n/jsx'
 
 const textoGuardar = (n: number) => (n ? t('Las {n} últimas', { n }) : t('Todas'))
 
-/** `refTitulo`: el título de la sección, para llegar con scroll desde el aviso de Inicio. */
-export function CopiaDeSeguridad({ refTitulo }: { refTitulo: Ref<HTMLParagraphElement> }) {
+/** Copia de seguridad: hacer copia, recuperar, automáticas, contraseña y copias guardadas. */
+export function CopiaDeSeguridad() {
   const aviso = useAviso()
   const a = useAjustes()
   const cap = capacidades()
@@ -77,11 +78,23 @@ export function CopiaDeSeguridad({ refTitulo }: { refTitulo: Ref<HTMLParagraphEl
   /** Una guardada ya pasó por su «¿Seguro?»: no se vuelve a preguntar. */
   const recuperarGuardada = (f: ArchivoElegido) => { if (!cifrada.abrir(f, false)) void restaurar(f.bytes) }
 
+  const exportar = async (tipo: TipoExportLigero) => {
+    setOcupado(true)
+    try {
+      const r = await exportarLigero(tipo)
+      if (r.resultado === 'compartido') aviso(t('Archivo listo: {nombre}', { nombre: r.nombre }))
+      else if (r.resultado === 'cancelado') aviso(t('No se ha guardado el archivo'))
+      else aviso(cap.copiasEnDocumentos ? t('Guardado en Documentos/JowyFit: {nombre}', { nombre: r.nombre }) : t('Descargado: {nombre}', { nombre: r.nombre }))
+    } catch (e) {
+      aviso(t('No se pudo exportar: {error}', { error: mensajeDe(e) }))
+    } finally { setOcupado(false) }
+  }
+
   return (
     <>
-      <p className="grp-t" ref={refTitulo} id="aju-datos">{t('Copia de seguridad')}</p>
+      <p className="grp-t" id="aju-datos">{t('Copia de seguridad')}</p>
       <p className="note ok"><Ico n="device-mobile-camera" /><span>{tr('<b>Todo se guarda en este móvil.</b> Una copia de vez en cuando te sirve si cambias de móvil o se borra algo.', { b: x => <b>{x}</b> })}</span></p>
-      <div className="list mt8" data-tour="copia">
+      <div className="list mt8">
         <button className="it" disabled={ocupado} onClick={() => void copiaAhora()}>
           <span className="ico"><Ico n="floppy-disk" /></span>
           <span className="tx"><b>{copiaLista ? t('Guardar la copia') : t('Hacer copia ahora')}</b><small>{copiaLista
@@ -113,6 +126,25 @@ export function CopiaDeSeguridad({ refTitulo }: { refTitulo: Ref<HTMLParagraphEl
             </div>
           </div>
         )}
+      </div>
+      <p className="grp-t">{t('Exportar para hoja de cálculo')}</p>
+      <div className="list">
+        <button className="it" disabled={ocupado} onClick={() => void exportar('entrenos')}>
+          <span className="ico"><Ico n="file-csv" /></span>
+          <span className="tx"><b>{t('Entrenos (.csv)')}</b><small>{t('Todas tus series, pesos, repeticiones y récords para Excel o Sheets')}</small></span>
+        </button>
+        <button className="it" disabled={ocupado} onClick={() => void exportar('comidas')}>
+          <span className="ico"><Ico n="file-csv" /></span>
+          <span className="tx"><b>{t('Comidas (.csv)')}</b><small>{t('Diario de comidas con proteína, calorías, cafeína y macros')}</small></span>
+        </button>
+        <button className="it" disabled={ocupado} onClick={() => void exportar('medidas')}>
+          <span className="ico"><Ico n="file-csv" /></span>
+          <span className="tx"><b>{t('Medidas y peso (.csv)')}</b><small>{t('Peso, perímetros y datos de la báscula ordenados por fecha')}</small></span>
+        </button>
+        <button className="it" disabled={ocupado} onClick={() => void exportar('json')}>
+          <span className="ico"><Ico n="file-code" /></span>
+          <span className="tx"><b>{t('Todo en JSON ligero (.json)')}</b><small>{t('Tus datos legibles sin fotos ni archivos pesados')}</small></span>
+        </button>
       </div>
       <ProtegerCopias copias={copias} onCambio={cambioCopias} />
       {cap.copiasEnDocumentos && copias.length > 0 && <CopiasGuardadas copias={copias} ocupado={ocupado} onRecuperar={recuperarGuardada} onCambio={refrescarCopias} />}

@@ -25,7 +25,7 @@ export function Celebracion({ rutina, historial }: { rutina: Rutina | null | und
     const { metas, ms, ses } = historial
     return celebracionesPosibles({
       hoy, sesiones: ses, fijos: rutina ? rutina.dias.filter(d => !d.opcional).length : 0, nombre: nombreEjercicio,
-      metas: metas.map(m => ({ id: m.id, titulo: m.titulo, conseguida: estadoMeta(m, valorMeta(m, ms, ses, perfil, hoy)).conseguida })),
+      metas: metas.map(m => ({ id: m.id, titulo: m.titulo, conseguida: estadoMeta(m, valorMeta(m, ms, ses, perfil, hoy, nombreEjercicio)).conseguida })),
     })
   }, [perfil, rutina, historial, hoy])
   const [vista, setVista] = useState<Cel | null>(null)

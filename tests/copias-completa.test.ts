@@ -12,7 +12,7 @@ import { nombreCopia } from '../src/dominio/copias'
 import { ajustesPorDefecto, leerAjustes, perfilPorDefecto } from '../src/datos/repos'
 import { sugerenciaPara, gastoDelDia } from '../src/datos/consultas'
 import type {
-  Ajustes, Bloque, Comida, DiaRutina, DiaSuplementos, EjercicioPropio, EjercicioSesion, Foto, Gimnasio, MaquinaPropia, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil,
+  Ajustes, Bloque, Comida, DiaRutina, DiaSuplementos, EjercicioPropio, EjercicioSesion, Foto, Gimnasio, IntentoReto, MaquinaPropia, MarcaEjercicio, Medicion, Meta, PasosDia, Perfil,
   Plantilla, Producto, Revision, Rutina, Serie, Sesion,
 } from '../src/datos/tipos'
 
@@ -41,9 +41,13 @@ const ajustes: Required<Ajustes> = {
     { fecha: '2026-10-01', antes: { kcal: 2250, proteina: 145, peso: 80.2 }, despues: { kcal: 2200, proteina: 140, peso: null }, porque: 'baja-cintura', manual: true },
   ],
   ayudaEsfuerzo: false, franjasHoras: { desayuno: '07:00', comida: '14:00', merienda: '17:00', cena: '20:00' }, pasosPorKm: 1400,
-  noti: { ...ajustesPorDefecto().noti, revision: true, revisionHora: '18:30' },
+  noti: { ...ajustesPorDefecto().noti, revision: true, revisionHora: '18:30', pasos: true, pasosHora: '17:45' },
   informe: { periodo: 'semana', secciones: { entrenos: true, comida: false, cuerpo: true, pasos: false, detalle: true } },
   fotos: { camara: 'delantera', esperar: true },
+  entrenosLibres: [{
+    id: 'pl-1', nombre: 'Express torso', creado: '2026-10-13',
+    ejercicios: [{ ejercicio: 'bench-press', series: 3, repsMin: 6, repsMax: 10, descanso: 120, registro: 'peso' }],
+  }],
 }
 const medicion: Required<Medicion> = {
   id: 1, fecha: '2026-10-13T07:05', origen: 'casa', pesoKg: 79.1,
@@ -78,9 +82,10 @@ const revision: Required<Revision> = {
   id: 1, fecha: '2026-10-18', estado: 'seguimiento', respuestas: [{ zona: 'rodillas', va: 'peor' }],
   cambios: [{ uid: 'b1', letra: 'A', zona: 'rodillas', antes: bloque, despues: { ...bloque, cargaPct: 0.8 }, deshecho: false }],
 }
-const meta: Required<Meta> = { id: 1, tipo: 'ejercicio', titulo: 'Banca 60 kg', objetivo: 60, unidad: 'kg', fecha: '2027-06-01', ejercicio: 'bench-press', inicio: 40, hecha: false }
+const meta: Required<Meta> = { id: 1, tipo: 'ejercicio', titulo: 'Banca 60 kg', objetivo: 60, unidad: 'kg', fecha: '2027-06-01', ejercicio: 'bench-press', inicio: 40, actual: 50, historial: [{ fecha: '2026-10-01', valor: 45, nota: 'buena técnica' }, { fecha: '2026-10-13', valor: 50 }], hecha: false }
 // La de repeticiones va aparte: la de kilos es la que más se usa y también tiene que sobrevivir.
-const metaReps: Required<Meta> = { id: 2, tipo: 'reps', titulo: '10 dominadas', objetivo: 10, unidad: 'reps', fecha: '2027-06-01', ejercicio: 'pull-up', inicio: 3, hecha: false }
+const metaReps: Required<Meta> = { id: 2, tipo: 'reps', titulo: '10 dominadas', objetivo: 10, unidad: 'reps', fecha: '2027-06-01', ejercicio: 'pull-up', inicio: 3, actual: 7, historial: [{ fecha: '2026-10-13', valor: 7, nota: 'sin impulso' }], hecha: false }
+const intentoReto: Required<IntentoReto> = { id: 1, fecha: '2026-11-25T07:30', reto: 'flexiones-60', valor: 34, invalidas: 2, duracionS: 60, modo: 'camara', record: true }
 
 async function sembrarTodo() {
   for (const t of TABLAS) await db.table(t).clear()
@@ -100,6 +105,7 @@ async function sembrarTodo() {
   await db.metas.bulkPut([meta, metaReps])
   await db.propios.put(propio)
   await db.revisiones.put(revision)
+  await db.retos.put(intentoReto)
 }
 
 /** Instantánea comparable de toda la base (los Blob se pasan a texto + tipo). */
@@ -120,7 +126,7 @@ const copiaJSON = (datos: Record<string, unknown[]>, version = 1) => strToU8(JSO
 describe('copia completa: cada tabla y cada campo', () => {
   beforeEach(sembrarTodo)
 
-  it('las 16 tablas tienen una fila con todos sus campos (metas, dos: de kilos y de repeticiones)', async () => {
+  it('las 17 tablas tienen una fila con todos sus campos (metas, dos: de kilos y de repeticiones)', async () => {
     for (const t of TABLAS) expect(await db.table(t).count(), t).toBe(t === 'metas' ? 2 : 1)
   })
   it('exportar → borrar todo → importar deja cada campo igual (fotos, propias y campos nuevos incluidos)', async () => {
@@ -168,8 +174,8 @@ describe('copia completa: cada tabla y cada campo', () => {
     expect(nombres.filter(n => n.startsWith('archivos/'))).toHaveLength(5)
     expect(nombres.some(n => n.endsWith('.png'))).toBe(true)
     const json = JSON.parse(strFromU8(ar['datos.json']!))
-    // El historial de energía y las metas de repeticiones necesitan el formato 6.
-    expect(json).toMatchObject({ app: 'JowyFit', version: 6 })
+    // Los intentos de retos necesitan el formato 7.
+    expect(json).toMatchObject({ app: 'JowyFit', version: 7 })
     expect(Object.keys(json.datos).sort()).toEqual([...TABLAS].sort())
     // Los Blob van como referencia al archivo, no como «{}».
     expect(json.datos.fotos[0].imagen).toMatchObject({ __archivo: expect.stringMatching(/^archivos\//), tipo: 'image/png' })
@@ -345,5 +351,28 @@ describe('compatibilidad al integrar molestias con el registro por lado', () => 
       expect(versionNecesaria({ sesiones: [{ ejercicios: [{ ...sesiones[0]!.ejercicios[0], ...campo }] }] })).toBe(5)
     }
     expect(versionNecesaria({ sesiones, ajustes: [{ molestiasVistas: [] }] })).toBe(5)
+    expect(versionNecesaria({ sesiones, metas: [{ tipo: 'reps' }] })).toBe(6)
+    expect(versionNecesaria({ sesiones, metas: [{ actual: 5 }] })).toBe(7)
+    expect(versionNecesaria({ sesiones, metas: [{ historial: [{ fecha: '2026-10-13', valor: 5 }] }] })).toBe(7)
+    expect(versionNecesaria({ sesiones, ajustes: [{ entrenosLibres: [{ id: 'pl-1', nombre: 'Express', ejercicios: [], creado: '2026-10-13' }] }] })).toBe(7)
+    expect(versionNecesaria({ sesiones, ajustes: [{ noti: { pasos: true } }] })).toBe(7)
+    expect(versionNecesaria({ sesiones, retos: [intentoReto] })).toBe(7)
+  })
+  it('completa `reps` con el lado más bajo si una copia trae izq/der sin reps', async () => {
+    for (const t of TABLAS) await db.table(t).clear()
+    await importar(copiaJSON({
+      perfil: [{ id: 'yo', altaCompleta: true }],
+      sesiones: [{
+        id: 1, fecha: '2026-10-13', rutinaId: null, letra: 'A', nombre: 'A', gimnasioId: null, inicio: 1, version: 'normal', estado: 'hecha', calibracion: false,
+        ejercicios: [{
+          uid: 'b1', ejercicio: 'lunge', planificado: 'lunge', estado: 'hecho', repsMin: 8, repsMax: 12, rpe: 8, descanso: 90, registro: 'peso',
+          series: [
+            { n: 1, peso: 20, reps: null, rpe: 8, calentamiento: false, hecha: true, izq: 9, der: 7 },
+          ],
+        }],
+      }],
+    }, 4))
+    const s = (await db.sesiones.toArray())[0]!.ejercicios[0]!.series
+    expect(s[0]!.reps).toBe(7)
   })
 })

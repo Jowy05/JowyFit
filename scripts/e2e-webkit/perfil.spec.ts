@@ -12,23 +12,40 @@ test('perfil, ficha y ajustes sin nada de Android', async ({ page, jf }) => {
   await jf.revisar('Datos personales')
   await jf.volver()
   await jf.pulsarSel('button[aria-label="Ajustes"]')
-  await jf.ver('Apariencia')
-  await jf.pulsar('Más ajustes')
-  await jf.ver('Descanso entre series')
-  const texto = await page.locator('.screen').innerText()
-  expect(texto).not.toMatch(DE_ANDROID)
-  expect(texto).not.toMatch(/Reloj y báscula|Copias guardadas en el móvil|No disponible/)
-  // Lo que sí está en iPhone.
-  for (const t of ['Tamaño de letra', 'Tema', 'Cómo ponerla en la pantalla de inicio', 'Hacer copia ahora', 'Recuperar una copia',
-    'Sonido al acabar el descanso', 'Pantalla siempre encendida', 'Mostrar calorías', 'De dónde salen los pasos', 'Gimnasios', 'Cámara']) await jf.ver(t)
-  await jf.ver('míralos en la app Salud')
+  await jf.ver('Apariencia e idioma')
+  await jf.ver('Cómo ponerla en la pantalla de inicio')
+  expect(await page.locator('.screen').innerText()).not.toMatch(DE_ANDROID)
   await jf.revisar('Ajustes')
-  // Tema oscuro y letra grande.
+  // Apariencia e idioma: tema oscuro y letra grande.
+  await jf.pulsar('Apariencia e idioma')
+  for (const t of ['Tamaño de letra', 'Tema', 'Idioma']) await jf.ver(t)
   await jf.pulsar('Oscuro')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await jf.pulsar(/^Aa\s*Grande$/)
   await expect(page.locator('.app').first()).toHaveAttribute('data-letra', 'grande')
   await jf.revisar('Ajustes oscuro y letra grande')
+  await jf.volver()
+  // Entreno y rutina: sin vibrar ni Android.
+  await jf.pulsar('Entreno y rutina')
+  for (const t of ['Descanso entre series', 'Sonido al acabar el descanso', 'Pantalla siempre encendida', 'Gimnasios']) await jf.ver(t)
+  expect(await page.locator('.screen').innerText()).not.toMatch(DE_ANDROID)
+  await jf.volver()
+  // Comida y nutrición.
+  await jf.pulsar('Comida y nutrición')
+  await jf.ver('Mostrar calorías')
+  await jf.volver()
+  // Conectividad y permisos: pasos a mano mirando Salud, sin Health Connect.
+  await jf.pulsar('Conectividad y permisos')
+  for (const t of ['De dónde salen los pasos', 'míralos en la app Salud', 'Cámara']) await jf.ver(t)
+  const textoCon = await page.locator('.screen').innerText()
+  expect(textoCon).not.toMatch(DE_ANDROID)
+  expect(textoCon).not.toMatch(/Reloj y báscula|No disponible/)
+  await jf.volver()
+  // Datos y copias: sin copias guardadas en el móvil.
+  await jf.pulsar('Datos y copias')
+  for (const t of ['Hacer copia ahora', 'Recuperar una copia']) await jf.ver(t)
+  expect(await page.locator('.screen').innerText()).not.toMatch(/Copias guardadas en el móvil/)
+  await jf.volver()
   // Créditos sin las piezas que solo lleva el APK.
   await jf.pulsar('Créditos y aviso legal')
   await jf.ver('RepDB')

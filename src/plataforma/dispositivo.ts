@@ -58,6 +58,8 @@ export type Capacidades = {
   aparatoApple: DispositivoApple | null
   /** Cómo se pone como app en un navegador de Apple: en el Dock (Mac) o en la pantalla de inicio; null fuera de Apple. */
   instalar: 'dock' | 'inicio' | null
+  /** Descarga e instalación del APK oficial desde la propia app: solo Android nativo. */
+  actualizarApk: boolean
   /** Abierta como app (el APK, o la web desde la pantalla de inicio o el Dock). */
   instalada: boolean
 }
@@ -77,6 +79,7 @@ export function capacidades(): Capacidades {
     apple: apple !== null,
     aparatoApple: apple,
     instalar: apple === 'mac' ? 'dock' : apple ? 'inicio' : null,
+    actualizarApk: esAndroid(),
     instalada: estaInstalada(),
   }
 }

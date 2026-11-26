@@ -6,7 +6,7 @@ type LN = typeof import('@capacitor/local-notifications').LocalNotifications
 export type Canal = Parameters<LN['createChannel']>[0]
 
 /** «dormir» y «pesarse» son el primero de una serie (uno por entreno o por día de pesaje). El del descanso va aparte (avisoDescanso.ts). */
-export const ID_AVISO = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700, revision: 800 } as const
+export const ID_AVISO = { dormir: 100, pesarse: 200, batido: 300, creatina: 400, copia: 500, fotos: 600, domingo: 700, revision: 800, pasos: 900 } as const
 
 export type Aviso = { id: number; titulo: string; texto: string; cuando: Date; repetirCada?: 'day' | 'week' }
 

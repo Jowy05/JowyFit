@@ -5,8 +5,9 @@ import { medicionesPorFecha, metasDeTipo } from '../../datos/consultas'
 import type { Medicion, OrigenMedicion } from '../../datos/tipos'
 import { cinturaAltura } from '../../dominio/calculos'
 import { conUnidad, num, capital } from '../../dominio/formato'
-import { fechaCorta } from '../../dominio/fechas'
-import { grasaPorMedidas, mediasSemanales, pendienteSemanal, serieMedida, ultimoValor, veredictoCinturaAltura, veredictoGrasa, type PuntoFecha } from '../../dominio/tendencias'
+import { fechaCorta, hoyISO } from '../../dominio/fechas'
+import { subirPesoEsBueno } from '../../dominio/objetivos'
+import { grasaEn, grasaPorMedidas, mediasSemanales, pendienteSemanal, serieMedida, ultimoValor, veredictoCinturaAltura, veredictoGrasa, type PuntoFecha } from '../../dominio/tendencias'
 import { Linea } from '../../ui/graficas'
 import { Ico, Pantalla, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -89,11 +90,16 @@ export function Cuerpo() {
   const fechaOtras = otras.map(p => p.u!.fecha).sort().pop()
   const historial = [...ms].reverse()
   const vRatio = rUlt ? veredictoCinturaAltura(rUlt.valor) : null
-  const grasaUlt = marina.length ? marina[marina.length - 1]!.valor : bascula.length ? bascula[bascula.length - 1]!.valor : null
+  const grasaInfo = grasaEn(ms, marina, hoyISO())
+  const grasaUlt = grasaInfo?.valor ?? null
   const vGrasa = grasaUlt != null ? veredictoGrasa(grasaUlt, perfil.sexo) : null
   const kgGrasa = grasaUlt != null && pesoUlt ? (pesoUlt.valor * grasaUlt) / 100 : null
-  // Bajar de peso es lo buscado salvo si el objetivo es ganar fuerza.
-  const tonoPeso = pendiente == null || Math.abs(pendiente) < 0.05 ? '' : (pendiente < 0) === (perfil.objetivo !== 'fuerza') ? 'ok' : 'warn'
+  // Si el objetivo es ganar músculo, fuerza o peso, subir de peso no es un aviso negativo.
+  const tonoPeso = pendiente == null || Math.abs(pendiente) < 0.05
+    ? ''
+    : subirPesoEsBueno(perfil.objetivo)
+      ? (pendiente > 0 ? 'ok' : '')
+      : (pendiente < 0 ? 'ok' : 'warn')
 
   return (
     <Pantalla>
@@ -144,18 +150,21 @@ export function Cuerpo() {
         </div>
 
         {/* 3 · % de grasa, explicado en palabras. */}
-        {grasaUlt != null && (
-          <div className="card pd mt12">
-            <div className="row jb">
-              <div><span className="lbl">{t('% de grasa')}</span><p className="tot-big mono">{num(grasaUlt)}<small> %</small></p></div>
-              {vGrasa && <span className={`tag frase ${vGrasa.tono}`}>{capital(vGrasa.palabra)}</span>}
+        {grasaUlt != null && (() => {
+          const origenGrasa = origenBascula ?? 'casa'
+          return (
+            <div className="card pd mt12">
+              <div className="row jb">
+                <div><span className="lbl">{t('% de grasa')}</span><p className="tot-big mono">{num(grasaUlt)}<small> %</small></p></div>
+                {vGrasa && <span className={`tag frase ${vGrasa.tono}`}>{capital(vGrasa.palabra)}</span>}
+              </div>
+              <p className="small mt8">
+                {kgGrasa != null ? <>{tr('Unos {kg} de tu peso son grasa.', { kg: <b>{num(kgGrasa, 0)} kg</b> })} </> : null}
+                {grasaInfo?.fuente === 'medidas' ? t('Calculado con tu cintura, tu cuello y tu altura.') : t('Lo da tu {bascula}.', { bascula: t(NOMBRE_ORIGEN[origenGrasa]).toLowerCase() })}
+              </p>
             </div>
-            <p className="small mt8">
-              {kgGrasa != null ? <>{tr('Unos {kg} de tu peso son grasa.', { kg: <b>{num(kgGrasa, 0)} kg</b> })} </> : null}
-              {marina.length ? t('Calculado con tu cintura, tu cuello y tu altura.') : t('Lo da tu {bascula}.', { bascula: t(NOMBRE_ORIGEN[origenBascula!]).toLowerCase() })}
-            </p>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Gráficas que no hacen falta para saber si vas bien, plegadas. */}
         {(ratio.length > 1 || marina.length > 1 || bascula.length > 1) && (

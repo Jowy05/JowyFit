@@ -81,7 +81,12 @@ export function Perfil() {
               <p className="d">{t('Lo que te conviene comer cada día. Toca para ver por qué.')}</p>
             </button>
           </div>
-          {n && n.peso == null && <p className="note plain mt8"><Ico n="scales" /><span>{tr('Aún no te has pesado: los cálculos usan 75 kg. <b>Pésate</b> para afinarlos.', { b: s => <b>{s}</b> })}</span></p>}
+          {n && n.peso == null && (
+            <button className="note plain mt8 w100" style={{ textAlign: 'left' }} onClick={() => nav.hoja('hoja-peso')}>
+              <Ico n="scales" />
+              <span>{tr('Aún no te has pesado: los cálculos usan 75 kg. <b>Pésate</b> para afinarlos.', { b: s => <b>{s}</b> })}</span>
+            </button>
+          )}
           <details className="fold mt8">
             <summary><Ico n="calculator" className="blue" />{t('Ver más números')} <Ico n="caret-down" /></summary>
             <div className="in">
@@ -128,7 +133,7 @@ export function Perfil() {
         <div className="list mt16">
           <button className="it" onClick={() => nav.ir('ajustes')}>
             <span className="ico"><Ico n="gear" /></span>
-            <span className="tx"><b>{t('Ajustes')}</b><small>{t('Tamaño de letra, recordatorios, copia de seguridad')}</small></span>
+            <span className="tx"><b>{t('Ajustes')}</b><small>{t('Apariencia, entreno, comida, conectividad y copias')}</small></span>
             <Ico n="caret-right" className="car" />
           </button>
         </div>

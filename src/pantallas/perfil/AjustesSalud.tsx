@@ -1,9 +1,10 @@
-// AJU-01 · Health Connect en Ajustes: «Reloj y báscula» (arriba, con los entrenos) y «Pasos y báscula» (en «Más ajustes»). Solo Android;
-// en otro navegador se dice que está en la app de Android y en los de Apple no se nombra.
+// AJU-01 · Conectividad y permisos en Ajustes: Health Connect (reloj y báscula), origen de pasos y báscula,
+// trote → pasos y permisos del dispositivo. En Apple se oculta lo exclusivo de Android.
 import { useEffect, useState } from 'react'
 import { guardarAjustes } from '../../datos/repos'
+import { reprogramarNotificaciones } from '../../datos/acciones/avisos'
 import type { Ajustes } from '../../datos/tipos'
-import { abrirHealthConnect, capacidades, pasosDisponibles, pedirPermisoPasos } from '../../plataforma'
+import { abrirHealthConnect, alVolverAPrimerPlano, avisosEnReposo, capacidades, pasosDisponibles, pedirAvisosEnReposo, pedirPermisoPasos, permisoNotificaciones } from '../../plataforma'
 import { Elegir, FilaInterruptor, Ico, Stepper } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -31,12 +32,54 @@ export function useSalud(): Salud {
   return { hayPasos, activarPasos }
 }
 
+/** Sección completa de Conectividad y permisos (Reloj y báscula + Pasos y báscula + Permisos). */
+export function ConectividadAjustes({ salud }: { salud: Salud }) {
+  const aviso = useAviso()
+  const a = useAjustes()
+  const cap = capacidades()
+  const [permNoti, setPermNoti] = useState(false)
+  const [enReposo, setEnReposo] = useState<boolean | null>(null)
+
+  useEffect(() => { void permisoNotificaciones(false).then(setPermNoti) }, [])
+  useEffect(() => {
+    const mirar = () => { void avisosEnReposo().then(setEnReposo) }
+    mirar()
+    const quitar = alVolverAPrimerPlano(mirar)
+    return () => { void quitar.then(f => f()) }
+  }, [])
+
+  const activarNoti = async () => {
+    const ok = await permisoNotificaciones(true)
+    setPermNoti(ok)
+    if (ok) { await reprogramarNotificaciones(); aviso(t('Notificaciones activadas')) }
+    else aviso(t('Actívalas en los ajustes del móvil'))
+  }
+
+  return (
+    <>
+      <RelojYBascula salud={salud} />
+      <PasosYBascula salud={salud} />
+      <p className="grp-t">{t('Permisos del dispositivo')}</p>
+      <div className="list">
+        {!cap.apple && <Permiso ico="bell" titulo={t('Notificaciones')} d={cap.recordatorios ? undefined : t('Solo en la app de Android')}
+          estado={cap.recordatorios ? permNoti : null} onActivar={() => void activarNoti()} />}
+        {enReposo !== null && <Permiso ico="lock" titulo={t('Avisos con el móvil bloqueado')} d={t('Para que el aviso del descanso llegue a su hora')}
+          estado={enReposo} onActivar={() => void pedirAvisosEnReposo()} />}
+        {!cap.apple && <Permiso ico="footprints" titulo="Health Connect" d={t('Para contar los pasos')} estado={salud.hayPasos ? a.fuentePasos === 'auto' : null} onActivar={() => void salud.activarPasos()} />}
+        <div className="it">
+          <span className="ico"><Ico n="camera" /></span>
+          <span className="tx"><b>{t('Cámara')}</b><small>{cap.apple ? t('Safari la pide la primera vez que escaneas') : t('Se pide la primera vez que escaneas o haces una foto')}</small></span>
+        </div>
+      </div>
+    </>
+  )
+}
+
 /** «Reloj y báscula»: conectar Health Connect, comprobar qué llega y abrir sus permisos. */
 export function RelojYBascula({ salud }: { salud: Salud }) {
   const aviso = useAviso()
   const a = useAjustes()
   const cap = capacidades()
-  // Resultado de «Comprobar qué llega» (para probar en el móvil).
   const [llega, setLlega] = useState<string[] | null>(null)
   if (cap.apple) return null
   const conectado = a.fuentePasos === 'auto' || a.fuenteBascula === 'auto'
@@ -47,7 +90,7 @@ export function RelojYBascula({ salud }: { salud: Salud }) {
       {!cap.salud ? (
         <p className="note plain"><Ico n="watch" /><span>{tr('<b>Solo en la app de Android:</b> los pasos y el peso se apuntan a mano.', { b: x => <b>{x}</b> })}</span></p>
       ) : salud.hayPasos ? (
-        <div className="list" data-tour="reloj">
+        <div className="list">
           <div className="it col">
             <span className="row"><span className="ico"><Ico n="heartbeat" /></span><span className="tx"><b>Health Connect</b><small>{conectado
               ? t('Conectado: {que}. Se actualiza solo al abrir la app.', { que: conectadoTodo ? t('pasos, peso y grasa') : a.fuentePasos === 'auto' ? t('pasos') : t('peso y grasa') })
@@ -57,12 +100,11 @@ export function RelojYBascula({ salud }: { salud: Salud }) {
             {llega && <p className="small muted">{llega.join(' · ')}</p>}
             <button className="lnk" onClick={() => void abrirHealthConnect()}>{t('Abrir Health Connect (permisos)')} <Ico n="caret-right" /></button>
           </div>
-          {/* Apagado de entrada: al encenderlo, Health Connect pregunta si deja guardar los entrenos. */}
           <FilaInterruptor ico="barbell" titulo={t('Guardar mis entrenos en Health Connect')} d={t('Al terminar, cada entreno se apunta allí como «fuerza», con su hora y sus calorías.')}
             on={!!a.entrenosASalud} onCambio={on => void cambiarEntrenosSalud(on).then(texto => aviso(texto))} />
         </div>
       ) : (
-        <div className="list" data-tour="reloj">
+        <div className="list">
           <div className="it col">
             <span className="row"><span className="ico"><Ico n="heartbeat" /></span><span className="tx"><b>{t('Health Connect no está listo en este móvil')}</b><small>{t('En Android 14 o más viene con el móvil: Ajustes → Seguridad y privacidad → Privacidad → Health Connect. En Android 13 o menos, se instala desde Google Play.')}</small></span></span>
             <button className="btn ln sm w100" onClick={() => void abrirHealthConnect().then(ok => { if (!ok) aviso(t('No se ha podido abrir: búscalo en los ajustes del móvil o en Google Play')) })}>{t('Abrir Health Connect')}</button>
@@ -73,7 +115,7 @@ export function RelojYBascula({ salud }: { salud: Salud }) {
   )
 }
 
-/** «Pasos y báscula» de «Más ajustes»: de dónde salen los pasos y el peso, el objetivo de pasos y cuánto cuenta el trote. */
+/** «Pasos y báscula»: de dónde salen los pasos y el peso, el objetivo de pasos y cuánto cuenta el trote. */
 export function PasosYBascula({ salud }: { salud: Salud }) {
   const nav = useNav()
   const aviso = useAviso()
@@ -115,12 +157,24 @@ export function PasosYBascula({ salud }: { salud: Salud }) {
           <span className="end small">{miles(p.pasosObjetivo)}</span>
           <Ico n="caret-right" className="car" />
         </button>
-        {/* Trote → pasos: lo que suma un trote apuntado en km (y correr en «Apuntar cardio»). */}
         <div className="it col">
           <span className="tx"><b>{t('Trote → pasos')}</b><small>{t('Cuántos pasos cuenta 1 km corriendo. Si das pasos largos, pon menos')}</small></span>
           <Stepper className="sm" valor={a.pasosPorKm ?? PASOS_POR_KM} paso={50} min={800} max={2000} decimales={0} sufijo={t('pasos')} etiqueta={t('Pasos por kilómetro')} onCambio={v => guardar({ pasosPorKm: v })} />
         </div>
       </div>
     </>
+  )
+}
+
+/** Estado de un permiso: null = no disponible en este móvil. */
+function Permiso({ ico, titulo, d, estado, onActivar }: { ico: string; titulo: string; d?: string; estado: boolean | null; onActivar: () => void }) {
+  return (
+    <div className="it">
+      <span className="ico"><Ico n={ico} /></span>
+      <span className="tx"><b>{titulo}</b>{d && <small>{d}</small>}</span>
+      {estado === null ? <span className="tag">{t('No disponible')}</span>
+        : estado ? <span className="tag ok"><Ico n="check" b />{t('Activado')}</span>
+          : <button className="btn sm auto" onClick={onActivar}>{t('Activar')}</button>}
+    </div>
   )
 }

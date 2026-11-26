@@ -28,15 +28,29 @@ function datosPerfil(p: Perfil, c: Ctx): DatoInforme[] {
   const modo = [enCola(p) ? t('rutina en orden') : t('días fijos'), p.modoMayor?.activo && (p.modoMayor.propuesto ? t('modo mayor (desde el {fecha})', { fecha: fechaCorta(p.modoMayor.propuesto) }) : t('modo mayor'))].filter(Boolean).join(' · ')
   const condiciones = (p.condicionesSalud ?? []).map(x => t(CONDICIONES.find(o => o.v === x)!.t))
   const cardio = p.cardioMin ? t('{n} min de cardio a la semana ({tipos})', { n: p.cardioMin, tipos: (p.cardioTipos ?? ['caminar']).map(x => nombreCardio(x).toLowerCase()).join(', ') }) : null
-  const manual = c.ajustes?.kcalManual != null
+  const manualKcal = c.ajustes?.kcalManual != null
+  const manualProt = c.ajustes?.proteinaManual != null
+  const ocultaKcal = c.ajustes?.mostrarKcal === false
+  const notasSalud = [p.lesiones?.trim(), p.condiciones?.trim()].filter(Boolean)
+  const saludPartes = [...condiciones, ...notasSalud]
+  const plantillas = c.ajustes?.entrenosLibres ?? []
   return [
     { nombre: t('Objetivo'), valor: objetivo },
     { nombre: t('Más trabajo en'), valor: zonas.length ? capital(zonas.join(' · ')) : t('Todo por igual') },
     { nombre: t('Modo'), valor: capital(modo) },
     { nombre: t('No quiere'), valor: p.noQuiero?.length ? p.noQuiero.map(g => t(NOMBRE_NO_QUIERO[g]).toLowerCase()).join(' · ') : t('Nada') },
-    { nombre: t('Salud'), valor: condiciones.length ? condiciones.join(' · ') : t('Nada marcado') },
+    { nombre: t('Salud'), valor: saludPartes.length ? saludPartes.join(' · ') : t('Nada marcado') },
     { nombre: t('Movimiento'), valor: [t('{n} pasos al día', { n: num(p.pasosObjetivo, 0) }), cardio].filter(Boolean).join(' · ') },
-    { nombre: t('Calorías'), valor: manual ? t('{n} kcal al día (puesto a mano)', { n: num(c.obj.kcal, 0) }) : t('{n} kcal al día (recomendado)', { n: num(c.obj.kcal, 0) }) },
+    {
+      nombre: t('Calorías'),
+      valor: (manualKcal ? t('{n} kcal al día (puesto a mano)', { n: num(c.obj.kcal, 0) }) : t('{n} kcal al día (recomendado)', { n: num(c.obj.kcal, 0) }))
+        + (ocultaKcal ? ` · ${t('ocultas en la app')}` : ''),
+    },
+    {
+      nombre: t('Proteína'),
+      valor: manualProt ? t('{n} g al día (puesto a mano)', { n: num(c.obj.proteina, 0) }) : t('{n} g al día (recomendado)', { n: num(c.obj.proteina, 0) }),
+    },
+    ...(plantillas.length ? [{ nombre: t('Plantillas libres'), valor: `${plantillas.length} · ${plantillas.slice(0, 3).map(x => x.nombre).join(', ')}${plantillas.length > 3 ? '…' : ''}` }] : []),
   ]
 }
 
@@ -108,7 +122,7 @@ function datosRevisiones(p: Perfil, revisiones: Revision[]): DatoInforme[] {
   return [
     { nombre: t('Hechas'), valor: revisiones.length ? t('{n} · la última, el {fecha}', { n: revisiones.length, fecha: fechaCorta(ultima!.fecha) }) : t('Ninguna todavía') },
     { nombre: t('Antes de entrenar'), valor: urgencias.length ? t('Marcado: {que}. No entrena hasta el visto bueno del médico.', { que: urgencias.join(', ') }) : t('Sin avisos'), tono: urgencias.length ? 'bad' : 'ok' },
-    ...(p.sueno ? [{ nombre: t('Sueño'), valor: t(SUENO[p.sueno]) }] : []),
+    ...(p.sueno ? [{ nombre: t('Sueño'), valor: p.sueno === 'poco' ? `${t(SUENO[p.sueno])} · ${t('esfuerzo limitado a 7,5')}` : t(SUENO[p.sueno]), ...(p.sueno === 'poco' ? { tono: 'warn' as const } : {}) }] : []),
   ]
 }
 

@@ -3,7 +3,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { objetivosEnergia } from '../../datos/consultas'
 import { guardarAjustes } from '../../datos/repos'
-import { FACTOR_ACTIVIDAD } from '../../dominio/calculos'
 import { num } from '../../dominio/formato'
 import { Cab, Ico, Pantalla } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
@@ -32,8 +31,6 @@ export function Energia() {
   const ajustes = useAjustes()
   const e = useLiveQuery(() => objetivosEnergia(perfil), [perfil, ajustes.kcalManual, ajustes.proteinaManual])
   if (!e) return <Pantalla><div className="cargando">{t('Cargando…')}</div></Pantalla>
-  const factor = FACTOR_ACTIVIDAD[perfil.trabajo]
-  const entreno = Math.max(0, Math.round(e.gasto - e.basal * factor))
   const manual = ajustes.kcalManual != null || ajustes.proteinaManual != null
   const gkg = e.peso ? e.proteina / e.peso : null
 
@@ -59,19 +56,20 @@ export function Energia() {
           <summary>{t('Ver cómo se calcula')}<Ico n="caret-down" /></summary>
           <div className="in">
             <div className="formula">
-              <p><span className="lbl">{t('Basal')}</span><b>{e.basal}</b></p>
-              <i>×</i>
-              <p><span className="lbl">{t('Actividad')}</span><b>{num(factor, 3)}</b></p>
+              <p><span className="lbl">{t('Basal')}</span><b>{e.desglose.basal}</b></p>
               <i>+</i>
-              <p><span className="lbl">{t('Entreno')}</span><b>{entreno}</b></p>
+              <p><span className="lbl">{t('Actividad')}</span><b>{e.desglose.diaADia + e.desglose.pasos}</b></p>
+              <i>+</i>
+              <p><span className="lbl">{t('Entreno')}</span><b>{e.desglose.entreno}</b></p>
               <i>=</i>
               <p className="res"><span className="lbl">{t('Gasto')}</span><b>~{e.gasto}</b></p>
             </div>
             <div className="spec-box mt12">
               <div className="spec">
-                <p><span>{t('En reposo (metabolismo basal)')}</span><b>{e.basal} kcal</b></p>
-                <p><span>{t('Tu día ({trabajo})', { trabajo: t(TRABAJO[perfil.trabajo]) })}</span><b>× {num(factor, 3)}</b></p>
-                <p><span>{t('Entreno (media al día)')}</span><b>+ {entreno} kcal</b></p>
+                <p><span>{t('En reposo (metabolismo basal)')}</span><b>{e.desglose.basal} kcal</b></p>
+                <p><span>{t('Tu día ({trabajo})', { trabajo: t(TRABAJO[perfil.trabajo]) })}</span><b>+ {e.desglose.diaADia} kcal</b></p>
+                {e.desglose.pasos > 0 && <p><span>{t('Pasos ({n} al día)', { n: num(perfil.pasosObjetivo, 0) })}</span><b>+ {e.desglose.pasos} kcal</b></p>}
+                <p><span>{t('Entreno (media al día)')}</span><b>+ {e.desglose.entreno} kcal</b></p>
                 <p><span>{t('Lo que gastas')}</span><b>~{e.gasto} kcal</b></p>
                 <p><span>{ajustes.kcalManual != null ? t('Objetivo de kcal (manual)') : t('Objetivo de kcal')}</span><b className="goc">~{e.kcal} kcal</b></p>
                 <p><span>{ajustes.proteinaManual != null ? t('Objetivo de proteína (manual)') : t('Objetivo de proteína')}</span><b className="okc">{e.proteina} g{gkg ? ` · ${t('{n} g por kilo', { n: num(gkg, 1) })}` : ''}</b></p>
@@ -80,9 +78,14 @@ export function Energia() {
           </div>
         </details>
 
-        {manual
-          ? <button className="btn ln sm mt16" onClick={async () => { await guardarAjustes({ kcalManual: null, proteinaManual: null }); aviso(t('Vuelve a ser automático')) }}>{t('Volver a automático')}</button>
-          : <button className="btn ln sm mt16" onClick={() => nav.ir('ajustes', { seccion: 'comida' })}>{t('Poner mi objetivo a mano')}</button>}
+        {manual ? (
+          <div className="btns mt16">
+            <button className="btn ln sm" onClick={() => nav.ir('ajustes', { seccion: 'comida' })}>{t('Cambiar objetivo')}</button>
+            <button className="btn gry sm" onClick={async () => { await guardarAjustes({ kcalManual: null, proteinaManual: null }); aviso(t('Vuelve a ser automático')) }}>{t('Volver a automático')}</button>
+          </div>
+        ) : (
+          <button className="btn ln sm mt16" onClick={() => nav.ir('ajustes', { seccion: 'comida' })}>{t('Poner mi objetivo a mano')}</button>
+        )}
 
         <div className="sec">
           <div className="sec-h"><h2>{t('Ajustes de cada 2 semanas')}</h2></div>

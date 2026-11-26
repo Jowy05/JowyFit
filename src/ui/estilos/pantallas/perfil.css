@@ -36,9 +36,7 @@
 .per-obj .k{white-space:normal}
 .per-obj .per-y{font:500 15px var(--font-body);color:var(--muted);margin:0 8px}
 
-/* Ajustes: «Más ajustes» plegado y «Borrar todo» aparte, al final. */
-.aju-mas>summary .tx{display:flex;flex-direction:column;line-height:1.2;padding:8px 0}
-.aju-mas>summary .tx small{font-weight:400;font-size:13px;color:var(--muted)}
+/* Ajustes: «Borrar todo» aparte, al final de Datos y copias. */
 .aju-borrar{margin-top:40px}
 
 /* Perfil: el objetivo en la cabecera puede ser largo («Perder grasa y ganar músculo»). */

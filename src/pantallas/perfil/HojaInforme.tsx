@@ -17,7 +17,7 @@ import { t, tk } from '../../i18n'
 // Los textos se traducen al pintarlos (t(c.titulo)): esto se evalúa antes de cargar el idioma.
 type Casilla = { k: keyof SeccionesInforme; titulo: string; d: string }
 const CASILLAS: Casilla[] = [
-  { k: 'entrenos', titulo: tk('Entrenos y subidas de peso'), d: tk('Cada entreno, récords, esfuerzo y gráficas de fuerza') },
+  { k: 'entrenos', titulo: tk('Entrenos y subidas de peso'), d: tk('Cada entreno, récords, retos, esfuerzo y gráficas de fuerza') },
   { k: 'comida', titulo: tk('Comida'), d: tk('Proteína, energía, picoteo y cafeína de cada día') },
   { k: 'cuerpo', titulo: tk('Cuerpo'), d: tk('Peso, % de grasa, cintura y cómo están') },
   { k: 'pasos', titulo: tk('Pasos y gasto'), d: tk('Pasos de cada día y lo que gastas') },

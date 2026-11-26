@@ -160,7 +160,7 @@ export function useMetaPrincipal(historial: DatosMetas | undefined): Principal |
   return useMemo(() => {
     if (!perfil || !historial) return undefined
     const { metas, ms, ses } = historial
-    return metaPrincipal(metas, m => valorMeta(m, ms, ses, perfil, hoy))
+    return metaPrincipal(metas, m => valorMeta(m, ms, ses, perfil, hoy, nombreEjercicio))
   }, [perfil, historial, hoy])
 }
 

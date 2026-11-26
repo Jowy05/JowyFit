@@ -169,14 +169,14 @@ export function Semana() {
               </>
             )}
           </button>
-          <div className="card kpi st">
+          <button className="card kpi st" onClick={() => nav.reemplazar('fuerza')}>
             <span className="row jb"><span className="lbl">{t('Entrenos')}</span><Icono e={eEntrenos} texto={eEntrenos === 'ok' ? (r.entrenos >= r.fijos ? t('hechos') : enCurso ? t('al día') : undefined) : undefined} /></span>
             <p className="k">{r.entrenos}<small>{t('de {n}', { n: r.fijos })}</small>{r.extra > 0 && <small>{t('+ {n} extra', { n: r.extra })}</small>}</p>
             <div className="pips mt8">
               {Array.from({ length: r.fijos }, (_, i) => <i key={i} className={cx(i < r.entrenos && 'on')} />)}
               {Array.from({ length: r.extra }, (_, i) => <i key={`x${i}`} className="ex" />)}
             </div>
-          </div>
+          </button>
           <button className="card kpi st" onClick={() => nav.pestana('com')}>
             <span className="row jb"><span className="lbl">{t('Proteína')}</span><Icono e={eProteina} texto={eProteina === 'bad' ? t('baja') : undefined} /></span>
             <p className="k">{r.proteina.media != null ? Math.round(r.proteina.media) : '—'}<small>{t('g/día')}</small></p>

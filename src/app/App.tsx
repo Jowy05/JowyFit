@@ -101,9 +101,8 @@ function Marco() {
     }
     // Las pruebas de extremo a extremo (en el navegador no hay botón atrás) lo pulsan por aquí.
     window.__jfAtras = manejar
-    let quitar = () => {}
-    void alPulsarAtras(manejar).then(f => { quitar = f })
-    return () => { quitar(); delete window.__jfAtras }
+    const quitar = alPulsarAtras(manejar)
+    return () => { void quitar.then(f => f()); delete window.__jfAtras }
   }, [nav])
 
   useEffect(() => {
@@ -119,9 +118,8 @@ function Marco() {
   const navActual = useRef(nav)
   navActual.current = nav
   useEffect(() => {
-    let quitar = () => {}
-    void alTocarAviso(id => { if (id === ID_AVISO.revision) navActual.current.ir('revision', undefined, 'per') }).then(f => { quitar = f })
-    return () => quitar()
+    const quitar = alTocarAviso(id => { if (id === ID_AVISO.revision) navActual.current.ir('revision', undefined, 'per') })
+    return () => { void quitar.then(f => f()) }
   }, [])
 
   // La primera vez, con Inicio ya a la vista, se ofrece el tutorial (una sola vez; luego está en Ajustes).
@@ -145,8 +143,8 @@ function Marco() {
   const Pant = PANTALLAS[ruta.p] as ComponentType<{ ruta: Ruta }>
   const hoja = nav.estado.hoja
   const Hoja = hoja ? (HOJAS[hoja.p] as ComponentType<{ ruta: Ruta }>) : undefined
-  // El escáner y la cámara de las fotos ocupan toda la pantalla: sin barra de pestañas tapando sus botones.
-  const full = !!nav.estado.completa || ruta.p === 'escaner' || ruta.p === 'camara-foto'
+  // El escáner, la cámara de las fotos y un reto en curso ocupan toda la pantalla: sin barra de pestañas tapando sus botones.
+  const full = !!nav.estado.completa || ruta.p === 'escaner' || ruta.p === 'camara-foto' || ruta.p === 'reto-activo'
   // El aviso se pinta fuera de .app: se le dice por el body si hay pantalla completa.
   useEffect(() => { document.body.classList.toggle('pantalla-completa', full) }, [full])
   useEffect(() => { document.body.classList.toggle('con-hoja', !!hoja) }, [hoja])
@@ -165,11 +163,14 @@ function Marco() {
       </div>
       {enCurso && <MiniBarra sesion={sesion} />}
       <nav className="tabbar" aria-label={t('Pestañas')}>
-        {TABS.map(x => (
-          <button key={x.t} className={cx(nav.estado.pestana === x.t && !full && 'on')} aria-label={t(x.n)} aria-current={nav.estado.pestana === x.t ? 'page' : undefined} onClick={() => nav.pestana(x.t)}>
-            <Ico n={x.i} />{t(x.n)}
-          </button>
-        ))}
+        {TABS.map(x => {
+          const activa = nav.estado.pestana === x.t && !full
+          return (
+            <button key={x.t} className={cx(activa && 'on')} aria-label={t(x.n)} aria-current={nav.estado.pestana === x.t ? 'page' : undefined} onClick={() => nav.pestana(x.t)}>
+              <Ico n={x.i} b={activa} />{t(x.n)}
+            </button>
+          )
+        })}
       </nav>
       {hoja && Hoja && (
         <>

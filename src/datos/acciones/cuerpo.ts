@@ -51,6 +51,7 @@ export async function guardarPasos(fecha: string, pasos: number) {
     const prev = await db.pasos.get(fecha)
     await db.pasos.put({ ...prev, fecha, pasos: Math.max(0, Math.round(pasos)), fuente: 'manual', troteKm: prev?.troteKm })
   })
+  if (fecha === hoyISO()) void reprogramarNotificaciones()
 }
 
 /** Suma un trote a los pasos del día. Devuelve cómo deshacerlo (vuelve el día como estaba). */
@@ -60,7 +61,8 @@ export async function sumarTrote(fecha: string, pasos: number, km: number): Prom
     await db.pasos.put({ ...prev, fecha, pasos: (prev?.pasos ?? 0) + pasos, fuente: prev?.fuente ?? 'manual', troteKm: Math.round(((prev?.troteKm ?? 0) + km) * 10) / 10 })
     return prev
   })
-  return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)) }
+  if (fecha === hoyISO()) void reprogramarNotificaciones()
+  return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)).then(() => { if (fecha === hoyISO()) void reprogramarNotificaciones() }) }
 }
 
 /**
@@ -79,7 +81,8 @@ export async function apuntarCardio(fecha: string, tipo: TipoCardio, min: number
     await db.pasos.put(dia)
     return prev
   })
-  return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)) }
+  if (trote && fecha === hoyISO()) void reprogramarNotificaciones()
+  return () => { void (prev ? db.pasos.put(prev) : db.pasos.delete(fecha)).then(() => { if (trote && fecha === hoyISO()) void reprogramarNotificaciones() }) }
 }
 
 /** Pasos andados de Health Connect por día; el trote apuntado a mano se suma aparte. */
@@ -92,6 +95,7 @@ export async function guardarPasosAuto(dias: Record<string, number>) {
       await db.pasos.put({ ...prev, fecha, pasos: pasos + trote, fuente: 'auto', troteKm: prev?.troteKm })
     }
   })
+  if (hoyISO() in dias) void reprogramarNotificaciones()
 }
 
 // El aviso de la foto cuenta desde la última: al hacer o borrar una, se vuelve a calcular.

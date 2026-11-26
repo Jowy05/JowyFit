@@ -60,7 +60,7 @@ escenario('tema oscuro y letra grande en todas las pestañas', async () => {
   await tema('dark')
   const revisar = async (donde) => { await t('listo').catch(() => {}); await revisarAqui(`oscuro y grande · ${donde}`) }
   const pantallas = [
-    ['Inicio', null], ['Rutina', null], ['Rutina', 'Ejercicios'], ['Rutina', 'Gimnasios'], ['Comida', null], ['Comida', 'Mis comidas'],
+    ['Inicio', null], ['Rutina', null], ['Rutina', 'Retos'], ['Rutina', 'Ejercicios'], ['Rutina', 'Gimnasios'], ['Comida', null], ['Comida', 'Mis comidas'],
     ['Progreso', null], ['Progreso', 'Fuerza'], ['Progreso', 'Cuerpo'], ['Progreso', 'Fotos'], ['Progreso', 'Metas'], ['Perfil', null],
   ]
   for (const [p, s] of pantallas) { await pestana(p); if (s) await seg(s); await revisar(`${p}${s ? '/' + s : ''}`) }

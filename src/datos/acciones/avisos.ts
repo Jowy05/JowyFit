@@ -7,11 +7,12 @@ import { aISO, deISO, diaSemana, hoyISO, minutosDe, proximoAviso, sumarDias } fr
 import { entrenosPrevistos, estadoSemana } from '../../dominio/semana'
 import { colaDe, DIAS_COLA, enCola, letrasCola } from '../../dominio/cola'
 import { dosisDe } from '../../dominio/comida'
+import { num } from '../../dominio/formato'
 import { cancelar, esNativo, ID_AVISO, programar, type Aviso } from '../../plataforma'
 import { t } from '../../i18n'
 
 // Todos los recordatorios: hasta 14 noches antes de entrenar y un día de pesaje por día de la semana.
-const TODOS = [...Array.from({ length: 14 }, (_, i) => ID_AVISO.dormir + i), ...Array.from({ length: 7 }, (_, i) => ID_AVISO.pesarse + i), ID_AVISO.batido, ID_AVISO.creatina, ID_AVISO.copia, ID_AVISO.fotos, ID_AVISO.domingo, ID_AVISO.revision]
+const TODOS = [...Array.from({ length: 14 }, (_, i) => ID_AVISO.dormir + i), ...Array.from({ length: 7 }, (_, i) => ID_AVISO.pesarse + i), ID_AVISO.batido, ID_AVISO.creatina, ID_AVISO.copia, ID_AVISO.fotos, ID_AVISO.domingo, ID_AVISO.revision, ID_AVISO.pasos, ID_AVISO.pasos + 1]
 
 /**
  * En cola, la víspera de cada día de entreno dice la que toca por orden: la siguiente de la cola, o la de después si
@@ -79,6 +80,28 @@ export async function reprogramarNotificaciones(): Promise<void> {
     const ultima = await db.fotos.orderBy('fecha').last()
     const desde = ultima ? ultima.fecha.slice(0, 10) : alta
     avisos.push({ id: ID_AVISO.fotos, titulo: t('Foto de progreso'), texto: t('Misma pose y misma luz que la última'), cuando: proximoAviso(desde, p.fotosCadaSemanas * 7, '19:30', new Date(ahora)) })
+  }
+  if (a.noti.pasos && p.pasosObjetivo > 0) {
+    const horaPasos = a.noti.pasosHora ?? '18:00'
+    const pasosHoy = (await db.pasos.get(hoy))?.pasos ?? 0
+    const mitad = p.pasosObjetivo * 0.5
+    const hoyCuando = enFecha(hoy, horaPasos)
+    // Solo avisa hoy si aún llevas menos de la mitad del objetivo; si ya pasaste del 50 %, queda cancelado.
+    if (pasosHoy < mitad && hoyCuando.getTime() > ahora) {
+      avisos.push({
+        id: ID_AVISO.pasos,
+        titulo: t('¿Un paseo rápido?'),
+        texto: t('Llevas {n} de {obj} pasos: aún estás a tiempo de sumar.', { n: num(pasosHoy, 0), obj: num(p.pasosObjetivo, 0) }),
+        cuando: hoyCuando,
+      })
+    }
+    // Respaldo para mañana por si no se abre la app antes de esa hora (al abrirla o sincronizar se recalcula).
+    avisos.push({
+      id: ID_AVISO.pasos + 1,
+      titulo: t('¿Cómo van tus pasos hoy?'),
+      texto: t('Objetivo: {obj} pasos. Un paseo corto suma mucho.', { obj: num(p.pasosObjetivo, 0) }),
+      cuando: enFecha(sumarDias(hoy, 1), horaPasos),
+    })
   }
   await programar(avisos.filter(x => x.cuando.getTime() > ahora || x.repetirCada))
 }

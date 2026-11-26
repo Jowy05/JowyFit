@@ -15,7 +15,7 @@ import { contexto, cuentaEntrenos, edadEn, estadosDias, leerPeso, nombreDe, type
 import { mesesInforme, puntuacionInforme, semanasInforme } from './semanas'
 import { controlPeso, cuerpoInforme, indicadores, metasInforme, zonasInforme } from './cuerpo'
 import { destacado, tablaResumen, tonoProteinaDia } from './resumen'
-import { entrenosInforme, fuerzaInforme } from './entrenos'
+import { entrenosInforme, fuerzaInforme, retosInforme } from './entrenos'
 import { comidaInforme, pasosInforme } from './comidaPasos'
 import { tuDiaInforme } from './dia'
 import { rutinaSaludInforme } from './rutinaSalud'
@@ -125,6 +125,7 @@ export function calcularInforme(e: EntradaInforme): Informe {
     resumen, semanas, meses,
     entrenos: secciones.entrenos && c.enPeriodo.length ? entrenosInforme(c, ent) : null,
     fuerza: secciones.entrenos && c.enPeriodo.length ? fuerzaInforme(c, semanas, meses) : null,
+    retos: secciones.entrenos ? retosInforme(c) : null,
     comida: secciones.comida ? comidaD : null,
     cuerpo: secciones.cuerpo && hayCuerpo ? cuerpo : null,
     pasos: secciones.pasos ? pasosD : null,

@@ -171,7 +171,7 @@ export function Condiciones({ p, cambia }: Props) {
           )
         })}
       </div>
-      {marcadas.includes('embarazo') && <p className="note warn mt8"><Ico n="warning" /><span>{t('Antes de seguir, consúltalo con tu médico o tu matrona. Hasta entonces, no hay plan normal.')}</span></p>}
+      {marcadas.includes('embarazo') && <p className="note warn mt8"><Ico n="warning" /><span>{t('Antes de seguir, consúltalo con tu médico o tu matrona. Mientras esté marcado, la rutina sale suave y sin impacto ni abdominales.')}</span></p>}
       <p className="small muted mt8">{t('Esto no es consejo médico. Si tienes una lesión o una condición, consulta a un profesional.')}</p>
     </>
   )

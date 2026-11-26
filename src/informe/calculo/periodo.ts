@@ -28,13 +28,14 @@ export function archivoPeriodo(p: PeriodoInforme): string {
   return tc('archivo', 'todo')
 }
 
-/** El dato más antiguo de todo lo apuntado (sesiones hechas, mediciones, comidas y pasos). */
-export function primerDato(t: Pick<TablasInforme, 'sesiones' | 'mediciones' | 'comidas' | 'pasos'>): string | null {
+/** El dato más antiguo de todo lo apuntado (sesiones hechas, mediciones, comidas, pasos y retos). */
+export function primerDato(t: Pick<TablasInforme, 'sesiones' | 'mediciones' | 'comidas' | 'pasos' | 'retos'>): string | null {
   const fechas = [
     ...t.sesiones.filter(s => s.estado === 'hecha').map(s => s.fecha),
     ...t.mediciones.map(m => dia10(m.fecha)),
     ...t.comidas.map(c => c.fecha),
     ...t.pasos.map(p => p.fecha),
+    ...(t.retos ?? []).map(r => dia10(r.fecha)),
   ]
   return fechas.length ? fechas.reduce((a, b) => (b < a ? b : a)) : null
 }
@@ -66,9 +67,10 @@ export function rangoInforme(periodo: PeriodoInforme, ahora: Date, primer: strin
 }
 
 /** ¿Hay algo apuntado en esos días? (si no, el botón «Crear el PDF» se queda gris). */
-export function hayDatosEn(t: Pick<TablasInforme, 'sesiones' | 'mediciones' | 'comidas' | 'pasos'>, inicio: string, fin: string): boolean {
+export function hayDatosEn(t: Pick<TablasInforme, 'sesiones' | 'mediciones' | 'comidas' | 'pasos' | 'retos'>, inicio: string, fin: string): boolean {
   return t.sesiones.some(s => s.estado === 'hecha' && entre(s.fecha, inicio, fin))
     || t.mediciones.some(m => entre(dia10(m.fecha), inicio, fin))
     || t.comidas.some(c => entre(c.fecha, inicio, fin))
     || t.pasos.some(p => entre(p.fecha, inicio, fin))
+    || (t.retos ?? []).some(r => entre(dia10(r.fecha), inicio, fin))
 }

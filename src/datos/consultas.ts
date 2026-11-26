@@ -2,8 +2,8 @@
 // combinan tablas (historial de ejercicios, sugerencias, totales del día…). Todas valen dentro de useLiveQuery.
 import { db } from './db'
 import { gimnasioActivo, leerPerfil, perfilPorDefecto, rutinaActiva } from './repos'
-import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
-import { catalogoCargado, ejercicio, hayEn } from '../catalogo/catalogo'
+import type { Comida, DiaRutina, DiaSuplementos, EjercicioPropio, Foto, Revision, Gimnasio, Guardado, IntentoReto, Medicion, Meta, PasosDia, Perfil, Plantilla, Producto, Rutina, Serie, Sesion } from './tipos'
+import { catalogoCargado, ejercicio, hayEn, nombreEjercicio } from '../catalogo/catalogo'
 import { tipoRegistro } from '../catalogo/clasificacion'
 import { quitadoPor } from '../catalogo/grupos'
 import type { Ejercicio } from '../catalogo/tipos'
@@ -217,14 +217,22 @@ export async function gastoDelDia(p: Perfil, fecha: string): Promise<GastoDia | 
 }
 
 /** Objetivo de kcal y proteína (automático o el que puso el usuario). */
-export type ObjetivosEnergia = ReturnType<typeof objetivos> & { peso: number | null; recomendado: number; manual: boolean }
+export type ObjetivosEnergia = ReturnType<typeof objetivos> & { peso: number | null; recomendado: number; proteinaRecomendada: number; manual: boolean }
 
 /** El objetivo del día: el recomendado (con su desglose) o el que puso el usuario a mano. */
 export async function objetivosEnergia(p: Perfil): Promise<ObjetivosEnergia> {
   const a = await db.ajustes.get('app')
   const peso = await pesoActual()
   const o = objetivos({ pesoKg: peso ?? 75, alturaCm: p.alturaCm, edad: edad(p.nacimiento), sexo: p.sexo, trabajo: p.trabajo, objetivo: p.objetivo, extra: p.objetivosExtra, entrenosSemana: p.diasFijos.length, pasos: p.pasosObjetivo })
-  return { ...o, kcal: a?.kcalManual ?? o.kcal, proteina: a?.proteinaManual ?? o.proteina, peso, recomendado: o.kcal, manual: a?.kcalManual != null }
+  return {
+    ...o,
+    kcal: a?.kcalManual ?? o.kcal,
+    proteina: a?.proteinaManual ?? o.proteina,
+    peso,
+    recomendado: o.kcal,
+    proteinaRecomendada: o.proteina,
+    manual: a?.kcalManual != null || a?.proteinaManual != null,
+  }
 }
 
 /** Valor actual de una meta (null si no se puede saber). */
@@ -232,7 +240,7 @@ export async function valorActualMeta(tipo: Meta['tipo'], ejercicioId: string | 
   if (tipo === 'libre') return null
   if (tipo === 'ejercicio' || tipo === 'reps' || tipo === 'dominadas') {
     const ses = await sesionesHechas()
-    if (tipo === 'dominadas') return hitosDominadas(ses).estrictas
+    if (tipo === 'dominadas') return hitosDominadas(ses, { nombre: nombreEjercicio }).estrictas
     if (!ejercicioId) return null
     return actualEjercicio(ses, ejercicioId, tipo === 'reps' ? 'reps' : 'kg')
   }
@@ -335,4 +343,30 @@ export async function loQueFalta(dia: DiaRutina, r: Rutina, hoy = hoyISO()): Pro
   if (!nuevo) return null
   const zonas = faltan.map(f => f.zona).filter(z => nuevo.bloques.some(b => zonaVolumen(b.ejercicio) === z))
   return { dia: nuevo, zonas }
+}
+
+/** Lectura en bloque para la exportación ligera en CSV / JSON (sin fotos ni archivos binarios). */
+export async function leerDatosExportLigero(): Promise<{
+  perfil: Perfil | null
+  mediciones: Medicion[]
+  sesiones: Sesion[]
+  comidas: Comida[]
+  pasos: PasosDia[]
+  metas: Meta[]
+  retos: IntentoReto[]
+  rutina: Rutina | null
+  gimnasios: Gimnasio[]
+}> {
+  const [perfil, mediciones, sesiones, comidas, pasos, metas, retos, rutina, gimnasios] = await Promise.all([
+    db.perfil.get('yo'),
+    db.mediciones.toArray(),
+    db.sesiones.toArray(),
+    db.comidas.toArray(),
+    db.pasos.toArray(),
+    db.metas.toArray(),
+    db.retos.toArray(),
+    rutinaActiva(),
+    db.gimnasios.toArray(),
+  ])
+  return { perfil: perfil ?? null, mediciones, sesiones, comidas, pasos, metas, retos, rutina: rutina ?? null, gimnasios }
 }

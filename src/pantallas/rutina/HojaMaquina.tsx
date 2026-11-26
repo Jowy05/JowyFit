@@ -1,7 +1,7 @@
 // RUT-09 · Máquina propia (para lo que no está en el catálogo)
 import { useEffect, useState } from 'react'
 import { leerGimnasio } from '../../datos/consultas'
-import { guardarMaquinaPropia } from '../../datos/acciones/rutina'
+import { borrarMaquinaPropia, guardarMaquinaPropia } from '../../datos/acciones/rutina'
 import type { MaquinaPropia } from '../../datos/tipos'
 import { catalogoCargado, nombreMaterial } from '../../catalogo/catalogo'
 import { hacerFoto } from '../../plataforma'
@@ -31,6 +31,13 @@ export function HojaMaquina({ ruta }: { ruta: Ruta<'hoja-maquina'> }) {
     nav.hoja(null)
     aviso(t('Máquina propia guardada'))
   }
+  const borrar = async () => {
+    if (!ruta.d.id) return
+    const deshacer = await borrarMaquinaPropia(gymId, ruta.d.id)
+    if (!deshacer) return
+    nav.hoja(null)
+    aviso(t('Máquina borrada'), deshacer)
+  }
   return (
     <Hoja titulo={t('Máquina propia')} sub={t('Para lo que no está en el catálogo')} className="tall">
       <button className="photo-ph" onClick={async () => { const f = await hacerFoto(900); if (f) setM(x => ({ ...x, foto: f })) }} style={url ? { padding: 0, overflow: 'hidden' } : undefined}>
@@ -50,6 +57,7 @@ export function HojaMaquina({ ruta }: { ruta: Ruta<'hoja-maquina'> }) {
         ? tr('Permite {n} ejercicio del catálogo.', { n: <b className="mono">{suma}</b> })
         : tr('Permite {n} ejercicios del catálogo.', { n: <b className="mono">{suma}</b> })}</span></div>}
       <button className="btn mt16" onClick={guardar}>{t('Guardar')}</button>
+      {ruta.d.id && <button className="btn bad sm mt8" onClick={() => void borrar()}><Ico n="trash" />{t('Borrar máquina')}</button>}
     </Hoja>
   )
 }

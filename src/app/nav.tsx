@@ -1,12 +1,15 @@
 // Navegación de la app: 5 pestañas, cada una con su pila de pantallas, hojas inferiores
 // y pantallas completas (alta de usuario, entreno en curso). Sin dependencias (solo tipos): es un reducer.
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react'
-import type { Foto, Franja, Meta } from '../datos/tipos'
+import type { Foto, Franja, Meta, TipoReto } from '../datos/tipos'
 
 export type Pestana = 'ini' | 'rut' | 'com' | 'pro' | 'per'
 
 /** Secciones de Perfil que se abren como pantalla (los textos de cada una están en pantallas/perfil/textos). */
 export type ClaveSeccion = 'datos' | 'cuerpo' | 'objetivos' | 'salud' | 'experiencia' | 'preferencias' | 'horario' | 'alimentacion' | 'vida' | 'seguimiento' | 'movimiento' | 'calorias' | 'sueno' | 'deportes'
+
+/** Categorías de Ajustes: sin sección se ve el índice principal; con sección, su subpantalla. */
+export type SeccionAjustes = 'apariencia' | 'cuerpo' | 'entreno' | 'comida' | 'conectividad' | 'recordatorios' | 'datos'
 
 /** Datos que lleva cada pantalla y cada hoja (`undefined`: ninguno). Las hojas empiezan por «hoja-». */
 export type Rutas = {
@@ -15,6 +18,8 @@ export type Rutas = {
   'detalle-dia': { letra: string }
   'generar-rutina': { definitiva: boolean } | undefined
   'editar-plan': { letra: string } | undefined
+  retos: undefined
+  'reto-activo': { reto: TipoReto }
   biblioteca: { filtro: 'evitados' } | undefined
   ficha: { id: string }
   gimnasios: undefined
@@ -39,7 +44,7 @@ export type Rutas = {
   pasos: undefined
   perfil: undefined
   'seccion-perfil': { s: ClaveSeccion }
-  ajustes: { seccion: 'datos' | 'comida' } | undefined
+  ajustes: { seccion: SeccionAjustes } | undefined
   creditos: undefined
   /** Revisión semanal de molestias (desde Ajustes o el aviso del domingo). */
   revision: undefined
@@ -66,9 +71,11 @@ export type Rutas = {
   /** Crear (o editar, con id) un ejercicio propio. Con `vuelta`, al guardar se vuelve a esa hoja con el nuevo ya buscado. */
   'hoja-propio': { id?: string; nombre?: string; vuelta?: ElegirEjercicio } | undefined
   'hoja-meta': { id?: number; tipo?: Meta['tipo'] } | undefined
+  'hoja-avance-meta': { id: number }
   'hoja-trote': undefined
   'hoja-confirmar': DatosConfirmar
   'hoja-informe': undefined
+  'hoja-actualizacion': undefined
   'hoja-oferta-tutorial': undefined
   'hoja-no-quiero': undefined
   'hoja-modo-mayor': { quitar?: boolean; rehacer?: boolean } | undefined

@@ -13,9 +13,11 @@ escenario('perfil y ajustes', async () => {
   await js(`document.activeElement?.blur()`)
   await volver()
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
-  await ver('Apariencia')
+  await ver('Apariencia e idioma')
+  await pulsar('Apariencia e idioma')
   await pulsar('Oscuro').catch(() => {})
   await pulsar('Grande').catch(() => {})
+  await volver()
   await pulsar('Créditos y aviso legal')
   await ver('RepDB')
   await ver('Open Food Facts')
@@ -25,32 +27,41 @@ escenario('ajustes a fondo: letra, tema, cada interruptor, descansos, cafeína y
   await altaRapida('2026-10-13T05:20:00')
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
-  await ver('Apariencia')
+  await ver('Apariencia e idioma')
   await revisarAqui('ajustes')
   // Letra grande y tema oscuro: se aplican a la página y se ven bien.
+  await pulsar('Apariencia e idioma')
   await pulsar(/Grande$/)
   await pulsar('Oscuro')
   await leerHasta(() => js(`const d = document.documentElement; return { ...d.dataset, clase: d.className, tema: localStorage.getItem('jf-tema'), letra: localStorage.getItem('jf-letra') }`),
     pagina => pagina.theme === 'dark' && pagina.tema === 'oscuro' && pagina.letra === 'grande', pagina => 'La letra o el tema no se aplican: ' + JSON.stringify(pagina))
   await revisarAqui('ajustes con letra grande y tema oscuro')
-  await pulsar('Más ajustes')
-  await revisarAqui('más ajustes (oscuro, grande)')
-  // Cada interruptor cambia su ajuste en la base.
-  const campos = { 'Vibrar al acabar el descanso': 'vibrar', 'Sonido al acabar el descanso': 'sonido', 'Pantalla siempre encendida': 'pantallaEncendida', 'Calentamiento sugerido': 'calentamiento', 'Avisos de seguridad': 'avisosSeguridad', 'Mostrar calorías': 'mostrarKcal' }
-  for (const [etq, campo] of Object.entries(campos)) {
+  await volver()
+  // Entreno y rutina: interruptores y descansos.
+  await pulsar('Entreno y rutina')
+  await revisarAqui('ajustes entreno (oscuro, grande)')
+  const camposEntreno = { 'Vibrar al acabar el descanso': 'vibrar', 'Sonido al acabar el descanso': 'sonido', 'Pantalla siempre encendida': 'pantallaEncendida', 'Calentamiento sugerido': 'calentamiento', 'Avisos de seguridad': 'avisosSeguridad' }
+  for (const [etq, campo] of Object.entries(camposEntreno)) {
     if (!(await js(`return !!document.querySelector('[role=switch][aria-label=${JSON.stringify(etq)}]')`))) continue
     const antes = (await ajustesBD())[campo]
     await t('pulsarSel', `[role=switch][aria-label="${etq}"]`)
     await leerHasta(ajustesBD, a => a[campo] === !antes, `«${etq}» no cambia ${campo}`)
   }
-  // Descansos y cafeína.
   const a0 = await ajustesBD()
   await t('pulsarSel', '[aria-label="Descanso de compuestos"] button[aria-label="Más"]')
   await t('pulsarSel', '[aria-label="Descanso de aislamiento"] button[aria-label="Menos"]')
+  await volver()
+  // Comida y nutrición: mostrar calorías y límite de cafeína.
+  await pulsar('Comida y nutrición')
+  const antesKcal = (await ajustesBD()).mostrarKcal
+  await t('pulsarSel', '[role=switch][aria-label="Mostrar calorías"]')
+  await leerHasta(ajustesBD, a => a.mostrarKcal === !antesKcal, '«Mostrar calorías» no cambia mostrarKcal')
   await t('pulsarSel', '[aria-label="Límite de cafeína"] button[aria-label="Menos"]')
   await leerHasta(ajustesBD, a1 => a1.descansoCompuesto === a0.descansoCompuesto + 15 && a1.descansoAislamiento === a0.descansoAislamiento - 15 && a1.cafeinaLimite === a0.cafeinaLimite - 50,
     a1 => 'Descansos o cafeína no se guardan: ' + JSON.stringify([a1.descansoCompuesto, a1.descansoAislamiento, a1.cafeinaLimite]))
-  // Recuperar una copia desde Ajustes (pide confirmar antes de sustituir nada).
+  await volver()
+  // Recuperar una copia desde Ajustes → Datos y copias (pide confirmar antes de sustituir nada).
+  await pulsar('Datos y copias')
   const copia = path.join(RAIZ, '.cache', 'e2e-copia-ajustes.jowyfit')
   fsx.writeFileSync(copia, JSON.stringify({ app: 'JowyFit', version: 1, datos: { perfil: (await tabla('perfil')).map(p => ({ ...p, nombre: 'Copiado' })), ajustes: await tabla('ajustes'), plantillas: [], rutinas: await tabla('rutinas'), gimnasios: await tabla('gimnasios') } }))
   entorno.archivoParaElegir = copia
@@ -66,8 +77,7 @@ escenario('ajustes a fondo: letra, tema, cada interruptor, descansos, cafeína y
   entorno.archivoParaElegir = null
   comprobar((await tabla('perfil'))[0]?.nombre === 'Copiado', 'La copia recuperada no sustituye los datos')
   // Vuelta a claro y letra normal para lo siguiente.
-  await pulsar(/^Normal$/).catch(() => {})
-  await pulsar(/^Claro$/).catch(() => {})
+  await js(`localStorage.removeItem('jf-tema'); localStorage.removeItem('jf-letra')`)
 })
 
 /** Abre una sección de «Tu ficha» en Perfil (las de «Más secciones» están plegadas). */

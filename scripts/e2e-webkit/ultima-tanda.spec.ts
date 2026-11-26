@@ -30,7 +30,7 @@ test('horas de comida: guarda al salir, rechaza el orden y restaura valores', as
   await jf.alta()
   await jf.pestana('Perfil')
   await jf.pulsarSel('button[aria-label="Ajustes"]')
-  await jf.pulsar('Más ajustes')
+  await jf.pulsar('Comida y nutrición')
   const hora = page.locator('input[type="time"][aria-label="Hora de desayuno"]')
   await hora.fill('06:30')
   await hora.blur()

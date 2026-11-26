@@ -63,7 +63,7 @@ export function Creditos() {
 
         <p className="grp-t">{t('Tus datos')}</p>
         <p className="legal">
-          {t('Todo lo que apuntas se guarda solo en este móvil. La app no tiene cuentas ni servidores propios y no envía tus datos a ningún sitio; solo se conecta a internet para buscar productos al escanear.')}
+          {t('Todo lo que apuntas se guarda solo en este móvil. La app no tiene cuentas ni servidores propios y no envía tus datos a ningún sitio; solo se conecta a internet para buscar productos al escanear o si buscas actualizaciones.')}
         </p>
         <div className="list mt12">
           <a className="it" href={privacidad} target="_blank" rel="noopener noreferrer">

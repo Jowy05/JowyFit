@@ -31,6 +31,7 @@ escenario('copia desde la interfaz: descargar, borrar todo e importar', async ()
   await pulsar(/^Normal/, '.popup')
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
+  await pulsar('Datos y copias')
   await pulsar('Hacer copia ahora')
   const archivo = await hastaQue(() => fsx.readdirSync(DESCARGAS).find(f => f.endsWith('.jowyfit')), 'No se descargó la copia', 10_000)
   await pulsar('Borrar todos los datos')
@@ -59,6 +60,7 @@ escenario('copia con contraseña: ponerla, descargar, borrar todo y recuperarla 
   await pulsar(/^Normal/, '.popup')
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
+  await pulsar('Datos y copias')
   await t('pulsarSel', 'button[aria-label="Proteger con contraseña"]')
   await ver('Si la olvidas, nadie puede abrir esas copias')
   const campo = n => `.sheet input[name="${n === 1 ? 'contrasena' : 'repetida'}"]`
@@ -107,6 +109,7 @@ escenario('copia con contraseña: ponerla, descargar, borrar todo y recuperarla 
   // La contraseña se queda puesta para las copias siguientes.
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
+  await pulsar('Datos y copias')
   await ver('Puesta · todas tus copias nuevas la llevan')
   // Desde Ajustes, la misma copia: contraseña y luego «¿Recuperar…?» antes de cambiar nada.
   entorno.archivoParaElegir = path.join(DESCARGAS, copia.nombre)
@@ -121,6 +124,7 @@ escenario('copia con contraseña: ponerla, descargar, borrar todo y recuperarla 
   // Quitar la contraseña: dos toques, y las copias nuevas vuelven a ir sin ella.
   await pestana('Perfil')
   await t('pulsarSel', 'button[aria-label="Ajustes"]')
+  await pulsar('Datos y copias')
   await pulsar('Cambiar o quitar la contraseña')
   await pulsar(/^Quitar la contraseña$/, '.sheet')
   await pulsar(/^¿Seguro\? Quitar la contraseña$/, '.sheet')

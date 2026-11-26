@@ -224,7 +224,13 @@ function lateral(f: Flujo, inf: Informe) {
   // Metas
   for (const [k, mt] of r.metas.entries()) {
     const lineas = f.l.partir(mt.titulo, f.w, TAM.cuerpo)
-    const altoMeta = lineas.length * INTER_LATERAL + 0.8 + 1.6 + 3.4 + 2.4
+    const hist = mt.historial ?? []
+    const ultNota = [...hist].reverse().find(h => !!h.nota)
+    const progresion = hist.length >= 2 ? hist.slice(-3).map(h => `${h.fecha} ${h.valorTexto}`).join(' · ') : null
+    const textoNota = ultNota ? `${ultNota.fecha}: ${ultNota.nota}` : null
+    const lineaHist = [progresion, textoNota].filter(Boolean).join(' · ') || null
+    const lineasHist = lineaHist ? f.l.partir(lineaHist, f.w, TAM.micro).slice(0, 2) : []
+    const altoMeta = lineas.length * INTER_LATERAL + 0.8 + 1.6 + 3.4 + (lineasHist.length ? lineasHist.length * 3.1 + 0.8 : 0) + 2.4
     f.bloque(m => (k === 0 ? altoH3(m) : 0) + altoMeta, (l, y, m) => {
       const y0 = y + (k === 0 ? h3(l, f.x, y, f.w, t('Metas'), r.metasFecha, m) : 0)
       lineas.forEach((tx, i) => l.texto(f.x, y0 + 3.1 + i * INTER_LATERAL, tx, { tam: TAM.cuerpo, color: l.c.tinta }))
@@ -233,6 +239,7 @@ function lateral(f: Flujo, inf: Informe) {
       l.rect(f.x, by, Math.max(1.6, f.w * Math.min(1, Math.max(0, mt.progreso))), 1.6, mt.conseguida ? l.c.verde : l.c.azul, 0.8)
       l.texto(f.x, by + 1.6 + 3, mt.actualTexto, { tam: TAM.micro, peso: 'negrita', color: l.c.tinta })
       if (mt.faltaTexto) l.texto(f.x + f.w, by + 1.6 + 3, mt.faltaTexto, { tam: TAM.micro, color: mt.conseguida ? l.c.verde : l.c.gris, anc: 'end', peso: mt.conseguida ? 'negrita' : 'normal' })
+      lineasHist.forEach((tx, i) => l.texto(f.x, by + 1.6 + 6.4 + i * 3.1, tx, { tam: TAM.micro, color: l.c.gris }))
     })
   }
   // Otros indicadores (báscula)

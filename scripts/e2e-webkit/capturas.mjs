@@ -95,7 +95,7 @@ async function alta(a) {
   await t('ver', 'Tu rutina está lista', 20000)
   await foto('alta-rutina-lista')
   await t('pulsar', 'Ir a Inicio')
-  await t('ver', /Hoy te toca|descansas/, 8000)
+  await t('ver', /Hoy te toca|Te toca|descansas/, 8000)
 }
 
 for (const tema of ['light', 'dark']) {
@@ -138,9 +138,12 @@ for (const tema of ['light', 'dark']) {
   await t('pulsar', 'Guardar'); await t('ver', /hecho/i, 8000)
   // Rutina.
   await pestana('Rutina'); await foto('rutina')
-  for (const sg of ['Ejercicios', 'Gimnasios']) { await t('pulsar', sg, '.seg'); await t('listo'); await foto(`rutina-${sg.toLowerCase()}`) }
+  await t('pulsar', 'Retos', '.seg').catch(() => {}); await t('listo'); await foto('rutina-retos')
+  await t('pulsar', 'Ejercicios', '.seg'); await t('listo'); await foto('rutina-ejercicios')
   await t('pulsar', /Press de Banca con Barra|Sentadilla/i).catch(() => {}); await t('listo'); await foto('ficha')
-  await pestana('Rutina'); await t('pulsar', 'Rutina', '.seg').catch(() => {}); await t('listo')
+  await pestana('Rutina')
+  await t('pulsar', 'Gimnasios', '.seg'); await t('listo'); await foto('rutina-gimnasios')
+  await t('pulsar', 'Mi plan', '.seg'); await t('listo')
   await t('pulsar', 'Editar plan'); await t('listo'); await foto('editar-plan')
   // Comida.
   await pestana('Comida'); await foto('comida')
@@ -160,7 +163,7 @@ for (const tema of ['light', 'dark']) {
   await pestana('Inicio'); await t('pulsarSel', '.kpi.steps'); await t('listo'); await foto('pasos')
   // Perfil y ajustes.
   await pestana('Perfil'); await foto('perfil')
-  await t('pulsarSel', 'button[aria-label="Ajustes"]'); await t('listo'); await t('pulsar', 'Más ajustes'); await foto('ajustes')
+  await t('pulsarSel', 'button[aria-label="Ajustes"]'); await t('listo'); await foto('ajustes')
   await t('pulsar', 'Créditos y aviso legal'); await t('listo'); await foto('creditos')
   await a.cerrar()
 }

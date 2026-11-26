@@ -1,15 +1,16 @@
-// PRO-07 · Objetivos e hitos (y la hoja para crear o editar una meta)
-import { useEffect, useRef, useState } from 'react'
+// PRO-07 · Objetivos e hitos (y las hojas para crear, editar o apuntar avance en una meta)
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { borrarMeta, guardarMeta } from '../../datos/acciones/cuerpo'
 import { datosMetas, leerMeta, sesionesHechas, valorActualMeta } from '../../datos/consultas'
 import type { Guardado, Meta } from '../../datos/tipos'
 import { cuentaRepeticiones } from '../../catalogo/clasificacion'
-import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
+import { buscar, ejercicio, nombreEjercicio, useCatalogo } from '../../catalogo/catalogo'
 import { capital, num } from '../../dominio/formato'
 import { fechaCorta, hoyISO, mesAnio, fechaDeCampo } from '../../dominio/fechas'
 import { ejerciciosHechos, hitosDominadas } from '../../dominio/tendencias'
-import { estadoMeta, unidadFalta, valorMeta, valorTxt } from '../../dominio/metas'
+import { estadoMeta, registrarAvanceMeta, borrarHitoMeta, unidadFalta, valorAutoMeta, valorMeta, valorTxt } from '../../dominio/metas'
+import { lineaSpark } from '../../ui/graficas'
 import { Barra, Campo, Chip, cx, Hoja, Ico, Interruptor, Pantalla, Stepper, useUnaVez, Vacio, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -18,19 +19,35 @@ import { CabProgreso, TIPOS_META } from './comun'
 import { t } from '../../i18n'
 
 const TONO: Partial<Record<Meta['tipo'], 'ok' | 'go'>> = { cintura: 'ok', grasa: 'ok', peso: 'ok', ejercicio: 'go', reps: 'go' }
+const ADMITE_AVANCE = (tipo: Meta['tipo']) => tipo === 'dominadas' || tipo === 'reps' || tipo === 'ejercicio' || tipo === 'libre'
 
 export function Objetivos() {
   const nav = useNav()
+  const aviso = useAviso()
   const perfil = usePerfil()
   const datos = useLiveQuery(datosMetas, [])
   const cab = <CabProgreso actual="objetivos" crumb={t('Metas e hitos')} />
   if (!datos) return <Pantalla>{cab}</Pantalla>
 
   const { metas, ms, ses } = datos
-  const dom = hitosDominadas(ses)
-  const verHitos = dom.hay || metas.some(m => m.tipo === 'dominadas')
+  const metasDom = metas.filter(m => m.tipo === 'dominadas')
+  const maxManualDom = metasDom.reduce((max, m) => Math.max(max, m.actual ?? 0), 0)
+  const maxObjDom = metasDom.reduce((max, m) => Math.max(max, m.objetivo), 5)
+  const dom = hitosDominadas(ses, { estrictasManual: maxManualDom || undefined, objetivo: maxObjDom, nombre: nombreEjercicio })
+  const verHitos = dom.hay || metasDom.length > 0
+  const hoy = hoyISO()
   const ordenadas = [...metas].sort((a, b) => Number(!!a.hecha) - Number(!!b.hecha) || (a.fecha ?? '9').localeCompare(b.fecha ?? '9'))
   const hechos = dom.hitos.filter(h => h.estado === 'hecho').length
+
+  const sumarUno = async (m: Guardado<Meta>, actual: number | null) => {
+    const antes = { ...m }
+    const nuevo = Math.round(((actual ?? 0) + 1) * 100) / 100
+    await guardarMeta(registrarAvanceMeta(m, nuevo, hoy))
+    const msg = m.objetivo > 0 && nuevo >= m.objetivo
+      ? t('¡Meta conseguida! {titulo}', { titulo: m.titulo })
+      : `${valorTxt(nuevo, m.unidad)} / ${valorTxt(m.objetivo, m.unidad)}`
+    aviso(msg, () => { void guardarMeta(antes) })
+  }
 
   return (
     <Pantalla>
@@ -42,24 +59,51 @@ export function Objetivos() {
         )}
 
         {ordenadas.map((m, i) => {
-          const actual = valorMeta(m, ms, ses, perfil, hoyISO())
+          const actual = valorMeta(m, ms, ses, perfil, hoy, nombreEjercicio)
           const { falta, conseguida, progreso: prog } = estadoMeta(m, actual)
+          const libreSinAvance = m.tipo === 'libre' && (actual == null || !(m.objetivo > 0))
           return (
-            <button key={m.id} className={cx('goal card pd', i > 0 && 'mt8')} onClick={() => nav.hoja('hoja-meta', { id: m.id })}>
-              <div className="row jb">
-                <b>{m.titulo}</b>
-                {conseguida ? <span className="tag ok"><Ico n="check" b />{t('Conseguida')}</span> : m.fecha ? <span className="tag">{capital(mesAnio(m.fecha))}</span> : null}
-              </div>
-              <div className="mt8"><Barra v={prog} total={1} tono={conseguida ? 'ok' : TONO[m.tipo]} gruesa /></div>
-              {m.tipo === 'libre' ? (
-                <div className="spec flat c2 mt4"><p><span>{t('Estado')}</span><b>{m.hecha ? t('Hecha') : t('Pendiente')}</b></p><p><span>{t('Objetivo')}</span><b>{valorTxt(m.objetivo, m.unidad)}</b></p></div>
-              ) : (
-                <div className="spec flat c2 mt4">
-                  <p><span>{t('Ahora')}</span><b>{actual != null ? valorTxt(actual, m.unidad) : '—'}</b></p>
-                  <p><span>{t('Falta')}</span><b className={cx(conseguida && 'okc')}>{conseguida ? t('¡Nada!') : falta != null ? valorTxt(falta, unidadFalta(m)) : '—'}</b></p>
+            <div key={m.id} className={cx('goal card pd', i > 0 && 'mt8')}>
+              <button className="goal-main" onClick={() => nav.hoja('hoja-meta', { id: m.id })}>
+                <div className="row jb">
+                  <b>{m.titulo}</b>
+                  {conseguida ? <span className="tag ok"><Ico n="check" b />{t('Conseguida')}</span> : m.fecha ? <span className="tag">{capital(mesAnio(m.fecha))}</span> : null}
+                </div>
+                <div className="mt8"><Barra v={prog} total={1} tono={conseguida ? 'ok' : TONO[m.tipo]} gruesa /></div>
+                {libreSinAvance ? (
+                  <div className="spec flat c2 mt4"><p><span>{t('Estado')}</span><b>{m.hecha ? t('Hecha') : t('Pendiente')}</b></p><p><span>{t('Objetivo')}</span><b>{valorTxt(m.objetivo, m.unidad)}</b></p></div>
+                ) : (
+                  <div className="spec flat c2 mt4">
+                    <p><span>{t('Ahora')}</span><b>{actual != null ? valorTxt(actual, m.unidad) : '—'}</b></p>
+                    <p><span>{t('Falta')}</span><b className={cx(conseguida && 'okc')}>{conseguida ? t('¡Nada!') : falta != null ? valorTxt(falta, unidadFalta(m)) : '—'}</b></p>
+                  </div>
+                )}
+                {(m.historial?.length ?? 0) >= 2 && (
+                  <div className="goal-hist mt8">
+                    <svg className="goal-spark" viewBox="0 0 120 26" aria-hidden="true">
+                      <polyline points={lineaSpark(m.historial!.slice(-12).map(x => x.valor), 120, 26)} />
+                    </svg>
+                    <span className="small muted">{m.historial!.at(-1)?.nota || t('{n} registros', { n: m.historial!.length })}</span>
+                  </div>
+                )}
+              </button>
+              {!conseguida && (
+                <div className="goal-act mt8">
+                  {ADMITE_AVANCE(m.tipo) ? (
+                    <>
+                      {(m.tipo === 'dominadas' || m.tipo === 'reps') && (
+                        <button type="button" className="btn gry sm auto" aria-label={t('Sumar 1 a {titulo}', { titulo: m.titulo })} onClick={() => void sumarUno(m, actual)}>+1</button>
+                      )}
+                      <button type="button" className="btn gry sm" onClick={() => nav.hoja('hoja-avance-meta', { id: m.id })}><Ico n="plus" b />{t('Apuntar avance')}</button>
+                    </>
+                  ) : m.tipo === 'peso' ? (
+                    <button type="button" className="btn gry sm" onClick={() => nav.hoja('hoja-peso')}><Ico n="scales" />{t('Apuntar peso')}</button>
+                  ) : (
+                    <button type="button" className="btn gry sm" onClick={() => nav.ir('registrar')}><Ico n="ruler" />{t('Registrar medidas')}</button>
+                  )}
                 </div>
               )}
-            </button>
+            </div>
           )
         })}
 
@@ -77,13 +121,112 @@ export function Objetivos() {
                 </li>
               ))}
             </ol>
-            <p className="small muted">{t('Se marcan solos con lo que apuntas en tus entrenos (asistidas, negativas y dominadas).')}</p>
+            <p className="small muted">{t('Se marcan con tus entrenos (asistidas, negativas y dominadas) y con el avance que apuntes en tu meta.')}</p>
           </div>
         )}
 
         {metas.length > 0 && <button className="btn ln sm mt16" onClick={() => nav.hoja('hoja-meta')}><Ico n="plus" />{t('Crear otra meta')}</button>}
       </div>
     </Pantalla>
+  )
+}
+
+// Hoja para apuntar avance en una meta (dominadas, repeticiones, ejercicio o meta libre).
+
+export function HojaAvanceMeta({ ruta }: { ruta: Ruta<'hoja-avance-meta'> }) {
+  const datos = useLiveQuery(datosMetas, [])
+  const perfil = usePerfil()
+  if (!datos) return <Hoja titulo={t('Apuntar avance')}><div className="cargando">…</div></Hoja>
+  const meta = datos.metas.find(m => m.id === ruta.d.id)
+  if (!meta) return <Hoja titulo={t('Apuntar avance')}><p className="muted">{t('Esta meta ya no existe.')}</p></Hoja>
+  const auto = valorAutoMeta(meta, datos.ms, datos.ses, perfil, hoyISO(), nombreEjercicio)
+  const actual = valorMeta(meta, datos.ms, datos.ses, perfil, hoyISO(), nombreEjercicio)
+  return <FormAvanceMeta key={meta.id} meta={meta} auto={auto} actualInicial={actual} />
+}
+
+function FormAvanceMeta({ meta, auto, actualInicial }: { meta: Guardado<Meta>; auto: number | null; actualInicial: number | null }) {
+  const nav = useNav()
+  const aviso = useAviso()
+  const def = TIPOS_META.find(x => x.v === meta.tipo)!
+  const paso = meta.tipo === 'ejercicio' && meta.unidad === 'kg' ? 2.5 : def.paso
+  const [valor, setValor] = useState<number>(actualInicial ?? 0)
+  const [nota, setNota] = useState('')
+  const unaVez = useUnaVez()
+
+  const efectivo = auto != null && meta.tipo !== 'libre' ? Math.max(auto, valor) : valor
+  const vista = estadoMeta({ ...meta, inicio: meta.inicio ?? 0, hecha: false }, efectivo)
+  const atajos = meta.tipo === 'ejercicio' && meta.unidad === 'kg' ? [2.5, 5, 10] : [1, 2, 5]
+  const historial = meta.historial ?? []
+
+  const guardar = unaVez(async () => {
+    const antes = { ...meta }
+    const actualizada = registrarAvanceMeta(meta, valor, hoyISO(), nota)
+    await guardarMeta(actualizada)
+    nav.hoja(null)
+    const final = auto != null && meta.tipo !== 'libre' ? Math.max(auto, actualizada.actual ?? 0) : (actualizada.actual ?? 0)
+    const msg = meta.objetivo > 0 && final >= meta.objetivo
+      ? t('¡Meta conseguida! {titulo}', { titulo: meta.titulo })
+      : t('Avance guardado: {valor}', { valor: valorTxt(final, meta.unidad) })
+    aviso(msg, () => { void guardarMeta(antes) })
+  })
+
+  const quitarHito = async (indiceOriginal: number) => {
+    const antes = { ...meta }
+    await guardarMeta(borrarHitoMeta(meta, indiceOriginal))
+    aviso(t('Registro borrado'), () => { void guardarMeta(antes) })
+  }
+
+  return (
+    <Hoja titulo={meta.titulo} sub={t('Objetivo: {valor}', { valor: valorTxt(meta.objetivo, meta.unidad) })}>
+      <p className="lbl fl">{t('¿Cuánto llevas ahora?')}</p>
+      <Stepper className="big" valor={valor} onCambio={setValor} paso={paso} min={0} sufijo={meta.unidad} decimales={paso % 1 ? 2 : 1} etiqueta={t('Avance actual')} />
+      <div className="chips eq mt12">
+        {atajos.map(n => (
+          <Chip key={n} onClick={() => setValor(v => Math.round((v + n) * 100) / 100)}>+{valorTxt(n, meta.unidad)}</Chip>
+        ))}
+      </div>
+      <div className="mt12">
+        <Campo etiqueta={t('Nota (opcional)')}>
+          <input className="inp" maxLength={120} value={nota} onChange={e => setNota(e.target.value)} placeholder={t('Ej. con buena técnica, sin ayuda…')} />
+        </Campo>
+      </div>
+      <div className="mt16">
+        <Barra v={vista.progreso} total={1} tono={vista.conseguida ? 'ok' : TONO[meta.tipo]} gruesa />
+        <p className="small muted mt8">
+          {vista.conseguida
+            ? t('¡Conseguida!')
+            : vista.falta != null
+              ? t('Te faltan {valor}', { valor: valorTxt(vista.falta, unidadFalta(meta)) })
+              : ''}
+        </p>
+      </div>
+      {auto != null && auto > 0 && meta.tipo !== 'libre' ? (
+        <p className="note plain mt12"><Ico n="barbell" /><span>{t('En tus entrenos ya llevas {valor}. Si apuntas menos, se queda tu marca del entreno.', { valor: valorTxt(auto, meta.unidad) })}</span></p>
+      ) : (
+        <p className="small muted mt8">{t('Puedes apuntar tu mejor marca actual o lo que hagas fuera de un entreno.')}</p>
+      )}
+      <button className="btn mt16" onClick={() => void guardar()}>{t('Guardar avance')}</button>
+
+      {historial.length > 0 && (
+        <div className="mt16">
+          <p className="lbl">{t('Histórico de avances')}</p>
+          <div className="list mt8">
+            {[...historial].map((h, i) => ({ h, i })).reverse().slice(0, 10).map(({ h, i }) => (
+              <div key={`${h.fecha}-${i}`} className="it">
+                <span className="code">{fechaCorta(h.fecha)}</span>
+                <span className="tx">
+                  <b className="mono">{valorTxt(h.valor, meta.unidad)}</b>
+                  {h.nota && <small>{h.nota}</small>}
+                </span>
+                <button type="button" className="ib" aria-label={t('Borrar registro del {fecha}', { fecha: fechaCorta(h.fecha) })} onClick={() => void quitarHito(i)}>
+                  <Ico n="trash" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Hoja>
   )
 }
 
@@ -126,6 +269,7 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
   const nav = useNav()
   const aviso = useAviso()
   const perfil = usePerfil()
+  const cat = useCatalogo()
   const inicialTipo = meta?.tipo ?? tipoInicial ?? 'cintura'
   const def = TIPOS_META.find(x => x.v === inicialTipo)!
   const [tipo, setTipo] = useState<Meta['tipo']>(inicialTipo)
@@ -133,17 +277,37 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
   const [objetivo, setObjetivo] = useState<number>(meta?.objetivo ?? sugerido(inicialTipo, null))
   const [unidad, setUnidad] = useState(meta?.unidad ?? def.unidad)
   const [fecha, setFecha] = useState(meta?.fecha ?? '')
+  const [busqueda, setBusqueda] = useState('')
   // Una meta de repeticiones no vale para el cardio (se apuntan minutos) ni para la plancha (segundos).
-  const conReps = ejercicios.filter(x => { const e = ejercicio(x); return !e || cuentaRepeticiones(e) })
-  const [ej, setEj] = useState<string | undefined>(meta?.ejercicio ?? (inicialTipo === 'reps' ? conReps : ejercicios)[0])
+  const conReps = useMemo(() => ejercicios.filter(x => { const e = ejercicio(x); return !e || cuentaRepeticiones(e) }), [ejercicios])
+  const catalogoBase = useMemo(() => {
+    const todos = (cat?.ejercicios ?? []).filter(e => e.categoria === 'strength' && (tipo === 'reps' ? cuentaRepeticiones(e) : true))
+    return busqueda.trim() ? buscar(busqueda, todos) : todos
+  }, [cat, tipo, busqueda])
+  const hechosLista = tipo === 'reps' ? conReps : ejercicios
+  const hechosFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return hechosLista
+    const validos = new Set(catalogoBase.map(e => e.id))
+    return hechosLista.filter(id => validos.has(id))
+  }, [hechosLista, busqueda, catalogoBase])
+  const restoCatalogo = useMemo(() => {
+    const ya = new Set(hechosFiltrados)
+    return catalogoBase.filter(e => !ya.has(e.id)).slice(0, busqueda.trim() ? 80 : 60).map(e => e.id)
+  }, [catalogoBase, hechosFiltrados, busqueda])
+  const primerEj = hechosLista[0] ?? catalogoBase[0]?.id
+  const [ej, setEj] = useState<string | undefined>(meta?.ejercicio ?? primerEj)
   const [hecha, setHecha] = useState(!!meta?.hecha)
   const info = TIPOS_META.find(x => x.v === tipo)!
   // Las de kilos y las de repeticiones van con un ejercicio.
   const deEjercicio = tipo === 'ejercicio' || tipo === 'reps'
-  const lista = tipo === 'reps' ? conReps : ejercicios
   const unaVez = useUnaVez()
   // Solo vale la última propuesta: si se cambia de tipo rápido, una respuesta vieja pisaría el objetivo del tipo nuevo.
   const ultimaPropuesta = useRef(0)
+
+  // Si aún no había ejercicio (porque el catálogo terminó de cargar después), elige el primero disponible.
+  useEffect(() => {
+    if (deEjercicio && !ej && primerEj) setEj(primerEj)
+  }, [deEjercicio, ej, primerEj])
 
   // Al crear, propone un objetivo razonable a partir del valor actual.
   const proponer = (tp: Meta['tipo'], e?: string) => {
@@ -154,9 +318,12 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
 
   const cambiarTipo = (tp: Meta['tipo']) => {
     setTipo(tp)
+    setBusqueda('')
     setUnidad(TIPOS_META.find(x => x.v === tp)!.unidad)
     setObjetivo(sugerido(tp, null))
-    const nuevoEj = tp === 'reps' && ej && !conReps.includes(ej) ? conReps[0] : ej
+    const eActual = ej ? ejercicio(ej) : undefined
+    const valido = ej && (tp !== 'reps' || !eActual || cuentaRepeticiones(eActual))
+    const nuevoEj = valido ? ej : (tp === 'reps' ? conReps[0] : ejercicios[0]) ?? (cat?.ejercicios ?? []).find(e => e.categoria === 'strength' && (tp !== 'reps' || cuentaRepeticiones(e)))?.id
     setEj(nuevoEj)
     proponer(tp, nuevoEj)
   }
@@ -168,13 +335,17 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
     // Se comprueba al guardar, no al teclear: en el PC el año pasa por «0002…» mientras se escribe.
     if (fecha && !fechaDeCampo(fecha)) { aviso(t('Revisa la fecha')); return }
     const mismoValor = meta && meta.tipo === tipo && (!deEjercicio || meta.ejercicio === ej)
-    const inicio = mismoValor ? meta.inicio : (await valorActualMeta(tipo, ej, perfil)) ?? undefined
+    const actualAuto = mismoValor ? meta.inicio : (await valorActualMeta(tipo, ej, perfil)) ?? undefined
+    const inicio = actualAuto ?? (ADMITE_AVANCE(tipo) ? 0 : undefined)
     const nueva: Meta = {
       tipo, objetivo, unidad: unidad.trim(),
       titulo: titulo.trim() || tituloAuto(tipo, objetivo, unidad.trim(), ej),
       fecha: fecha || undefined,
       ejercicio: deEjercicio ? ej : undefined,
-      inicio, hecha,
+      inicio,
+      actual: mismoValor ? meta.actual : undefined,
+      historial: mismoValor ? meta.historial : undefined,
+      hecha,
     }
     if (meta) nueva.id = meta.id
     await guardarMeta(nueva)
@@ -189,6 +360,9 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
     aviso(t('Meta borrada'), deshacer)
   }
 
+  const hayOpciones = hechosFiltrados.length > 0 || restoCatalogo.length > 0
+  const ejFueraDeLista = ej && !hechosFiltrados.includes(ej) && !restoCatalogo.includes(ej)
+
   return (
     <Hoja titulo={meta ? t('Editar meta') : t('Nueva meta')} sub={t('Con fecha y barra de progreso')}>
       <p className="lbl fl">{t('Tipo')}</p>
@@ -199,9 +373,22 @@ function FormMeta({ meta, tipoInicial, ejercicios }: { meta: Guardado<Meta> | nu
       {deEjercicio && (
         <div className="mt12">
           <Campo etiqueta={t('Ejercicio')} ayuda={tipo === 'reps' ? t('Cuenta tu mejor serie: las repeticiones seguidas sin parar.') : undefined}>
-            {lista.length
-              ? <select className="inp" value={ej ?? ''} onChange={e => cambiarEj(e.target.value)}>{lista.map(x => <option key={x} value={x}>{nombreEjercicio(x)}</option>)}</select>
-              : <p className="small muted">{t('Haz algún entreno primero para elegir uno de tus ejercicios.')}</p>}
+            <input type="search" className="inp" value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder={t('Buscar ejercicio…')} aria-label={t('Buscar ejercicio')} />
+            {hayOpciones || ej ? (
+              <select className="inp mt8" value={ej ?? ''} onChange={e => cambiarEj(e.target.value)} aria-label={t('Ejercicio')}>
+                {ejFueraDeLista && <option value={ej}>{nombreEjercicio(ej)}</option>}
+                {hechosFiltrados.length > 0 && (
+                  <optgroup label={t('Tus ejercicios')}>
+                    {hechosFiltrados.map(x => <option key={x} value={x}>{nombreEjercicio(x)}</option>)}
+                  </optgroup>
+                )}
+                {restoCatalogo.length > 0 && (
+                  <optgroup label={t('Catálogo')}>
+                    {restoCatalogo.map(x => <option key={x} value={x}>{nombreEjercicio(x)}</option>)}
+                  </optgroup>
+                )}
+              </select>
+            ) : <p className="small muted mt8">{t('No encontramos ningún ejercicio con ese nombre.')}</p>}
           </Campo>
         </div>
       )}

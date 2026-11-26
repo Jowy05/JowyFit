@@ -178,6 +178,7 @@ function tituloMeta(c: Ctx, m: Meta, val: (v: number, u: string) => string): str
 
 export function metasInforme(c: Ctx): MetaInforme[] {
   const ses = c.hechas
+  const nombre = (id: string) => nombreDe(c, id)
   return c.metas.map(m => {
     let actual: number | null = null
     let hito: string | null = null
@@ -185,26 +186,35 @@ export function metasInforme(c: Ctx): MetaInforme[] {
     else if (m.tipo === 'peso') actual = ultimoValor(c.ms, leerPeso, c.fin)?.valor ?? null
     else if (m.tipo === 'grasa') actual = grasaEn(c.ms, c.marina, c.fin)?.valor ?? null
     else if (m.tipo === 'dominadas') {
-      const d = hitosDominadas(ses)
+      const d = hitosDominadas(ses, { estrictasManual: m.actual, objetivo: m.objetivo, nombre })
       actual = d.estrictas
       // El primer hito es el de las asistidas y el segundo, el de las negativas (por su sitio: el título puede ir traducido).
       const act = d.hitos.findIndex(x => x.estado === 'actual')
       hito = d.hay && act >= 0 && d.estrictas === 0 ? (act === 0 ? t('vas por las asistidas') : act === 1 ? t('vas por las negativas') : null) : null
     } else if ((m.tipo === 'ejercicio' || m.tipo === 'reps') && m.ejercicio) {
-      actual = actualEjercicio(ses, m.ejercicio, m.tipo === 'reps' ? 'reps' : 'kg')
+      const auto = actualEjercicio(ses, m.ejercicio, m.tipo === 'reps' ? 'reps' : 'kg')
+      actual = m.actual != null ? (auto != null ? Math.max(auto, m.actual) : m.actual) : auto
+    } else if (m.tipo === 'libre') {
+      actual = m.actual ?? null
     }
-    const libre = m.tipo === 'libre'
-    const falta = libre ? null : faltaMeta(m.inicio, actual, m.objetivo)
+    const libreSinAvance = m.tipo === 'libre' && (actual == null || !(m.objetivo > 0))
+    const inicio = m.inicio ?? (m.tipo === 'dominadas' || m.tipo === 'reps' || m.tipo === 'ejercicio' || m.tipo === 'libre' ? 0 : undefined)
+    const falta = libreSinAvance ? null : faltaMeta(inicio, actual, m.objetivo)
     const conseguida = !!m.hecha || falta === 0
     const unidadFalta = m.tipo === 'grasa' ? t('puntos') : m.unidad
     const val = (v: number, u: string) => conUnidad(u === 'kg' ? kg(v) : num(v), u)
+    const historial = (m.historial ?? [])
+      .filter(h => h.fecha <= c.fin)
+      .slice(-4)
+      .map(h => ({ fecha: fechaCorta(h.fecha), valorTexto: val(h.valor, m.unidad), nota: h.nota ?? null }))
     return {
       titulo: tituloMeta(c, m, val), tipo: m.tipo, unidad: m.unidad, objetivo: m.objetivo, actual,
-      actualTexto: actual != null ? val(actual, m.unidad) : libre ? (m.hecha ? t('Hecha') : t('Pendiente')) : '—',
-      progreso: libre ? (m.hecha ? 1 : 0) : conseguida ? 1 : progresoMeta(m.inicio, actual, m.objetivo),
+      actualTexto: actual != null ? val(actual, m.unidad) : libreSinAvance ? (m.hecha ? t('Hecha') : t('Pendiente')) : '—',
+      progreso: libreSinAvance ? (m.hecha ? 1 : 0) : conseguida ? 1 : progresoMeta(inicio, actual, m.objetivo),
       falta,
       faltaTexto: conseguida ? t('¡Conseguida!') : hito ?? (falta != null ? t('faltan {n}', { n: val(falta, unidadFalta) }) : ''),
       conseguida, fecha: m.fecha ?? null, mes: m.fecha ? mesAnio(m.fecha) : null,
+      ...(historial.length ? { historial } : {}),
     }
   })
 }

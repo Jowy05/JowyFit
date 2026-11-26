@@ -22,9 +22,9 @@ img,svg{display:block}
 @keyframes jf-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* barra inferior y mini barra */
-.tabbar{position:absolute;left:0;right:0;bottom:0;z-index:30;transition:transform .28s ease}
-.app.is-full .tabbar{transform:translateY(120%)}
-.minibar{position:absolute;left:0;right:0;bottom:calc(var(--tabbar-h) + var(--sa-b));z-index:29;display:none;cursor:pointer;text-align:left}
+.tabbar{position:absolute;left:12px;right:12px;bottom:calc(10px + var(--sa-b));z-index:30;height:64px;transition:transform .28s ease-in-out}
+.app.is-full .tabbar{transform:translateY(calc(100% + 40px + var(--sa-b)))}
+.minibar{position:absolute;left:12px;right:12px;bottom:calc(var(--tabbar-h) + var(--sa-b) + 8px);z-index:29;display:none;cursor:pointer;text-align:left}
 .app.session-on:not(.is-full) .minibar{display:flex}
 
 /* hojas inferiores */
@@ -51,7 +51,6 @@ body.con-hoja .toast{bottom:auto;top:calc(var(--sb-h) + 12px)}
 .toast .toast-act{font-weight:700;color:var(--toast-act,#7cc4ff)}
 
 :focus-visible{outline:2px solid var(--focus,#3b8cff);outline-offset:2px}
-.tabbar{padding-bottom:calc(12px + var(--sa-b))!important;height:calc(var(--tabbar-h) + var(--sa-b))!important}
 
 /* imágenes reales de ejercicios dentro de las miniaturas del mockup */
 .th>img.rep{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}

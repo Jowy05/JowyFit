@@ -2,7 +2,7 @@
 import { kg, num, fijo } from '../../../dominio/formato'
 import { MESES_CORTOS, fechaCorta, lunesDe } from '../../../dominio/fechas'
 import { t, tc, tn } from '../../../i18n'
-import type { EntrenosInforme, FuerzaInforme, GraficaFuerza, Informe, MesInforme } from '../../calculo/tipos'
+import type { EntrenosInforme, FuerzaInforme, GraficaFuerza, Informe, MesInforme, RetosInforme } from '../../calculo/tipos'
 import { diasDe, formatoSerie } from '../../calculo/comun'
 import { TAM, type Lienzo } from '../lienzo'
 import { altoZonas, ejeDe, ejeHolgado, etiquetasFechas, etiquetasPuntos, filasZonas, grafica, indiceDia, type EtiquetaX, type FilaZonas } from '../graficas'
@@ -210,8 +210,8 @@ function miniFuerza(l: Lienzo, x: number, y: number, w: number, h: number, g: Gr
   l.texto(x, y + h - 0.6, tn(g.veces, '{n} vez', '{n} veces'), { tam: TAM.micro, color: l.c.gris })
 }
 
-/** Progreso de fuerza. Con `sigue` (la semana), va debajo de los entrenos en vez de empezar página. */
-export function paginaFuerza(maq: Maqueta, fu: FuerzaInforme, sigue: Flujo | null = null) {
+/** Progreso de fuerza. Con `sigue` (la semana), va debajo de los entrenos en vez de empezar página. Devuelve su flujo. */
+export function paginaFuerza(maq: Maqueta, fu: FuerzaInforme, sigue: Flujo | null = null): Flujo {
   const inf = maq.inf
   const f = sigue ?? maq.flujo()
   const ej = fu.ejercicios.filter(g => g.puntos.length >= MIN_PUNTOS_GRAFICA)
@@ -313,6 +313,55 @@ export function paginaFuerza(maq: Maqueta, fu: FuerzaInforme, sigue: Flujo | nul
       nota(l, f.x, y0 + tabla(l, f.x, y0, f.w, cols, filas, { compacta: true }), f.w, NOTA_1RM)
     })
   }
+
+  // Ejercicios estancados (3 o más sesiones seguidas sin mejorar el 1RM).
+  if (fu.estancados.length) {
+    const NOTA_EST = t('3 sesiones seguidas sin mejorar: conviene probar una variante o bajar un 10 % y volver a subir.')
+    const colsEst: Columna[] = [{ t: t('Ejercicio'), w: 0 }, { t: t('Peso actual'), w: 28, der: true }, { t: t('Situación'), w: 42 }]
+    const filasEst: FilaTabla[] = fu.estancados.slice(0, 6).map(x => ({
+      celdas: [
+        { t: x.nombre, partir: true },
+        { t: `${kg(x.peso)} kg`, peso: 'negrita' },
+        { t: t('{n} sesiones sin subir', { n: x.sesiones }), color: f.l.c.ambar, peso: 'negrita' },
+      ],
+    }))
+    f.bloque(m => altoH2(m) + altoTablaDe(f.l, f.w, colsEst, filasEst, { compacta: true }) + altoNota(f.l, NOTA_EST, f.w), (l, y, m) => {
+      const y0 = y + h2(l, f.x, y, f.w, t('Ejercicios estancados'), t('sin progreso reciente'), m)
+      nota(l, f.x, y0 + tabla(l, f.x, y0, f.w, colsEst, filasEst, { compacta: true }), f.w, NOTA_EST)
+    })
+  }
+  return f
+}
+
+/** Retos diarios completados en el periodo (mejores marcas, récords y racha). */
+export function seccionRetos(maq: Maqueta, ret: RetosInforme, sigue: Flujo | null = null) {
+  const f = sigue ?? maq.flujo()
+  const sub = [
+    tn(ret.intentos, '{n} intento', '{n} intentos'),
+    ret.records ? tn(ret.records, '{n} récord', '{n} récords') : null,
+    ret.rachaActual > 0 ? tn(ret.rachaActual, 'racha actual: {n} día', 'racha actual: {n} días') : null,
+    ret.mejorRacha > 0 ? tn(ret.mejorRacha, 'mejor racha: {n} día', 'mejor racha: {n} días') : null,
+  ].filter(Boolean).join(' · ')
+  const cols: Columna[] = [
+    { t: t('Reto'), w: 0 },
+    { t: t('Intentos'), w: 22, der: true },
+    { t: t('Mejor marca'), w: 32, der: true },
+    { t: t('Cuándo'), w: 22 },
+  ]
+  const filas: FilaTabla[] = ret.filas.map(x => ({
+    celdas: [
+      { t: x.titulo, partir: true, estrella: x.recordEnPeriodo },
+      String(x.intentos),
+      { t: x.mejor, peso: 'negrita', color: x.recordEnPeriodo ? f.l.c.oro : f.l.c.tinta },
+      { t: x.mejorFecha, color: f.l.c.gris },
+    ],
+  }))
+  const NOTA = t('récord conseguido en el periodo.')
+  f.bloque(m => altoH2(m) + altoTablaDe(f.l, f.w, cols, filas, { compacta: true }) + (ret.records ? altoNota(f.l, NOTA, f.w, 3) : 0), (l, y, m) => {
+    const y0 = y + h2(l, f.x, y, f.w, t('Retos diarios'), sub, m)
+    const yy = y0 + tabla(l, f.x, y0, f.w, cols, filas, { compacta: true })
+    if (ret.records) nota(l, f.x, yy, f.w, NOTA, { estrella: true })
+  })
 }
 
 export function paginaMeses(maq: Maqueta, meses: MesInforme[], conEntrenos: boolean, conCuerpo: boolean) {

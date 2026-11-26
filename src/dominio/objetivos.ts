@@ -53,8 +53,8 @@ export const PARAMETROS: Record<Juego, Parametros> = {
 export const RPE_MAX_GENERAL = 9
 export const RPE_MAX_PRUDENTE = 8
 
-export function rpeMaximo(p: Pick<Perfil, 'nivel' | 'modoMayor'>): number {
-  return p.nivel === 'empiezo' || p.nivel === 'vuelvo' || p.modoMayor?.activo ? RPE_MAX_PRUDENTE : RPE_MAX_GENERAL
+export function rpeMaximo(p: Pick<Perfil, 'nivel' | 'modoMayor' | 'sueno'>): number {
+  return p.nivel === 'empiezo' || p.nivel === 'vuelvo' || p.modoMayor?.activo || p.sueno === 'poco' ? RPE_MAX_PRUDENTE : RPE_MAX_GENERAL
 }
 
 export const ZONAS_AFINAR: { v: string; t: string }[] = [

@@ -284,7 +284,9 @@ function seriesYRepsBase(h: Hueco, x: EntradaGenerador, e: Ejercicio): Pick<Bloq
   const par = PARAMETROS[juego]
   const mayor = !!x.perfil.modoMayor?.activo
   const salud = contexto(x).salud
-  const tope = Math.min(rpeMaximo(x.perfil), salud.rpeMax ?? 10)
+  // Si duerme menos de 6 horas habitualmente, baja el techo de esfuerzo para favorecer la recuperación.
+  const techoSueno = x.perfil.sueno === 'poco' ? 7.5 : 10
+  const tope = Math.min(rpeMaximo(x.perfil), salud.rpeMax ?? 10, techoSueno)
   const rpe = (base: number) => (x.calibracion ? 7 : Math.min(base, tope))
   const zona = ZONA_DE_PATRON[h.patron]
   const series = (zona && contexto(x).series.get(zona)) || 3
@@ -533,6 +535,7 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
   porque.push(t('Sesiones de {normal} min como mucho, con versión corta de ~{corta} min si vas con prisa.', { normal: x.perfil.minutosNormal, corta: x.perfil.minutosCorta }))
   const salud = resumenSalud(x.perfil)
   if (salud) porque.push(t('Cuidando: {zonas}.', { zonas: salud.toLowerCase() }))
+  if (x.perfil.sueno === 'poco') porque.push(t('Duermes poco → esfuerzo más suave para recuperar mejor.'))
   if (x.perfil.noQuiero?.length) porque.push(t('Sin lo que no quieres hacer: {grupos}.', { grupos: x.perfil.noQuiero.map(g => t(NOMBRE_NO_QUIERO[g])).join(', ').toLowerCase() }))
   const evitados = [...x.marcas.values()].filter(m => m.odiado || m.duele).length
   if (evitados) porque.push(tn(evitados, '{n} ejercicio que no te gusta o te duele, fuera.', '{n} ejercicios que no te gustan o te duelen, fuera.'))
@@ -557,7 +560,7 @@ export function generarRutina(x: EntradaGenerador): Omit<Rutina, 'id'> {
  * esfuerzo normal en vez del cómodo de la prueba y ajustada a lo que tardas de verdad en cada ejercicio.
  */
 export function rutinaDefinitiva(actual: Omit<Rutina, 'id'>, o: { perfil: Perfil; tiempos?: Map<string, { serie: number; descanso: number }>; compuesto: (id: string) => boolean }): Omit<Rutina, 'id'> {
-  const rpe = o.perfil.nivel === 'empiezo' ? 7 : 8
+  const rpe = o.perfil.nivel === 'empiezo' ? 7 : o.perfil.sueno === 'poco' ? 7.5 : 8
   const normal = minutosValidos(o.perfil.minutosNormal, 60)
   const corta = Math.min(normal, minutosValidos(o.perfil.minutosCorta, Math.min(45, normal)))
   const dias = actual.dias.map(d => {

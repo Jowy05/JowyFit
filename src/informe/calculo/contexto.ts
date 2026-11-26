@@ -1,5 +1,5 @@
 // Contexto del informe: las tablas ordenadas y recortadas al periodo, y lo que comparten todas las secciones.
-import type { Ajustes, Comida, DiaSuplementos, Medicion, Meta, PasosDia, Perfil, Rutina, Sesion } from '../../datos/tipos'
+import type { Ajustes, Comida, DiaSuplementos, IntentoReto, Medicion, Meta, PasosDia, Perfil, Rutina, Sesion } from '../../datos/tipos'
 import { objetivos } from '../../dominio/calculos'
 import { aISO, deISO, edad, lunesDe, sumarDias } from '../../dominio/fechas'
 import { estadoSemana, type EstadoDia, type Recolocada } from '../../dominio/semana'
@@ -33,6 +33,8 @@ export type Ctx = {
   pasos: PasosDia[]
   suplementos: DiaSuplementos[]
   metas: Meta[]
+  retos: IntentoReto[]
+  retosEnPeriodo: IntentoReto[]
   cat: CatalogoInforme
   obj: { kcal: number; proteina: number }
   logros: Logro[]
@@ -62,13 +64,15 @@ export function contexto(e: EntradaInforme, r: RangoInforme): Ctx {
   const enPeriodo = hechas.filter(s => s.fecha >= r.inicio)
   const peso = ultimoValor(ms, leerPeso, r.fin)?.valor ?? null
   const enRango = (f: string) => entre(f, r.inicio, r.fin)
+  const retos = [...(e.retos ?? [])].filter(x => x.fecha.slice(0, 10) <= r.fin).sort((a, b) => a.fecha.localeCompare(b.fecha))
+  const retosEnPeriodo = retos.filter(x => enRango(x.fecha.slice(0, 10)))
   return {
     r, hoy: r.hoy, inicio: r.inicio, fin: r.fin, p, hayPerfil: !!e.perfil, ajustes: e.ajustes,
     ms, marina: grasaPorMedidas(ms, p.sexo, p.alturaCm),
     todas: e.sesiones, hechas, enPeriodo,
     rutina: e.rutina, recolocadas: e.ajustes?.recolocadas ?? [],
     fijos: e.rutina ? e.rutina.dias.filter(d => !d.opcional).length : p.diasFijos.length,
-    comidas: e.comidas, pasos: e.pasos, suplementos: e.suplementos, metas: e.metas,
+    comidas: e.comidas, pasos: e.pasos, suplementos: e.suplementos, metas: e.metas, retos, retosEnPeriodo,
     cat: e.catalogo ?? CATALOGO_VACIO,
     obj: objetivosInforme(p, e.ajustes, peso, r.fin),
     logros: logros(hechas).filter(l => enRango(l.fecha)),

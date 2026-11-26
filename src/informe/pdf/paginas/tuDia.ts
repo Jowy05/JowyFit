@@ -9,6 +9,7 @@ import { ejeHolgado, grafica } from '../graficas'
 import { ANCHO, Flujo, altoFichas, altoH2, altoNota, fichas, fraseConNegrita, h2, nota, type Ficha, type Maqueta } from '../piezas'
 import { dosLineas, tablaPartida, type FilaTabla } from '../tablas'
 import { barraGasto, comidaCols, rangoFuerza } from './comun'
+import { seccionRetos } from './entrenos'
 
 export function paginaTuDia(maq: Maqueta, td: TuDiaInforme) {
   const inf = maq.inf
@@ -117,6 +118,9 @@ export function paginaTuDia(maq: Maqueta, td: TuDiaInforme) {
       titulo: { alto: altoH2(4.2), dibujar: (l, y0, sigue) => { h2(l, f.x, y0, f.w, ayer ? t('Comida de ayer') : t('Comida de hoy'), sigue ? t('(sigue)') : sub) } },
     })
   }
+
+  // Retos completados en ese día
+  if (sec.entrenos && inf.retos) seccionRetos(maq, inf.retos, f)
 
   // Cuerpo del día y líneas de lo que falta
   const lineasFin = [

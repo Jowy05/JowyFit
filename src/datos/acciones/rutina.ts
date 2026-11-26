@@ -59,6 +59,19 @@ export async function guardarMaquinaPropia(gymId: number, m: MaquinaPropia): Pro
   })
 }
 
+/** Borra una máquina propia del gimnasio y devuelve cómo deshacerlo. */
+export async function borrarMaquinaPropia(gymId: number, maquinaId: string): Promise<(() => void) | null> {
+  const borrada = await db.transaction('rw', db.gimnasios, async () => {
+    const g = await db.gimnasios.get(gymId)
+    const m = g?.propias.find(x => x.id === maquinaId)
+    if (!g || !m) return null
+    await db.gimnasios.put({ ...g, propias: g.propias.filter(x => x.id !== maquinaId) })
+    return m
+  })
+  if (!borrada) return null
+  return () => { void guardarMaquinaPropia(gymId, borrada) }
+}
+
 /**
  * Rehace la rutina con el perfil de ahora (al quitar o poner el modo mayor desde Ajustes). Conserva si va en semana de
  * prueba; los pesos y el historial no se tocan (salen de los entrenos hechos).

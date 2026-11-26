@@ -57,7 +57,7 @@ export function cspPara(html: string): string {
     `script-src ${script.join(' ')}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://images.openfoodfacts.org https://static.openfoodfacts.org",
-    "connect-src 'self' https://world.openfoodfacts.org",
+    "connect-src 'self' https://world.openfoodfacts.org https://api.github.com",
     "font-src 'self' data:",
     "worker-src 'self' blob:",
     "media-src 'self' blob:",
@@ -117,9 +117,16 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         // Todo dentro de la app: también el catálogo de ejercicios y sus imágenes.
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,json,wasm}'],
-        // La landing y la demo no hacen falta para usar la app sin conexión (y pesan).
-        globIgnores: ['**/Phosphor*.svg', 'landing/**', 'demo/**', 'Demo.html'],
+        // La landing, la demo y el modelo local de postura (se guarda bajo demanda) no van en la precarga inicial.
+        globIgnores: ['**/Phosphor*.svg', 'landing/**', 'demo/**', 'Demo.html', 'postura/**'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: /\/postura\/.*\.(?:js|wasm|task)$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'jowyfit-postura-v1' },
+          },
+        ],
         navigateFallback: 'index.html',
         // La demo y la política de privacidad no van en la precarga: sin esto, el service worker respondía a /Demo con la landing.
         navigateFallbackDenylist: [/\/Demo(\.html)?(\?|$)/, /\/privacypolicy\.html(\?|$)/],

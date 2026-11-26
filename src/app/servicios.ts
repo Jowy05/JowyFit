@@ -120,7 +120,6 @@ export function arrancarServicios(): () => void {
   }
   tarea()
   addEventListener('online', pendientes)
-  let quitar = () => {}
-  void alVolverAPrimerPlano(tarea).then(f => { quitar = f })
-  return () => { quitar(); removeEventListener('online', pendientes); arrancado = false }
+  const quitar = alVolverAPrimerPlano(tarea)
+  return () => { void quitar.then(f => f()); removeEventListener('online', pendientes); arrancado = false }
 }

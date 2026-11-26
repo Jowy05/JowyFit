@@ -222,6 +222,15 @@ describe('dominadas', () => {
     expect(h.hitos[0]!.fecha).toBeNull()
     expect(hitosDominadas([]).hay).toBe(false)
   })
+
+  it('avance manual y objetivo > 5 añaden escalones hasta la meta y reconocen nombres propios', () => {
+    expect(esDominadaEstricta('mio-1', 'corporal', 'Dominadas estrictas')).toBe(true)
+    const h = hitosDominadas([], { estrictasManual: 8, objetivo: 15 })
+    expect(h.hay).toBe(true)
+    expect(h.estrictas).toBe(8)
+    expect(h.hitos.map(x => x.titulo)).toEqual(['Asistidas: hasta −15 kg', 'Negativas: 3 × 5', '1 dominada estricta', '3 estrictas', '5 estrictas', '10 estrictas', '15 estrictas'])
+    expect(h.hitos.map(x => x.estado)).toEqual(['hecho', 'hecho', 'hecho', 'hecho', 'hecho', 'actual', 'pendiente'])
+  })
 })
 
 describe('pasos y mini gráfica', () => {

@@ -8,7 +8,7 @@ import { anadirSerie, irA, repetibles, resumen } from '../../dominio/sesion'
 import { DIAS, deISO, diaSemana, duracion, fechaLarga, formatoHora, horaDe, hoyISO } from '../../dominio/fechas'
 import { entrenosPrevistos } from '../../dominio/semana'
 import { capital, kg, textoMarca, textoSerie, textoSubida } from '../../dominio/formato'
-import { guardarSesion, terminarEntreno } from '../../datos/acciones/entreno'
+import { guardarPlantillaEntreno, guardarSesion, terminarEntreno } from '../../datos/acciones/entreno'
 import { Cab, Chip, Ico, Pantalla, Th, useUnaVez, LARGO } from '../../ui/componentes'
 import { useNav, type Ruta } from '../../app/nav'
 import { useAviso } from '../../ui/aviso'
@@ -36,6 +36,8 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
   const [hayMolestia, setHayMolestia] = useState<boolean | null>(null)
   const [molestos, setMolestos] = useState<string[] | null>(null)
   const [nota, setNota] = useState('')
+  const [nombrePlantilla, setNombrePlantilla] = useState('')
+  const [plantillaGuardada, setPlantillaGuardada] = useState(false)
   const unaVez = useUnaVez()
   // «¿Una más?»: una serie más de algo de hoy, u otro ejercicio del gimnasio, antes de guardar.
   const [unaMas, setUnaMas] = useState(false)
@@ -169,6 +171,26 @@ export function FinEntreno({ ruta }: { ruta: Ruta<'fin-entreno'> }) {
                 <button className="btn gry mt12" onClick={() => nav.hoja('hoja-elegir-ejercicio', { modo: 'sesion-anadir', despues: 'entreno' })}><Ico n="magnifying-glass" b />{t('Otro ejercicio de tu gimnasio')}</button>
               </div>
             )}
+          </div>
+        )}
+
+        {s.ejercicios.filter(e => e.estado !== 'saltado').length > 0 && (
+          <div className="sec">
+            <details className="fold">
+              <summary><Ico n="bookmark-simple" className="blue" />{plantillaGuardada ? t('Guardada como plantilla libre') : t('Guardar como plantilla libre')}<Ico n="caret-down" /></summary>
+              <div className="in">
+                <p className="small muted">{t('Para repetir estos mismos ejercicios en 1 toque desde Rutina, sin tocar tu plan semanal.')}</p>
+                <div className="row mt8" style={{ gap: 8 }}>
+                  <input className="inp grow" maxLength={LARGO.nombre} value={nombrePlantilla} onChange={e => setNombrePlantilla(e.target.value)} placeholder={s.letra === 'L' ? t('Ej. Express torso, Casa…') : nombreEntreno(s)} aria-label={t('Nombre de la plantilla')} />
+                  <button type="button" className="btn sm auto" disabled={plantillaGuardada} onClick={async () => {
+                    const titulo = nombrePlantilla.trim() || (s.letra === 'L' ? t('Entreno libre') : nombreEntreno(s))
+                    await guardarPlantillaEntreno(titulo, s.ejercicios)
+                    setPlantillaGuardada(true)
+                    aviso(t('Plantilla guardada: {nombre}', { nombre: titulo }))
+                  }}>{plantillaGuardada ? t('Guardada') : t('Guardar')}</button>
+                </div>
+              </div>
+            </details>
           </div>
         )}
 

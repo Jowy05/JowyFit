@@ -2,8 +2,9 @@
 // (récords, subidas, gráficas por ejercicio, medidas, metas, hitos y pasos).
 import type { Comida, Medicion, Perfil, Serie, Sesion, TipoRegistro } from '../datos/tipos'
 import { epley, grasaMarina } from './calculos'
-import { diasEntre, lunesDe, sumarDias } from './fechas'
+import { MESES_CORTOS, deISO, diasEntre, lunesDe, sumarDias } from './fechas'
 import { volumen } from './progresion'
+import { estancado, pesoTop, SESIONES_ESTANCADO } from './descarga'
 import { t, tk } from '../i18n'
 
 export type PuntoFecha = { fecha: string; valor: number }
@@ -136,6 +137,45 @@ export function logros(sesiones: Sesion[]): Logro[] {
 export function recordsEn(sesiones: Sesion[], dias: string[]): number {
   return sesiones.filter(s => s.estado === 'hecha' && dias.includes(s.fecha))
     .reduce((suma, s) => suma + s.ejercicios.reduce((a, e) => a + trabajo(e.series).filter(x => x.record).length, 0), 0)
+}
+
+export type RecordsMes = { mes: string; etiqueta: string; total: number; enCurso: boolean }
+
+/** Récords conseguidos en cada uno de los últimos `meses` meses (incluyendo el mes actual). */
+export function recordsPorMes(sesiones: Sesion[], hoy: string, meses = 6): RecordsMes[] {
+  const cuenta = new Map<string, number>()
+  for (const l of logros(sesiones)) {
+    const m = l.fecha.slice(0, 7)
+    cuenta.set(m, (cuenta.get(m) ?? 0) + 1)
+  }
+  const ref = deISO(hoy)
+  const out: RecordsMes[] = []
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1)
+    const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    out.push({ mes, etiqueta: MESES_CORTOS[d.getMonth()]!, total: cuenta.get(mes) ?? 0, enCurso: i === 0 })
+  }
+  return out
+}
+
+export type EjercicioEstancado = { ejercicio: string; peso: number; sesiones: number }
+
+/**
+ * Ejercicios con peso que llevan al menos 3 sesiones normales seguidas sin mejorar el 1RM
+ * (mismo criterio que la sugerencia de descarga en el entreno).
+ */
+export function ejerciciosEstancados(sesiones: Sesion[], semanaSuave?: string | null): EjercicioEstancado[] {
+  const normales = sesiones
+    .filter(s => s.estado === 'hecha' && !s.calibracion && !s.suave && (!semanaSuave || s.fecha > semanaSuave))
+    .sort((a, b) => b.inicio - a.inicio)
+  const ids = [...new Set(normales.flatMap(s => s.ejercicios.filter(e => e.registro === 'peso' || e.registro === 'mancuerna').map(e => e.ejercicio)))]
+  const out: EjercicioEstancado[] = []
+  for (const id of ids) {
+    const hist = normales.flatMap(s => s.ejercicios.filter(e => e.ejercicio === id && !e.cargaPct && trabajo(e.series).length > 0).map(e => ({ series: e.series })))
+    if (!estancado(hist)) continue
+    out.push({ ejercicio: id, peso: pesoTop(hist[0]!.series), sesiones: SESIONES_ESTANCADO })
+  }
+  return out
 }
 
 // Series por grupo muscular
@@ -308,49 +348,89 @@ export function faltaMeta(inicio: number | null | undefined, actual: number | nu
 
 // Dominadas
 
-const DOMINADA = /(pull-?ups?|chin-?ups?)/
-const NO_ESTRICTA = /(assisted|negative|band|australian|inverted|jumping|kipping|scapular)/
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const DOMINADA = /(pull-?ups?|chin-?ups?|dominada)/
+const NO_ESTRICTA = /(assisted|asistid|negative|negativ|band|goma|australian|inverted|jumping|salto|kipping|scapular|escapul)/
+const ASISTIDA = /(assisted|asistid|band|goma)/
+const NEGATIVA = /(negative|negativ)/
 
-export const esDominadaEstricta = (id: string, registro: TipoRegistro) => DOMINADA.test(id) && !NO_ESTRICTA.test(id) && registro !== 'asistido'
-export const esDominadaAsistida = (id: string, registro: TipoRegistro) => (DOMINADA.test(id) || /assisted-pull/.test(id)) && (registro === 'asistido' || /assisted/.test(id))
-export const esDominadaNegativa = (id: string) => DOMINADA.test(id) && /negative/.test(id)
+const textoDom = (id: string, nombre?: string) => sinTildes(nombre ? `${id} ${nombre}` : id)
+
+export const esDominadaEstricta = (id: string, registro: TipoRegistro, nombre?: string) => {
+  const x = textoDom(id, nombre)
+  return DOMINADA.test(x) && !NO_ESTRICTA.test(x) && registro !== 'asistido'
+}
+export const esDominadaAsistida = (id: string, registro: TipoRegistro, nombre?: string) => {
+  const x = textoDom(id, nombre)
+  return (DOMINADA.test(x) || /assisted-pull/.test(x)) && (registro === 'asistido' || ASISTIDA.test(x))
+}
+export const esDominadaNegativa = (id: string, nombre?: string) => {
+  const x = textoDom(id, nombre)
+  return DOMINADA.test(x) && NEGATIVA.test(x)
+}
 
 /** id: qué hito es, sin depender del idioma (título y detalle salen traducidos). */
-type Hito = { id: 'asistidas' | 'negativas' | 'e1' | 'e3' | 'e5'; titulo: string; detalle: string; fecha: string | null; estado: 'hecho' | 'actual' | 'pendiente' }
+export type Hito = { id: string; titulo: string; detalle: string; fecha: string | null; estado: 'hecho' | 'actual' | 'pendiente' }
 
-/** Hitos guiados de las dominadas: asistidas → negativas → 1 → 3 → 5 estrictas. */
-export function hitosDominadas(sesiones: Sesion[]): { hitos: Hito[]; estrictas: number; hay: boolean } {
+const ESCALONES_EXTRA = [10, 15, 20, 25, 30, 40, 50]
+
+/**
+ * Hitos guiados de las dominadas: asistidas → negativas → 1 → 3 → 5 estrictas (y escalones hasta el objetivo si es > 5).
+ * También cuenta las dominadas apuntadas a mano (`estrictasManual`) y ejercicios propios con «dominada» en su nombre.
+ */
+export function hitosDominadas(
+  sesiones: Sesion[],
+  o?: { estrictasManual?: number; objetivo?: number; nombre?: (id: string) => string },
+): { hitos: Hito[]; estrictas: number; hay: boolean } {
   let asist: string | null = null, neg: string | null = null
-  const estrictas: (string | null)[] = [null, null, null] // 1, 3, 5
+  const metaObj = o?.objetivo && o.objetivo > 5 ? Math.round(o.objetivo) : 5
+  const niveles: number[] = [1, 3, 5]
+  if (metaObj > 5) {
+    for (const n of ESCALONES_EXTRA) if (n < metaObj - 1) niveles.push(n)
+    niveles.push(metaObj)
+  }
+  const fechas = new Map<number, string | null>(niveles.map(n => [n, null]))
   let max = 0, hay = false
   for (const s of hechasAsc(sesiones)) {
     for (const e of s.ejercicios) {
       const tr = trabajo(e.series)
       if (!tr.length) continue
-      if (esDominadaAsistida(e.ejercicio, e.registro)) {
+      const nom = o?.nombre?.(e.ejercicio)
+      if (esDominadaAsistida(e.ejercicio, e.registro, nom)) {
         hay = true
         if (!asist && tr.some(x => x.peso != null && Math.abs(x.peso) <= 15 && (x.reps ?? 0) >= 5)) asist = s.fecha
-      } else if (esDominadaNegativa(e.ejercicio)) {
+      } else if (esDominadaNegativa(e.ejercicio, nom)) {
         hay = true
         if (!neg && tr.filter(x => (x.reps ?? 0) >= 5).length >= 3) neg = s.fecha
-      } else if (esDominadaEstricta(e.ejercicio, e.registro)) {
+      } else if (esDominadaEstricta(e.ejercicio, e.registro, nom)) {
         hay = true
         const r = Math.max(...tr.map(x => x.reps ?? 0))
         max = Math.max(max, r)
-        ;[1, 3, 5].forEach((n, i) => { if (!estrictas[i] && r >= n) estrictas[i] = s.fecha })
+        for (const n of niveles) if (!fechas.get(n) && r >= n) fechas.set(n, s.fecha)
       }
     }
   }
-  const base: Omit<Hito, 'estado'>[] = [
-    { id: 'asistidas', titulo: t('Asistidas: hasta −15 kg'), detalle: t('Ve quitando ayuda poco a poco'), fecha: asist },
-    { id: 'negativas', titulo: t('Negativas: 3 × 5'), detalle: t('Bajar despacio, 3-5 segundos'), fecha: neg },
-    { id: 'e1', titulo: t('1 dominada estricta'), detalle: t('Sin asistencia'), fecha: estrictas[0]! },
-    { id: 'e3', titulo: t('3 estrictas'), detalle: t('En una misma serie'), fecha: estrictas[1]! },
-    { id: 'e5', titulo: t('5 estrictas'), detalle: t('Meta'), fecha: estrictas[2]! },
+  const manual = o?.estrictasManual != null && o.estrictasManual > 0 ? o.estrictasManual : 0
+  if (manual > 0) {
+    hay = true
+    max = Math.max(max, manual)
+  }
+  const tituloDe = (n: number) => (n === 1 ? t('1 dominada estricta') : n === 3 ? t('3 estrictas') : n === 5 ? t('5 estrictas') : t('{n} estrictas', { n }))
+  const detalleDe = (n: number, ultimo: boolean) => (ultimo ? t('Meta') : n === 1 ? t('Sin asistencia') : t('En una misma serie'))
+  const base: (Omit<Hito, 'estado'> & { hecho: boolean })[] = [
+    { id: 'asistidas', titulo: t('Asistidas: hasta −15 kg'), detalle: t('Ve quitando ayuda poco a poco'), fecha: asist, hecho: asist != null },
+    { id: 'negativas', titulo: t('Negativas: 3 × 5'), detalle: t('Bajar despacio, 3-5 segundos'), fecha: neg, hecho: neg != null },
+    ...niveles.map((n, i) => ({
+      id: `e${n}`,
+      titulo: tituloDe(n),
+      detalle: detalleDe(n, i === niveles.length - 1),
+      fecha: fechas.get(n) ?? null,
+      hecho: fechas.get(n) != null || max >= n,
+    })),
   ]
   // Un hito cuenta como hecho si se logró o si ya se superó uno posterior.
-  const ultimoHecho = base.map(h => h.fecha != null).lastIndexOf(true)
-  const hitos = base.map((h, i): Hito => ({ ...h, estado: i <= ultimoHecho ? 'hecho' : i === ultimoHecho + 1 ? 'actual' : 'pendiente' }))
+  const ultimoHecho = base.map(h => h.hecho).lastIndexOf(true)
+  const hitos = base.map(({ hecho: _, ...h }, i): Hito => ({ ...h, estado: i <= ultimoHecho ? 'hecho' : i === ultimoHecho + 1 ? 'actual' : 'pendiente' }))
   return { hitos, estrictas: max, hay }
 }
 

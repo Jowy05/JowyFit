@@ -357,6 +357,9 @@ export type PasosDia = { fecha: string; pasos: number; fuente: 'auto' | 'manual'
 
 export type DiaSuplementos = { fecha: string; tomados: string[] }
 
+/** Un avance apuntado a mano en una meta, con su fecha y nota opcional. */
+export type HitoMeta = { fecha: string; valor: number; nota?: string }
+
 export type Meta = {
   id?: number
   /** «ejercicio»: los kg de un ejercicio; «reps»: las repeticiones seguidas en una serie de un ejercicio. */
@@ -367,7 +370,19 @@ export type Meta = {
   fecha?: string
   ejercicio?: string
   inicio?: number
+  /** Progreso apuntado a mano (dominadas fuera de un entreno, avance de una meta libre o marca manual). */
+  actual?: number
+  /** Histórico de avances apuntados con fecha y nota opcional (ordenado por fecha). */
+  historial?: HitoMeta[]
   hecha?: boolean
+}
+
+/** Plantilla de entreno libre guardada por el usuario para repetirla en un toque. */
+export type PlantillaEntreno = {
+  id: string
+  nombre: string
+  ejercicios: { ejercicio: string; series: number; repsMin: number; repsMax: number; descanso: number; registro: TipoRegistro }[]
+  creado: string
 }
 
 /**
@@ -422,6 +437,9 @@ export type Ajustes = {
     /** Revisión semanal de molestias: el domingo a la hora de `revisionHora`. */
     revision?: boolean
     revisionHora?: string
+    /** Recordatorio inteligente de pasos a media tarde (solo salta si llevas menos del 50 % del objetivo). */
+    pasos?: boolean
+    pasosHora?: string
   }
   copiaAuto: boolean
   /** Copias automáticas que se guardan (las más nuevas; 0 = todas). */
@@ -459,6 +477,8 @@ export type Ajustes = {
   }
   /** Lo último que se eligió al hacer las fotos de progreso: qué cámara y si se esperan 5 segundos. */
   fotos?: { camara: 'delantera' | 'trasera'; esperar: boolean }
+  /** Plantillas guardadas de entrenos libres / sesiones favoritas. */
+  entrenosLibres?: PlantillaEntreno[]
 }
 
 /** Revisión semanal: qué tal cada molestia, qué hay de nuevo y qué cambió en los entrenos que quedan. */
@@ -472,3 +492,21 @@ export type Revision = {
 /** Un cambio en un bloque del plan por una molestia, con el bloque de antes para deshacerlo o volver a lo normal. */
 /** Un cambio de la revisión. `vuelta`: devuelve el bloque hacia lo normal (no suaviza, así que no se «devuelve» otra vez). */
 export type CambioRevision = { uid: string; letra: string; zona: ZonaDolor; antes: Bloque; despues: Bloque; deshecho?: boolean; vuelta?: boolean }
+
+/** Retos diarios de postura y resistencia en la pestaña Rutina. */
+export type TipoReto = 'flexiones-60' | 'sentadillas-60' | 'plancha-max' | 'flexiones-20' | 'sentadillas-30'
+
+export type IntentoReto = {
+  id?: number
+  fecha: string // AAAA-MM-DDTHH:MM
+  reto: TipoReto
+  /** Repeticiones válidas (retos 60 s) o segundos (plancha / contrarreloj). */
+  valor: number
+  /** Repeticiones mal hechas avisadas por el motor de postura (solo modo cámara). */
+  invalidas?: number
+  /** Duración real del intento en segundos. */
+  duracionS: number
+  modo: 'camara' | 'manual'
+  /** Si batió tu récord en ese momento. */
+  record?: boolean
+}

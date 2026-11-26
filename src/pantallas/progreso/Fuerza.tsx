@@ -1,17 +1,18 @@
 // PRO-02 · Fuerza
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { metasDeTipo } from '../../datos/consultas'
-import { sesionesHechas } from '../../datos/consultas'
+import { leerMetas, sesionesHechas } from '../../datos/consultas'
 import { ejercicio, nombreEjercicio } from '../../catalogo/catalogo'
 import { patron, tipoRegistro } from '../../catalogo/clasificacion'
 import { kg, num, textoMarca, textoSubida } from '../../dominio/formato'
 import { fechaCorta, hoyISO, MESES, semanaDe, sumarDias } from '../../dominio/fechas'
+import { estadoMeta, unidadFalta, valorMeta, valorTxt } from '../../dominio/metas'
 import { resumen } from '../../dominio/sesion'
-import { cambioDesdeInicio, ejerciciosHechos, evolucion, logros, nivelSeries, pesoMaximo, progresoMeta, seriesDe, seriesPorGrupo, subidas } from '../../dominio/tendencias'
+import { cambioDesdeInicio, ejerciciosEstancados, ejerciciosHechos, evolucion, logros, nivelSeries, recordsPorMes, seriesPorGrupo, subidas } from '../../dominio/tendencias'
 import { Barras, Linea } from '../../ui/graficas'
 import { Chip, cx, estilo, Ico, Pantalla, pct, Th, Vacio } from '../../ui/componentes'
 import { useNav } from '../../app/nav'
+import { useAjustes, usePerfil } from '../../datos/hooks'
 import { CabProgreso, fechaPunto } from './comun'
 import { t, tk, tn, type Vars } from '../../i18n'
 import { nombreEntreno } from '../../dominio/nombres'
@@ -24,8 +25,10 @@ const NIVEL = { poco: tk('poco'), bien: tk('bien'), mucho: tk('mucho') } as cons
 
 export function Fuerza() {
   const nav = useNav()
+  const perfil = usePerfil()
+  const ajustes = useAjustes()
   const sesiones = useLiveQuery(() => sesionesHechas(), [])
-  const metas = useLiveQuery(() => metasDeTipo('ejercicio'), []) ?? []
+  const metas = useLiveQuery(leerMetas, []) ?? []
   const [elegido, setElegido] = useState<string | null>(null)
   const [cuantos, setCuantos] = useState(12)
   const [todosEj, setTodosEj] = useState(false)
@@ -47,6 +50,11 @@ export function Fuerza() {
   const todos = logros(sesiones)
   const delMes = todos.filter(l => l.fecha >= mesIni)
   const recientes = todos.slice(0, 5)
+  const recMes = recordsPorMes(sesiones, hoy, 6)
+  const hayRecMes = recMes.some(m => m.total > 0)
+  const mesActualRec = recMes.at(-1)?.total ?? 0
+  const mesAnteriorRec = recMes.at(-2)?.total ?? 0
+  const estancadosLista = ejerciciosEstancados(sesiones, ajustes.semanaSuave)
 
   // Subidas de los últimos 30 días, una por ejercicio (del primer «antes» al último «ahora»).
   const desde = sumarDias(hoy, -30)
@@ -58,12 +66,14 @@ export function Fuerza() {
   }
   const subidasMes = [...porEj.values()]
 
-  // Metas de ejercicio aún sin alcanzar: se muestran como logros por desbloquear.
-  const bloqueadas = metas.filter(m => !m.hecha && m.ejercicio).map(m => {
-    const pesos = sesiones.map(s => pesoMaximo(seriesDe(s, m.ejercicio!))).filter((v): v is number => v != null)
-    const actual = pesos.length ? Math.max(...pesos) : null
-    return { m, actual }
-  }).filter(x => x.actual == null || x.actual < x.m.objetivo)
+  // Metas de fuerza aún sin alcanzar (kg, repeticiones o dominadas): se muestran como logros por desbloquear.
+  const bloqueadas = metas
+    .filter(m => m.tipo === 'ejercicio' || m.tipo === 'reps' || m.tipo === 'dominadas')
+    .map(m => {
+      const actual = valorMeta(m, [], sesiones, perfil, hoy, nombreEjercicio)
+      return { m, estado: estadoMeta(m, actual) }
+    })
+    .filter(x => !x.estado.conseguida)
 
   const ids = ejerciciosHechos(sesiones).slice(0, 10)
   const id = elegido && ids.includes(elegido) ? elegido : ids[0]
@@ -114,19 +124,58 @@ export function Fuerza() {
                   {l.mejora > 0 && <span className="end up">{l.tipo === 'reps' ? tn(l.mejora, '+{n} rep', '+{n} reps') : `+${kg(l.mejora)} kg`}</span>}
                 </button>
               ))}
-              {bloqueadas.map(({ m, actual }) => (
-                <button key={m.id} className="ach locked" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.hoja('hoja-meta', { id: m.id })}>
+              {bloqueadas.map(({ m, estado }) => (
+                <button key={m.id} className="ach locked" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.hoja('hoja-avance-meta', { id: m.id })}>
                   <span className="tro lock"><Ico n="lock-simple" b /></span>
                   <span className="tx">
                     <b>{m.titulo}</b>
-                    <small>{actual != null ? t('Te faltan {cantidad} {unidad}', { cantidad: kg(m.objetivo - actual), unidad: m.unidad || 'kg' }) : t('Aún sin datos')}</small>
-                    <span className="bar gold mt4"><i style={estilo({ '--w': pct(progresoMeta(m.inicio, actual, m.objetivo), 1) })} /></span>
+                    <small>{estado.falta != null ? t('Te faltan {valor}', { valor: valorTxt(estado.falta, unidadFalta(m)) }) : t('Aún sin datos')}</small>
+                    <span className="bar gold mt4"><i style={estilo({ '--w': pct(estado.progreso, 1) })} /></span>
                   </span>
                 </button>
               ))}
             </div>
           )}
         </div>
+
+        {hayRecMes && (
+          <div className="sec">
+            <div className="sec-h">
+              <h2>{t('Récords por mes')}</h2>
+              <span className="lbl mono">{t('Mes pasado: {n}', { n: mesAnteriorRec })}</span>
+            </div>
+            <div className="card pd">
+              <div className="row jb">
+                <span className="small muted">{t('Últimos 6 meses')}</span>
+                <span className={cx('tag', mesActualRec >= mesAnteriorRec && mesActualRec > 0 ? 'ok' : '')}>
+                  {tn(mesActualRec, '{n} este mes', '{n} este mes')}
+                </span>
+              </div>
+              <div className="mt8">
+                <Barras puntos={recMes.map(m => ({ x: m.etiqueta, y: m.total }))} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {estancadosLista.length > 0 && (
+          <div className="sec">
+            <div className="sec-h"><h2>{t('Ejercicios estancados')}</h2><span className="tag warn">{estancadosLista.length}</span></div>
+            <p className="note warn"><Ico n="warning" /><span>{t('Llevan 3 sesiones seguidas sin mejorar. Toca uno para ver variantes o bajar un 10 % y volver a subir.')}</span></p>
+            <div className="list mt8">
+              {estancadosLista.map(x => (
+                <button key={x.ejercicio} className="it" onClick={() => nav.ir('ficha', { id: x.ejercicio }, 'rut')}>
+                  <Th ej={ejercicio(x.ejercicio)} size="s" />
+                  <span className="tx">
+                    <b>{nombreEjercicio(x.ejercicio)}</b>
+                    <small className="mono">{t('{kg} kg · {n} sesiones sin subir', { kg: kg(x.peso), n: x.sesiones })}</small>
+                  </span>
+                  <Ico n="caret-right" className="car" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {subidasMes.length > 0 && (
           <div className="sec">

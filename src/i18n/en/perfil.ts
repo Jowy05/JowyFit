@@ -848,4 +848,14 @@ export default {
   'Actualizar versión web': 'Update web app',
   'Ver notas en GitHub': 'View release notes on GitHub',
   'Solo se consulta GitHub cuando tocas aquí. Tus datos se conservan al actualizar.': 'GitHub is only checked when you tap here. Your data is kept when updating.',
+  // Reliable Android backup saving and sharing
+  'Elegir dónde guardar la copia': 'Choose where to save backup',
+  'Descargas, Drive o la carpeta que prefieras': 'Downloads, Drive, or any folder you prefer',
+  'Enviar o compartir copia': 'Send or share backup',
+  'WhatsApp, Telegram, Drive u otra app': 'WhatsApp, Telegram, Drive, or another app',
+  'Copia lista para compartir: {nombre}': 'Backup ready to share: {nombre}',
+  'Compartir la copia': 'Share backup',
+  'No se pudo compartir la copia: {error}': "Couldn't share the backup: {error}",
+  'Copia guardada en Descargas/JowyFit: {nombre}': 'Backup saved in Downloads/JowyFit: {nombre}',
+  'Guardado en Descargas/JowyFit: {nombre}': 'Saved in Downloads/JowyFit: {nombre}',
 } satisfies Diccionario

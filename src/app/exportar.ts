@@ -3,13 +3,13 @@ import { leerDatosExportLigero } from '../datos/consultas'
 import { cargarCatalogo, ejercicio, nombreEjercicio } from '../catalogo/catalogo'
 import { csvComidas, csvEntrenos, csvMedidas, jsonLigero } from '../dominio/exportar'
 import { hoyISO } from '../dominio/fechas'
-import { capacidades, compartirArchivo, guardarArchivo } from '../plataforma'
+import { capacidades, compartirArchivo, compartirNativo, guardarArchivoConCarpeta } from '../plataforma'
 
 export type TipoExportLigero = 'entrenos' | 'comidas' | 'medidas' | 'json'
 
 export type ResultadoExportLigero = {
   nombre: string
-  resultado: 'guardado' | 'compartido' | 'cancelado'
+  resultado: 'guardado' | 'descargas' | 'compartido' | 'cancelado'
 }
 
 /** Genera el archivo ligero elegido y lo guarda (Android/Web) o comparte (Apple). */
@@ -46,6 +46,12 @@ export async function exportarLigero(tipo: TipoExportLigero): Promise<ResultadoE
     if (r === 'compartido') return { nombre, resultado: 'compartido' }
     if (r === 'cancelado') return { nombre, resultado: 'cancelado' }
   }
-  await guardarArchivo(nombre, bytes, mime)
-  return { nombre, resultado: 'guardado' }
+  try {
+    const destino = await guardarArchivoConCarpeta(nombre, bytes, mime)
+    return { nombre: destino.nombre, resultado: destino.carpeta === 'descargas' ? 'descargas' : 'guardado' }
+  } catch (e) {
+    if (!cap.compartirNativo) throw e
+    const r = await compartirNativo(nombre, bytes, nombre, mime)
+    return { nombre, resultado: r === 'compartido' ? 'compartido' : 'cancelado' }
+  }
 }

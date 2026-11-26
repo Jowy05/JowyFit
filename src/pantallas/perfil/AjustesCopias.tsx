@@ -10,7 +10,7 @@ import { Chip, FilaInterruptor, Ico } from '../../ui/componentes'
 import { useCopiaCifrada } from '../../ui/HojaCopiaCifrada'
 import { useAviso } from '../../ui/aviso'
 import { useAjustes } from '../../datos/hooks'
-import { copiaCompartiendo, hacerCopiaAhora, type CopiaPreparada } from '../../app/copias'
+import { compartirCopiaAhora, copiaCompartiendo, guardarCopiaEnCarpetaElegida, hacerCopiaConRespaldo, type CopiaPreparada } from '../../app/copias'
 import { exportarLigero, type TipoExportLigero } from '../../app/exportar'
 import { CopiasGuardadas, cuando } from './CopiasGuardadas'
 import { ProtegerCopias } from './ProtegerCopias'
@@ -55,11 +55,37 @@ export function CopiaDeSeguridad() {
         else if (r.resultado === 'cancelado') aviso(t('No se ha guardado la copia'))
         return
       }
-      const nombre = await hacerCopiaAhora()
-      aviso(cap.copiasEnDocumentos ? t('Copia guardada en Documentos/JowyFit: {nombre}', { nombre }) : t('Copia descargada: {nombre}', { nombre }))
+      const r = await hacerCopiaConRespaldo()
+      if (r.resultado === 'documentos') aviso(t('Copia guardada en Documentos/JowyFit: {nombre}', { nombre: r.nombre }))
+      else if (r.resultado === 'descargas') aviso(t('Copia guardada en Descargas/JowyFit: {nombre}', { nombre: r.nombre }))
+      else if (r.resultado === 'compartido') aviso(t('Copia lista para compartir: {nombre}', { nombre: r.nombre }))
+      else if (r.resultado === 'cancelado') aviso(t('No se ha guardado la copia'))
+      else aviso(t('Copia descargada: {nombre}', { nombre: r.nombre }))
       refrescarCopias()
     } catch (e) {
       aviso(t('No se pudo hacer la copia: {error}', { error: mensajeDe(e) }))
+    } finally { setOcupado(false) }
+  }
+  const elegirCarpeta = async () => {
+    setOcupado(true)
+    try {
+      const r = await guardarCopiaEnCarpetaElegida()
+      if (r.resultado === 'guardado') aviso(t('Copia guardada: {nombre}', { nombre: r.nombre }))
+      else if (r.resultado === 'compartido') aviso(t('Copia lista para compartir: {nombre}', { nombre: r.nombre }))
+      else aviso(t('No se ha guardado la copia'))
+      refrescarCopias()
+    } catch (e) {
+      aviso(t('No se pudo hacer la copia: {error}', { error: mensajeDe(e) }))
+    } finally { setOcupado(false) }
+  }
+  const compartirCopia = async () => {
+    setOcupado(true)
+    try {
+      const r = await compartirCopiaAhora()
+      if (r.resultado === 'compartido') aviso(t('Copia lista para compartir: {nombre}', { nombre: r.nombre }))
+      else aviso(t('No se ha guardado la copia'))
+    } catch (e) {
+      aviso(t('No se pudo compartir la copia: {error}', { error: mensajeDe(e) }))
     } finally { setOcupado(false) }
   }
   const restaurar = async (bytes: Uint8Array) => {
@@ -84,6 +110,7 @@ export function CopiaDeSeguridad() {
       const r = await exportarLigero(tipo)
       if (r.resultado === 'compartido') aviso(t('Archivo listo: {nombre}', { nombre: r.nombre }))
       else if (r.resultado === 'cancelado') aviso(t('No se ha guardado el archivo'))
+      else if (r.resultado === 'descargas') aviso(t('Guardado en Descargas/JowyFit: {nombre}', { nombre: r.nombre }))
       else aviso(cap.copiasEnDocumentos ? t('Guardado en Documentos/JowyFit: {nombre}', { nombre: r.nombre }) : t('Descargado: {nombre}', { nombre: r.nombre }))
     } catch (e) {
       aviso(t('No se pudo exportar: {error}', { error: mensajeDe(e) }))
@@ -101,6 +128,18 @@ export function CopiaDeSeguridad() {
             ? t('Está lista: toca para elegir dónde guardarla')
             : <>{cap.apple ? t('Guárdala en Archivos o envíatela') : t('Guarda una copia de todo')} · {a.ultimaCopia ? t('la última, {cuando}', { cuando: cuando(new Date(a.ultimaCopia)) }) : t('aún no has hecho ninguna')}</>}</small></span>
         </button>
+        {cap.compartirNativo && (
+          <>
+            <button className="it" disabled={ocupado} onClick={() => void elegirCarpeta()}>
+              <span className="ico"><Ico n="folder-open" /></span>
+              <span className="tx"><b>{t('Elegir dónde guardar la copia')}</b><small>{t('Descargas, Drive o la carpeta que prefieras')}</small></span>
+            </button>
+            <button className="it" disabled={ocupado} onClick={() => void compartirCopia()}>
+              <span className="ico"><Ico n="share-network" /></span>
+              <span className="tx"><b>{t('Enviar o compartir copia')}</b><small>{t('WhatsApp, Telegram, Drive u otra app')}</small></span>
+            </button>
+          </>
+        )}
         <button className="it" disabled={ocupado} onClick={() => void elegir()}>
           <span className="ico"><Ico n="clock-counter-clockwise" /></span>
           <span className="tx"><b>{t('Recuperar una copia')}</b><small>{cap.apple ? t('Elige en Archivos el .jowyfit que guardaste antes') : t('Elige un archivo .jowyfit que guardaste antes')}</small></span>

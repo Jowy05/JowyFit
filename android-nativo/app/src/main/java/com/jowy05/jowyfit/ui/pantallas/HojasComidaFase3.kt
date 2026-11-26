@@ -234,7 +234,13 @@ fun HojaAnadirComidaCompleta(
                         plantillas.take(15).forEach { pl ->
                             Tarjeta(padding = PaddingValues(10.dp)) {
                                 Text(pl.nombre, color = p.ink, fontWeight = FontWeight.SemiBold)
-                                Text("${pl.proteina.roundToInt()} g prot. · ${pl.kcal.roundToInt()} kcal", color = p.muted, fontFamily = FuenteMono, fontSize = 12.5.sp)
+                                Text(
+                                    text = "${pl.proteina.roundToInt()} g prot." +
+                                        if (estado.ajustes.mostrarKcal) " · ${pl.kcal.roundToInt()} kcal" else "",
+                                    color = p.muted,
+                                    fontFamily = FuenteMono,
+                                    fontSize = 12.5.sp,
+                                )
                                 Spacer(Modifier.height(6.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     listOf("P", "N", "G").forEach { rac ->
@@ -258,7 +264,8 @@ fun HojaAnadirComidaCompleta(
                             recientes.forEachIndexed { idx, rec ->
                                 FilaLista(
                                     titulo = rec.nombre,
-                                    subtitulo = "${rec.proteina.roundToInt()} g prot. · ${rec.kcal.roundToInt()} kcal",
+                                    subtitulo = "${rec.proteina.roundToInt()} g prot." +
+                                        if (estado.ajustes.mostrarKcal) " · ${rec.kcal.roundToInt()} kcal" else "",
                                     icono = Icons.Rounded.History,
                                     alPulsar = {
                                         val hora = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))

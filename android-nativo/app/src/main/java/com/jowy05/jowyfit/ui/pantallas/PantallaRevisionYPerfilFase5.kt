@@ -17,10 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.HealthAndSafety
-import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -93,7 +93,7 @@ fun PantallaRevisionSemanal(
             if (hayDeshacer) {
                 BotonSecundario(
                     texto = "Deshacer última revisión aplicada",
-                    icono = Icons.Rounded.Undo,
+                    icono = Icons.AutoMirrored.Rounded.Undo,
                     onClick = alDeshacerUltima,
                 )
             }
@@ -158,6 +158,7 @@ fun PantallaRevisionSemanal(
                         activos = estado.revisiones.flatMap { it.cambios },
                         ejerciciosPorId = catalogo.porId,
                         gimnasio = estado.gimnasioActivo,
+                        marcas = estado.marcas,
                     )
                 }
             }

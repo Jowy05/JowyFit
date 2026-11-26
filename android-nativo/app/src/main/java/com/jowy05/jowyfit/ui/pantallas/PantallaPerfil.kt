@@ -17,10 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FactCheck
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Person
@@ -87,7 +87,11 @@ fun PantallaPerfil(
     )
     val imc = peso?.let { CalculosDominio.imc(it, perfil.alturaCm) }
     val ratio = cintura?.let { CalculosDominio.cinturaAltura(it, perfil.alturaCm) }
-    val grasa = CalculosDominio.grasaMarina(perfil.sexo, perfil.alturaCm, cintura, cuello, cadera)
+    val grasa = com.jowy05.jowyfit.dominio.TendenciasDominio.grasaActual(
+        estado.mediciones,
+        perfil,
+        java.time.LocalDate.now().toString(),
+    )?.valor
 
     val iniciales = perfil.nombre.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
         .take(2).joinToString("") { it.first().uppercase() }
@@ -149,9 +153,11 @@ fun PantallaPerfil(
                 Text(t("Tu objetivo al día").uppercase(), color = p.muted, fontFamily = FuenteTitulo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 1.sp)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${energia.kcal}", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                    Text("kcal", color = p.muted, fontSize = 13.5.sp, modifier = Modifier.padding(bottom = 2.dp))
-                    Text("y", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(bottom = 2.dp))
+                    if (estado.ajustes.mostrarKcal) {
+                        Text("${energia.kcal}", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Text("kcal", color = p.muted, fontSize = 13.5.sp, modifier = Modifier.padding(bottom = 2.dp))
+                        Text("y", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(bottom = 2.dp))
+                    }
                     Text("${energia.proteina}", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
                     Text("g de proteína", color = p.muted, fontSize = 13.5.sp, modifier = Modifier.padding(bottom = 2.dp))
                 }
@@ -223,7 +229,7 @@ fun PantallaPerfil(
                 FilaLista(
                     titulo = "Revisión semanal",
                     subtitulo = if (estado.revisiones.isNotEmpty()) "Última: ${estado.revisiones.first().fecha}" else "Adapta tu rutina si algo molesta o mejora",
-                    icono = Icons.Rounded.FactCheck,
+                    icono = Icons.AutoMirrored.Rounded.FactCheck,
                     alPulsar = alAbrirRevision,
                 )
                 SeparadorLista()

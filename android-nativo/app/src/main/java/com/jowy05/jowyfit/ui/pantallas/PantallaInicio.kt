@@ -110,7 +110,8 @@ fun PantallaInicio(
 
     val comidasHoy = estado.comidas.filter { it.fecha == hoyIso }
     val tot = CalculosDominio.totalesComida(comidasHoy)
-    val pasosHoy = estado.pasos.firstOrNull { it.fecha == hoyIso }?.pasos ?: 0
+    val pasosDiaHoy = estado.pasos.firstOrNull { it.fecha == hoyIso }
+    val pasosHoy = pasosDiaHoy?.pasos ?: 0
     val energia = CalculosDominio.calcularObjetivos(
         perfil = estado.perfil,
         pesoActual = estado.ultimoPeso,
@@ -119,7 +120,13 @@ fun PantallaInicio(
     )
     val minutosAhora = LocalTime.now().let { it.hour * 60 + it.minute }
     val basalAhora = CalculosDominio.basalHastaAhora(energia.basal, minutosAhora)
-    val kcalPasos = CalculosDominio.kcalPasos(pasosHoy, estado.ultimoPeso ?: 75.0, estado.perfil.alturaCm)
+    val kcalPasos = CalculosDominio.kcalPasos(
+        pasos = pasosHoy,
+        pesoKg = estado.ultimoPeso ?: 75.0,
+        alturaCm = estado.perfil.alturaCm,
+        troteKm = pasosDiaHoy?.troteKm ?: 0.0,
+        porKm = estado.ajustes.pasosPorKm ?: 1300,
+    )
 
     Column(
         modifier = Modifier
@@ -375,8 +382,9 @@ private fun TarjetaHoyCompose(
                         Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = p.ok, modifier = Modifier.size(26.dp))
                     }
                     Column(modifier = Modifier.weight(1f)) {
+                        val hechos = com.jowy05.jowyfit.dominio.MotorSesion.resumen(tarjeta.sesion).hechos
                         Text(t("Entreno de hoy hecho."), color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 21.sp)
-                        Text("${tarjeta.sesion.nombre} · ${tarjeta.sesion.ejercicios.size} ejercicios", color = p.muted, fontSize = 14.sp)
+                        Text("${tarjeta.sesion.nombre} · $hechos ejercicios", color = p.muted, fontSize = 14.sp)
                     }
                 }
                 Spacer(Modifier.height(12.dp))

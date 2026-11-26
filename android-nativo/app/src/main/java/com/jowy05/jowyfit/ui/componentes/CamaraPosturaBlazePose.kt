@@ -151,6 +151,7 @@ fun VisorCamaraBlazePose(
             val ejecutor = remember { Executors.newSingleThreadExecutor() }
             var detector by remember { mutableStateOf<PoseLandmarker?>(null) }
             val detectorActual by rememberUpdatedState(detector)
+            val cerrado = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
 
             LaunchedEffect(context) {
                 val creado = withContext(Dispatchers.Default) {
@@ -167,6 +168,7 @@ fun VisorCamaraBlazePose(
                             .setMinPosePresenceConfidence(0.45f)
                             .setMinTrackingConfidence(0.45f)
                             .setResultListener { res, _ ->
+                                if (cerrado.get()) return@setResultListener
                                 val norm = res.landmarks().firstOrNull()
                                 val world = res.worldLandmarks().firstOrNull()
                                 val pts2D = norm?.map { it.x() to it.y() }.orEmpty()
@@ -178,13 +180,15 @@ fun VisorCamaraBlazePose(
                                     PosturaDominio.PuntosPostura()
                                 }
                                 ContextCompat.getMainExecutor(context).execute {
-                                    esqueleto2D = pts2D
-                                    alPuntosActual(puntos3D, System.currentTimeMillis())
+                                    if (!cerrado.get()) {
+                                        esqueleto2D = pts2D
+                                        alPuntosActual(puntos3D, System.currentTimeMillis())
+                                    }
                                 }
                             }
                             .setErrorListener { e ->
                                 ContextCompat.getMainExecutor(context).execute {
-                                    errorMotor = e.message
+                                    if (!cerrado.get()) errorMotor = e.message
                                 }
                             }
                             .build()
@@ -193,13 +197,17 @@ fun VisorCamaraBlazePose(
                     runCatching { crear(Delegate.GPU) }.getOrElse {
                         runCatching { crear(Delegate.CPU) }.getOrElse { e ->
                             ContextCompat.getMainExecutor(context).execute {
-                                errorMotor = e.message ?: "No se pudo iniciar BlazePose"
+                                if (!cerrado.get()) errorMotor = e.message ?: "No se pudo iniciar BlazePose"
                             }
                             null
                         }
                     }
                 }
-                detector = creado
+                if (cerrado.get()) {
+                    runCatching { creado?.close() }
+                } else {
+                    detector = creado
+                }
             }
 
             var proveedor by remember { mutableStateOf<ProcessCameraProvider?>(null) }
@@ -207,6 +215,7 @@ fun VisorCamaraBlazePose(
 
             DisposableEffect(Unit) {
                 onDispose {
+                    cerrado.set(true)
                     runCatching { proveedor?.unbindAll() }
                     runCatching { detectorActual?.close() }
                     runCatching { ejecutor.shutdown() }

@@ -1,6 +1,7 @@
 package com.jowy05.jowyfit
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -70,6 +71,7 @@ import com.jowy05.jowyfit.ui.pantallas.HojaContrasenaCopia
 import com.jowy05.jowyfit.ui.pantallas.HojaDia
 import com.jowy05.jowyfit.ui.pantallas.HojaEditarPerfilYSalud
 import com.jowy05.jowyfit.ui.pantallas.HojaEmpezarDia
+import com.jowy05.jowyfit.ui.pantallas.HojaExportarCopia
 import com.jowy05.jowyfit.ui.pantallas.HojaPeso
 import com.jowy05.jowyfit.ui.pantallas.HojaProductoEscaneado
 import com.jowy05.jowyfit.ui.pantallas.MiniBarraEntreno
@@ -94,6 +96,8 @@ import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
 
+    private var accionPendiente = mutableStateOf<Pair<String, Long>?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -102,7 +106,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
         )
 
-        val accionInicial = intent?.action
+        intent?.action?.let { accionPendiente.value = it to System.nanoTime() }
         setContent {
             val vm: EstadoAppViewModel = viewModel()
             val prefs by vm.preferencias.collectAsStateWithLifecycle()
@@ -128,15 +132,29 @@ class MainActivity : ComponentActivity() {
 
             CompositionLocalProvider(LocalIdioma provides prefs.idioma) {
                 JowyFitTheme(preferenciaTema = prefs.tema, escalaLetra = prefs.letra) {
-                    AppRaiz(vm = vm, accionInicial = accionInicial)
+                    AppRaiz(
+                        vm = vm,
+                        accionPendiente = accionPendiente.value,
+                        alConsumirAccion = { accionPendiente.value = null },
+                    )
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.action?.let { accionPendiente.value = it to System.nanoTime() }
+    }
 }
 
 @Composable
-private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
+private fun AppRaiz(
+    vm: EstadoAppViewModel,
+    accionPendiente: Pair<String, Long>?,
+    alConsumirAccion: () -> Unit,
+) {
     val p = LocalPaleta.current
     val context = LocalContext.current
     val estado by vm.estado.collectAsStateWithLifecycle()
@@ -147,9 +165,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     val errorClave by vm.errorClave.collectAsStateWithLifecycle()
     val sesionTerminada by vm.sesionRecienTerminada.collectAsStateWithLifecycle()
 
-    var pestana by remember {
-        mutableStateOf(if (accionInicial == "com.jowy05.jowyfit.ACCION_RUTINA") Pestana.RUTINA else Pestana.INICIO)
-    }
+    var pestana by remember { mutableStateOf(Pestana.INICIO) }
     var subtabComidaPendiente by remember { mutableStateOf<String?>(null) }
     var subtabProgresoPendiente by remember { mutableStateOf<String?>(null) }
     var poseProgresoPendiente by remember { mutableStateOf<String?>(null) }
@@ -165,11 +181,33 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     var fichaEjercicioId by remember { mutableStateOf<String?>(null) }
     var diaParaEmpezar by remember { mutableStateOf<DiaRutina?>(null) }
     var avisoSesionActiva by remember { mutableStateOf<DiaRutina?>(null) }
-    var hojaPeso by remember { mutableStateOf(accionInicial == "com.jowy05.jowyfit.ACCION_PESO") }
+    var hojaPeso by remember { mutableStateOf(false) }
     var hojaComida by remember { mutableStateOf(false) }
     var hojaDia by remember { mutableStateOf<CalculosDominio.EstadoDia?>(null) }
     var hojaActualizacion by remember { mutableStateOf(false) }
+    var hojaExportarCopia by remember { mutableStateOf(false) }
     var bytesExportar by remember { mutableStateOf<ByteArray?>(null) }
+
+    LaunchedEffect(accionPendiente) {
+        val acc = accionPendiente?.first ?: return@LaunchedEffect
+        when (acc) {
+            "com.jowy05.jowyfit.ACCION_RUTINA" -> {
+                enAjustes = false
+                enGimnasios = false
+                enRevision = false
+                fichaEjercicioId = null
+                pestana = Pestana.RUTINA
+            }
+            "com.jowy05.jowyfit.ACCION_PESO" -> {
+                enAjustes = false
+                enGimnasios = false
+                enRevision = false
+                fichaEjercicioId = null
+                hojaPeso = true
+            }
+        }
+        alConsumirAccion()
+    }
 
     BackHandler(enabled = poseCamaraFoto != null) { poseCamaraFoto = null }
     BackHandler(enabled = poseCamaraFoto == null && retoActivo != null) { retoActivo = null }
@@ -214,6 +252,22 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     }
 
     val selectorExportar = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val data = bytesExportar
+        bytesExportar = null
+        if (uri != null && data != null) {
+            vm.guardarBytesEnUri(uri, data)
+        }
+    }
+
+    val selectorExportarCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        val data = bytesExportar
+        bytesExportar = null
+        if (uri != null && data != null) {
+            vm.guardarBytesEnUri(uri, data)
+        }
+    }
+
+    val selectorExportarJson = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val data = bytesExportar
         bytesExportar = null
         if (uri != null && data != null) {
@@ -397,8 +451,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     poseInicial = pose,
                     fotoReferenciaPorPose = { pBuscada ->
                         estado.fotos
-                            .filter { it.pose == pBuscada }
-                            .maxByOrNull { it.fecha }
+                            .firstOrNull { it.pose == pBuscada }
                             ?.imagen?.archivo
                             ?.let { vm.repo.archivoMedia(it) }
                     },
@@ -469,6 +522,8 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         enEntreno = false
                         vm.descartarEntrenoEnCurso()
                     },
+                    perfil = estado.perfil,
+                    marcas = estado.marcas,
                 )
             }
             enRevision -> {
@@ -505,27 +560,22 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     alToggleEntrenosHC = ::cambiarToggleEntrenosHC,
                     alPedirSegundoPlano = { PermisosNativos.pedirIgnorarAhorroBateria(context) },
                     alImportarCopia = { selectorImportar.launch(arrayOf("*/*")) },
-                    alExportarCopia = {
-                        vm.exportarCopiaBytes { bytes ->
-                            bytesExportar = bytes
-                            selectorExportar.launch("jowyfit-${LocalDate.now()}.jowyfit")
-                        }
-                    },
+                    alExportarCopia = { hojaExportarCopia = true },
                     alExportarCsvEntrenos = {
                         bytesExportar = vm.exportarCsvEntrenosBytes()
-                        selectorExportar.launch("jowyfit-entrenos-${LocalDate.now()}.csv")
+                        selectorExportarCsv.launch("jowyfit-entrenos-${LocalDate.now()}.csv")
                     },
                     alExportarCsvComidas = {
                         bytesExportar = vm.exportarCsvComidasBytes()
-                        selectorExportar.launch("jowyfit-comidas-${LocalDate.now()}.csv")
+                        selectorExportarCsv.launch("jowyfit-comidas-${LocalDate.now()}.csv")
                     },
                     alExportarCsvMedidas = {
                         bytesExportar = vm.exportarCsvMedidasBytes()
-                        selectorExportar.launch("jowyfit-medidas-${LocalDate.now()}.csv")
+                        selectorExportarCsv.launch("jowyfit-medidas-${LocalDate.now()}.csv")
                     },
                     alExportarJsonLigero = {
                         bytesExportar = vm.exportarJsonLigeroBytes()
-                        selectorExportar.launch("jowyfit-ligero-${LocalDate.now()}.json")
+                        selectorExportarJson.launch("jowyfit-ligero-${LocalDate.now()}.json")
                     },
                     alGenerarPdf = vm::generarYCompartirPdf,
                     alAbrirActualizaciones = { hojaActualizacion = true },
@@ -752,6 +802,18 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     }
     if (hojaActualizacion) {
         HojaActualizacionNativa(alCerrar = { hojaActualizacion = false })
+    }
+    if (hojaExportarCopia) {
+        HojaExportarCopia(
+            alCancelar = { hojaExportarCopia = false },
+            alExportar = { clave ->
+                hojaExportarCopia = false
+                vm.exportarCopiaBytes(contrasena = clave) { bytes ->
+                    bytesExportar = bytes
+                    selectorExportar.launch("jowyfit-${LocalDate.now()}.jowyfit")
+                }
+            },
+        )
     }
     bytesPendientesClave?.let { bytes ->
         HojaContrasenaCopia(

@@ -57,7 +57,7 @@ data class CatalogoJson(
 )
 
 @Serializable
-private data class TextoEjercicio(
+internal data class TextoEjercicio(
     val nombre: String,
     val descripcion: String = "",
     val instrucciones: List<String> = emptyList(),
@@ -65,10 +65,11 @@ private data class TextoEjercicio(
 )
 
 @Serializable
-private data class TextoNombre(val nombre: String, val cientifico: String? = null)
+internal data class TextoNombre(val nombre: String, val cientifico: String? = null)
 
 @Serializable
-private data class TextosCatalogoJson(
+internal data class TextosCatalogoJson(
+    val etiquetas: Map<String, Map<String, String>> = emptyMap(),
     val musculos: Map<String, TextoNombre> = emptyMap(),
     val material: Map<String, TextoNombre> = emptyMap(),
     val ejercicios: Map<String, TextoEjercicio> = emptyMap(),
@@ -90,7 +91,15 @@ data class CatalogoCargado(
         etiquetas["body_part"]?.get(clave) ?: clave.replace('_', ' ')
 
     fun nombreMaterial(clave: String?): String =
-        if (clave == null) "Peso corporal" else material[clave]?.nombre ?: clave
+        if (clave == null) {
+            when (idioma) {
+                "ca" -> "Pes corporal"
+                "en" -> "Bodyweight"
+                else -> "Peso corporal"
+            }
+        } else {
+            material[clave]?.nombre ?: clave
+        }
 
     fun miniaturaAsset(e: EjercicioCatalogo): String {
         val pose = if ("peak" in e.poses) "peak" else e.poses.firstOrNull() ?: "main"
@@ -153,44 +162,56 @@ object CargadorCatalogo {
                 null
             }
 
-            val ejercicios = base.ejercicios.map { e ->
-                val tr = textos?.ejercicios?.get(e.id)
-                if (tr != null) {
-                    e.copy(
-                        nombre = tr.nombre,
-                        descripcion = tr.descripcion,
-                        instrucciones = tr.instrucciones,
-                        consejos = tr.consejos,
-                    )
-                } else {
-                    e.copy(
-                        nombre = nombreComun(e.nombre),
-                        descripcion = textoComun(e.descripcion),
-                        instrucciones = e.instrucciones.map(::textoComun),
-                        consejos = e.consejos.map(::textoComun),
-                    )
-                }
-            }
-
-            val material = base.material.mapValues { (k, v) ->
-                val tr = textos?.material?.get(k)?.nombre
-                v.copy(nombre = tr ?: textoComun(v.nombre))
-            }
-
-            val musculos = base.musculos.mapValues { (k, v) ->
-                val tr = textos?.musculos?.get(k)
-                v.copy(nombre = tr?.nombre ?: v.nombre, cientifico = tr?.cientifico ?: v.cientifico)
-            }
-
-            CatalogoCargado(
-                idioma = idioma,
-                ejercicios = ejercicios,
-                porId = ejercicios.associateBy { it.id },
-                musculos = musculos,
-                material = material,
-                etiquetas = base.etiquetas,
-            ).also { cachePorIdioma[idioma] = it }
+            combinarTextos(base, textos, idioma).also { cachePorIdioma[idioma] = it }
         }
+    }
+
+    internal fun combinarTextos(base: CatalogoJson, textos: TextosCatalogoJson?, idioma: String): CatalogoCargado {
+        val ejercicios = base.ejercicios.map { e ->
+            val tr = textos?.ejercicios?.get(e.id)
+            if (tr != null) {
+                e.copy(
+                    nombre = tr.nombre,
+                    descripcion = tr.descripcion,
+                    instrucciones = tr.instrucciones,
+                    consejos = tr.consejos,
+                )
+            } else {
+                e.copy(
+                    nombre = nombreComun(e.nombre),
+                    descripcion = textoComun(e.descripcion),
+                    instrucciones = e.instrucciones.map(::textoComun),
+                    consejos = e.consejos.map(::textoComun),
+                )
+            }
+        }
+
+        val material = base.material.mapValues { (k, v) ->
+            val tr = textos?.material?.get(k)?.nombre
+            v.copy(nombre = tr ?: textoComun(v.nombre))
+        }
+
+        val musculos = base.musculos.mapValues { (k, v) ->
+            val tr = textos?.musculos?.get(k)
+            v.copy(nombre = tr?.nombre ?: v.nombre, cientifico = tr?.cientifico ?: v.cientifico)
+        }
+
+        val etiquetasCombinadas = if (textos != null && textos.etiquetas.isNotEmpty()) {
+            base.etiquetas.mapValues { (cat, mapaBase) ->
+                mapaBase + textos.etiquetas[cat].orEmpty()
+            } + textos.etiquetas.filterKeys { it !in base.etiquetas }
+        } else {
+            base.etiquetas
+        }
+
+        return CatalogoCargado(
+            idioma = idioma,
+            ejercicios = ejercicios,
+            porId = ejercicios.associateBy { it.id },
+            musculos = musculos,
+            material = material,
+            etiquetas = etiquetasCombinadas,
+        )
     }
 
     private fun nombreComun(nombre: String): String =

@@ -37,8 +37,11 @@ class WorkerRecordatorioPasos(ctx: Context, params: WorkerParameters) : Coroutin
         } ?: return Result.success()
         if (ajustes.noti.pasos != true) return Result.success()
 
-        val horaObj = (ajustes.noti.pasosHora ?: "18:00").split(":").firstOrNull()?.toIntOrNull() ?: 18
-        if (LocalTime.now().hour < horaObj) return Result.success()
+        val partesHora = (ajustes.noti.pasosHora ?: "18:00").split(":")
+        val horaObj = partesHora.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 18
+        val minObj = partesHora.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0
+        val ahora = LocalTime.now()
+        if (ahora.hour * 60 + ahora.minute < horaObj * 60 + minObj) return Result.success()
 
         val perfil = dao.leerUno("perfil", "yo")?.let {
             runCatching { JsonJowyFit.decodeFromString<Perfil>(it.payloadJson) }.getOrNull()
@@ -85,6 +88,10 @@ class WorkerCopiaAuto(ctx: Context, params: WorkerParameters) : CoroutineWorker(
             runCatching { JsonJowyFit.decodeFromString<Ajustes>(it.payloadJson) }.getOrNull()
         } ?: return Result.success()
         if (!ajustes.copiaAuto) return Result.success()
+        val perfil = dao.leerUno("perfil", "yo")?.let {
+            runCatching { JsonJowyFit.decodeFromString<Perfil>(it.payloadJson) }.getOrNull()
+        }
+        if (perfil?.altaCompleta != true) return Result.success()
 
         runCatching {
             val bytes = repo.exportarCopia()

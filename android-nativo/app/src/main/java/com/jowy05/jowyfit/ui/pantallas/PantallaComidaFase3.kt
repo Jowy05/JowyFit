@@ -504,7 +504,8 @@ fun PantallaComidaCompleta(
                                 val r = ComidaDominio.porRacion(prod)
                                 FilaLista(
                                     titulo = prod.nombre,
-                                    subtitulo = "${prod.marca.ifBlank { prod.codigo }} · ${r.proteina.roundToInt()} g prot. · ${r.kcal.roundToInt()} kcal",
+                                    subtitulo = "${prod.marca.ifBlank { prod.codigo }} · ${r.proteina.roundToInt()} g prot." +
+                                        if (estado.ajustes.mostrarKcal) " · ${r.kcal.roundToInt()} kcal" else "",
                                     icono = Icons.Rounded.QrCodeScanner,
                                     alPulsar = { alAbrirProducto(prod, fechaIso, franjaActual) },
                                     final = {
@@ -523,8 +524,15 @@ fun PantallaComidaCompleta(
             }
 
             else -> {
-                val pasosHoy = estado.pasos.firstOrNull { it.fecha == fechaIso }?.pasos ?: 0
-                val kcalPasos = CalculosDominio.kcalPasos(pasosHoy, estado.ultimoPeso ?: 75.0, estado.perfil.alturaCm)
+                val pasosDiaHoy = estado.pasos.firstOrNull { it.fecha == fechaIso }
+                val pasosHoy = pasosDiaHoy?.pasos ?: 0
+                val kcalPasos = CalculosDominio.kcalPasos(
+                    pasos = pasosHoy,
+                    pesoKg = estado.ultimoPeso ?: 75.0,
+                    alturaCm = estado.perfil.alturaCm,
+                    troteKm = pasosDiaHoy?.troteKm ?: 0.0,
+                    porKm = estado.ajustes.pasosPorKm ?: 1300,
+                )
                 var kcalManTxt by remember(estado.ajustes.kcalManual) { mutableStateOf(estado.ajustes.kcalManual?.toString().orEmpty()) }
                 var protManTxt by remember(estado.ajustes.proteinaManual) { mutableStateOf(estado.ajustes.proteinaManual?.toString().orEmpty()) }
                 var mostrarKcal by remember(estado.ajustes.mostrarKcal) { mutableStateOf(estado.ajustes.mostrarKcal) }

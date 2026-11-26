@@ -41,6 +41,32 @@ object GeneradorPdfNativo {
             .trim()
             .take(maxChars)
 
+    /** Parte un texto largo en líneas legibles sin cortar palabras en el borde de la página A4. */
+    fun envolverLineas(texto: String, maxChars: Int = 88, maxLineas: Int = 12): List<String> {
+        val limpio = texto.map { if (it.code < 0x20 || it.code == 0x7F) ' ' else it }
+            .joinToString("")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (limpio.isEmpty()) return emptyList()
+        if (limpio.length <= maxChars) return listOf(limpio)
+        val out = mutableListOf<String>()
+        var resto = limpio
+        while (resto.isNotEmpty() && out.size < maxLineas) {
+            if (resto.length <= maxChars) {
+                out += resto
+                break
+            }
+            val corte = resto.lastIndexOf(' ', maxChars).let { if (it > maxChars / 3) it else maxChars }
+            out += resto.substring(0, corte).trimEnd()
+            resto = resto.substring(corte).trimStart()
+            if (out.size == maxLineas - 1 && resto.length > maxChars) {
+                out += "${resto.take(maxChars - 1).trimEnd()}…"
+                break
+            }
+        }
+        return out
+    }
+
     fun generarArchivo(context: Context, estado: EstadoPrincipal, catalogo: CatalogoCargado?): File {
         val doc = PdfDocument()
         try {
@@ -123,9 +149,14 @@ object GeneradorPdfNativo {
         }
 
         fun linea(texto: String, negrita: Boolean = false, sangria: Float = 0f) {
-            if (!asegurarEspacio(16f)) return
-            canvas!!.drawText(sanearTextoPdf(texto, 96), MARGEN + sangria, y, if (negrita) pNegrita else pCuerpo)
-            y += 15f
+            val maxChars = if (sangria > 0f) 84 else 90
+            val paint = if (negrita) pNegrita else pCuerpo
+            envolverLineas(texto, maxChars = maxChars).forEachIndexed { idx, l ->
+                if (!asegurarEspacio(16f)) return
+                val x = MARGEN + sangria + if (idx > 0 && sangria > 0f) 8f else 0f
+                canvas!!.drawText(l, x, y, paint)
+                y += 15f
+            }
         }
 
         abrirPagina(portada = true)

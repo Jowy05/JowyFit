@@ -177,7 +177,7 @@ fun PantallaBienvenida(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    listOf("recomposicion" to "Recomp.", "perder" to "Perder grasa", "musculo" to "Músculo", "fuerza" to "Fuerza").forEach { (k, lbl) ->
+                    listOf("recomposicion" to "Recomp.", "perder" to "Perder grasa", "musculo" to "Músculo", "fuerza" to "Fuerza", "salud" to "Salud").forEach { (k, lbl) ->
                         FilterChip(selected = objetivo == k, onClick = { objetivo = k }, label = { Text(lbl) })
                     }
                 }
@@ -186,7 +186,7 @@ fun PantallaBienvenida(
                     texto = "Entrar en JowyFit",
                     onClick = {
                         val alt = altura.toDoubleOrNull()?.coerceIn(120.0, 230.0) ?: 175.0
-                        val kg = peso.replace(',', '.').toDoubleOrNull()
+                        val kg = peso.replace(',', '.').toDoubleOrNull()?.takeIf { it in 20.0..350.0 }
                         alCompletarAlta(nombre, sexo, alt, kg, objetivo)
                     },
                 )

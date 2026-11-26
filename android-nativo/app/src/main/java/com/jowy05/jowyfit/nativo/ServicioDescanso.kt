@@ -111,13 +111,25 @@ class ServicioDescanso : Service() {
         fun iniciar(context: Context, segundos: Int, titulo: String = "Descansando", texto: String = "Siguiente serie") {
             val seg = segundos.coerceIn(1, MAX_DESCANSO_SEG)
             val hasta = System.currentTimeMillis() + seg * 1000L
+            val titLimpio = titulo.take(80)
+            val txtLimpio = texto.take(120)
             val i = Intent(context, ServicioDescanso::class.java).apply {
                 action = ACCION_INICIAR
                 putExtra(EXTRA_HASTA, hasta)
-                putExtra(EXTRA_TITULO, titulo.take(80))
-                putExtra(EXTRA_TEXTO, texto.take(120))
+                putExtra(EXTRA_TITULO, titLimpio)
+                putExtra(EXTRA_TEXTO, txtLimpio)
             }
-            context.startForegroundService(i)
+            val iniciado = runCatching { context.startForegroundService(i) }.isSuccess
+            if (!iniciado) {
+                // Si Android 12–16 bloquea FGS desde segundo plano, aseguramos al menos la alarma exacta de fin.
+                hastaActualMs = hasta
+                tituloActual = titLimpio
+                textoActual = txtLimpio
+                runCatching {
+                    crearCanales(context)
+                    programarAlarmaFin(context, hasta, titLimpio, txtLimpio)
+                }
+            }
         }
 
         fun cancelarTodo(context: Context) {
@@ -210,6 +222,7 @@ class ServicioDescanso : Service() {
 
 class ReceptorDescanso : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ServicioDescanso.ACCION_FIN) return
         ServicioDescanso.crearCanales(context)
         ServicioDescanso.hastaActualMs = 0L
         context.stopService(Intent(context, ServicioDescanso::class.java))

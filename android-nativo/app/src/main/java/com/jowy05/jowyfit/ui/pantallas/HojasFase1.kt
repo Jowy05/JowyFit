@@ -244,6 +244,64 @@ fun HojaContrasenaCopia(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun HojaExportarCopia(
+    alCancelar: () -> Unit,
+    alExportar: (String?) -> Unit,
+) {
+    val p = LocalPaleta.current
+    var conClave by remember { mutableStateOf(false) }
+    var clave by remember { mutableStateOf("") }
+    var repetir by remember { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = alCancelar, containerColor = p.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("Exportar copia (.jowyfit)", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
+            Text("Incluye entrenos, comidas, medidas, fotos y retos en formato V7.", color = p.muted, fontSize = 13.5.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = !conClave, onClick = { conClave = false }, label = { Text("Sin contraseña") })
+                FilterChip(selected = conClave, onClick = { conClave = true }, label = { Text("Cifrada (AES-256)") })
+            }
+            if (conClave) {
+                OutlinedTextField(
+                    value = clave,
+                    onValueChange = { clave = it },
+                    label = { Text("Contraseña (mín. 6 caracteres)") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = repetir,
+                    onValueChange = { repetir = it },
+                    label = { Text("Repite la contraseña") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    isError = repetir.isNotEmpty() && repetir != clave,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (repetir.isNotEmpty() && repetir != clave) {
+                    Text("Las contraseñas no coinciden", color = p.bad, fontSize = 13.sp)
+                }
+            }
+            val valido = !conClave || (clave.length >= 6 && clave == repetir)
+            BotonPrincipal(
+                texto = if (conClave) "Crear copia cifrada" else "Crear copia",
+                enabled = valido,
+                onClick = { alExportar(if (conClave) clave else null) },
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun HojaActualizacionNativa(
     alCerrar: () -> Unit,
 ) {

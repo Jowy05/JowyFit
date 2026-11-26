@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="peso_rapido"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/atajo_peso"
+        android:shortcutLongLabel="@string/atajo_peso_largo">
+        <intent
+            android:action="com.jowy05.jowyfit.ACCION_PESO"
+            android:targetPackage="com.jowy05.jowyfit.nativo"
+            android:targetClass="com.jowy05.jowyfit.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="rutina_rapida"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/atajo_rutina"
+        android:shortcutLongLabel="@string/atajo_rutina_largo">
+        <intent
+            android:action="com.jowy05.jowyfit.ACCION_RUTINA"
+            android:targetPackage="com.jowy05.jowyfit.nativo"
+            android:targetClass="com.jowy05.jowyfit.MainActivity" />
+    </shortcut>
+</shortcuts>

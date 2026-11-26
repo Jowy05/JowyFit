@@ -75,18 +75,18 @@ object ClienteHealthConnect {
                         timeRangeFilter = TimeRangeFilter.between(inicioHoy, ahora),
                     ),
                 )
-                agg[StepsRecord.COUNT_TOTAL]?.toInt()
+                agg[StepsRecord.COUNT_TOTAL]?.toInt()?.takeIf { it in 0..250_000 }
             } else null
 
             val hace30d = LocalDate.now().minusDays(30).atStartOfDay(zona).toInstant()
             val peso = if (HealthPermission.getReadPermission(WeightRecord::class) in concedidos) {
                 client.readRecords(ReadRecordsRequest(WeightRecord::class, TimeRangeFilter.between(hace30d, ahora)))
-                    .records.maxByOrNull { it.time }?.weight?.inKilograms
+                    .records.maxByOrNull { it.time }?.weight?.inKilograms?.takeIf { it.isFinite() && it in 20.0..350.0 }
             } else null
 
             val grasa = if (HealthPermission.getReadPermission(BodyFatRecord::class) in concedidos) {
                 client.readRecords(ReadRecordsRequest(BodyFatRecord::class, TimeRangeFilter.between(hace30d, ahora)))
-                    .records.maxByOrNull { it.time }?.percentage?.value
+                    .records.maxByOrNull { it.time }?.percentage?.value?.takeIf { it.isFinite() && it in 3.0..70.0 }
             } else null
 
             DatosSincronizados(pasos, peso, grasa)
@@ -105,7 +105,8 @@ object ClienteHealthConnect {
             val fin = Instant.ofEpochMilli(finMs)
             val offset = ZoneId.systemDefault().rules.getOffset(inicio)
             val durMin = max(1L, (finMs - sesion.inicio) / 60_000L)
-            val kcalEst = (durMin * (pesoKg * 0.085)).coerceIn(20.0, 1200.0)
+            val kcalEst = (durMin * (pesoKg.coerceIn(30.0, 250.0) * 0.085)).coerceIn(20.0, 1200.0)
+            val idBase = "jowyfit-sesion-${sesion.id ?: sesion.inicio}"
 
             val registroSesion = ExerciseSessionRecord(
                 startTime = inicio,
@@ -114,7 +115,7 @@ object ClienteHealthConnect {
                 endZoneOffset = offset,
                 exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
                 title = sesion.nombre.ifBlank { "JowyFit · Entreno" },
-                metadata = Metadata.manualEntry(),
+                metadata = Metadata.manualEntry(clientRecordId = idBase, clientRecordVersion = finMs),
             )
             val registros = buildList {
                 add(registroSesion)
@@ -126,7 +127,7 @@ object ClienteHealthConnect {
                             endTime = fin,
                             endZoneOffset = offset,
                             energy = Energy.kilocalories(kcalEst),
-                            metadata = Metadata.manualEntry(),
+                            metadata = Metadata.manualEntry(clientRecordId = "$idBase-kcal", clientRecordVersion = finMs),
                         ),
                     )
                 }

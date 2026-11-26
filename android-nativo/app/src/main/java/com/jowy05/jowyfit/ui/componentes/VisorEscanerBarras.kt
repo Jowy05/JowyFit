@@ -153,6 +153,7 @@ fun PantallaEscanerBarras(
             }
             val escaner = remember { BarcodeScanning.getClient(opciones) }
             var proveedor by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+            var vistaPreview by remember { mutableStateOf<PreviewView?>(null) }
 
             DisposableEffect(Unit) {
                 onDispose {
@@ -162,58 +163,61 @@ fun PantallaEscanerBarras(
                 }
             }
 
+            LaunchedEffect(permisoCamara, vistaPreview) {
+                val vista = vistaPreview ?: return@LaunchedEffect
+                if (!permisoCamara) return@LaunchedEffect
+                val futuro = ProcessCameraProvider.getInstance(context)
+                futuro.addListener(
+                    {
+                        runCatching {
+                            val prov = futuro.get()
+                            proveedor = prov
+                            val selector = when {
+                                prov.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) -> CameraSelector.DEFAULT_BACK_CAMERA
+                                else -> CameraSelector.DEFAULT_FRONT_CAMERA
+                            }
+                            val preview = Preview.Builder().build().also {
+                                it.surfaceProvider = vista.surfaceProvider
+                            }
+                            val analisis = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
+                                .also { ia ->
+                                    ia.setAnalyzer(ejecutor) { proxy ->
+                                        val img = proxy.image
+                                        if (img == null || yaDetectado.get()) {
+                                            proxy.close()
+                                            return@setAnalyzer
+                                        }
+                                        val input = InputImage.fromMediaImage(img, proxy.imageInfo.rotationDegrees)
+                                        escaner.process(input)
+                                            .addOnSuccessListener { lista ->
+                                                val valido = lista.firstNotNullOfOrNull { bc ->
+                                                    bc.rawValue?.takeIf { ComidaDominio.codigoValido(it) }
+                                                }
+                                                if (valido != null) {
+                                                    ContextCompat.getMainExecutor(context).execute {
+                                                        notificarCodigo(valido)
+                                                    }
+                                                }
+                                            }
+                                            .addOnCompleteListener { proxy.close() }
+                                    }
+                                }
+                            prov.unbindAll()
+                            camaraActiva = prov.bindToLifecycle(lifecycleOwner, selector, preview, analisis)
+                        }
+                    },
+                    ContextCompat.getMainExecutor(context),
+                )
+            }
+
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
-                    val vista = PreviewView(ctx).apply {
+                    PreviewView(ctx).apply {
                         scaleType = PreviewView.ScaleType.FILL_CENTER
-                    }
-                    val futuro = ProcessCameraProvider.getInstance(ctx)
-                    futuro.addListener(
-                        {
-                            runCatching {
-                                val prov = futuro.get()
-                                proveedor = prov
-                                val preview = Preview.Builder().build().also {
-                                    it.surfaceProvider = vista.surfaceProvider
-                                }
-                                val analisis = ImageAnalysis.Builder()
-                                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                    .build()
-                                    .also { ia ->
-                                        ia.setAnalyzer(ejecutor) { proxy ->
-                                            val img = proxy.image
-                                            if (img == null || yaDetectado.get()) {
-                                                proxy.close()
-                                                return@setAnalyzer
-                                            }
-                                            val input = InputImage.fromMediaImage(img, proxy.imageInfo.rotationDegrees)
-                                            escaner.process(input)
-                                                .addOnSuccessListener { lista ->
-                                                    val valido = lista.firstNotNullOfOrNull { bc ->
-                                                        bc.rawValue?.takeIf { ComidaDominio.codigoValido(it) }
-                                                    }
-                                                    if (valido != null) {
-                                                        ContextCompat.getMainExecutor(ctx).execute {
-                                                            notificarCodigo(valido)
-                                                        }
-                                                    }
-                                                }
-                                                .addOnCompleteListener { proxy.close() }
-                                        }
-                                    }
-                                prov.unbindAll()
-                                camaraActiva = prov.bindToLifecycle(
-                                    lifecycleOwner,
-                                    CameraSelector.DEFAULT_BACK_CAMERA,
-                                    preview,
-                                    analisis,
-                                )
-                            }
-                        },
-                        ContextCompat.getMainExecutor(ctx),
-                    )
-                    vista
+                    }.also { vistaPreview = it }
                 },
             )
 

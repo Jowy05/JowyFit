@@ -124,6 +124,8 @@ fun PantallaEntrenoEnVivo(
     alAbrirFicha: (String) -> Unit,
     alFinalizar: () -> Unit,
     alDescartar: () -> Unit,
+    perfil: com.jowy05.jowyfit.datos.modelo.Perfil = com.jowy05.jowyfit.datos.modelo.Perfil(),
+    marcas: Map<String, com.jowy05.jowyfit.datos.modelo.MarcaEjercicio> = emptyMap(),
 ) {
     val p = LocalPaleta.current
     val context = LocalContext.current
@@ -166,7 +168,8 @@ fun PantallaEntrenoEnVivo(
         serieActual?.segundos,
     )
     var pesoCampo by remember(claveSerie) {
-        mutableDoubleStateOf(serieActual?.peso ?: listaPesos.firstOrNull { it > 0 } ?: 20.0)
+        val defecto = if (ejActual?.registro == "asistido") -20.0 else (listaPesos.firstOrNull { it > 0 } ?: 20.0)
+        mutableDoubleStateOf(serieActual?.peso ?: defecto)
     }
     var repsCampo by remember(claveSerie) {
         mutableIntStateOf(
@@ -292,8 +295,9 @@ fun PantallaEntrenoEnVivo(
                                 "cardio" -> "min"
                                 else -> "reps"
                             }
+                            val rpeTxt = if (ejActual.rpe % 1.0 == 0.0) "${ejActual.rpe.toInt()}" else String.format("%.1f", ejActual.rpe).replace('.', ',')
                             Text(
-                                text = "Objetivo: ${ejActual.repsMin}-${ejActual.repsMax} $unidadObj · RPE ${ejActual.rpe.toInt()}",
+                                text = "Objetivo: ${ejActual.repsMin}-${ejActual.repsMax} $unidadObj · RPE $rpeTxt",
                                 color = p.muted,
                                 fontSize = 13.5.sp,
                             )
@@ -557,12 +561,22 @@ fun PantallaEntrenoEnVivo(
         }
     }
 
-    // Hoja «Ocupado»: sustituir ejercicio por alternativa del mismo patrón
+    // Hoja «Ocupado»: sustituir ejercicio por alternativa segura del mismo patrón y material disponible
     if (hojaOcupado && ejActual != null && catalogo != null) {
         val pat = ejCat?.let { PesosYDiscos.patron(it) }
         val enSesion = sesion.ejercicios.map { it.ejercicio }.toSet()
+        val matDisp = gimnasio?.material?.takeIf { it.isNotEmpty() }?.toSet() ?: PesosYDiscos.MATERIAL_HABITUAL
+        val rest = com.jowy05.jowyfit.dominio.SaludYRevisionDominio.restricciones(perfil)
         val alts = catalogo.ejercicios
-            .filter { it.id !in enSesion && (pat == null || PesosYDiscos.patron(it) == pat) }
+            .filter {
+                it.id !in enSesion &&
+                    it.categoria == "strength" &&
+                    (it.material == null || it.material in matDisp) &&
+                    marcas[it.id]?.duele != true &&
+                    marcas[it.id]?.odiado != true &&
+                    rest.fuera(it) == null &&
+                    (pat == null || PesosYDiscos.patron(it) == pat)
+            }
             .take(15)
         ModalBottomSheet(onDismissRequest = { hojaOcupado = false }, containerColor = p.surface) {
             Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp)) {
@@ -694,7 +708,10 @@ fun PantallaEntrenoEnVivo(
         if (ejActual != null) {
             val esTiempo = ejActual.registro == "tiempo"
             val conPeso = ejActual.registro in setOf("peso", "mancuerna", "asistido")
-            var pesoEd by remember(sIdxEdit, serieOrig) { mutableDoubleStateOf(serieOrig.peso ?: listaPesos.firstOrNull { it > 0 } ?: 20.0) }
+            var pesoEd by remember(sIdxEdit, serieOrig) {
+                val defEd = if (ejActual.registro == "asistido") -20.0 else (listaPesos.firstOrNull { it > 0 } ?: 20.0)
+                mutableDoubleStateOf(serieOrig.peso ?: defEd)
+            }
             var repsEd by remember(sIdxEdit, serieOrig) {
                 mutableIntStateOf(if (esTiempo) serieOrig.segundos ?: ejActual.repsMin else serieOrig.reps ?: ejActual.repsMin)
             }

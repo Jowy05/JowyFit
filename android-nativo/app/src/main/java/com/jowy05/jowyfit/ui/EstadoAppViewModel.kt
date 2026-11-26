@@ -137,7 +137,7 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
             productos = c.productos,
             suplementos = c.suplementos,
             fotos = c.fotos,
-            revisiones = revs.sortedByDescending { it.fecha },
+            revisiones = revs,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoPrincipal())
 
@@ -187,7 +187,7 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
             )
             repo.guardarPerfil(perfil)
             repo.guardarAjustes(Ajustes(inicio = LocalDate.now().toString()))
-            if (pesoKg != null && pesoKg > 20.0) repo.apuntarPeso(pesoKg)
+            if (pesoKg != null && pesoKg in 20.0..350.0) repo.apuntarPeso(pesoKg)
             // Crea una primera rutina lista con el catálogo local.
             val cat = _catalogo.value ?: runCatching { CargadorCatalogo.cargar(getApplication(), preferencias.value.idioma.codigo) }.getOrNull()
             if (cat != null) {
@@ -386,7 +386,12 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
         val ejCat = _catalogo.value?.porId?.get(ejSes.ejercicio)
         val lista = PesosYDiscos.pesosPara(ejCat?.material, ejSes.registro, st.gimnasioActivo)
         val pesoTrabajo = ejSes.series.firstOrNull { !it.calentamiento }?.peso ?: return
-        val seriesCal = PesosYDiscos.calentamiento(pesoTrabajo, lista)
+        val minimoBarra = when (val mat = ejCat?.material) {
+            "barbell" -> st.gimnasioActivo?.barraKg ?: 20.0
+            in PesosYDiscos.BARRAS -> PesosYDiscos.BARRAS.getValue(mat!!)
+            else -> 0.0
+        }
+        val seriesCal = PesosYDiscos.calentamiento(pesoTrabajo, lista, minimo = minimoBarra)
         if (seriesCal.isEmpty()) {
             mostrarAviso("Con este peso no hace falta aproximación")
             return

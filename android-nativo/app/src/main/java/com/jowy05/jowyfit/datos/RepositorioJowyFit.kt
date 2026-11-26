@@ -399,29 +399,33 @@ class RepositorioJowyFit(private val context: Context) {
         dao.guardar(RegistroTablaEntity("suplementos", fecha, fecha, JsonJowyFit.encodeToString(DiaSuplementos(fecha, tomados.toList()))))
 
         if (ComidaDominio.esBatido(suplemento)) {
+            val comidasDia = dao.leerTabla("comidas")
+                .mapNotNull { decodificar<Comida>(it.payloadJson) }
+                .filter { it.fecha == fecha }
             if (marcado) {
-                val b = perfil.batido
-                val kcal = b?.kcal ?: 120.0
-                val prot = b?.proteina ?: 24.0
-                val hora = if (fecha == LocalDate.now().toString()) LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm")) else "17:30"
-                val franja = ComidaDominio.franjaPorHora(hora)
-                guardarComida(
-                    Comida(
-                        fecha = fecha,
-                        hora = hora,
-                        franja = franja,
-                        nombre = suplemento,
-                        kcal = kcal,
-                        proteina = prot,
-                        racion = "N",
-                        tipo = "plantilla",
-                        suplemento = suplemento,
-                    ),
-                )
+                val yaTiene = comidasDia.any { it.suplemento == suplemento } || ComidaDominio.batidoAMano(comidasDia)
+                if (!yaTiene) {
+                    val b = perfil.batido
+                    val prot = b?.proteina ?: 25.0
+                    val kcal = b?.kcal ?: ComidaDominio.kcalBatido(prot)
+                    val hora = if (fecha == LocalDate.now().toString()) LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm")) else "17:30"
+                    val franja = ComidaDominio.franjaPorHora(hora)
+                    guardarComida(
+                        Comida(
+                            fecha = fecha,
+                            hora = hora,
+                            franja = franja,
+                            nombre = suplemento,
+                            kcal = kcal,
+                            proteina = prot,
+                            racion = "N",
+                            tipo = "plantilla",
+                            suplemento = suplemento,
+                        ),
+                    )
+                }
             } else {
-                val vinculadas = dao.leerTabla("comidas")
-                    .mapNotNull { decodificar<Comida>(it.payloadJson) }
-                    .filter { it.fecha == fecha && it.suplemento == suplemento }
+                val vinculadas = comidasDia.filter { it.suplemento == suplemento }
                 for (c in vinculadas) {
                     c.id?.let { dao.borrarUno("comidas", it.toString()) }
                 }
@@ -481,7 +485,7 @@ class RepositorioJowyFit(private val context: Context) {
 
     suspend fun guardarFotoProgreso(pose: String, bytes: ByteArray, fecha: String = LocalDate.now().toString()): FotoProgreso = withContext(Dispatchers.IO) {
         val id = siguienteIdTabla("fotos")
-        val ruta = "archivos/foto-${System.currentTimeMillis()}.jpg"
+        val ruta = "archivos/foto-$id-${System.currentTimeMillis()}.jpg"
         guardarMediaBytes(ruta, bytes)
         val foto = FotoProgreso(
             id = id,
@@ -511,7 +515,10 @@ class RepositorioJowyFit(private val context: Context) {
 
     suspend fun importarCopia(bytes: ByteArray, contrasena: String? = null): Int = withContext(Dispatchers.IO) {
         val leida = GestorCopias.leerCopia(bytes, contrasena)
-        val dirTmp = File(context.filesDir, "jowyfit_media_tmp_${System.nanoTime()}")
+        val sello = System.nanoTime()
+        val dirTmp = File(context.filesDir, "jowyfit_media_tmp_$sello")
+        val dirBak = File(context.filesDir, "jowyfit_media_bak_$sello")
+        var movidoABak = false
         try {
             if (leida.archivosMedia.isNotEmpty()) {
                 val baseTmp = dirTmp.canonicalFile
@@ -523,15 +530,25 @@ class RepositorioJowyFit(private val context: Context) {
                     destino.writeBytes(contenido)
                 }
             }
-            // Primero la transacción atómica en SQLite; solo si tiene éxito se sustituyen las fotos.
+            // Primero la transacción atómica en SQLite; luego intercambio seguro de carpeta media con respaldo.
             dao.reemplazarTodo(leida.registros)
-            if (dirMedia.exists()) dirMedia.deleteRecursively()
+            if (dirMedia.exists()) {
+                if (dirMedia.renameTo(dirBak)) {
+                    movidoABak = true
+                } else {
+                    dirMedia.deleteRecursively()
+                }
+            }
             if (dirTmp.exists() && !dirTmp.renameTo(dirMedia)) {
                 dirTmp.copyRecursively(dirMedia, overwrite = true)
                 dirTmp.deleteRecursively()
             }
+            if (dirBak.exists()) dirBak.deleteRecursively()
             leida.registros.size
         } catch (e: Exception) {
+            if (movidoABak && !dirMedia.exists() && dirBak.exists()) {
+                runCatching { dirBak.renameTo(dirMedia) }
+            }
             if (dirTmp.exists()) dirTmp.deleteRecursively()
             throw e
         }
@@ -562,22 +579,24 @@ class RepositorioJowyFit(private val context: Context) {
     /** Lectura rápida para el Widget Glance sin necesitar collectors activos. */
     suspend fun resumenParaWidget(): Triple<String, String, String> = withContext(Dispatchers.IO) {
         val p = dao.leerUno("perfil", "yo")?.let { decodificar<Perfil>(it.payloadJson) } ?: Perfil()
+        val aj = dao.leerUno("ajustes", "app")?.let { decodificar<Ajustes>(it.payloadJson) } ?: Ajustes()
         val hoy = LocalDate.now().toString()
         val rutinasLista = dao.leerTabla("rutinas").mapNotNull { decodificar<Rutina>(it.payloadJson) }
         val rutinaActiva = rutinasLista.firstOrNull { it.activa } ?: rutinasLista.firstOrNull()
         val sesionesLista = dao.leerTabla("sesiones").mapNotNull { decodificar<Sesion>(it.payloadJson) }
+        val enCurso = sesionesLista.firstOrNull { it.estado == "curso" }
         val comidasHoy = dao.leerTabla("comidas")
             .filter { it.fecha == hoy }
             .mapNotNull { decodificar<Comida>(it.payloadJson) }
         val pasosHoy = dao.leerUno("pasos", hoy)?.let { decodificar<PasosDia>(it.payloadJson) }?.pasos ?: 0
 
-        val semana = com.jowy05.jowyfit.dominio.CalculosDominio.estadoSemana(rutinaActiva, sesionesLista, hoy)
-        val tar = com.jowy05.jowyfit.dominio.CalculosDominio.tarjetaHoy(rutinaActiva, semana, hoy, null)
+        val semana = com.jowy05.jowyfit.dominio.CalculosDominio.estadoSemana(rutinaActiva, sesionesLista, hoy, aj.recolocadas)
+        val tar = com.jowy05.jowyfit.dominio.CalculosDominio.tarjetaHoy(rutinaActiva, semana, hoy, enCurso)
         val tituloEntreno = when (tar) {
             is com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.Hoy -> tar.dia.nombre
             is com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.Hecho -> "Entreno hecho"
             is com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.Opcional -> "Sesión extra"
-            is com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.EnCurso -> tar.sesion.nombre
+            is com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.EnCurso -> "En curso · ${tar.sesion.nombre}"
             is com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.Descanso -> "Hoy descansas"
             com.jowy05.jowyfit.dominio.CalculosDominio.TarjetaHoyEstado.SinRutina -> "Sin rutina aún"
         }
@@ -586,7 +605,7 @@ class RepositorioJowyFit(private val context: Context) {
             .mapNotNull { decodificar<Medicion>(it.payloadJson) }
             .sortedWith(compareByDescending<Medicion> { it.fecha }.thenByDescending { it.id ?: 0L })
             .firstOrNull { it.pesoKg != null }?.pesoKg
-        val obj = com.jowy05.jowyfit.dominio.CalculosDominio.calcularObjetivos(p, medPeso)
+        val obj = com.jowy05.jowyfit.dominio.CalculosDominio.calcularObjetivos(p, medPeso, aj.kcalManual, aj.proteinaManual)
         Triple(tituloEntreno, "$protHoy / ${obj.proteina} g", "$pasosHoy / ${p.pasosObjetivo}")
     }
 

@@ -18,6 +18,7 @@ import com.jowy05.jowyfit.datos.modelo.PasosDia
 import com.jowy05.jowyfit.datos.modelo.Perfil
 import com.jowy05.jowyfit.datos.modelo.Plantilla
 import com.jowy05.jowyfit.datos.modelo.Producto
+import com.jowy05.jowyfit.datos.modelo.Revision
 import com.jowy05.jowyfit.datos.modelo.Rutina
 import com.jowy05.jowyfit.datos.modelo.Sesion
 import com.jowy05.jowyfit.dominio.ComidaDominio
@@ -117,6 +118,10 @@ class RepositorioJowyFit(private val context: Context) {
 
     val fotos: Flow<List<FotoProgreso>> = dao.observarTabla("fotos").map { lista ->
         lista.mapNotNull { decodificar<FotoProgreso>(it.payloadJson) }
+    }
+
+    val revisiones: Flow<List<Revision>> = dao.observarTabla("revisiones").map { lista ->
+        lista.mapNotNull { decodificar<Revision>(it.payloadJson) }
     }
 
     private fun cargarPreferencias(): PreferenciasVisuales {
@@ -481,6 +486,13 @@ class RepositorioJowyFit(private val context: Context) {
 
     suspend fun guardarPasosDia(pasosDia: PasosDia) = withContext(Dispatchers.IO) {
         dao.guardar(RegistroTablaEntity("pasos", pasosDia.fecha, pasosDia.fecha, JsonJowyFit.encodeToString(pasosDia)))
+    }
+
+    suspend fun guardarRevision(revision: Revision): Revision = withContext(Dispatchers.IO) {
+        val id = revision.id ?: siguienteIdTabla("revisiones")
+        val final = revision.copy(id = id)
+        dao.guardar(RegistroTablaEntity("revisiones", id.toString(), final.fecha.take(10), JsonJowyFit.encodeToString(final)))
+        final
     }
 
     suspend fun importarCopia(bytes: ByteArray, contrasena: String? = null): Int = withContext(Dispatchers.IO) {

@@ -20,10 +20,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.FactCheck
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.SaludYRevisionDominio
 import com.jowy05.jowyfit.ui.EstadoPrincipal
 import com.jowy05.jowyfit.ui.componentes.CabeceraPantalla
 import com.jowy05.jowyfit.ui.componentes.EtiquetaTag
@@ -61,6 +64,9 @@ fun PantallaPerfil(
     estado: EstadoPrincipal,
     alAbrirAjustes: () -> Unit,
     alAbrirPeso: () -> Unit,
+    alEditarPerfil: () -> Unit,
+    alAbrirRevision: () -> Unit,
+    alGenerarPdf: () -> Unit,
 ) {
     val p = LocalPaleta.current
     val perfil = estado.perfil
@@ -192,6 +198,7 @@ fun PantallaPerfil(
                     titulo = "Datos personales",
                     subtitulo = "$subDatos · ${perfil.sexo}",
                     icono = Icons.Rounded.Person,
+                    alPulsar = alEditarPerfil,
                 )
                 SeparadorLista()
                 FilaLista(
@@ -204,10 +211,26 @@ fun PantallaPerfil(
                     alPulsar = alAbrirPeso,
                 )
                 SeparadorLista()
+                val resSalud = SaludYRevisionDominio.resumenSalud(perfil)
                 FilaLista(
                     titulo = "Salud y molestias",
-                    subtitulo = if (perfil.lesiones.isNotBlank()) perfil.lesiones else "Sin lesiones apuntadas",
+                    subtitulo = resSalud.ifBlank { "Sin lesiones ni condiciones apuntadas" },
                     icono = Icons.Rounded.HealthAndSafety,
+                    alPulsar = alEditarPerfil,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Revisión semanal",
+                    subtitulo = if (estado.revisiones.isNotEmpty()) "Última: ${estado.revisiones.first().fecha}" else "Adapta tu rutina si algo molesta o mejora",
+                    icono = Icons.Rounded.FactCheck,
+                    alPulsar = alAbrirRevision,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Informe en PDF",
+                    subtitulo = "Genera y comparte tu informe A4 completo (28 días)",
+                    icono = Icons.Rounded.PictureAsPdf,
+                    alPulsar = alGenerarPdf,
                 )
                 SeparadorLista()
                 FilaLista(
@@ -222,13 +245,13 @@ fun PantallaPerfil(
             ListaAgrupada {
                 FilaLista(
                     titulo = t("Ajustes"),
-                    subtitulo = "Apariencia, idioma, copias .jowyfit, descanso nativo y actualizaciones",
+                    subtitulo = "Apariencia, idioma, Health Connect, WorkManager, CSV/JSON y copias",
                     icono = Icons.Rounded.Settings,
                     alPulsar = alAbrirAjustes,
                 )
             }
 
-            Spacer(Modifier.height(112.dp))
+            Spacer(Modifier.height(if (estado.sesionEnCurso != null) 156.dp else 112.dp))
         }
     }
 }

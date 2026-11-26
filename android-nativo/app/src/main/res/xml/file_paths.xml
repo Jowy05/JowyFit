@@ -2,4 +2,5 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-path name="copias" path="Documents/JowyFit/" />
     <cache-path name="compartir" path="compartir/" />
+    <cache-path name="informes" path="informes/" />
 </paths>

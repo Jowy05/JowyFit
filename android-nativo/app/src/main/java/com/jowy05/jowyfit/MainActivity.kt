@@ -62,6 +62,7 @@ import com.jowy05.jowyfit.ui.pantallas.HojaActualizacionNativa
 import com.jowy05.jowyfit.ui.pantallas.HojaComidaRapida
 import com.jowy05.jowyfit.ui.pantallas.HojaContrasenaCopia
 import com.jowy05.jowyfit.ui.pantallas.HojaDia
+import com.jowy05.jowyfit.ui.pantallas.HojaEditarPerfilYSalud
 import com.jowy05.jowyfit.ui.pantallas.HojaEmpezarDia
 import com.jowy05.jowyfit.ui.pantallas.HojaPeso
 import com.jowy05.jowyfit.ui.pantallas.HojaProductoEscaneado
@@ -77,6 +78,7 @@ import com.jowy05.jowyfit.ui.pantallas.PantallaInicio
 import com.jowy05.jowyfit.ui.pantallas.PantallaPerfil
 import com.jowy05.jowyfit.ui.pantallas.PantallaProgresoCompleta
 import com.jowy05.jowyfit.ui.pantallas.PantallaRetoActivo
+import com.jowy05.jowyfit.ui.pantallas.PantallaRevisionSemanal
 import com.jowy05.jowyfit.ui.pantallas.PantallaRutina
 import com.jowy05.jowyfit.ui.tema.JowyFitTheme
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
@@ -144,7 +146,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     }
     var enAjustes by remember { mutableStateOf(false) }
     var enGimnasios by remember { mutableStateOf(false) }
+    var enRevision by remember { mutableStateOf(false) }
     var enEntreno by remember { mutableStateOf(false) }
+    var hojaEditarPerfil by remember { mutableStateOf(false) }
     var enEscaner by remember { mutableStateOf<Pair<String, String>?>(null) }
     var retoActivo by remember { mutableStateOf<RetosDominio.DefinicionReto?>(null) }
     var poseCamaraFoto by remember { mutableStateOf<String?>(null) }
@@ -164,8 +168,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId != null) { fichaEjercicioId = null }
     BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada != null) { vm.cerrarFinEntreno() }
     BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && enEntreno && estado.sesionEnCurso != null) { enEntreno = false }
-    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enGimnasios) { enGimnasios = false }
-    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enGimnasios && enAjustes) { enAjustes = false }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enRevision) { enRevision = false }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enRevision && enGimnasios) { enGimnasios = false }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enRevision && !enGimnasios && enAjustes) { enAjustes = false }
 
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(aviso) {
@@ -353,6 +358,15 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     },
                 )
             }
+            enRevision -> {
+                PantallaRevisionSemanal(
+                    estado = estado,
+                    catalogo = catalogo,
+                    alVolver = { enRevision = false },
+                    alAplicarRevision = vm::aplicarRevisionSemanal,
+                    alDeshacerUltima = vm::deshacerUltimaRevision,
+                )
+            }
             enGimnasios -> {
                 PantallaGimnasios(
                     estado = estado,
@@ -373,6 +387,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     alCambiarLetra = vm::cambiarLetra,
                     alCambiarIdioma = vm::cambiarIdioma,
                     alToggleMostrarKcal = { v -> vm.actualizarAjustes { it.copy(mostrarKcal = v) } },
+                    alToggleRecordatorioPasos = { v -> vm.actualizarAjustes { it.copy(noti = it.noti.copy(pasos = v)) } },
+                    alToggleCopiaAuto = { v -> vm.actualizarAjustes { it.copy(copiaAuto = v) } },
+                    alToggleEntrenosHC = { v -> vm.actualizarAjustes { it.copy(entrenosASalud = v) } },
                     alImportarCopia = { selectorImportar.launch(arrayOf("*/*")) },
                     alExportarCopia = {
                         vm.exportarCopiaBytes { bytes ->
@@ -380,12 +397,30 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                             selectorExportar.launch("jowyfit-${LocalDate.now()}.jowyfit")
                         }
                     },
+                    alExportarCsvEntrenos = {
+                        bytesExportar = vm.exportarCsvEntrenosBytes()
+                        selectorExportar.launch("jowyfit-entrenos-${LocalDate.now()}.csv")
+                    },
+                    alExportarCsvComidas = {
+                        bytesExportar = vm.exportarCsvComidasBytes()
+                        selectorExportar.launch("jowyfit-comidas-${LocalDate.now()}.csv")
+                    },
+                    alExportarCsvMedidas = {
+                        bytesExportar = vm.exportarCsvMedidasBytes()
+                        selectorExportar.launch("jowyfit-medidas-${LocalDate.now()}.csv")
+                    },
+                    alExportarJsonLigero = {
+                        bytesExportar = vm.exportarJsonLigeroBytes()
+                        selectorExportar.launch("jowyfit-ligero-${LocalDate.now()}.json")
+                    },
+                    alGenerarPdf = vm::generarYCompartirPdf,
                     alAbrirActualizaciones = { hojaActualizacion = true },
                     alProbarDescanso = ::lanzarPruebaDescanso,
                     alBorrarTodo = {
                         enAjustes = false
                         enEntreno = false
                         enGimnasios = false
+                        enRevision = false
                         fichaEjercicioId = null
                         vm.borrarTodosLosDatos()
                     },
@@ -483,6 +518,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         estado = estado,
                         alAbrirAjustes = { enAjustes = true },
                         alAbrirPeso = { hojaPeso = true },
+                        alEditarPerfil = { hojaEditarPerfil = true },
+                        alAbrirRevision = { enRevision = true },
+                        alGenerarPdf = vm::generarYCompartirPdf,
                     )
                 }
 
@@ -553,6 +591,13 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     Text("Empezar nuevo", color = p.bad)
                 }
             },
+        )
+    }
+    if (hojaEditarPerfil) {
+        HojaEditarPerfilYSalud(
+            perfil = estado.perfil,
+            alCerrar = { hojaEditarPerfil = false },
+            alGuardar = vm::guardarPerfil,
         )
     }
     if (hojaPeso) {

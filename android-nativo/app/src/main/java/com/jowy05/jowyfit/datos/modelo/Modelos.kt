@@ -517,3 +517,28 @@ data class IntentoReto(
     val modo: String = "manual",
     val record: Boolean? = null,
 )
+
+@Serializable
+data class RespuestaRevision(
+    val zona: String,
+    val va: String, // "ya" | "mejor" | "igual" | "peor"
+)
+
+@Serializable
+data class CambioRevision(
+    val uid: String,
+    val letra: String,
+    val zona: String,
+    val antes: Bloque,
+    val despues: Bloque,
+    val vuelta: Boolean? = null,
+    val deshecho: Boolean? = null,
+)
+
+@Serializable
+data class Revision(
+    val id: Long? = null,
+    val fecha: String,
+    val respuestas: List<RespuestaRevision> = emptyList(),
+    val cambios: List<CambioRevision> = emptyList(),
+)

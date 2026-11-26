@@ -3,11 +3,11 @@
 -keepclassmembers class * {
     @kotlinx.serialization.SerialName <fields>;
 }
--keep,includedescriptorclasses class com.jowy05.jowyfit.datos.modelo.**$$serializer { *; }
--keepclassmembers class com.jowy05.jowyfit.datos.modelo.** {
+-keep,includedescriptorclasses class com.jowy05.jowyfit.**$$serializer { *; }
+-keepclassmembers class com.jowy05.jowyfit.** {
     *** Companion;
 }
--keepclasseswithmembers class com.jowy05.jowyfit.datos.modelo.** {
+-keepclasseswithmembers class com.jowy05.jowyfit.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 -keep class com.jowy05.jowyfit.datos.catalogo.** { *; }

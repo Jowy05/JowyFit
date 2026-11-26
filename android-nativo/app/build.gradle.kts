@@ -92,7 +92,7 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".nativo"
-            versionNameSuffix = "-kotlin-f4"
+            versionNameSuffix = "-kotlin"
             manifestPlaceholders["appLabel"] = "JowyFit Kotlin"
             matchingFallbacks += listOf("release")
         }

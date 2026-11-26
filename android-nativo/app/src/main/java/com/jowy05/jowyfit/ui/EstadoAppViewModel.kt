@@ -31,16 +31,21 @@ import com.jowy05.jowyfit.datos.modelo.Perfil
 import com.jowy05.jowyfit.datos.modelo.Plantilla
 import com.jowy05.jowyfit.datos.modelo.PlantillaEntreno
 import com.jowy05.jowyfit.datos.modelo.Producto
+import com.jowy05.jowyfit.datos.modelo.RespuestaRevision
+import com.jowy05.jowyfit.datos.modelo.Revision
 import com.jowy05.jowyfit.datos.modelo.Rutina
 import com.jowy05.jowyfit.datos.modelo.Sesion
 import com.jowy05.jowyfit.dominio.ComidaDominio
+import com.jowy05.jowyfit.dominio.ExportarLigero
 import com.jowy05.jowyfit.dominio.GeneradorRutina
 import com.jowy05.jowyfit.dominio.MetasDominio
 import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.PesosYDiscos
 import com.jowy05.jowyfit.dominio.Progresion
+import com.jowy05.jowyfit.dominio.SaludYRevisionDominio
 import com.jowy05.jowyfit.nativo.ClienteHealthConnect
 import com.jowy05.jowyfit.nativo.ClienteOpenFoodFacts
+import com.jowy05.jowyfit.nativo.GeneradorPdfNativo
 import com.jowy05.jowyfit.nativo.GestorTareasFondo
 import com.jowy05.jowyfit.nativo.ServicioDescanso
 import com.jowy05.jowyfit.widget.WidgetHoy
@@ -71,6 +76,7 @@ data class EstadoPrincipal(
     val productos: List<Producto> = emptyList(),
     val suplementos: List<DiaSuplementos> = emptyList(),
     val fotos: List<FotoProgreso> = emptyList(),
+    val revisiones: List<Revision> = emptyList(),
 ) {
     val rutinaActiva: Rutina? get() = rutinas.firstOrNull { it.activa } ?: rutinas.firstOrNull()
     val sesionEnCurso: Sesion? get() = sesiones.firstOrNull { it.estado == "curso" }
@@ -109,7 +115,7 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
         BloqueC(mar, pl, pr, sup, fo)
     }
 
-    val estado: StateFlow<EstadoPrincipal> = combine(bloqueA, bloqueB, bloqueC) { a, b, c ->
+    val estado: StateFlow<EstadoPrincipal> = combine(bloqueA, bloqueB, bloqueC, repo.revisiones) { a, b, c, revs ->
         EstadoPrincipal(
             cargando = false,
             perfil = a.perfil,
@@ -127,6 +133,7 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
             productos = c.productos,
             suplementos = c.suplementos,
             fotos = c.fotos,
+            revisiones = revs.sortedByDescending { it.fecha },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoPrincipal())
 
@@ -705,6 +712,103 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
             }
             actualizarWidget()
             mostrarAviso(if (cambios > 0) "Health Connect sincronizado ($cambios datos)" else "Sin datos nuevos en Health Connect")
+        }
+    }
+
+    fun guardarPerfil(perfil: Perfil) {
+        viewModelScope.launch {
+            repo.guardarPerfil(perfil)
+            actualizarWidget()
+            mostrarAviso("Perfil y salud actualizados")
+        }
+    }
+
+    fun aplicarRevisionSemanal(
+        respuestas: List<RespuestaRevision>,
+        nuevosDolores: List<com.jowy05.jowyfit.datos.modelo.Dolor>,
+    ) {
+        viewModelScope.launch {
+            val st = estado.value
+            val doloresActualizados = SaludYRevisionDominio.doloresTrasRevision(st.perfil.dolores.orEmpty(), respuestas) + nuevosDolores
+            val perfilNuevo = st.perfil.copy(dolores = doloresActualizados.distinctBy { it.zona })
+            repo.guardarPerfil(perfilNuevo)
+
+            val rut = st.rutinaActiva
+            val cat = _catalogo.value
+            var cambiosAplicados = emptyList<com.jowy05.jowyfit.datos.modelo.CambioRevision>()
+            if (rut != null && cat != null) {
+                val zonasPeor = respuestas.filter { it.va == "peor" }.map { it.zona } + nuevosDolores.map { it.zona }
+                val zonasMejor = respuestas.filter { it.va == "mejor" || it.va == "ya" }.map { it.zona to (it.va == "ya") }
+                val activos = st.revisiones.flatMap { it.cambios }
+                cambiosAplicados = SaludYRevisionDominio.cambiosRevision(
+                    rutina = rut,
+                    perfil = perfilNuevo,
+                    zonasPeor = zonasPeor.distinct(),
+                    zonasMejor = zonasMejor,
+                    activos = activos,
+                    ejerciciosPorId = cat.porId,
+                    gimnasio = st.gimnasioActivo,
+                )
+                if (cambiosAplicados.isNotEmpty()) {
+                    repo.guardarRutina(SaludYRevisionDominio.aplicarCambios(rut, cambiosAplicados))
+                }
+            }
+            repo.guardarRevision(Revision(fecha = LocalDate.now().toString(), respuestas = respuestas, cambios = cambiosAplicados))
+            mostrarAviso(
+                if (cambiosAplicados.isEmpty()) "Revisión guardada (tu rutina sigue igual)"
+                else "Revisión aplicada (${cambiosAplicados.size} ajustes en la rutina)",
+            )
+        }
+    }
+
+    fun deshacerUltimaRevision() {
+        val st = estado.value
+        val ult = st.revisiones.firstOrNull { r -> r.cambios.any { it.deshecho != true } } ?: return
+        val rut = st.rutinaActiva ?: return
+        viewModelScope.launch {
+            repo.guardarRutina(SaludYRevisionDominio.aplicarCambios(rut, ult.cambios, deshacer = true))
+            repo.guardarRevision(ult.copy(cambios = ult.cambios.map { it.copy(deshecho = true) }))
+            mostrarAviso("Última revisión deshecha")
+        }
+    }
+
+    fun exportarCsvEntrenosBytes(): ByteArray {
+        val cat = _catalogo.value
+        return ExportarLigero.csvEntrenos(estado.value.sesiones) { cat?.nombreEjercicio(it) ?: it }.toByteArray(Charsets.UTF_8)
+    }
+
+    fun exportarCsvComidasBytes(): ByteArray =
+        ExportarLigero.csvComidas(estado.value.comidas).toByteArray(Charsets.UTF_8)
+
+    fun exportarCsvMedidasBytes(): ByteArray =
+        ExportarLigero.csvMedidas(estado.value.mediciones).toByteArray(Charsets.UTF_8)
+
+    fun exportarJsonLigeroBytes(): ByteArray {
+        val st = estado.value
+        val paq = ExportarLigero.PaqueteLigeroDatos(
+            perfil = st.perfil,
+            mediciones = st.mediciones,
+            sesiones = st.sesiones,
+            comidas = st.comidas,
+            pasos = st.pasos,
+            metas = st.metas,
+            retos = st.retos,
+            rutina = st.rutinaActiva,
+            gimnasios = st.gimnasios,
+        )
+        return ExportarLigero.jsonLigero(paq).toByteArray(Charsets.UTF_8)
+    }
+
+    fun generarYCompartirPdf() {
+        viewModelScope.launch {
+            runCatching {
+                val f = GeneradorPdfNativo.generarArchivo(getApplication(), estado.value, _catalogo.value)
+                GeneradorPdfNativo.compartirPdf(getApplication(), f)
+            }.onSuccess {
+                mostrarAviso("Informe PDF generado")
+            }.onFailure {
+                mostrarAviso("No se pudo generar el PDF: ${it.message}")
+            }
         }
     }
 

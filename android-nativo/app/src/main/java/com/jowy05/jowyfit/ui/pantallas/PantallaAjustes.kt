@@ -12,13 +12,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
+import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.TableChart
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.AlertDialog
@@ -62,8 +68,16 @@ fun PantallaAjustes(
     alCambiarLetra: (EscalaLetra) -> Unit,
     alCambiarIdioma: (IdiomaApp) -> Unit,
     alToggleMostrarKcal: (Boolean) -> Unit,
+    alToggleRecordatorioPasos: (Boolean) -> Unit,
+    alToggleCopiaAuto: (Boolean) -> Unit,
+    alToggleEntrenosHC: (Boolean) -> Unit,
     alImportarCopia: () -> Unit,
     alExportarCopia: () -> Unit,
+    alExportarCsvEntrenos: () -> Unit,
+    alExportarCsvComidas: () -> Unit,
+    alExportarCsvMedidas: () -> Unit,
+    alExportarJsonLigero: () -> Unit,
+    alGenerarPdf: () -> Unit,
     alAbrirActualizaciones: () -> Unit,
     alProbarDescanso: () -> Unit,
     alBorrarTodo: () -> Unit,
@@ -130,6 +144,30 @@ fun PantallaAjustes(
                     onCambio = alToggleMostrarKcal,
                 )
                 SeparadorLista()
+                FilaInterruptor(
+                    titulo = "Recordatorio inteligente de pasos",
+                    subtitulo = "Solo avisa a las 18:00 si llevas < 50 % del objetivo (WorkManager)",
+                    icono = Icons.AutoMirrored.Rounded.DirectionsWalk,
+                    activo = estado.ajustes.noti.pasos == true,
+                    onCambio = alToggleRecordatorioPasos,
+                )
+                SeparadorLista()
+                FilaInterruptor(
+                    titulo = "Copia automática semanal",
+                    subtitulo = "Guarda copias locales en segundo plano con WorkManager",
+                    icono = Icons.Rounded.Backup,
+                    activo = estado.ajustes.copiaAuto,
+                    onCambio = alToggleCopiaAuto,
+                )
+                SeparadorLista()
+                FilaInterruptor(
+                    titulo = "Escribir entrenos en Health Connect",
+                    subtitulo = "Publica cada sesión completada en Salud de Android",
+                    icono = Icons.Rounded.Sync,
+                    activo = estado.ajustes.entrenosASalud == true,
+                    onCambio = alToggleEntrenosHC,
+                )
+                SeparadorLista()
                 FilaLista(
                     titulo = t("Descanso interactivo (prueba)"),
                     subtitulo = "Lanza 45 s en pantalla bloqueada con botones +30 s y Saltar",
@@ -147,6 +185,13 @@ fun PantallaAjustes(
             EtiquetaSeccionGrupo(t("Datos y copias"))
             ListaAgrupada {
                 FilaLista(
+                    titulo = "Informe completo en PDF",
+                    subtitulo = "Resumen A4 multipágina para compartir o imprimir",
+                    icono = Icons.Rounded.PictureAsPdf,
+                    alPulsar = alGenerarPdf,
+                )
+                SeparadorLista()
+                FilaLista(
                     titulo = "Importar copia (.jowyfit)",
                     subtitulo = "Compatible con copias V1–V7 (sin contraseña o cifradas)",
                     icono = Icons.Rounded.FileUpload,
@@ -158,6 +203,34 @@ fun PantallaAjustes(
                     subtitulo = "Guarda una copia completa V7 en tu teléfono",
                     icono = Icons.Rounded.Save,
                     alPulsar = alExportarCopia,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Exportar CSV · Entrenos",
+                    subtitulo = "Excel / Sheets (UTF-8 BOM, protección anti-fórmulas)",
+                    icono = Icons.Rounded.TableChart,
+                    alPulsar = alExportarCsvEntrenos,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Exportar CSV · Comidas",
+                    subtitulo = "Historial diario de comidas, proteína, kcal y macros",
+                    icono = Icons.Rounded.TableChart,
+                    alPulsar = alExportarCsvComidas,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Exportar CSV · Medidas",
+                    subtitulo = "Peso, perímetros y datos de báscula",
+                    icono = Icons.Rounded.TableChart,
+                    alPulsar = alExportarCsvMedidas,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Exportar JSON ligero",
+                    subtitulo = "Todos tus datos legibles sin fotos ni binarios",
+                    icono = Icons.Rounded.Code,
+                    alPulsar = alExportarJsonLigero,
                 )
             }
 
@@ -190,7 +263,7 @@ fun PantallaAjustes(
 
             Spacer(Modifier.height(14.dp))
             NotaAviso(
-                texto = "JowyFit Kotlin Nativo (Fase 1). Coexiste en paralelo con tu JowyFit actual sin tocar sus datos.",
+                texto = "JowyFit Kotlin Nativo (Fases 1–5 completas). Coexiste en paralelo con tu JowyFit actual sin tocar sus datos.",
                 tono = TonoNota.INFO,
                 icono = Icons.Rounded.Download,
             )

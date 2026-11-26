@@ -1,6 +1,7 @@
 package com.jowy05.jowyfit.ui.pantallas
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -17,14 +19,25 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.MonitorWeight
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,10 +52,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
+import com.jowy05.jowyfit.datos.modelo.DiaRutina
+import com.jowy05.jowyfit.datos.modelo.PlantillaEntreno
 import com.jowy05.jowyfit.dominio.CalculosDominio
 import com.jowy05.jowyfit.ui.EstadoPrincipal
 import com.jowy05.jowyfit.ui.componentes.BarraProgreso
 import com.jowy05.jowyfit.ui.componentes.BotonPrincipal
+import com.jowy05.jowyfit.ui.componentes.BotonSecundario
 import com.jowy05.jowyfit.ui.componentes.CabeceraPantalla
 import com.jowy05.jowyfit.ui.componentes.EtiquetaTag
 import com.jowy05.jowyfit.ui.componentes.FilaLista
@@ -64,10 +80,23 @@ import java.time.LocalDate
 fun PantallaRutina(
     estado: EstadoPrincipal,
     catalogo: CatalogoCargado?,
+    alAbrirFicha: (String) -> Unit,
+    alAbrirGimnasios: () -> Unit,
+    alGenerarVariante: () -> Unit,
+    alEmpezarDia: (DiaRutina) -> Unit,
+    alEmpezarLibre: () -> Unit,
+    alEmpezarPlantilla: (PlantillaEntreno) -> Unit,
+    alBorrarPlantilla: (String) -> Unit,
+    alAnadirBloque: (String, String) -> Unit,
+    alQuitarBloque: (String, String) -> Unit,
+    alCambiarSeries: (String, String, Int) -> Unit,
 ) {
     val p = LocalPaleta.current
     var subtab by remember { mutableStateOf("plan") }
     var busqueda by remember { mutableStateOf("") }
+    var diaEditando by remember { mutableStateOf<String?>(null) }
+    var anadirADia by remember { mutableStateOf<String?>(null) }
+    var verPorque by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -101,50 +130,174 @@ fun PantallaRutina(
             ) {
                 val rutina = estado.rutinaActiva
                 if (rutina == null) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                     NotaAviso(
-                        texto = "Aún no tienes rutina cargada. Importa tu .jowyfit en Ajustes para ver tu plan real; el generador de rutinas y el entreno en vivo entran en la Fase 2.",
+                        texto = "Aún no tienes rutina activa. Puedes generarla automáticamente según tu perfil y material o importar tu .jowyfit en Ajustes.",
                         tono = TonoNota.INFO,
                         icono = Icons.Rounded.FitnessCenter,
                     )
+                    BotonPrincipal(
+                        texto = "Crear mi rutina",
+                        icono = Icons.Rounded.AutoAwesome,
+                        grande = true,
+                        onClick = alGenerarVariante,
+                    )
                 } else {
+                    if (rutina.porque.isNotEmpty()) {
+                        Tarjeta(onClick = { verPorque = !verPorque }, padding = PaddingValues(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = "¿Por qué esta rutina?",
+                                    color = p.ink,
+                                    fontFamily = FuenteTitulo,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                )
+                                Icon(
+                                    imageVector = if (verPorque) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                    contentDescription = null,
+                                    tint = p.muted,
+                                )
+                            }
+                            if (verPorque) {
+                                Spacer(Modifier.height(6.dp))
+                                rutina.porque.forEach { linea ->
+                                    Text("• $linea", color = p.muted, fontSize = 13.5.sp, modifier = Modifier.padding(vertical = 2.dp))
+                                }
+                            }
+                        }
+                    }
+
                     rutina.dias.forEach { dia ->
+                        val editando = diaEditando == dia.letra
+                        val durMin = CalculosDominio.duracionMinDia(dia.bloques)
                         Tarjeta {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(dia.nombre, color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(dia.nombre, color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                    Text("~$durMin min · ${dia.bloques.size} ejercicios", color = p.muted, fontSize = 13.sp)
+                                }
                                 EtiquetaTag(if (dia.opcional) "Opcional" else "Día ${dia.letra}", colorFondo = p.blueT, colorTexto = p.blue)
                             }
                             Spacer(Modifier.height(8.dp))
                             dia.bloques.forEachIndexed { i, b ->
                                 val ej = catalogo?.porId?.get(b.ejercicio)
+                                val marca = estado.marcas[b.ejercicio]
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clickable { alAbrirFicha(b.ejercicio) }
                                         .padding(vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
                                     MiniaturaEjercicio(urlAsset = ej?.let { catalogo.miniaturaAsset(it) }, tamano = 38.dp)
-                                    Text(
-                                        text = ej?.nombre ?: b.ejercicio,
-                                        color = p.ink,
-                                        fontSize = 14.5.sp,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Text("${b.series}×${b.repsMin}-${b.repsMax}", color = p.muted, fontFamily = FuenteMono, fontSize = 12.5.sp)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = ej?.nombre ?: b.ejercicio,
+                                            color = p.ink,
+                                            fontSize = 14.5.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        if (b.superserie != null || marca?.favorito == true || marca?.duele == true || marca?.odiado == true) {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                if (b.superserie != null) {
+                                                    Text("Dos seguidos", color = p.go, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                                                }
+                                                if (marca?.favorito == true) {
+                                                    Icon(Icons.Rounded.Star, contentDescription = "Favorito", tint = p.gold, modifier = Modifier.size(14.dp))
+                                                }
+                                                if (marca?.duele == true) {
+                                                    Icon(Icons.Rounded.Warning, contentDescription = "Duele", tint = p.warn, modifier = Modifier.size(14.dp))
+                                                }
+                                                if (marca?.odiado == true) {
+                                                    Icon(Icons.Rounded.Block, contentDescription = "Evitar", tint = p.bad, modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (editando) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = { alCambiarSeries(dia.letra, b.uid, -1) },
+                                                modifier = Modifier.size(32.dp),
+                                            ) {
+                                                Icon(Icons.Rounded.Remove, contentDescription = "Menos series", tint = p.blue, modifier = Modifier.size(18.dp))
+                                            }
+                                            Text("${b.series}s", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            IconButton(
+                                                onClick = { alCambiarSeries(dia.letra, b.uid, 1) },
+                                                modifier = Modifier.size(32.dp),
+                                            ) {
+                                                Icon(Icons.Rounded.Add, contentDescription = "Más series", tint = p.blue, modifier = Modifier.size(18.dp))
+                                            }
+                                            IconButton(
+                                                onClick = { alQuitarBloque(dia.letra, b.uid) },
+                                                modifier = Modifier.size(32.dp),
+                                            ) {
+                                                Icon(Icons.Rounded.Delete, contentDescription = "Quitar", tint = p.bad, modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+                                    } else {
+                                        Text("${b.series}×${b.repsMin}-${b.repsMax}", color = p.muted, fontFamily = FuenteMono, fontSize = 12.5.sp)
+                                    }
                                 }
                                 if (i < dia.bloques.lastIndex) SeparadorLista()
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            if (editando) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    BotonSecundario(
+                                        texto = "+ Ejercicio",
+                                        icono = Icons.Rounded.Add,
+                                        onClick = { anadirADia = dia.letra },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    BotonPrincipal(
+                                        texto = "Listo",
+                                        onClick = { diaEditando = null },
+                                        modifier = Modifier.weight(0.8f),
+                                    )
+                                }
+                            } else {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    BotonPrincipal(
+                                        texto = "Empezar",
+                                        icono = Icons.Rounded.PlayArrow,
+                                        onClick = { alEmpezarDia(dia) },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    BotonSecundario(
+                                        texto = "Editar",
+                                        icono = Icons.Rounded.Edit,
+                                        onClick = { diaEditando = dia.letra },
+                                        modifier = Modifier.weight(0.65f),
+                                    )
+                                }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(112.dp))
+
+                BloqueGeneradorYLibres(
+                    estado = estado,
+                    alGenerarVariante = alGenerarVariante,
+                    alAbrirGimnasios = alAbrirGimnasios,
+                    alEmpezarLibre = alEmpezarLibre,
+                    alEmpezarPlantilla = alEmpezarPlantilla,
+                    alBorrarPlantilla = alBorrarPlantilla,
+                )
+
+                Spacer(Modifier.height(if (estado.sesionEnCurso != null) 156.dp else 112.dp))
             }
         } else {
             val lista = remember(catalogo, busqueda) { catalogo?.buscar(busqueda).orEmpty() }
@@ -161,10 +314,11 @@ fun PantallaRutina(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 112.dp),
+                    contentPadding = PaddingValues(bottom = if (estado.sesionEnCurso != null) 156.dp else 112.dp),
                 ) {
                     items(lista, key = { it.id }) { ej ->
-                        Tarjeta(padding = PaddingValues(10.dp)) {
+                        val marca = estado.marcas[ej.id]
+                        Tarjeta(onClick = { alAbrirFicha(ej.id) }, padding = PaddingValues(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 MiniaturaEjercicio(urlAsset = catalogo?.miniaturaAsset(ej), tamano = 52.dp)
                                 Column(modifier = Modifier.weight(1f)) {
@@ -177,12 +331,32 @@ fun PantallaRutina(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
+                                if (marca?.favorito == true) {
+                                    Icon(Icons.Rounded.Star, contentDescription = "Favorito", tint = p.gold, modifier = Modifier.size(18.dp))
+                                } else if (marca?.duele == true) {
+                                    Icon(Icons.Rounded.Warning, contentDescription = "Me duele", tint = p.warn, modifier = Modifier.size(18.dp))
+                                } else if (marca?.odiado == true) {
+                                    Icon(Icons.Rounded.Block, contentDescription = "Evitar", tint = p.bad, modifier = Modifier.size(18.dp))
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (anadirADia != null && catalogo != null) {
+        val letra = anadirADia!!
+        HojaBuscadorEjercicio(
+            catalogo = catalogo,
+            titulo = "Añadir al día $letra",
+            alCerrar = { anadirADia = null },
+            alElegir = { id ->
+                alAnadirBloque(letra, id)
+                anadirADia = null
+            },
+        )
     }
 }
 

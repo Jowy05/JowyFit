@@ -20,9 +20,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Coffee
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.NightsStay
@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,8 +49,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
+import com.jowy05.jowyfit.datos.modelo.Bloque
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.Progresion
 import com.jowy05.jowyfit.ui.EstadoPrincipal
 import com.jowy05.jowyfit.ui.componentes.AnilloProgreso
 import com.jowy05.jowyfit.ui.componentes.BarraProgreso
@@ -80,12 +81,16 @@ import kotlin.math.max
 fun PantallaInicio(
     estado: EstadoPrincipal,
     catalogo: CatalogoCargado?,
+    sugerenciaPara: (Bloque) -> Progresion.Sugerencia,
     alAbrirAjustes: () -> Unit,
     alCambiarPestana: (Pestana) -> Unit,
     alPulsarDia: (CalculosDominio.EstadoDia) -> Unit,
+    alEmpezarDia: (DiaRutina) -> Unit,
+    alContinuarEntreno: () -> Unit,
+    alAbrirFicha: (String) -> Unit,
+    alGenerarRutina: () -> Unit,
     alAbrirPeso: () -> Unit,
     alAbrirComidaRapida: () -> Unit,
-    alProbarDescanso: () -> Unit,
     alAviso: (String) -> Unit,
 ) {
     val p = LocalPaleta.current
@@ -146,8 +151,12 @@ fun PantallaInicio(
                 calibracion = estado.rutinaActiva?.calibracion == true,
                 gimnasioNombre = estado.gimnasioActivo?.nombre,
                 catalogo = catalogo,
+                sugerenciaPara = sugerenciaPara,
                 alVerRutina = { alCambiarPestana(Pestana.RUTINA) },
-                alProbarDescanso = alProbarDescanso,
+                alEmpezarDia = alEmpezarDia,
+                alContinuarEntreno = alContinuarEntreno,
+                alAbrirFicha = alAbrirFicha,
+                alGenerarRutina = alGenerarRutina,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -308,8 +317,8 @@ fun PantallaInicio(
                 }
             }
 
-            // Espacio inferior para que el contenido nunca quede tapado por la barra flotante.
-            Spacer(Modifier.height(112.dp))
+            // Espacio inferior para que el contenido nunca quede tapado por la barra flotante ni la mini barra de entreno.
+            Spacer(Modifier.height(if (estado.sesionEnCurso != null) 156.dp else 112.dp))
         }
     }
 }
@@ -320,8 +329,12 @@ private fun TarjetaHoyCompose(
     calibracion: Boolean,
     gimnasioNombre: String?,
     catalogo: CatalogoCargado?,
+    sugerenciaPara: (Bloque) -> Progresion.Sugerencia,
     alVerRutina: () -> Unit,
-    alProbarDescanso: () -> Unit,
+    alEmpezarDia: (DiaRutina) -> Unit,
+    alContinuarEntreno: () -> Unit,
+    alAbrirFicha: (String) -> Unit,
+    alGenerarRutina: () -> Unit,
 ) {
     val p = LocalPaleta.current
     when (tarjeta) {
@@ -331,9 +344,10 @@ private fun TarjetaHoyCompose(
                 etiqueta = if (calibracion) "Semana de prueba" else "Hoy",
                 gimnasioNombre = gimnasioNombre,
                 catalogo = catalogo,
+                sugerenciaPara = sugerenciaPara,
                 botonTexto = t("Empezar rutina"),
-                alPulsarBoton = alVerRutina,
-                alProbarDescanso = alProbarDescanso,
+                alPulsarBoton = { alEmpezarDia(tarjeta.dia) },
+                alAbrirFicha = alAbrirFicha,
             )
         }
         is CalculosDominio.TarjetaHoyEstado.Opcional -> {
@@ -342,9 +356,10 @@ private fun TarjetaHoyCompose(
                 etiqueta = "Opcional",
                 gimnasioNombre = gimnasioNombre,
                 catalogo = catalogo,
+                sugerenciaPara = sugerenciaPara,
                 botonTexto = "Empezar",
-                alPulsarBoton = alVerRutina,
-                alProbarDescanso = alProbarDescanso,
+                alPulsarBoton = { alEmpezarDia(tarjeta.dia) },
+                alAbrirFicha = alAbrirFicha,
             )
         }
         is CalculosDominio.TarjetaHoyEstado.Hecho -> {
@@ -373,8 +388,14 @@ private fun TarjetaHoyCompose(
                 EtiquetaTag("En curso", colorFondo = p.goT, colorTexto = p.go)
                 Spacer(Modifier.height(8.dp))
                 Text(tarjeta.sesion.nombre, color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 25.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${tarjeta.sesion.ejercicios.count { it.estado == "hecho" }}/${tarjeta.sesion.ejercicios.size} ejercicios completados",
+                    color = p.muted,
+                    fontSize = 14.sp,
+                )
                 Spacer(Modifier.height(12.dp))
-                BotonPrincipal(texto = "Continuar", icono = Icons.Rounded.PlayArrow, grande = true, onClick = alVerRutina)
+                BotonPrincipal(texto = "Continuar", icono = Icons.Rounded.PlayArrow, grande = true, onClick = alContinuarEntreno)
             }
         }
         is CalculosDominio.TarjetaHoyEstado.Descanso -> {
@@ -422,13 +443,15 @@ private fun TarjetaHoyCompose(
                     Text(t("Aún no tienes rutina"), color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 21.sp)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Importa tu copia .jowyfit en Ajustes para cargar tu plan real, o explora el catálogo de 650 ejercicios.",
+                        text = "Genera tu rutina adaptada al instante o importa tu copia .jowyfit desde Ajustes.",
                         color = p.muted,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(12.dp))
-                    BotonPrincipal(texto = "Explorar ejercicios", onClick = alVerRutina)
+                    BotonPrincipal(texto = "Crear mi rutina", icono = Icons.Rounded.AutoAwesome, grande = true, onClick = alGenerarRutina)
+                    Spacer(Modifier.height(8.dp))
+                    BotonSecundario(texto = "Explorar ejercicios", onClick = alVerRutina)
                 }
             }
         }
@@ -441,9 +464,10 @@ private fun TarjetaDiaHero(
     etiqueta: String,
     gimnasioNombre: String?,
     catalogo: CatalogoCargado?,
+    sugerenciaPara: (Bloque) -> Progresion.Sugerencia,
     botonTexto: String,
     alPulsarBoton: () -> Unit,
-    alProbarDescanso: () -> Unit,
+    alAbrirFicha: (String) -> Unit,
 ) {
     val p = LocalPaleta.current
     val duracionMin = CalculosDominio.duracionMinDia(dia.bloques)
@@ -485,9 +509,11 @@ private fun TarjetaDiaHero(
             val visibles = dia.bloques.take(4)
             visibles.forEachIndexed { idx, b ->
                 val ej = catalogo?.porId?.get(b.ejercicio)
+                val sug = sugerenciaPara(b)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable { alAbrirFicha(b.ejercicio) }
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -503,12 +529,29 @@ private fun TarjetaDiaHero(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Text(
-                        text = "${b.series}×${b.repsMin}-${b.repsMax}",
-                        color = p.muted,
-                        fontFamily = FuenteMono,
-                        fontSize = 13.sp,
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${b.series}×${b.repsMin}-${b.repsMax}",
+                            color = p.muted,
+                            fontFamily = FuenteMono,
+                            fontSize = 12.5.sp,
+                        )
+                        sug.peso?.let { kg ->
+                            val flecha = when (sug.accion) {
+                                Progresion.AccionSugerencia.SUBIR -> " ↑"
+                                Progresion.AccionSugerencia.BAJAR -> " ↓"
+                                else -> ""
+                            }
+                            val kgTxt = if (kg == kg.toInt().toDouble()) "${kg.toInt()}" else String.format("%.1f", kg).replace('.', ',')
+                            Text(
+                                text = "$kgTxt kg$flecha",
+                                color = if (sug.accion == Progresion.AccionSugerencia.SUBIR) p.ok else p.blue,
+                                fontFamily = FuenteMono,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
                 }
                 if (idx < visibles.lastIndex) HorizontalDivider(color = p.line, thickness = 1.dp)
             }
@@ -522,9 +565,8 @@ private fun TarjetaDiaHero(
             }
         }
 
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             BotonPrincipal(texto = botonTexto, icono = Icons.Rounded.PlayArrow, grande = true, onClick = alPulsarBoton)
-            BotonSecundario(texto = "Probar descanso en pantalla bloqueada (+30 s / Saltar)", icono = Icons.Rounded.Timer, onClick = alProbarDescanso)
         }
     }
 }

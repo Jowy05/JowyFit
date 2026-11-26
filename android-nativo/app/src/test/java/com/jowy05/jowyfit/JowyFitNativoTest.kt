@@ -1,15 +1,25 @@
 package com.jowy05.jowyfit
 
+import com.jowy05.jowyfit.datos.catalogo.CatalogoJson
 import com.jowy05.jowyfit.datos.copias.CifradoCopia
 import com.jowy05.jowyfit.datos.copias.GestorCopias
 import com.jowy05.jowyfit.datos.db.RegistroTablaEntity
 import com.jowy05.jowyfit.datos.modelo.Bloque
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
+import com.jowy05.jowyfit.datos.modelo.Gimnasio
 import com.jowy05.jowyfit.datos.modelo.JsonJowyFit
+import com.jowy05.jowyfit.datos.modelo.MarcaEjercicio
+import com.jowy05.jowyfit.datos.modelo.ModoMayor
 import com.jowy05.jowyfit.datos.modelo.Perfil
 import com.jowy05.jowyfit.datos.modelo.Rutina
+import com.jowy05.jowyfit.datos.modelo.Serie
+import com.jowy05.jowyfit.datos.modelo.Tramo
 import com.jowy05.jowyfit.dominio.ActualizacionDominio
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.GeneradorRutina
+import com.jowy05.jowyfit.dominio.MotorSesion
+import com.jowy05.jowyfit.dominio.PesosYDiscos
+import com.jowy05.jowyfit.dominio.Progresion
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
@@ -154,5 +164,196 @@ class JowyFitNativoTest {
     fun csvNeutralizaFormulas() {
         assertEquals("'=SUM(A1:A2)", GestorCopias.celdaCsvSegura("=SUM(A1:A2)"))
         assertEquals("\"' +10,5\"".replace(" ", ""), GestorCopias.celdaCsvSegura("+10,5"))
+    }
+
+    @Test
+    fun pesosYDiscosCalculoExactoYCalentamiento() {
+        assertEquals(listOf(20.0), PesosYDiscos.discosPorLado(60.0, 20.0, listOf(20.0, 15.0, 10.0, 5.0)))
+        // Caso donde voraz fallaría (15 + sin resto exacto) pero DP encuentra 10 + 10 por lado
+        assertEquals(listOf(10.0, 10.0), PesosYDiscos.discosPorLado(60.0, 20.0, listOf(15.0, 10.0)))
+        assertEquals(emptyList<Double>(), PesosYDiscos.discosPorLado(20.0, 20.0, listOf(10.0)))
+        assertNull(PesosYDiscos.discosPorLado(15.0, 20.0, listOf(10.0)))
+        assertNull(PesosYDiscos.discosPorLado(23.0, 20.0, listOf(10.0, 5.0)))
+
+        val gym = Gimnasio(
+            nombre = "Casa",
+            barraKg = 20.0,
+            mancuernas = listOf(Tramo(2.0, 10.0, 2.0), Tramo(12.5, 40.0, 2.5)),
+        )
+        val pesosBarra = PesosYDiscos.pesosPara("barbell", "peso", gym)
+        assertTrue(pesosBarra.contains(20.0))
+        assertTrue(pesosBarra.contains(60.0))
+        val cal = PesosYDiscos.calentamiento(100.0, pesosBarra)
+        assertEquals(3, cal.size)
+        assertTrue(cal.all { it.peso < 100.0 && it.peso >= 20.0 })
+        assertTrue(cal[0].peso < cal[1].peso && cal[1].peso < cal[2].peso)
+
+        val mancuernas = PesosYDiscos.mancuernasDisponibles(gym)
+        assertTrue(mancuernas.contains(10.0))
+        assertEquals(12.5, PesosYDiscos.siguiente(mancuernas, 10.0, 1), 0.01)
+    }
+
+    @Test
+    fun progresionDobleYRecords() {
+        val lista = (0..60).map { it * 2.5 }
+        val obj = Progresion.ObjetivoBloque(repsMin = 8, repsMax = 12, rpe = 8.0)
+
+        val sube = Progresion.sugerir(
+            ultimas = listOf(
+                Serie(1, peso = 60.0, reps = 12, rpe = 8.0, hecha = true),
+                Serie(2, peso = 60.0, reps = 12, rpe = 8.5, hecha = true),
+            ),
+            objetivo = obj,
+            registro = "peso",
+            lista = lista,
+        )
+        assertEquals(Progresion.AccionSugerencia.SUBIR, sube.accion)
+        assertEquals(62.5, sube.peso!!, 0.01)
+        assertEquals(8, sube.reps)
+
+        val mantiene = Progresion.sugerir(
+            ultimas = listOf(
+                Serie(1, peso = 60.0, reps = 10, rpe = 8.0, hecha = true),
+                Serie(2, peso = 60.0, reps = 9, rpe = 8.5, hecha = true),
+            ),
+            objetivo = obj,
+            registro = "peso",
+            lista = lista,
+        )
+        assertEquals(Progresion.AccionSugerencia.MANTENER, mantiene.accion)
+        assertEquals(60.0, mantiene.peso!!, 0.01)
+        assertEquals(11, mantiene.reps)
+
+        val baja = Progresion.sugerir(
+            ultimas = listOf(
+                Serie(1, peso = 60.0, reps = 5, rpe = 9.5, hecha = true),
+                Serie(2, peso = 60.0, reps = 5, rpe = 10.0, hecha = true),
+            ),
+            objetivo = obj,
+            registro = "peso",
+            lista = lista,
+        )
+        assertEquals(Progresion.AccionSugerencia.BAJAR, baja.accion)
+        assertEquals(57.5, baja.peso!!, 0.01)
+
+        val historial = listOf(Serie(1, peso = 60.0, reps = 10, hecha = true))
+        val recPeso = Progresion.esRecord(Serie(1, peso = 62.5, reps = 8, hecha = true), historial)
+        assertEquals("peso", recPeso?.tipo)
+        val recReps = Progresion.esRecord(Serie(1, peso = 60.0, reps = 11, hecha = true), historial)
+        assertEquals("reps", recReps?.tipo)
+        assertNull(Progresion.esRecord(Serie(1, peso = 80.0, reps = 10, calentamiento = true, hecha = true), historial))
+    }
+
+    @Test
+    fun motorSesionPrSuperserieYResumen() {
+        val dia = DiaRutina(
+            letra = "A",
+            nombre = "Torso A",
+            dia = 0,
+            bloques = listOf(
+                Bloque(uid = "b1", ejercicio = "bicep-curl", series = 2, repsMin = 10, repsMax = 15, descanso = 75, superserie = "b2", registro = "mancuerna"),
+                Bloque(uid = "b2", ejercicio = "tricep-pushdown", series = 2, repsMin = 10, repsMax = 15, descanso = 75, superserie = "b1", registro = "peso"),
+            ),
+        )
+        val sesion0 = MotorSesion.crearSesion(
+            id = 1L,
+            dia = dia,
+            rutinaId = 1L,
+            gimnasioId = null,
+            sugerencias = mapOf("bicep-curl" to (12.0 to 10), "tricep-pushdown" to (25.0 to 12)),
+            ahora = 1_000_000L,
+        )
+        assertEquals(0, MotorSesion.indiceActual(sesion0))
+
+        // Primera serie del par A1 -> 0 s de descanso y salta al compañero A2 + detecta PR
+        val r1 = MotorSesion.apuntarSerie(
+            sesion = sesion0,
+            idx = 0,
+            datos = MotorSesion.DatosSerie(peso = 14.0, reps = 12, rpe = 8.0),
+            previas = listOf(Serie(1, peso = 12.0, reps = 12, hecha = true)),
+            ahora = 1_060_000L,
+        )!!
+        assertEquals(0, r1.descansoSeg)
+        assertEquals("peso", r1.record?.tipo)
+        assertEquals(1, MotorSesion.indiceActual(r1.sesion))
+        // Hereda 14 kg a la segunda serie pendiente de b1
+        assertEquals(14.0, r1.sesion.ejercicios[0].series[1].peso!!, 0.01)
+
+        // Primera serie del compañero A2 -> descanso completo (75 s) y vuelve a A1
+        val r2 = MotorSesion.apuntarSerie(
+            sesion = r1.sesion,
+            idx = 1,
+            datos = MotorSesion.DatosSerie(peso = 25.0, reps = 12, rpe = 8.0),
+            previas = emptyList(),
+            ahora = 1_120_000L,
+        )!!
+        assertEquals(75, r2.descansoSeg)
+        assertEquals(0, MotorSesion.indiceActual(r2.sesion))
+
+        val conCal = MotorSesion.conCalentamiento(r2.sesion, 0, listOf(PesosYDiscos.SerieCalentamiento(6.0, 10)))
+        assertEquals(3, conCal.ejercicios[0].series.size)
+        val conExtra = MotorSesion.anadirSerie(conCal, 0)
+        assertEquals(4, conExtra.ejercicios[0].series.size)
+        val quitada = MotorSesion.quitarSerie(conExtra, 0)
+        assertEquals(3, quitada.ejercicios[0].series.size)
+
+        val res = MotorSesion.resumen(r2.sesion, ahora = 1_600_000L)
+        assertEquals(2, res.series)
+        assertEquals((14.0 * 12 + 25.0 * 12).toInt(), res.volumenKg)
+        assertEquals(600, res.segundos)
+    }
+
+    @Test
+    fun generadorRutinaConCatalogoReal() {
+        val ficheroCatalogo = File("../../public/repdb/catalogo.json")
+        assertTrue("Falta public/repdb/catalogo.json para probar el generador", ficheroCatalogo.exists())
+        val catalogo = JsonJowyFit.decodeFromString<CatalogoJson>(ficheroCatalogo.readText())
+        assertTrue(catalogo.ejercicios.size >= 600)
+
+        // 1) Rutina 3 días + poco sueño (tope RPE 7.5) + marca «duele» excluida
+        val perfil3 = Perfil(
+            altaCompleta = true,
+            objetivo = "musculo",
+            nivel = "intermedio",
+            diasFijos = listOf(0, 2, 4),
+            minutosNormal = 55,
+            minutosCorta = 35,
+            sueno = "poco",
+            superseries = true,
+        )
+        val marcas = mapOf("bench-press" to MarcaEjercicio(id = "bench-press", duele = true))
+        val r3 = GeneradorRutina.generar(id = 1L, perfil = perfil3, gimnasio = null, ejercicios = catalogo.ejercicios, marcas = marcas)
+        // 3 días fijos + 1 sesión opcional de sábado por defecto
+        assertEquals(3, r3.dias.count { !it.opcional })
+        assertEquals(1, r3.dias.count { it.opcional })
+        assertTrue(r3.estructura.contains("3 días"))
+        assertTrue(r3.dias.all { it.bloques.isNotEmpty() })
+        assertTrue(r3.dias.flatMap { it.bloques }.all { it.rpe <= 7.5 })
+        assertTrue(r3.dias.flatMap { it.bloques }.none { it.ejercicio == "bench-press" })
+
+        // Versiones corta y mínima tienen menos o igual trabajo que normal
+        val diaA = r3.dias.first()
+        val sNormal = MotorSesion.crearSesion(1L, diaA, r3.id, null, "normal")
+        val sCorta = MotorSesion.crearSesion(2L, diaA, r3.id, null, "corta")
+        val sMin = MotorSesion.crearSesion(3L, diaA, r3.id, null, "minima")
+        assertTrue(sCorta.ejercicios.size <= sNormal.ejercicios.size)
+        assertTrue(sMin.ejercicios.size <= 3 && sMin.ejercicios.all { it.series.size <= 2 })
+
+        // 2) Rutina 4 días en modo mayor: sin superseries, descansos >= 120s, equilibrio = 6
+        val perfilMayor = Perfil(
+            altaCompleta = true,
+            objetivo = "salud",
+            nivel = "empiezo",
+            diasFijos = listOf(0, 1, 3, 4),
+            diasOpcionales = emptyList(),
+            superseries = true,
+            modoMayor = ModoMayor(activo = true),
+        )
+        val r4 = GeneradorRutina.generar(id = 2L, perfil = perfilMayor, gimnasio = null, ejercicios = catalogo.ejercicios)
+        assertEquals(4, r4.dias.size)
+        assertEquals(6, r4.equilibrio)
+        val todosBloques = r4.dias.flatMap { it.bloques }
+        assertTrue(todosBloques.none { it.superserie != null })
+        assertTrue(todosBloques.all { it.descanso >= 120 })
     }
 }

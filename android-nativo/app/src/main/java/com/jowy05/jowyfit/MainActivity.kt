@@ -6,20 +6,26 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -29,15 +35,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jowy05.jowyfit.datos.PreferenciaTema
+import com.jowy05.jowyfit.datos.modelo.DiaRutina
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.nativo.ServicioDescanso
 import com.jowy05.jowyfit.ui.EstadoAppViewModel
 import com.jowy05.jowyfit.ui.componentes.BarraInferiorFlotante
@@ -47,10 +55,16 @@ import com.jowy05.jowyfit.ui.pantallas.HojaActualizacionNativa
 import com.jowy05.jowyfit.ui.pantallas.HojaComidaRapida
 import com.jowy05.jowyfit.ui.pantallas.HojaContrasenaCopia
 import com.jowy05.jowyfit.ui.pantallas.HojaDia
+import com.jowy05.jowyfit.ui.pantallas.HojaEmpezarDia
 import com.jowy05.jowyfit.ui.pantallas.HojaPeso
+import com.jowy05.jowyfit.ui.pantallas.MiniBarraEntreno
 import com.jowy05.jowyfit.ui.pantallas.PantallaAjustes
 import com.jowy05.jowyfit.ui.pantallas.PantallaBienvenida
 import com.jowy05.jowyfit.ui.pantallas.PantallaComida
+import com.jowy05.jowyfit.ui.pantallas.PantallaEntrenoEnVivo
+import com.jowy05.jowyfit.ui.pantallas.PantallaFichaEjercicio
+import com.jowy05.jowyfit.ui.pantallas.PantallaFinEntreno
+import com.jowy05.jowyfit.ui.pantallas.PantallaGimnasios
 import com.jowy05.jowyfit.ui.pantallas.PantallaInicio
 import com.jowy05.jowyfit.ui.pantallas.PantallaPerfil
 import com.jowy05.jowyfit.ui.pantallas.PantallaProgreso
@@ -112,16 +126,28 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     val aviso by vm.aviso.collectAsStateWithLifecycle()
     val bytesPendientesClave by vm.bytesPendientesClave.collectAsStateWithLifecycle()
     val errorClave by vm.errorClave.collectAsStateWithLifecycle()
+    val sesionTerminada by vm.sesionRecienTerminada.collectAsStateWithLifecycle()
 
     var pestana by remember {
         mutableStateOf(if (accionInicial == "com.jowy05.jowyfit.ACCION_RUTINA") Pestana.RUTINA else Pestana.INICIO)
     }
     var enAjustes by remember { mutableStateOf(false) }
+    var enGimnasios by remember { mutableStateOf(false) }
+    var enEntreno by remember { mutableStateOf(false) }
+    var fichaEjercicioId by remember { mutableStateOf<String?>(null) }
+    var diaParaEmpezar by remember { mutableStateOf<DiaRutina?>(null) }
+    var avisoSesionActiva by remember { mutableStateOf<DiaRutina?>(null) }
     var hojaPeso by remember { mutableStateOf(accionInicial == "com.jowy05.jowyfit.ACCION_PESO") }
     var hojaComida by remember { mutableStateOf(false) }
     var hojaDia by remember { mutableStateOf<CalculosDominio.EstadoDia?>(null) }
     var hojaActualizacion by remember { mutableStateOf(false) }
     var bytesExportar by remember { mutableStateOf<ByteArray?>(null) }
+
+    BackHandler(enabled = fichaEjercicioId != null) { fichaEjercicioId = null }
+    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada != null) { vm.cerrarFinEntreno() }
+    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada == null && enEntreno && estado.sesionEnCurso != null) { enEntreno = false }
+    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enGimnasios) { enGimnasios = false }
+    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enGimnasios && enAjustes) { enAjustes = false }
 
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(aviso) {
@@ -162,6 +188,24 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
         }
     }
 
+    val pedirNotifEntreno = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> }
+
+    fun asegurarPermisoNotifEntreno() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pedirNotifEntreno.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    fun pedirEmpezarDia(dia: DiaRutina) {
+        if (estado.sesionEnCurso != null) {
+            avisoSesionActiva = dia
+        } else {
+            diaParaEmpezar = dia
+        }
+    }
+
     fun lanzarPruebaDescanso() {
         val necesitaPermiso = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -186,6 +230,67 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     alCompletarAlta = vm::completarAltaRapida,
                 )
             }
+            fichaEjercicioId != null -> {
+                val ejId = fichaEjercicioId!!
+                PantallaFichaEjercicio(
+                    ejercicioId = ejId,
+                    catalogo = catalogo,
+                    marcaInicial = estado.marcas[ejId],
+                    alVolver = { fichaEjercicioId = null },
+                    alGuardarMarca = vm::guardarMarcaEjercicio,
+                )
+            }
+            sesionTerminada != null -> {
+                val fin = sesionTerminada!!
+                PantallaFinEntreno(
+                    sesion = fin,
+                    alGuardarPlantilla = { nombre -> vm.guardarPlantillaLibreDesdeSesion(fin, nombre) },
+                    alVolverInicio = {
+                        vm.cerrarFinEntreno()
+                        enEntreno = false
+                        pestana = Pestana.INICIO
+                    },
+                )
+            }
+            enEntreno && estado.sesionEnCurso != null -> {
+                val activa = estado.sesionEnCurso!!
+                PantallaEntrenoEnVivo(
+                    sesion = activa,
+                    gimnasio = estado.gimnasioActivo,
+                    catalogo = catalogo,
+                    ajustesMaquina = { ejId -> estado.marcas[ejId]?.ajustes },
+                    sugerenciaPara = { e -> vm.sugerenciaPara(e.ejercicio, e.repsMin, e.repsMax, e.rpe, e.registro) },
+                    alMinimizar = { enEntreno = false },
+                    alApuntarSerie = vm::apuntarSerieEnCurso,
+                    alAjustarDescanso = vm::ajustarDescansoEnCurso,
+                    alAnadirSerie = { idx -> vm.modificarSesionEnCurso { MotorSesion.anadirSerie(it, idx) } },
+                    alQuitarSerie = { idx -> vm.modificarSesionEnCurso { MotorSesion.quitarSerie(it, idx) } },
+                    alCalentar = vm::anadirCalentamientoEnCurso,
+                    alSustituir = { idx, nuevoId -> vm.sustituirEjercicioEnCurso(idx, nuevoId) },
+                    alSaltarEjercicio = { idx -> vm.modificarSesionEnCurso { MotorSesion.saltar(it, idx) } },
+                    alIrAEjercicio = { idx -> vm.modificarSesionEnCurso { MotorSesion.irA(it, idx) } },
+                    alAnadirEjercicio = vm::anadirEjercicioASesionEnCurso,
+                    alAbrirFicha = { ejId -> fichaEjercicioId = ejId },
+                    alFinalizar = {
+                        enEntreno = false
+                        vm.finalizarEntrenoEnCurso()
+                    },
+                    alDescartar = {
+                        enEntreno = false
+                        vm.descartarEntrenoEnCurso()
+                    },
+                )
+            }
+            enGimnasios -> {
+                PantallaGimnasios(
+                    estado = estado,
+                    catalogo = catalogo,
+                    alVolver = { enGimnasios = false },
+                    alGuardarGimnasio = vm::guardarGimnasio,
+                    alActivarGimnasio = vm::activarGimnasio,
+                    alBorrarGimnasio = vm::borrarGimnasio,
+                )
+            }
             enAjustes -> {
                 PantallaAjustes(
                     estado = estado,
@@ -207,6 +312,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     alProbarDescanso = ::lanzarPruebaDescanso,
                     alBorrarTodo = {
                         enAjustes = false
+                        enEntreno = false
+                        enGimnasios = false
+                        fichaEjercicioId = null
                         vm.borrarTodosLosDatos()
                     },
                 )
@@ -216,15 +324,48 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     Pestana.INICIO -> PantallaInicio(
                         estado = estado,
                         catalogo = catalogo,
+                        sugerenciaPara = { b -> vm.sugerenciaPara(b.ejercicio, b.repsMin, b.repsMax, b.rpe, b.registro) },
                         alAbrirAjustes = { enAjustes = true },
                         alCambiarPestana = { pestana = it },
                         alPulsarDia = { hojaDia = it },
+                        alEmpezarDia = ::pedirEmpezarDia,
+                        alContinuarEntreno = { enEntreno = true },
+                        alAbrirFicha = { ejId -> fichaEjercicioId = ejId },
+                        alGenerarRutina = { vm.generarNuevaRutina(calibracion = false, evitarActual = false) },
                         alAbrirPeso = { hojaPeso = true },
                         alAbrirComidaRapida = { hojaComida = true },
-                        alProbarDescanso = ::lanzarPruebaDescanso,
                         alAviso = vm::mostrarAviso,
                     )
-                    Pestana.RUTINA -> PantallaRutina(estado = estado, catalogo = catalogo)
+                    Pestana.RUTINA -> PantallaRutina(
+                        estado = estado,
+                        catalogo = catalogo,
+                        alAbrirFicha = { ejId -> fichaEjercicioId = ejId },
+                        alAbrirGimnasios = { enGimnasios = true },
+                        alGenerarVariante = { vm.generarNuevaRutina(calibracion = false, evitarActual = estado.rutinaActiva != null) },
+                        alEmpezarDia = ::pedirEmpezarDia,
+                        alEmpezarLibre = {
+                            if (estado.sesionEnCurso != null) {
+                                enEntreno = true
+                                vm.mostrarAviso("Ya tienes un entreno en curso")
+                            } else {
+                                asegurarPermisoNotifEntreno()
+                                vm.empezarEntrenoLibre("Entreno libre") { enEntreno = true }
+                            }
+                        },
+                        alEmpezarPlantilla = { pl ->
+                            if (estado.sesionEnCurso != null) {
+                                enEntreno = true
+                                vm.mostrarAviso("Ya tienes un entreno en curso")
+                            } else {
+                                asegurarPermisoNotifEntreno()
+                                vm.empezarPlantillaLibre(pl) { enEntreno = true }
+                            }
+                        },
+                        alBorrarPlantilla = vm::borrarPlantillaLibre,
+                        alAnadirBloque = vm::anadirEjercicioADiaRutina,
+                        alQuitarBloque = vm::quitarBloqueDeDiaRutina,
+                        alCambiarSeries = vm::cambiarSeriesBloqueRutina,
+                    )
                     Pestana.COMIDA -> PantallaComida(estado = estado, alAbrirAnadir = { hojaComida = true })
                     Pestana.PROGRESO -> PantallaProgreso(
                         estado = estado,
@@ -238,11 +379,21 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     )
                 }
 
-                BarraInferiorFlotante(
-                    activa = pestana,
-                    alCambiar = { pestana = it },
+                Column(
                     modifier = Modifier.align(Alignment.BottomCenter),
-                )
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    estado.sesionEnCurso?.let { enCurso ->
+                        MiniBarraEntreno(
+                            sesion = enCurso,
+                            onClick = { enEntreno = true },
+                        )
+                    }
+                    BarraInferiorFlotante(
+                        activa = pestana,
+                        alCambiar = { pestana = it },
+                    )
+                }
             }
         }
 
@@ -251,7 +402,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 86.dp, start = 14.dp, end = 14.dp),
+                .padding(bottom = if (enEntreno) 16.dp else 86.dp, start = 14.dp, end = 14.dp),
         ) { data ->
             Snackbar(
                 snackbarData = data,
@@ -263,6 +414,40 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
         }
     }
 
+    diaParaEmpezar?.let { dia ->
+        HojaEmpezarDia(
+            dia = dia,
+            alCerrar = { diaParaEmpezar = null },
+            alElegirVersion = { version ->
+                diaParaEmpezar = null
+                asegurarPermisoNotifEntreno()
+                vm.empezarDiaRutina(dia, version) { enEntreno = true }
+            },
+        )
+    }
+    avisoSesionActiva?.let { nuevoDia ->
+        AlertDialog(
+            onDismissRequest = { avisoSesionActiva = null },
+            title = { Text("Ya tienes un entreno en curso") },
+            text = { Text("¿Quieres retomar «${estado.sesionEnCurso?.nombre ?: "Entreno"}» o descartarlo para empezar «${nuevoDia.nombre}»?") },
+            confirmButton = {
+                TextButton(onClick = { avisoSesionActiva = null; enEntreno = true }) {
+                    Text("Retomar actual", color = p.go, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        avisoSesionActiva = null
+                        vm.descartarEntrenoEnCurso()
+                        diaParaEmpezar = nuevoDia
+                    },
+                ) {
+                    Text("Empezar nuevo", color = p.bad)
+                }
+            },
+        )
+    }
     if (hojaPeso) {
         HojaPeso(
             pesoInicial = estado.ultimoPeso,

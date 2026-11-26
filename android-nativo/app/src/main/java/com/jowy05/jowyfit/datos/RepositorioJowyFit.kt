@@ -9,6 +9,7 @@ import com.jowy05.jowyfit.datos.modelo.Comida
 import com.jowy05.jowyfit.datos.modelo.Gimnasio
 import com.jowy05.jowyfit.datos.modelo.IntentoReto
 import com.jowy05.jowyfit.datos.modelo.JsonJowyFit
+import com.jowy05.jowyfit.datos.modelo.MarcaEjercicio
 import com.jowy05.jowyfit.datos.modelo.Medicion
 import com.jowy05.jowyfit.datos.modelo.Meta
 import com.jowy05.jowyfit.datos.modelo.PasosDia
@@ -91,6 +92,10 @@ class RepositorioJowyFit(private val context: Context) {
 
     val gimnasios: Flow<List<Gimnasio>> = dao.observarTabla("gimnasios").map { lista ->
         lista.mapNotNull { decodificar<Gimnasio>(it.payloadJson) }
+    }
+
+    val marcas: Flow<List<MarcaEjercicio>> = dao.observarTabla("marcas").map { lista ->
+        lista.mapNotNull { decodificar<MarcaEjercicio>(it.payloadJson) }
     }
 
     private fun cargarPreferencias(): PreferenciasVisuales {
@@ -202,6 +207,52 @@ class RepositorioJowyFit(private val context: Context) {
                 payloadJson = JsonJowyFit.encodeToString(p),
             ),
         )
+    }
+
+    suspend fun siguienteIdTabla(tabla: String): Long = withContext(Dispatchers.IO) {
+        (dao.leerTabla(tabla).mapNotNull { it.clave.toLongOrNull() }.maxOrNull() ?: 0L) + 1L
+    }
+
+    suspend fun guardarRutina(rutina: Rutina, desactivarOtras: Boolean = false): Rutina = withContext(Dispatchers.IO) {
+        val id = rutina.id ?: siguienteIdTabla("rutinas")
+        val final = rutina.copy(id = id)
+        if (desactivarOtras) {
+            val previas = dao.leerTabla("rutinas").mapNotNull { decodificar<Rutina>(it.payloadJson) }
+            for (r in previas) {
+                if (r.id != null && r.id != id && r.activa) {
+                    val inactiva = r.copy(activa = false)
+                    dao.guardar(RegistroTablaEntity("rutinas", r.id.toString(), r.creada.take(10), JsonJowyFit.encodeToString(inactiva)))
+                }
+            }
+        }
+        dao.guardar(RegistroTablaEntity("rutinas", id.toString(), final.creada.take(10), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun guardarSesion(sesion: Sesion): Sesion = withContext(Dispatchers.IO) {
+        val id = sesion.id ?: siguienteIdTabla("sesiones")
+        val final = sesion.copy(id = id)
+        dao.guardar(RegistroTablaEntity("sesiones", id.toString(), final.fecha.take(10), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarSesion(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("sesiones", id.toString())
+    }
+
+    suspend fun guardarMarca(marca: MarcaEjercicio) = withContext(Dispatchers.IO) {
+        dao.guardar(RegistroTablaEntity("marcas", marca.id, "", JsonJowyFit.encodeToString(marca)))
+    }
+
+    suspend fun guardarGimnasio(gimnasio: Gimnasio): Gimnasio = withContext(Dispatchers.IO) {
+        val id = gimnasio.id ?: siguienteIdTabla("gimnasios")
+        val final = gimnasio.copy(id = id, creado = gimnasio.creado.ifBlank { Instant.now().toString() })
+        dao.guardar(RegistroTablaEntity("gimnasios", id.toString(), final.creado.take(10), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarGimnasio(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("gimnasios", id.toString())
     }
 
     suspend fun importarCopia(bytes: ByteArray, contrasena: String? = null): Int = withContext(Dispatchers.IO) {

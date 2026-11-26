@@ -55,6 +55,7 @@ import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
 import com.jowy05.jowyfit.datos.modelo.PlantillaEntreno
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.RetosDominio
 import com.jowy05.jowyfit.ui.EstadoPrincipal
 import com.jowy05.jowyfit.ui.componentes.BarraProgreso
 import com.jowy05.jowyfit.ui.componentes.BotonPrincipal
@@ -90,6 +91,8 @@ fun PantallaRutina(
     alAnadirBloque: (String, String) -> Unit,
     alQuitarBloque: (String, String) -> Unit,
     alCambiarSeries: (String, String, Int) -> Unit,
+    alIniciarReto: (RetosDominio.DefinicionReto) -> Unit,
+    alBorrarIntentoReto: (Long) -> Unit,
 ) {
     val p = LocalPaleta.current
     var subtab by remember { mutableStateOf("plan") }
@@ -105,12 +108,17 @@ fun PantallaRutina(
     ) {
         CabeceraPantalla(
             crumb = t("Rutina"),
-            titulo = if (subtab == "plan") "Mi plan" else "Ejercicios",
+            titulo = when (subtab) {
+                "plan" -> "Mi plan"
+                "retos" -> "Retos 3D"
+                else -> "Ejercicios"
+            },
             sub = estado.rutinaActiva?.estructura?.ifBlank { null },
             extra = {
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = subtab == "plan", onClick = { subtab = "plan" }, label = { Text("Mi plan") })
+                    FilterChip(selected = subtab == "retos", onClick = { subtab = "retos" }, label = { Text("Retos") })
                     FilterChip(
                         selected = subtab == "ejercicios",
                         onClick = { subtab = "ejercicios" },
@@ -120,7 +128,13 @@ fun PantallaRutina(
             },
         )
 
-        if (subtab == "plan") {
+        if (subtab == "retos") {
+            ContenidoRetosEnRutina(
+                estado = estado,
+                alIniciarReto = alIniciarReto,
+                alBorrarIntento = alBorrarIntentoReto,
+            )
+        } else if (subtab == "plan") {
             Column(
                 modifier = Modifier
                     .fillMaxSize()

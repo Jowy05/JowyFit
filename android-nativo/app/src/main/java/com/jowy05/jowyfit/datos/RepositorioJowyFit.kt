@@ -427,6 +427,62 @@ class RepositorioJowyFit(private val context: Context) {
         f
     }
 
+    suspend fun guardarMedicion(medicion: Medicion): Medicion = withContext(Dispatchers.IO) {
+        val id = medicion.id ?: siguienteIdTabla("mediciones")
+        val final = medicion.copy(id = id)
+        dao.guardar(RegistroTablaEntity("mediciones", id.toString(), final.fecha.take(10), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarMedicion(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("mediciones", id.toString())
+    }
+
+    suspend fun guardarMeta(meta: Meta): Meta = withContext(Dispatchers.IO) {
+        val id = meta.id ?: siguienteIdTabla("metas")
+        val final = meta.copy(id = id, titulo = meta.titulo.trim())
+        dao.guardar(RegistroTablaEntity("metas", id.toString(), final.fecha?.take(10).orEmpty(), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarMeta(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("metas", id.toString())
+    }
+
+    suspend fun guardarIntentoReto(intento: IntentoReto): IntentoReto = withContext(Dispatchers.IO) {
+        val id = intento.id ?: siguienteIdTabla("retos")
+        val final = intento.copy(id = id)
+        dao.guardar(RegistroTablaEntity("retos", id.toString(), final.fecha.take(10), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarIntentoReto(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("retos", id.toString())
+    }
+
+    suspend fun guardarFotoProgreso(pose: String, bytes: ByteArray, fecha: String = LocalDate.now().toString()): FotoProgreso = withContext(Dispatchers.IO) {
+        val id = siguienteIdTabla("fotos")
+        val ruta = "archivos/foto-${System.currentTimeMillis()}.jpg"
+        guardarMediaBytes(ruta, bytes)
+        val foto = FotoProgreso(
+            id = id,
+            fecha = fecha,
+            pose = pose,
+            imagen = com.jowy05.jowyfit.datos.modelo.RefArchivo(archivo = ruta, tipo = "image/jpeg"),
+        )
+        dao.guardar(RegistroTablaEntity("fotos", id.toString(), fecha, JsonJowyFit.encodeToString(foto)))
+        foto
+    }
+
+    suspend fun borrarFotoProgreso(foto: FotoProgreso) = withContext(Dispatchers.IO) {
+        foto.id?.let { dao.borrarUno("fotos", it.toString()) }
+        foto.imagen?.archivo?.let { rel -> runCatching { archivoMedia(rel).delete() } }
+    }
+
+    suspend fun guardarPasosDia(pasosDia: PasosDia) = withContext(Dispatchers.IO) {
+        dao.guardar(RegistroTablaEntity("pasos", pasosDia.fecha, pasosDia.fecha, JsonJowyFit.encodeToString(pasosDia)))
+    }
+
     suspend fun importarCopia(bytes: ByteArray, contrasena: String? = null): Int = withContext(Dispatchers.IO) {
         val leida = GestorCopias.leerCopia(bytes, contrasena)
         if (dirMedia.exists()) dirMedia.deleteRecursively()

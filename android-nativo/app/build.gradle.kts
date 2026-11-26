@@ -30,6 +30,13 @@ val prepararAssetsRepdb = tasks.register<Sync>("prepararAssetsRepdb") {
     into(carpetaAssetsRepdb.map { it.dir("repdb") })
 }
 
+// Copia el modelo nativo MediaPipe BlazePose Lite (5,7 MB, sin WASM) para Retos 3D en GPU.
+val carpetaAssetsPostura = layout.buildDirectory.dir("generated/assets/postura")
+val prepararAssetsPostura = tasks.register<Sync>("prepararAssetsPostura") {
+    from(rootProject.file("../public/postura/pose_landmarker_lite.task"))
+    into(carpetaAssetsPostura.map { it.dir("postura") })
+}
+
 android {
     namespace = "com.jowy05.jowyfit"
     compileSdk = 36
@@ -43,6 +50,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appLabel"] = "JowyFit"
         buildConfigField("String", "VERSION_APP", "\"$versionApp\"")
+        ndk {
+            // Solo arquitecturas de teléfonos Android reales (ahorra ~20 MB de binarios x86 en ML Kit y MediaPipe).
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     signingConfigs {
@@ -81,7 +92,7 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".nativo"
-            versionNameSuffix = "-kotlin-f3"
+            versionNameSuffix = "-kotlin-f4"
             manifestPlaceholders["appLabel"] = "JowyFit Kotlin"
             matchingFallbacks += listOf("release")
         }
@@ -90,6 +101,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDir(carpetaAssetsRepdb)
+            assets.srcDir(carpetaAssetsPostura)
         }
     }
 
@@ -115,7 +127,7 @@ android {
 }
 
 tasks.named("preBuild") {
-    dependsOn(prepararAssetsRepdb)
+    dependsOn(prepararAssetsRepdb, prepararAssetsPostura)
 }
 
 dependencies {
@@ -167,6 +179,11 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraXVersion")
     implementation("com.google.guava:guava:33.3.1-android")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // MediaPipe Tasks Vision nativo (BlazePose 3D en C++/GPU para Retos).
+    implementation("com.google.mediapipe:tasks-vision:0.10.21") {
+        exclude(group = "com.google.auto.value", module = "auto-value")
+    }
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 

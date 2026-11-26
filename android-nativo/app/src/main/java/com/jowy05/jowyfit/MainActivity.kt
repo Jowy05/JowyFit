@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jowy05.jowyfit.datos.PreferenciaTema
@@ -48,9 +49,12 @@ import com.jowy05.jowyfit.datos.modelo.Producto
 import com.jowy05.jowyfit.dominio.CalculosDominio
 import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.dominio.MotorSesion
+import com.jowy05.jowyfit.dominio.RetosDominio
+import com.jowy05.jowyfit.nativo.ClienteHealthConnect
 import com.jowy05.jowyfit.nativo.ServicioDescanso
 import com.jowy05.jowyfit.ui.EstadoAppViewModel
 import com.jowy05.jowyfit.ui.componentes.BarraInferiorFlotante
+import com.jowy05.jowyfit.ui.componentes.PantallaCamaraFotoProgreso
 import com.jowy05.jowyfit.ui.componentes.PantallaEscanerBarras
 import com.jowy05.jowyfit.ui.componentes.Pestana
 import com.jowy05.jowyfit.ui.i18n.LocalIdioma
@@ -71,7 +75,8 @@ import com.jowy05.jowyfit.ui.pantallas.PantallaFinEntreno
 import com.jowy05.jowyfit.ui.pantallas.PantallaGimnasios
 import com.jowy05.jowyfit.ui.pantallas.PantallaInicio
 import com.jowy05.jowyfit.ui.pantallas.PantallaPerfil
-import com.jowy05.jowyfit.ui.pantallas.PantallaProgreso
+import com.jowy05.jowyfit.ui.pantallas.PantallaProgresoCompleta
+import com.jowy05.jowyfit.ui.pantallas.PantallaRetoActivo
 import com.jowy05.jowyfit.ui.pantallas.PantallaRutina
 import com.jowy05.jowyfit.ui.tema.JowyFitTheme
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
@@ -141,6 +146,8 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     var enGimnasios by remember { mutableStateOf(false) }
     var enEntreno by remember { mutableStateOf(false) }
     var enEscaner by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var retoActivo by remember { mutableStateOf<RetosDominio.DefinicionReto?>(null) }
+    var poseCamaraFoto by remember { mutableStateOf<String?>(null) }
     var productoHoja by remember { mutableStateOf<Triple<String, Producto?, Pair<String, String>>?>(null) }
     var fichaEjercicioId by remember { mutableStateOf<String?>(null) }
     var diaParaEmpezar by remember { mutableStateOf<DiaRutina?>(null) }
@@ -151,12 +158,14 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     var hojaActualizacion by remember { mutableStateOf(false) }
     var bytesExportar by remember { mutableStateOf<ByteArray?>(null) }
 
-    BackHandler(enabled = enEscaner != null) { enEscaner = null }
-    BackHandler(enabled = enEscaner == null && fichaEjercicioId != null) { fichaEjercicioId = null }
-    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada != null) { vm.cerrarFinEntreno() }
-    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && enEntreno && estado.sesionEnCurso != null) { enEntreno = false }
-    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enGimnasios) { enGimnasios = false }
-    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enGimnasios && enAjustes) { enAjustes = false }
+    BackHandler(enabled = poseCamaraFoto != null) { poseCamaraFoto = null }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo != null) { retoActivo = null }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner != null) { enEscaner = null }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId != null) { fichaEjercicioId = null }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada != null) { vm.cerrarFinEntreno() }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && enEntreno && estado.sesionEnCurso != null) { enEntreno = false }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enGimnasios) { enGimnasios = false }
+    BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enGimnasios && enAjustes) { enAjustes = false }
 
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(aviso) {
@@ -198,6 +207,24 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     }
 
     val pedirNotifEntreno = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> }
+
+    val pedirPermisosHC = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract(),
+    ) { concedidos ->
+        if (concedidos.isNotEmpty()) {
+            vm.sincronizarHealthConnect()
+        } else {
+            vm.mostrarAviso("Permisos de Health Connect no concedidos")
+        }
+    }
+
+    fun sincronizarHealthConnectConPermisos() {
+        if (!ClienteHealthConnect.estaDisponible(context)) {
+            vm.mostrarAviso("Health Connect no está disponible en este teléfono")
+            return
+        }
+        pedirPermisosHC.launch(ClienteHealthConnect.PERMISOS)
+    }
 
     fun asegurarPermisoNotifEntreno() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -247,6 +274,32 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         enEscaner = null
                         productoHoja = Triple(codigo, null, fechaEsc to franjaEsc)
                     },
+                )
+            }
+            poseCamaraFoto != null -> {
+                val pose = poseCamaraFoto!!
+                val ref = estado.fotos
+                    .filter { it.pose == pose }
+                    .maxByOrNull { it.fecha }
+                    ?.imagen?.archivo
+                    ?.let { vm.repo.archivoMedia(it) }
+                PantallaCamaraFotoProgreso(
+                    poseInicial = pose,
+                    fotoReferencia = ref,
+                    alCerrar = { poseCamaraFoto = null },
+                    alCapturar = { pElegida, bytes ->
+                        poseCamaraFoto = null
+                        vm.guardarFotoProgreso(pElegida, bytes)
+                    },
+                )
+            }
+            retoActivo != null -> {
+                val def = retoActivo!!
+                PantallaRetoActivo(
+                    reto = def,
+                    intentosPrevios = estado.retos,
+                    alCerrar = { retoActivo = null },
+                    alGuardarIntento = vm::guardarIntentoReto,
                 )
             }
             fichaEjercicioId != null -> {
@@ -389,6 +442,8 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         alAnadirBloque = vm::anadirEjercicioADiaRutina,
                         alQuitarBloque = vm::quitarBloqueDeDiaRutina,
                         alCambiarSeries = vm::cambiarSeriesBloqueRutina,
+                        alIniciarReto = { def -> retoActivo = def },
+                        alBorrarIntentoReto = vm::borrarIntentoReto,
                     )
                     Pestana.COMIDA -> PantallaComidaCompleta(
                         estado = estado,
@@ -408,10 +463,21 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                             vm.mostrarAviso("Objetivos de energía guardados")
                         },
                     )
-                    Pestana.PROGRESO -> PantallaProgreso(
+                    Pestana.PROGRESO -> PantallaProgresoCompleta(
                         estado = estado,
-                        alAbrirPeso = { hojaPeso = true },
+                        catalogo = catalogo,
+                        archivoMedia = vm.repo::archivoMedia,
+                        alAbrirFicha = { ejId -> fichaEjercicioId = ejId },
+                        alGuardarMedicion = vm::guardarMedicionCompleta,
+                        alGuardarMeta = vm::guardarMeta,
+                        alBorrarMeta = vm::borrarMeta,
+                        alAvanceMeta = vm::registrarAvanceMeta,
+                        alBorrarHitoMeta = vm::borrarHitoMeta,
+                        alAbrirCamaraFoto = { pose -> poseCamaraFoto = pose },
+                        alBorrarFoto = vm::borrarFotoProgreso,
                         alSumarPasos = vm::apuntarPasos,
+                        alApuntarCardio = vm::apuntarCardioHoy,
+                        alSincronizarHC = ::sincronizarHealthConnectConPermisos,
                     )
                     Pestana.PERFIL -> PantallaPerfil(
                         estado = estado,

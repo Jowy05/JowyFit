@@ -16,6 +16,7 @@ import com.jowy05.jowyfit.datos.copias.GestorCopias
 import com.jowy05.jowyfit.datos.modelo.Ajustes
 import com.jowy05.jowyfit.datos.modelo.BatidoPerfil
 import com.jowy05.jowyfit.datos.modelo.BloquePlantilla
+import com.jowy05.jowyfit.datos.modelo.CardioEntrada
 import com.jowy05.jowyfit.datos.modelo.Comida
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
 import com.jowy05.jowyfit.datos.modelo.DiaSuplementos
@@ -34,10 +35,13 @@ import com.jowy05.jowyfit.datos.modelo.Rutina
 import com.jowy05.jowyfit.datos.modelo.Sesion
 import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.dominio.GeneradorRutina
+import com.jowy05.jowyfit.dominio.MetasDominio
 import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.PesosYDiscos
 import com.jowy05.jowyfit.dominio.Progresion
+import com.jowy05.jowyfit.nativo.ClienteHealthConnect
 import com.jowy05.jowyfit.nativo.ClienteOpenFoodFacts
+import com.jowy05.jowyfit.nativo.GestorTareasFondo
 import com.jowy05.jowyfit.nativo.ServicioDescanso
 import com.jowy05.jowyfit.widget.WidgetHoy
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -388,6 +392,9 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
             val terminada = sesion.copy(estado = "hecha", fin = System.currentTimeMillis(), descansoHasta = null)
             repo.guardarSesion(terminada)
             _sesionRecienTerminada.value = terminada
+            if (estado.value.ajustes.entrenosASalud == true) {
+                runCatching { ClienteHealthConnect.escribirEntreno(getApplication(), terminada, estado.value.ultimoPeso ?: 75.0) }
+            }
             actualizarWidget()
         }
     }
@@ -585,7 +592,120 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun actualizarAjustes(transformar: (Ajustes) -> Ajustes) {
-        viewModelScope.launch { repo.guardarAjustes(transformar(estado.value.ajustes)) }
+        viewModelScope.launch {
+            val nuevos = transformar(estado.value.ajustes)
+            repo.guardarAjustes(nuevos)
+            runCatching { GestorTareasFondo.sincronizar(getApplication(), nuevos) }
+        }
+    }
+
+    fun guardarMedicionCompleta(medicion: Medicion) {
+        viewModelScope.launch {
+            repo.guardarMedicion(medicion)
+            actualizarWidget()
+            mostrarAviso("Medición guardada")
+        }
+    }
+
+    fun guardarMeta(meta: Meta) {
+        viewModelScope.launch {
+            repo.guardarMeta(meta)
+            mostrarAviso("Meta guardada")
+        }
+    }
+
+    fun borrarMeta(id: Long) {
+        viewModelScope.launch {
+            repo.borrarMeta(id)
+            mostrarAviso("Meta borrada")
+        }
+    }
+
+    fun registrarAvanceMeta(meta: Meta, valor: Double, nota: String? = null) {
+        viewModelScope.launch {
+            val actualizada = MetasDominio.registrarAvance(meta, valor, LocalDate.now().toString(), nota)
+            repo.guardarMeta(actualizada)
+            mostrarAviso("Avance apuntado en «${meta.titulo}»")
+        }
+    }
+
+    fun borrarHitoMeta(meta: Meta, indice: Int) {
+        viewModelScope.launch {
+            repo.guardarMeta(MetasDominio.borrarHito(meta, indice))
+            mostrarAviso("Registro eliminado")
+        }
+    }
+
+    fun guardarIntentoReto(intento: IntentoReto) {
+        viewModelScope.launch {
+            repo.guardarIntentoReto(intento)
+            mostrarAviso(if (intento.record == true) "🏆 ¡Nuevo récord guardado!" else "Intento de reto guardado")
+        }
+    }
+
+    fun borrarIntentoReto(id: Long) {
+        viewModelScope.launch {
+            repo.borrarIntentoReto(id)
+            mostrarAviso("Intento borrado")
+        }
+    }
+
+    fun guardarFotoProgreso(pose: String, bytes: ByteArray) {
+        viewModelScope.launch {
+            repo.guardarFotoProgreso(pose, bytes)
+            mostrarAviso("Foto de $pose guardada en local")
+        }
+    }
+
+    fun borrarFotoProgreso(foto: FotoProgreso) {
+        viewModelScope.launch {
+            repo.borrarFotoProgreso(foto)
+            mostrarAviso("Foto borrada")
+        }
+    }
+
+    fun apuntarCardioHoy(tipo: String, minutos: Int) {
+        val hoy = LocalDate.now().toString()
+        val existente = estado.value.pasos.firstOrNull { it.fecha == hoy } ?: PasosDia(fecha = hoy)
+        viewModelScope.launch {
+            repo.guardarPasosDia(existente.copy(cardio = existente.cardio.orEmpty() + CardioEntrada(tipo, minutos)))
+            mostrarAviso("Cardio añadido ($minutos min)")
+        }
+    }
+
+    fun sincronizarHealthConnect() {
+        viewModelScope.launch {
+            if (!ClienteHealthConnect.estaDisponible(getApplication())) {
+                mostrarAviso("Health Connect no está disponible en este teléfono")
+                return@launch
+            }
+            val datos = ClienteHealthConnect.sincronizarHoy(getApplication())
+            if (datos == null) {
+                mostrarAviso("Activa los permisos de Health Connect primero")
+                return@launch
+            }
+            var cambios = 0
+            val hoy = LocalDate.now().toString()
+            datos.pasosHoy?.takeIf { it > 0 }?.let { p ->
+                val actual = estado.value.pasos.firstOrNull { it.fecha == hoy }
+                repo.guardarPasosDia((actual ?: PasosDia(fecha = hoy)).copy(pasos = p, fuente = "hc"))
+                cambios++
+            }
+            if (datos.ultimoPesoKg != null || datos.ultimaGrasaPct != null) {
+                val ahora = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"))
+                repo.guardarMedicion(
+                    Medicion(
+                        fecha = ahora,
+                        origen = "hc",
+                        pesoKg = datos.ultimoPesoKg,
+                        bascula = datos.ultimaGrasaPct?.let { com.jowy05.jowyfit.datos.modelo.Bascula(grasaPct = it) },
+                    ),
+                )
+                cambios++
+            }
+            actualizarWidget()
+            mostrarAviso(if (cambios > 0) "Health Connect sincronizado ($cambios datos)" else "Sin datos nuevos en Health Connect")
+        }
     }
 
     fun importarCopiaBytes(bytes: ByteArray, contrasena: String? = null) {

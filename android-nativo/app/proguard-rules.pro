@@ -12,3 +12,9 @@
 }
 -keep class com.jowy05.jowyfit.datos.catalogo.** { *; }
 -keep class com.jowy05.jowyfit.widget.** { *; }
+
+# MediaPipe Tasks Vision (JNI y callbacks nativos de BlazePose)
+-keep class com.google.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.proto.**
+-dontwarn javax.lang.model.**
+-dontwarn com.google.auto.value.**

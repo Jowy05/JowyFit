@@ -31,6 +31,8 @@ object CalculosDominio {
     /** 0 = lunes … 6 = domingo (idéntico a diaSemana de TS). */
     fun diaSemana(fecha: LocalDate): Int = (fecha.dayOfWeek.value - 1).coerceIn(0, 6)
 
+    fun lunesDe(fecha: LocalDate): LocalDate = fecha.with(DayOfWeek.MONDAY)
+
     fun semanaDe(fechaIso: String): List<String> {
         val d = LocalDate.parse(fechaIso.take(10))
         val lunes = d.with(DayOfWeek.MONDAY)

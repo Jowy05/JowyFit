@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JowyFit</string>
+    <string name="widget_hoy_nombre">JowyFit · Hoy</string>
+    <string name="widget_hoy_desc">Entreno de hoy, proteína y pasos en un vistazo</string>
+    <string name="atajo_peso">+ Peso</string>
+    <string name="atajo_peso_largo">Apuntar peso rápido</string>
+    <string name="atajo_rutina">Mi plan</string>
+    <string name="atajo_rutina_largo">Abrir mi rutina de hoy</string>
+</resources>

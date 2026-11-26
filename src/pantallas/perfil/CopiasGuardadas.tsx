@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { esCifradaPorNombre, esCopiaAuto } from '../../dominio/copias'
 import { aISO, fechaCorta, horaDe } from '../../dominio/fechas'
 import { mensajeDe, tamanoArchivo } from '../../dominio/formato'
-import { borrarCopiaGuardada, leerCopiaGuardada, type ArchivoElegido, type CopiaGuardada } from '../../plataforma'
+import { borrarCopiaGuardada, compartirCopiaGuardada, leerCopiaGuardada, type ArchivoElegido, type CopiaGuardada } from '../../plataforma'
 import { cx, Ico } from '../../ui/componentes'
 import { useAviso } from '../../ui/aviso'
 import { t } from '../../i18n'
@@ -33,6 +33,13 @@ export function CopiasGuardadas({ copias, ocupado, onRecuperar, onCambio }: {
     try { onRecuperar({ nombre, bytes: await leerCopiaGuardada(nombre) }) }
     catch (e) { aviso(t('No se pudo leer la copia: {error}', { error: mensajeDe(e) })) }
   }
+  const compartir = async (nombre: string) => {
+    setArmado(null)
+    try {
+      const r = await compartirCopiaGuardada(nombre, t('Copia de seguridad'))
+      if (r === 'compartido') aviso(t('Copia lista para compartir: {nombre}', { nombre }))
+    } catch (e) { aviso(t('No se pudo compartir la copia: {error}', { error: mensajeDe(e) })) }
+  }
   const borrar = async (nombre: string) => {
     if (!segundoToque(nombre, 'borrar')) return
     try {
@@ -57,6 +64,8 @@ export function CopiasGuardadas({ copias, ocupado, onRecuperar, onCambio }: {
                     {esCopiaAuto(c.nombre) && <span className="tag">{t('auto')}</span>}</b>
                   <small>{protegida ? t('Protegida') : t('Sin contraseña')}{c.tam ? ` · ${tamanoArchivo(c.tam)}` : ''}</small>
                 </span>
+                <button className="ib sm" disabled={ocupado} aria-label={t('Compartir la copia')}
+                  onClick={() => void compartir(c.nombre)}><Ico n="share-network" /></button>
                 <button className={cx('ib sm', que === 'borrar' && 'badf')} disabled={ocupado} aria-label={que === 'borrar' ? t('¿Seguro? Borrar la copia') : t('Borrar la copia')}
                   onClick={() => void borrar(c.nombre)}><Ico n="trash" /></button>
                 <button className={cx('btn sm auto', que === 'recuperar' ? 'badf' : 'gry')} disabled={ocupado} onClick={() => void recuperar(c.nombre)}>

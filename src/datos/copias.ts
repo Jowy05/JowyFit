@@ -28,17 +28,19 @@ export async function exportar(): Promise<Uint8Array> {
       const copia: Fila = { ...f }
       for (const [k, v] of Object.entries(f)) {
         if (v instanceof Blob) {
-          const ruta = `archivos/${tb}-${n++}.${v.type.includes('png') ? 'png' : 'jpg'}`
+          const tipoFoto = v.type || 'image/jpeg'
+          const ruta = `archivos/${tb}-${n++}.${tipoFoto.includes('png') ? 'png' : 'jpg'}`
           archivos[ruta] = await blobAU8(v)
-          copia[k] = { __archivo: ruta, tipo: v.type }
+          copia[k] = { __archivo: ruta, tipo: tipoFoto }
         }
       }
       if (tb === 'gimnasios' && Array.isArray(copia.propias)) {
         copia.propias = await Promise.all((copia.propias as Fila[]).map(async p => {
           if (p.foto instanceof Blob) {
+            const tipoFoto = p.foto.type || 'image/jpeg'
             const ruta = `archivos/maquina-${n++}.jpg`
             archivos[ruta] = await blobAU8(p.foto)
-            return { ...p, foto: { __archivo: ruta, tipo: (p.foto as Blob).type } }
+            return { ...p, foto: { __archivo: ruta, tipo: tipoFoto } }
           }
           return p
         }))
@@ -49,7 +51,10 @@ export async function exportar(): Promise<Uint8Array> {
   // Con ejercicios propios, versión 2: una app anterior avisa de que hay que actualizar en vez de perderlos sin decir nada.
   const version = versionNecesaria(datos)
   const json = JSON.stringify({ app: 'JowyFit', version, creada: new Date().toISOString(), datos })
-  return zipSync({ 'datos.json': strToU8(json), ...archivos }, { level: 6 })
+  // datos.json se comprime; las fotos ya vienen en JPEG/PNG y guardarlas sin recomprimir evita picos de memoria en el móvil.
+  const entradas: Record<string, [Uint8Array, { level: 0 | 6 }]> = { 'datos.json': [strToU8(json), { level: 6 }] }
+  for (const [ruta, bin] of Object.entries(archivos)) entradas[ruta] = [bin, { level: 0 }]
+  return zipSync(entradas)
 }
 
 /**

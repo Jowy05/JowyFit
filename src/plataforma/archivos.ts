@@ -1,11 +1,68 @@
 // Archivos: guardar, compartir y elegir (copias e informe), copias en Documentos y fotos.
+import { registerPlugin } from '@capacitor/core'
 import { esAndroid, esNativo, esWebApple } from './dispositivo'
 import { t } from '../i18n'
 
+/** Trozo binario para subir o bajar archivos por el puente nativo sin picos de memoria ni límites de IPC. */
+const TAM_TROZO = 512 * 1024
+
+type CarpetaNativa = 'documentos' | 'descargas'
+
+type PluginArchivos = {
+  iniciarArchivo(o: { nombre: string }): Promise<{ id: string }>
+  escribirTrozo(o: { id: string; datos: string }): Promise<void>
+  cancelarArchivo(o: { id: string }): Promise<void>
+  guardarEnDocumentos(o: { id: string; nombre: string; tipo: string }): Promise<{ uri: string; carpeta: CarpetaNativa; nombre: string }>
+  guardarComo(o: { id: string; nombre: string; tipo: string }): Promise<{ estado: 'guardado' | 'cancelado'; uri?: string; nombre?: string }>
+  compartir(o: { id: string; nombre: string; tipo: string; titulo: string }): Promise<{ estado: 'compartido' | 'cancelado' }>
+  compartirCopiaGuardada(o: { nombre: string; titulo: string }): Promise<{ estado: 'compartido' | 'cancelado' }>
+  listarCopias(): Promise<{ copias: CopiaGuardada[] }>
+  abrirLecturaCopia(o: { nombre: string }): Promise<{ id: string }>
+  leerTrozoCopia(o: { id: string }): Promise<{ datos: string; fin: boolean }>
+  cerrarLecturaCopia(o: { id: string }): Promise<void>
+  borrarCopia(o: { nombre: string }): Promise<void>
+}
+
+let pluginCache: PluginArchivos | null = null
+function pluginArchivos(): PluginArchivos {
+  return (pluginCache ??= registerPlugin<PluginArchivos>('ArchivosNativos'))
+}
+
+function esNoImplementado(e: unknown): boolean {
+  const m = String((e as Error)?.message ?? e ?? '')
+  return /UNIMPLEMENTED|not implemented/i.test(m)
+}
+
+function esFaltaPermisoNativo(e: unknown): boolean {
+  return (e as { code?: string })?.code === 'SIN_PERMISO'
+}
+
 function aBase64(bytes: Uint8Array): string {
-  let s = ''
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-  return btoa(s)
+  const trozos: string[] = []
+  for (let i = 0; i < bytes.length; i += 0x8000) trozos.push(String.fromCharCode(...bytes.subarray(i, i + 0x8000)))
+  return btoa(trozos.join(''))
+}
+
+function deBase64(b64: string): Uint8Array {
+  const bin = atob(b64)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
+
+/** Sube los bytes al archivo temporal nativo en trozos de 512 KB (borra el temporal si falla a medias). */
+async function prepararEnNativo(nombre: string, bytes: Uint8Array): Promise<string> {
+  const p = pluginArchivos()
+  const { id } = await p.iniciarArchivo({ nombre })
+  try {
+    for (let i = 0; i < bytes.length; i += TAM_TROZO) {
+      await p.escribirTrozo({ id, datos: aBase64(bytes.subarray(i, i + TAM_TROZO)) })
+    }
+    return id
+  } catch (e) {
+    await p.cancelarArchivo({ id }).catch(() => {})
+    throw e
+  }
 }
 
 /**
@@ -32,23 +89,81 @@ async function exigirPermiso(pedir: boolean, texto: string): Promise<void> {
   e.name = SIN_PERMISO
   throw e
 }
+const sinPermisoGuardar = () => t('Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.')
 // Al leer o borrar no se habla de «guardar»: despistaría.
 const sinPermisoCarpeta = () => t('Sin permiso para usar la carpeta Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.')
 
-/** Guarda un archivo. Android: Documentos/JowyFit (sobrevive a desinstalar). Web: descarga. */
-export async function guardarArchivo(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<string> {
+export type DestinoGuardado = { uri: string; carpeta: 'documentos' | 'descargas' | 'web'; nombre: string }
+
+/**
+ * Guarda un archivo indicando dónde quedó. En Android usa MediaStore (Documentos/JowyFit y, si el fabricante lo
+ * bloquea, Descargas/JowyFit) con transferencia por trozos; si un APK antiguo no trae el plugin, cae a Filesystem.
+ */
+export async function guardarArchivoConCarpeta(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<DestinoGuardado> {
   if (esNativo()) {
-    await exigirPermiso(true, t('Sin permiso para guardar en Documentos. Dalo en los ajustes del móvil: Aplicaciones → JowyFit → Permisos.'))
+    if (esAndroid()) {
+      const p = pluginArchivos()
+      let id: string | null = null
+      try {
+        const idTmp = await prepararEnNativo(nombre, bytes)
+        id = idTmp
+        try {
+          const r = await p.guardarEnDocumentos({ id: idTmp, nombre, tipo })
+          id = null
+          return { uri: r.uri, carpeta: r.carpeta === 'descargas' ? 'descargas' : 'documentos', nombre: r.nombre || nombre }
+        } catch (e) {
+          if (esFaltaPermisoNativo(e)) {
+            await exigirPermiso(true, sinPermisoGuardar())
+            const r = await p.guardarEnDocumentos({ id: idTmp, nombre, tipo })
+            id = null
+            return { uri: r.uri, carpeta: r.carpeta === 'descargas' ? 'descargas' : 'documentos', nombre: r.nombre || nombre }
+          }
+          throw e
+        }
+      } catch (e) {
+        if (id) await p.cancelarArchivo({ id }).catch(() => {})
+        if (!esNoImplementado(e)) throw e
+      }
+    }
+    await exigirPermiso(true, sinPermisoGuardar())
     const { Filesystem, Directory } = await import('@capacitor/filesystem')
     const r = await Filesystem.writeFile({ path: `JowyFit/${nombre}`, data: aBase64(bytes), directory: Directory.Documents, recursive: true })
-    return r.uri
+    return { uri: r.uri, carpeta: 'documentos', nombre }
   }
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: tipo }))
   const a = document.createElement('a')
   a.href = url; a.download = nombre
   document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
-  return nombre
+  return { uri: nombre, carpeta: 'web', nombre }
+}
+
+/** Guarda un archivo. Android: Documentos/JowyFit (sobrevive a desinstalar). Web: descarga. */
+export async function guardarArchivo(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<string> {
+  return (await guardarArchivoConCarpeta(nombre, bytes, tipo)).uri
+}
+
+export type ResultadoGuardarComo =
+  | { estado: 'guardado'; nombre: string }
+  | { estado: 'cancelado' }
+  | { estado: 'no-disponible' }
+
+/** Android: abre el selector de carpetas del sistema (SAF ACTION_CREATE_DOCUMENT) para guardar donde elija el usuario. */
+export async function guardarArchivoComo(nombre: string, bytes: Uint8Array, tipo = 'application/octet-stream'): Promise<ResultadoGuardarComo> {
+  if (!esAndroid()) return { estado: 'no-disponible' }
+  const p = pluginArchivos()
+  let id: string | null = null
+  try {
+    id = await prepararEnNativo(nombre, bytes)
+    const r = await p.guardarComo({ id, nombre, tipo })
+    id = null
+    if (r.estado === 'cancelado') return { estado: 'cancelado' }
+    return { estado: 'guardado', nombre: r.nombre || nombre }
+  } catch (e) {
+    if (id) await p.cancelarArchivo({ id }).catch(() => {})
+    if (esNoImplementado(e)) return { estado: 'no-disponible' }
+    throw e
+  }
 }
 
 type Compartido = 'compartido' | 'cancelado' | 'sin-gesto' | 'no-se-puede'
@@ -78,7 +193,20 @@ export async function compartirArchivo(nombre: string, bytes: Uint8Array, tipo =
  * Android: abre el menú Compartir del sistema con un archivo (WhatsApp, Gmail, Drive…). Se deja antes en la caché,
  * en la carpeta «compartir», que es la que el FileProvider deja dar a otra app (res/xml/file_paths.xml).
  */
-export async function compartirNativo(nombre: string, bytes: Uint8Array, titulo: string): Promise<'compartido' | 'cancelado'> {
+export async function compartirNativo(nombre: string, bytes: Uint8Array, titulo: string, tipo = 'application/octet-stream'): Promise<'compartido' | 'cancelado'> {
+  if (esAndroid()) {
+    const p = pluginArchivos()
+    let id: string | null = null
+    try {
+      id = await prepararEnNativo(nombre, bytes)
+      const r = await p.compartir({ id, nombre, tipo, titulo })
+      id = null
+      return r.estado === 'cancelado' ? 'cancelado' : 'compartido'
+    } catch (e) {
+      if (id) await p.cancelarArchivo({ id }).catch(() => {})
+      if (!esNoImplementado(e)) throw e
+    }
+  }
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
   const { Share } = await import('@capacitor/share')
   const r = await Filesystem.writeFile({ path: `compartir/${nombre}`, data: aBase64(bytes), directory: Directory.Cache, recursive: true })
@@ -95,9 +223,21 @@ export async function compartirNativo(nombre: string, bytes: Uint8Array, titulo:
 export type CopiaGuardada = { nombre: string; fecha: number; tam: number }
 export type ArchivoElegido = { nombre: string; bytes: Uint8Array }
 
-/** Lista las copias guardadas en Documentos/JowyFit (solo Android; sin el permiso de Android 10 o anterior, ninguna). */
+/** Lista las copias guardadas en Documentos/JowyFit (o Descargas/JowyFit en Android 10+). */
 export async function copiasGuardadas(): Promise<CopiaGuardada[]> {
-  if (!esNativo() || !(await permisoDocumentos(false))) return []
+  if (!esNativo()) return []
+  if (esAndroid()) {
+    try {
+      const r = await pluginArchivos().listarCopias()
+      return (r.copias ?? [])
+        .filter(f => f.nombre.endsWith('.jowyfit'))
+        .map(f => ({ nombre: f.nombre, fecha: Number(f.fecha ?? 0), tam: Number(f.tam ?? 0) }))
+        .sort((a, b) => b.fecha - a.fecha || b.nombre.localeCompare(a.nombre))
+    } catch (e) {
+      if (!esNoImplementado(e)) return []
+    }
+  }
+  if (!(await permisoDocumentos(false))) return []
   try {
     const { Filesystem, Directory } = await import('@capacitor/filesystem')
     const r = await Filesystem.readdir({ path: 'JowyFit', directory: Directory.Documents })
@@ -114,16 +254,62 @@ function rutaCopia(nombre: string): string {
 // Leer y borrar no preguntan: sin el permiso la lista sale vacía, así que solo llega aquí si se quitó después.
 export async function leerCopiaGuardada(nombre: string): Promise<Uint8Array> {
   const ruta = rutaCopia(nombre)
+  if (esAndroid()) {
+    const p = pluginArchivos()
+    let id: string | null = null
+    try {
+      id = (await p.abrirLecturaCopia({ nombre })).id
+      const partes: Uint8Array[] = []
+      let total = 0
+      for (;;) {
+        const tzo = await p.leerTrozoCopia({ id })
+        if (tzo.fin) break
+        const bin = deBase64(tzo.datos)
+        partes.push(bin)
+        total += bin.length
+      }
+      id = null
+      const out = new Uint8Array(total)
+      let pos = 0
+      for (const parte of partes) { out.set(parte, pos); pos += parte.length }
+      return out
+    } catch (e) {
+      if (id) await p.cerrarLecturaCopia({ id }).catch(() => {})
+      if (!esNoImplementado(e)) throw e
+    }
+  }
   await exigirPermiso(false, sinPermisoCarpeta())
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
   const r = await Filesystem.readFile({ path: ruta, directory: Directory.Documents })
-  const bin = atob(typeof r.data === 'string' ? r.data : await (r.data as Blob).text())
-  return Uint8Array.from(bin, c => c.charCodeAt(0))
+  return deBase64(typeof r.data === 'string' ? r.data : await (r.data as Blob).text())
 }
 
-/** Borra una copia de Documentos/JowyFit. Ahí no hay papelera: no se puede deshacer. */
+/** Android: comparte una copia ya guardada en el móvil sin mover sus bytes por JavaScript. */
+export async function compartirCopiaGuardada(nombre: string, titulo: string): Promise<'compartido' | 'cancelado'> {
+  rutaCopia(nombre)
+  if (esAndroid()) {
+    try {
+      const r = await pluginArchivos().compartirCopiaGuardada({ nombre, titulo })
+      return r.estado === 'cancelado' ? 'cancelado' : 'compartido'
+    } catch (e) {
+      if (!esNoImplementado(e)) throw e
+    }
+  }
+  const bytes = await leerCopiaGuardada(nombre)
+  return compartirNativo(nombre, bytes, titulo, 'application/octet-stream')
+}
+
+/** Borra una copia de Documentos/JowyFit (o Descargas/JowyFit). Ahí no hay papelera: no se puede deshacer. */
 export async function borrarCopiaGuardada(nombre: string): Promise<void> {
   const ruta = rutaCopia(nombre)
+  if (esAndroid()) {
+    try {
+      await pluginArchivos().borrarCopia({ nombre })
+      return
+    } catch (e) {
+      if (!esNoImplementado(e)) throw e
+    }
+  }
   await exigirPermiso(false, sinPermisoCarpeta())
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
   await Filesystem.deleteFile({ path: ruta, directory: Directory.Documents })

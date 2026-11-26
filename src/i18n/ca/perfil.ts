@@ -848,4 +848,14 @@ export default {
   'Actualizar versión web': 'Actualitzar versió web',
   'Ver notas en GitHub': 'Veure notes a GitHub',
   'Solo se consulta GitHub cuando tocas aquí. Tus datos se conservan al actualizar.': 'Només es consulta GitHub quan toques aquí. Les teves dades es conserven en actualitzar.',
+  // Guardado fiable y compartido de copias en Android
+  'Elegir dónde guardar la copia': 'Triar on desar la còpia',
+  'Descargas, Drive o la carpeta que prefieras': 'Baixades, Drive o la carpeta que prefereixis',
+  'Enviar o compartir copia': 'Enviar o compartir la còpia',
+  'WhatsApp, Telegram, Drive u otra app': 'WhatsApp, Telegram, Drive o una altra app',
+  'Copia lista para compartir: {nombre}': 'Còpia a punt per compartir: {nombre}',
+  'Compartir la copia': 'Compartir la còpia',
+  'No se pudo compartir la copia: {error}': "No s'ha pogut compartir la còpia: {error}",
+  'Copia guardada en Descargas/JowyFit: {nombre}': 'Còpia desada a Baixades/JowyFit: {nombre}',
+  'Guardado en Descargas/JowyFit: {nombre}': 'Desat a Baixades/JowyFit: {nombre}',
 } satisfies Diccionario

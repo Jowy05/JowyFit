@@ -190,4 +190,46 @@ describe('copias guardadas en el móvil: limpieza y «Borrarlas»', () => {
       expect(quedan.every(esCifradaPorNombre)).toBe(true)
     })
   })
+
+  it('si falla guardar en Documentos en Android, «hacerCopiaConRespaldo» abre Compartir automáticamente', async () => {
+    let compartidoCon: string | null = null
+    vi.resetModules()
+    vi.doMock('../src/plataforma', async orig => ({
+      ...((await orig()) as Record<string, unknown>),
+      esNativo: () => true,
+      copiasGuardadas: async () => [],
+      guardarArchivoConCarpeta: async () => { throw new Error('EACCES') },
+      compartirNativo: async (n: string) => { compartidoCon = n; return 'compartido' },
+    }))
+    try {
+      const { hacerCopiaConRespaldo } = await import('../src/app/copias')
+      const r = await hacerCopiaConRespaldo()
+      expect(r.resultado).toBe('compartido')
+      expect(compartidoCon).toBe(r.nombre)
+      expect((await db.ajustes.get('app'))?.ultimaCopia).toBeTruthy()
+    } finally {
+      vi.doUnmock('../src/plataforma')
+      vi.resetModules()
+    }
+  })
+
+  it('«guardarCopiaEnCarpetaElegida» usa el selector de carpetas del sistema y apunta la fecha', async () => {
+    vi.resetModules()
+    vi.doMock('../src/plataforma', async orig => ({
+      ...((await orig()) as Record<string, unknown>),
+      esNativo: () => true,
+      copiasGuardadas: async () => [],
+      guardarArchivoComo: async (n: string) => ({ estado: 'guardado', nombre: n }),
+    }))
+    try {
+      const { guardarCopiaEnCarpetaElegida } = await import('../src/app/copias')
+      const r = await guardarCopiaEnCarpetaElegida()
+      expect(r.resultado).toBe('guardado')
+      expect(r.nombre).toMatch(/^jowyfit-.*\.jowyfit$/)
+      expect((await db.ajustes.get('app'))?.ultimaCopia).toBeTruthy()
+    } finally {
+      vi.doUnmock('../src/plataforma')
+      vi.resetModules()
+    }
+  })
 })

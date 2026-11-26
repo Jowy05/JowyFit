@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(EntrenosSalud.class);
         registerPlugin(AvisoDescanso.class);
         registerPlugin(ActualizacionApp.class);
+        registerPlugin(ArchivosNativos.class);
         super.onCreate(savedInstanceState);
     }
 }

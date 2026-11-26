@@ -5,11 +5,21 @@ import { leerClaveCopias } from '../datos/claveCopias'
 import { reprogramarNotificaciones } from '../datos/acciones/avisos'
 import { guardarAjustes, leerAjustes, leerPerfil } from '../datos/repos'
 import { automaticasDeMasNueva, esCifradaPorNombre, nombreCopia } from '../dominio/copias'
-import { borrarCopiaGuardada, compartirArchivo, copiasGuardadas, esNativo, guardarArchivo, permisoDocumentos } from '../plataforma'
+import {
+  borrarCopiaGuardada,
+  compartirArchivo,
+  compartirNativo,
+  copiasGuardadas,
+  esNativo,
+  guardarArchivo,
+  guardarArchivoComo,
+  guardarArchivoConCarpeta,
+  permisoDocumentos,
+} from '../plataforma'
 import { t } from '../i18n'
 
 export type CopiaPreparada = { nombre: string; bytes: Uint8Array }
-// También la cifrada va como zip: es el tipo que el menú Compartir de Safari ya acepta con el «.jowyfit».
+// En web/Safari va como zip (el menú Compartir de Safari lo acepta con «.jowyfit»); en Android ArchivosNativos usa application/octet-stream.
 const TIPO = 'application/zip'
 
 /**
@@ -24,7 +34,7 @@ async function prepararCopia(auto = false): Promise<CopiaPreparada> {
 
 async function apuntarCopia() {
   await guardarAjustes({ ultimaCopia: new Date().toISOString() })
-  await reprogramarNotificaciones()
+  await reprogramarNotificaciones().catch(() => undefined)
 }
 
 /** Borra esas copias; si una no se puede, sigue con las demás. Devuelve cuántas borró. */
@@ -82,6 +92,65 @@ export async function hacerCopiaAhora(): Promise<string> {
     await guardarArchivo(c.nombre, c.bytes, TIPO)
     await apuntarCopia()
     return c.nombre
+  } finally { copiandoAMano-- }
+}
+
+export type ResultadoCopiaAndroid =
+  | { resultado: 'documentos' | 'descargas' | 'web' | 'compartido'; nombre: string }
+  | { resultado: 'cancelado'; nombre: string }
+
+/**
+ * Copia manual en Android (o web): guarda en Documentos/JowyFit (o Descargas/JowyFit); si el almacenamiento del móvil
+ * fallase aun así, abre automáticamente el menú Compartir para que el usuario nunca se quede sin su copia.
+ */
+export async function hacerCopiaConRespaldo(): Promise<ResultadoCopiaAndroid> {
+  copiandoAMano++
+  try {
+    const c = await prepararCopia()
+    try {
+      const destino = await guardarArchivoConCarpeta(c.nombre, c.bytes, TIPO)
+      await apuntarCopia()
+      return { resultado: destino.carpeta, nombre: destino.nombre }
+    } catch (errGuardado) {
+      if (!esNativo()) throw errGuardado
+      const r = await compartirNativo(c.nombre, c.bytes, t('Copia de seguridad'), 'application/octet-stream')
+      if (r === 'compartido') {
+        await apuntarCopia()
+        return { resultado: 'compartido', nombre: c.nombre }
+      }
+      return { resultado: 'cancelado', nombre: c.nombre }
+    }
+  } finally { copiandoAMano-- }
+}
+
+/** Android: abre el selector de carpetas del sistema (SAF) para elegir dónde guardar la copia. */
+export async function guardarCopiaEnCarpetaElegida(): Promise<{ resultado: 'guardado' | 'compartido' | 'cancelado'; nombre: string }> {
+  copiandoAMano++
+  try {
+    const c = await prepararCopia()
+    const r = await guardarArchivoComo(c.nombre, c.bytes, 'application/octet-stream')
+    if (r.estado === 'guardado') {
+      await apuntarCopia()
+      return { resultado: 'guardado', nombre: r.nombre }
+    }
+    if (r.estado === 'cancelado') return { resultado: 'cancelado', nombre: c.nombre }
+    const compartido = await compartirNativo(c.nombre, c.bytes, t('Copia de seguridad'), 'application/octet-stream')
+    if (compartido === 'compartido') {
+      await apuntarCopia()
+      return { resultado: 'compartido', nombre: c.nombre }
+    }
+    return { resultado: 'cancelado', nombre: c.nombre }
+  } finally { copiandoAMano-- }
+}
+
+/** Android: prepara la copia y abre el menú Compartir del sistema (Drive, Telegram, WhatsApp, Enlace Móvil…). */
+export async function compartirCopiaAhora(): Promise<{ resultado: 'compartido' | 'cancelado'; nombre: string }> {
+  copiandoAMano++
+  try {
+    const c = await prepararCopia()
+    const r = await compartirNativo(c.nombre, c.bytes, t('Copia de seguridad'), 'application/octet-stream')
+    if (r === 'compartido') await apuntarCopia()
+    return { resultado: r, nombre: c.nombre }
   } finally { copiandoAMano-- }
 }
 

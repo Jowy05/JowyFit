@@ -15,14 +15,35 @@ const fsNativo = vi.hoisted(() => ({
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: fsNativo, Directory: { Documents: 'DOCUMENTS' } }))
 // Por defecto, el navegador; las pruebas del permiso de Documentos se hacen pasar por el APK.
 const plataforma = vi.hoisted(() => ({ nativa: false }))
-// El plugin propio del aviso del descanso (AvisoDescanso.java) y el de notificaciones, simulados.
+// El plugin propio del aviso del descanso (AvisoDescanso.java), el de archivos (ArchivosNativos.java) y el de notificaciones, simulados.
 const alarmaDescanso = vi.hoisted(() => ({ programar: vi.fn(), cancelar: vi.fn() }))
+const archivosNativos = vi.hoisted(() => ({
+  activo: false,
+  iniciarArchivo: vi.fn(),
+  escribirTrozo: vi.fn(),
+  cancelarArchivo: vi.fn(),
+  guardarEnDocumentos: vi.fn(),
+  guardarComo: vi.fn(),
+  compartir: vi.fn(),
+  compartirCopiaGuardada: vi.fn(),
+  listarCopias: vi.fn(),
+  abrirLecturaCopia: vi.fn(),
+  leerTrozoCopia: vi.fn(),
+  cerrarLecturaCopia: vi.fn(),
+  borrarCopia: vi.fn(),
+}))
+const proxyArchivosNativos = vi.hoisted(() => new Proxy({} as Record<string, unknown>, {
+  get: (_t, prop: string) => (...args: unknown[]) => {
+    if (!archivosNativos.activo) return Promise.reject(new Error('not implemented'))
+    return (archivosNativos[prop as keyof typeof archivosNativos] as (...a: unknown[]) => unknown)(...args)
+  },
+}))
 vi.mock('@capacitor/core', async orig => {
   const m = await orig<typeof import('@capacitor/core')>()
   return {
     ...m,
     Capacitor: { ...m.Capacitor, isNativePlatform: () => plataforma.nativa, getPlatform: () => (plataforma.nativa ? 'android' : 'web') },
-    registerPlugin: (nombre: string) => (nombre === 'AvisoDescanso' ? alarmaDescanso : m.registerPlugin(nombre)),
+    registerPlugin: (nombre: string) => (nombre === 'AvisoDescanso' ? alarmaDescanso : nombre === 'ArchivosNativos' ? proxyArchivosNativos : m.registerPlugin(nombre)),
   }
 })
 const notificaciones = vi.hoisted(() => ({
@@ -36,10 +57,10 @@ vi.mock('barcode-detector/ponyfill', () => ({
   BarcodeDetector: class { async detect() { return (detector.lecturas.shift() ?? []).map(rawValue => ({ rawValue })) } },
 }))
 
-import { avisarDescanso, borrarCopiaGuardada, cancelar, ID_AVISO, programar, quitarAvisoDescanso, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
+import { avisarDescanso, borrarCopiaGuardada, cancelar, compartirCopiaGuardada, compartirNativo, ID_AVISO, programar, quitarAvisoDescanso, copiasGuardadas, esSinPermisoDocumentos, guardarArchivo, guardarArchivoComo, guardarArchivoConCarpeta, hacerFoto, leerBascula, leerCopiaGuardada, leerPasos, marcarPlataforma, permisoDocumentos, prepararSonido } from '../src/plataforma'
 import { abrirCamara } from '../src/plataforma/escanerWeb'
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); plataforma.nativa = false })
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); plataforma.nativa = false; archivosNativos.activo = false })
 
 describe('Health Connect simulado', () => {
   it('pasos por día (en hora local) desde el primer día hasta el último incluido', async () => {
@@ -266,5 +287,85 @@ describe('aviso del fin del descanso en Android', () => {
     alarmaDescanso.cancelar.mockImplementation(async () => { orden.push('cancelar') })
     await Promise.all([avisarDescanso(descanso), quitarAvisoDescanso()])
     expect(orden).toEqual(['programar', 'cancelar'])
+  })
+})
+
+describe('plugin ArchivosNativos en Android (MediaStore, SAF y transferencia por trozos)', () => {
+  const preparar = () => {
+    plataforma.nativa = true
+    archivosNativos.activo = true
+    for (const k of Object.keys(archivosNativos) as (keyof typeof archivosNativos)[]) {
+      if (k !== 'activo') (archivosNativos[k] as ReturnType<typeof vi.fn>).mockReset()
+    }
+    archivosNativos.iniciarArchivo.mockResolvedValue({ id: 'tmp-1' })
+    archivosNativos.escribirTrozo.mockResolvedValue(undefined)
+    archivosNativos.cancelarArchivo.mockResolvedValue(undefined)
+  }
+
+  it('divide un archivo grande en trozos de 512 KB y guarda en Documentos o Descargas por MediaStore', async () => {
+    preparar()
+    const grande = new Uint8Array(600 * 1024).fill(65)
+    archivosNativos.guardarEnDocumentos.mockResolvedValue({ uri: 'content://media/external/file/42', carpeta: 'descargas', nombre: 'jowyfit-test.jowyfit' })
+    const res = await guardarArchivoConCarpeta('jowyfit-test.jowyfit', grande, 'application/zip')
+    expect(res).toEqual({ uri: 'content://media/external/file/42', carpeta: 'descargas', nombre: 'jowyfit-test.jowyfit' })
+    expect(archivosNativos.iniciarArchivo).toHaveBeenCalledWith({ nombre: 'jowyfit-test.jowyfit' })
+    expect(archivosNativos.escribirTrozo).toHaveBeenCalledTimes(2)
+    expect(fsNativo.writeFile).not.toHaveBeenCalled()
+  })
+
+  it('si falla un trozo a medias, limpia el archivo temporal nativo', async () => {
+    preparar()
+    archivosNativos.escribirTrozo.mockRejectedValue(new Error('disco lleno'))
+    await expect(guardarArchivo('a.jowyfit', new Uint8Array([1, 2, 3]))).rejects.toThrow(/disco lleno/)
+    expect(archivosNativos.cancelarArchivo).toHaveBeenCalledWith({ id: 'tmp-1' })
+  })
+
+  it('en Android 8–9, si falta permiso lo pide y reintenta guardar sin perder el temporal', async () => {
+    preparar()
+    fsNativo.requestPermissions.mockResolvedValue({ publicStorage: 'granted' })
+    archivosNativos.guardarEnDocumentos
+      .mockRejectedValueOnce(Object.assign(new Error('Sin permiso'), { code: 'SIN_PERMISO' }))
+      .mockResolvedValueOnce({ uri: 'file:///docs/a.jowyfit', carpeta: 'documentos', nombre: 'a.jowyfit' })
+    const res = await guardarArchivoConCarpeta('a.jowyfit', new Uint8Array([1, 2]))
+    expect(res.carpeta).toBe('documentos')
+    expect(fsNativo.requestPermissions).toHaveBeenCalledTimes(1)
+    expect(archivosNativos.guardarEnDocumentos).toHaveBeenCalledTimes(2)
+  })
+
+  it('guardarArchivoComo abre SAF y devuelve guardado o cancelado', async () => {
+    preparar()
+    archivosNativos.guardarComo.mockResolvedValueOnce({ estado: 'guardado', uri: 'content://doc/1', nombre: 'mi-copia.jowyfit' })
+    expect(await guardarArchivoComo('copia.jowyfit', new Uint8Array([80, 75]))).toEqual({ estado: 'guardado', nombre: 'mi-copia.jowyfit' })
+    archivosNativos.guardarComo.mockResolvedValueOnce({ estado: 'cancelado' })
+    expect(await guardarArchivoComo('copia.jowyfit', new Uint8Array([80, 75]))).toEqual({ estado: 'cancelado' })
+  })
+
+  it('compartirNativo y compartirCopiaGuardada usan el plugin nativo', async () => {
+    preparar()
+    archivosNativos.compartir.mockResolvedValue({ estado: 'compartido' })
+    expect(await compartirNativo('copia.jowyfit', new Uint8Array([1, 2]), 'Copia de seguridad')).toBe('compartido')
+    archivosNativos.compartirCopiaGuardada.mockResolvedValue({ estado: 'compartido' })
+    expect(await compartirCopiaGuardada('jowyfit-2026-11-26.jowyfit', 'Copia de seguridad')).toBe('compartido')
+    expect(archivosNativos.compartirCopiaGuardada).toHaveBeenCalledWith({ nombre: 'jowyfit-2026-11-26.jowyfit', titulo: 'Copia de seguridad' })
+  })
+
+  it('lista, lee por trozos y borra copias vía MediaStore sin pasar por Filesystem', async () => {
+    preparar()
+    archivosNativos.listarCopias.mockResolvedValue({ copias: [
+      { nombre: 'jowyfit-2026-11-25.jowyfit', fecha: 100, tam: 10 },
+      { nombre: 'jowyfit-2026-11-26.jowyfit', fecha: 200, tam: 20 },
+    ] })
+    expect((await copiasGuardadas()).map(c => c.nombre)).toEqual(['jowyfit-2026-11-26.jowyfit', 'jowyfit-2026-11-25.jowyfit'])
+
+    archivosNativos.abrirLecturaCopia.mockResolvedValue({ id: 'lec-1' })
+    archivosNativos.leerTrozoCopia
+      .mockResolvedValueOnce({ datos: btoa('PK'), fin: false })
+      .mockResolvedValueOnce({ datos: btoa('\x03\x04'), fin: false })
+      .mockResolvedValueOnce({ datos: '', fin: true })
+    expect([...await leerCopiaGuardada('jowyfit-2026-11-26.jowyfit')]).toEqual([80, 75, 3, 4])
+
+    archivosNativos.borrarCopia.mockResolvedValue(undefined)
+    await borrarCopiaGuardada('jowyfit-2026-11-26.jowyfit')
+    expect(archivosNativos.borrarCopia).toHaveBeenCalledWith({ nombre: 'jowyfit-2026-11-26.jowyfit' })
   })
 })

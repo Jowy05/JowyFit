@@ -91,6 +91,7 @@ fun PantallaInicio(
     alGenerarRutina: () -> Unit,
     alAbrirPeso: () -> Unit,
     alAbrirComidaRapida: () -> Unit,
+    alAbrirEscaner: () -> Unit,
     alAviso: (String) -> Unit,
 ) {
     val p = LocalPaleta.current
@@ -164,9 +165,7 @@ fun PantallaInicio(
             // 3 accesos rápidos 1:1 con .ux-qa3
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AccesoRapido("+ Comer o beber", Icons.Rounded.Restaurant, Modifier.weight(1f), alAbrirComidaRapida)
-                AccesoRapido("Escanear", Icons.Rounded.QrCodeScanner, Modifier.weight(1f)) {
-                    alAviso("El escáner nativo CameraX + ML Kit llega en la Fase 3")
-                }
+                AccesoRapido("Escanear", Icons.Rounded.QrCodeScanner, Modifier.weight(1f), alAbrirEscaner)
                 AccesoRapido("+ Peso", Icons.Rounded.MonitorWeight, Modifier.weight(1f), alAbrirPeso)
             }
 

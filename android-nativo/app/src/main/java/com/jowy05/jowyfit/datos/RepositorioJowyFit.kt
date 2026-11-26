@@ -6,6 +6,8 @@ import com.jowy05.jowyfit.datos.db.BaseJowyFit
 import com.jowy05.jowyfit.datos.db.RegistroTablaEntity
 import com.jowy05.jowyfit.datos.modelo.Ajustes
 import com.jowy05.jowyfit.datos.modelo.Comida
+import com.jowy05.jowyfit.datos.modelo.DiaSuplementos
+import com.jowy05.jowyfit.datos.modelo.FotoProgreso
 import com.jowy05.jowyfit.datos.modelo.Gimnasio
 import com.jowy05.jowyfit.datos.modelo.IntentoReto
 import com.jowy05.jowyfit.datos.modelo.JsonJowyFit
@@ -14,8 +16,11 @@ import com.jowy05.jowyfit.datos.modelo.Medicion
 import com.jowy05.jowyfit.datos.modelo.Meta
 import com.jowy05.jowyfit.datos.modelo.PasosDia
 import com.jowy05.jowyfit.datos.modelo.Perfil
+import com.jowy05.jowyfit.datos.modelo.Plantilla
+import com.jowy05.jowyfit.datos.modelo.Producto
 import com.jowy05.jowyfit.datos.modelo.Rutina
 import com.jowy05.jowyfit.datos.modelo.Sesion
+import com.jowy05.jowyfit.dominio.ComidaDominio
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,6 +101,22 @@ class RepositorioJowyFit(private val context: Context) {
 
     val marcas: Flow<List<MarcaEjercicio>> = dao.observarTabla("marcas").map { lista ->
         lista.mapNotNull { decodificar<MarcaEjercicio>(it.payloadJson) }
+    }
+
+    val plantillas: Flow<List<Plantilla>> = dao.observarTabla("plantillas").map { lista ->
+        lista.mapNotNull { decodificar<Plantilla>(it.payloadJson) }
+    }
+
+    val productos: Flow<List<Producto>> = dao.observarTabla("productos").map { lista ->
+        lista.mapNotNull { decodificar<Producto>(it.payloadJson) }
+    }
+
+    val suplementos: Flow<List<DiaSuplementos>> = dao.observarTabla("suplementos").map { lista ->
+        lista.mapNotNull { decodificar<DiaSuplementos>(it.payloadJson) }
+    }
+
+    val fotos: Flow<List<FotoProgreso>> = dao.observarTabla("fotos").map { lista ->
+        lista.mapNotNull { decodificar<FotoProgreso>(it.payloadJson) }
     }
 
     private fun cargarPreferencias(): PreferenciasVisuales {
@@ -253,6 +274,157 @@ class RepositorioJowyFit(private val context: Context) {
 
     suspend fun borrarGimnasio(id: Long) = withContext(Dispatchers.IO) {
         dao.borrarUno("gimnasios", id.toString())
+    }
+
+    suspend fun guardarComida(comida: Comida): Comida = withContext(Dispatchers.IO) {
+        val id = comida.id ?: siguienteIdTabla("comidas")
+        val final = comida.copy(id = id, nombre = comida.nombre.trim())
+        dao.guardar(RegistroTablaEntity("comidas", id.toString(), final.fecha.take(10), JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarComida(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("comidas", id.toString())
+    }
+
+    suspend fun copiarComidasDia(desde: String, hacia: String, franja: String? = null): Int = withContext(Dispatchers.IO) {
+        val origen = dao.leerTabla("comidas")
+            .mapNotNull { decodificar<Comida>(it.payloadJson) }
+            .filter { it.fecha == desde && (franja == null || it.franja == franja) }
+            .sortedBy { it.hora }
+        if (origen.isEmpty()) return@withContext 0
+        var nextId = siguienteIdTabla("comidas")
+        val entidades = origen.map { c ->
+            val copia = c.copy(id = nextId++, fecha = hacia, suplemento = null)
+            RegistroTablaEntity("comidas", copia.id.toString(), hacia.take(10), JsonJowyFit.encodeToString(copia))
+        }
+        dao.guardarVarios(entidades)
+        entidades.size
+    }
+
+    suspend fun guardarPlantilla(plantilla: Plantilla): Plantilla = withContext(Dispatchers.IO) {
+        val id = plantilla.id ?: siguienteIdTabla("plantillas")
+        val final = plantilla.copy(id = id, nombre = plantilla.nombre.trim())
+        dao.guardar(RegistroTablaEntity("plantillas", id.toString(), "", JsonJowyFit.encodeToString(final)))
+        final
+    }
+
+    suspend fun borrarPlantilla(id: Long) = withContext(Dispatchers.IO) {
+        dao.borrarUno("plantillas", id.toString())
+    }
+
+    suspend fun apuntarPlantilla(plantilla: Plantilla, racion: String, fecha: String, franja: String): Comida = withContext(Dispatchers.IO) {
+        val macros = ComidaDominio.Macros(plantilla.hidratos, plantilla.grasas, plantilla.azucares, plantilla.sal)
+        val v = ComidaDominio.conRacion(plantilla.kcal, plantilla.proteina, plantilla.cafeina, macros, racion, plantilla.tipo)
+        val hora = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+        val tipoComida = if (plantilla.tipo == "comida") "plantilla" else plantilla.tipo
+        val nueva = guardarComida(
+            Comida(
+                fecha = fecha,
+                hora = hora,
+                franja = franja,
+                nombre = plantilla.nombre,
+                kcal = v.kcal,
+                proteina = v.proteina,
+                cafeina = v.cafeina,
+                racion = racion,
+                tipo = tipoComida,
+                plantillaId = plantilla.id,
+                codigo = plantilla.codigo,
+                foto = plantilla.foto,
+                hidratos = v.hidratos,
+                azucares = v.azucares,
+                grasas = v.grasas,
+                sal = v.sal,
+            ),
+        )
+        if (plantilla.id != null) {
+            guardarPlantilla(plantilla.copy(usos = plantilla.usos + 1))
+        }
+        nueva
+    }
+
+    suspend fun guardarProducto(producto: Producto) = withContext(Dispatchers.IO) {
+        dao.guardar(RegistroTablaEntity("productos", producto.codigo, producto.guardado.take(10), JsonJowyFit.encodeToString(producto)))
+    }
+
+    suspend fun borrarProducto(codigo: String) = withContext(Dispatchers.IO) {
+        dao.borrarUno("productos", codigo)
+    }
+
+    suspend fun guardarPlantillaDesdeProducto(producto: Producto): Boolean = withContext(Dispatchers.IO) {
+        val existentes = dao.leerTabla("plantillas").mapNotNull { decodificar<Plantilla>(it.payloadJson) }
+        if (existentes.any { it.codigo == producto.codigo }) return@withContext false
+        val p = ComidaDominio.porRacion(producto)
+        guardarPlantilla(
+            Plantilla(
+                nombre = producto.nombre,
+                kcal = p.kcal,
+                proteina = p.proteina,
+                cafeina = p.cafeina,
+                tipo = "comida",
+                usos = 0,
+                codigo = producto.codigo,
+                hidratos = p.macros.hidratos,
+                azucares = p.macros.azucares,
+                grasas = p.macros.grasas,
+                sal = p.macros.sal,
+            ),
+        )
+        true
+    }
+
+    suspend fun alternarSuplemento(perfil: Perfil, fecha: String, suplemento: String): Boolean = withContext(Dispatchers.IO) {
+        val actual = dao.leerUno("suplementos", fecha)?.let { decodificar<DiaSuplementos>(it.payloadJson) }
+        val tomados = actual?.tomados?.toMutableSet() ?: LinkedHashSet()
+        val marcado = if (suplemento in tomados) {
+            tomados.remove(suplemento)
+            false
+        } else {
+            tomados.add(suplemento)
+            true
+        }
+        dao.guardar(RegistroTablaEntity("suplementos", fecha, fecha, JsonJowyFit.encodeToString(DiaSuplementos(fecha, tomados.toList()))))
+
+        if (ComidaDominio.esBatido(suplemento)) {
+            if (marcado) {
+                val b = perfil.batido
+                val kcal = b?.kcal ?: 120.0
+                val prot = b?.proteina ?: 24.0
+                val hora = if (fecha == LocalDate.now().toString()) LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm")) else "17:30"
+                val franja = ComidaDominio.franjaPorHora(hora)
+                guardarComida(
+                    Comida(
+                        fecha = fecha,
+                        hora = hora,
+                        franja = franja,
+                        nombre = suplemento,
+                        kcal = kcal,
+                        proteina = prot,
+                        racion = "N",
+                        tipo = "plantilla",
+                        suplemento = suplemento,
+                    ),
+                )
+            } else {
+                val vinculadas = dao.leerTabla("comidas")
+                    .mapNotNull { decodificar<Comida>(it.payloadJson) }
+                    .filter { it.fecha == fecha && it.suplemento == suplemento }
+                for (c in vinculadas) {
+                    c.id?.let { dao.borrarUno("comidas", it.toString()) }
+                }
+            }
+        }
+        marcado
+    }
+
+    fun archivoMedia(rutaRelativa: String): File = File(dirMedia, rutaRelativa)
+
+    suspend fun guardarMediaBytes(rutaRelativa: String, bytes: ByteArray): File = withContext(Dispatchers.IO) {
+        val f = File(dirMedia, rutaRelativa)
+        f.parentFile?.mkdirs()
+        f.writeBytes(bytes)
+        f
     }
 
     suspend fun importarCopia(bytes: ByteArray, contrasena: String? = null): Int = withContext(Dispatchers.IO) {

@@ -81,7 +81,7 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".nativo"
-            versionNameSuffix = "-kotlin-f2"
+            versionNameSuffix = "-kotlin-f3"
             manifestPlaceholders["appLabel"] = "JowyFit Kotlin"
             matchingFallbacks += listOf("release")
         }
@@ -158,6 +158,15 @@ dependencies {
 
     // Health Connect SDK nativo.
     implementation("androidx.health.connect:connect-client:1.1.0")
+
+    // CameraX + ML Kit Barcode Scanning (escáner de códigos de barras 100 % local en Fase 3 y cámara en Fase 4).
+    val cameraXVersion = "1.4.2"
+    implementation("androidx.camera:camera-core:$cameraXVersion")
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
+    implementation("com.google.guava:guava:33.3.1-android")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 

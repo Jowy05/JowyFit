@@ -44,11 +44,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jowy05.jowyfit.datos.PreferenciaTema
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
+import com.jowy05.jowyfit.datos.modelo.Producto
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.nativo.ServicioDescanso
 import com.jowy05.jowyfit.ui.EstadoAppViewModel
 import com.jowy05.jowyfit.ui.componentes.BarraInferiorFlotante
+import com.jowy05.jowyfit.ui.componentes.PantallaEscanerBarras
 import com.jowy05.jowyfit.ui.componentes.Pestana
 import com.jowy05.jowyfit.ui.i18n.LocalIdioma
 import com.jowy05.jowyfit.ui.pantallas.HojaActualizacionNativa
@@ -57,10 +60,11 @@ import com.jowy05.jowyfit.ui.pantallas.HojaContrasenaCopia
 import com.jowy05.jowyfit.ui.pantallas.HojaDia
 import com.jowy05.jowyfit.ui.pantallas.HojaEmpezarDia
 import com.jowy05.jowyfit.ui.pantallas.HojaPeso
+import com.jowy05.jowyfit.ui.pantallas.HojaProductoEscaneado
 import com.jowy05.jowyfit.ui.pantallas.MiniBarraEntreno
 import com.jowy05.jowyfit.ui.pantallas.PantallaAjustes
 import com.jowy05.jowyfit.ui.pantallas.PantallaBienvenida
-import com.jowy05.jowyfit.ui.pantallas.PantallaComida
+import com.jowy05.jowyfit.ui.pantallas.PantallaComidaCompleta
 import com.jowy05.jowyfit.ui.pantallas.PantallaEntrenoEnVivo
 import com.jowy05.jowyfit.ui.pantallas.PantallaFichaEjercicio
 import com.jowy05.jowyfit.ui.pantallas.PantallaFinEntreno
@@ -72,6 +76,8 @@ import com.jowy05.jowyfit.ui.pantallas.PantallaRutina
 import com.jowy05.jowyfit.ui.tema.JowyFitTheme
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
 
@@ -134,6 +140,8 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     var enAjustes by remember { mutableStateOf(false) }
     var enGimnasios by remember { mutableStateOf(false) }
     var enEntreno by remember { mutableStateOf(false) }
+    var enEscaner by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var productoHoja by remember { mutableStateOf<Triple<String, Producto?, Pair<String, String>>?>(null) }
     var fichaEjercicioId by remember { mutableStateOf<String?>(null) }
     var diaParaEmpezar by remember { mutableStateOf<DiaRutina?>(null) }
     var avisoSesionActiva by remember { mutableStateOf<DiaRutina?>(null) }
@@ -143,11 +151,12 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     var hojaActualizacion by remember { mutableStateOf(false) }
     var bytesExportar by remember { mutableStateOf<ByteArray?>(null) }
 
-    BackHandler(enabled = fichaEjercicioId != null) { fichaEjercicioId = null }
-    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada != null) { vm.cerrarFinEntreno() }
-    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada == null && enEntreno && estado.sesionEnCurso != null) { enEntreno = false }
-    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enGimnasios) { enGimnasios = false }
-    BackHandler(enabled = fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enGimnasios && enAjustes) { enAjustes = false }
+    BackHandler(enabled = enEscaner != null) { enEscaner = null }
+    BackHandler(enabled = enEscaner == null && fichaEjercicioId != null) { fichaEjercicioId = null }
+    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada != null) { vm.cerrarFinEntreno() }
+    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && enEntreno && estado.sesionEnCurso != null) { enEntreno = false }
+    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && enGimnasios) { enGimnasios = false }
+    BackHandler(enabled = enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enGimnasios && enAjustes) { enAjustes = false }
 
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(aviso) {
@@ -228,6 +237,16 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                 PantallaBienvenida(
                     alImportarCopia = { selectorImportar.launch(arrayOf("*/*")) },
                     alCompletarAlta = vm::completarAltaRapida,
+                )
+            }
+            enEscaner != null -> {
+                val (fechaEsc, franjaEsc) = enEscaner!!
+                PantallaEscanerBarras(
+                    alCerrar = { enEscaner = null },
+                    alCodigoDetectado = { codigo ->
+                        enEscaner = null
+                        productoHoja = Triple(codigo, null, fechaEsc to franjaEsc)
+                    },
                 )
             }
             fichaEjercicioId != null -> {
@@ -334,6 +353,11 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         alGenerarRutina = { vm.generarNuevaRutina(calibracion = false, evitarActual = false) },
                         alAbrirPeso = { hojaPeso = true },
                         alAbrirComidaRapida = { hojaComida = true },
+                        alAbrirEscaner = {
+                            val hoy = LocalDate.now().toString()
+                            val fr = ComidaDominio.franjaPorHora(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+                            enEscaner = hoy to fr
+                        },
                         alAviso = vm::mostrarAviso,
                     )
                     Pestana.RUTINA -> PantallaRutina(
@@ -366,7 +390,24 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         alQuitarBloque = vm::quitarBloqueDeDiaRutina,
                         alCambiarSeries = vm::cambiarSeriesBloqueRutina,
                     )
-                    Pestana.COMIDA -> PantallaComida(estado = estado, alAbrirAnadir = { hojaComida = true })
+                    Pestana.COMIDA -> PantallaComidaCompleta(
+                        estado = estado,
+                        alAbrirEscaner = { fecha, franja -> enEscaner = fecha to franja },
+                        alGuardarComida = vm::guardarComida,
+                        alBorrarComida = vm::borrarComida,
+                        alCopiarAyer = vm::copiarComidasDeAyer,
+                        alApuntarPlantilla = vm::apuntarPlantilla,
+                        alGuardarPlantilla = vm::guardarPlantilla,
+                        alBorrarPlantilla = vm::borrarPlantilla,
+                        alAbrirProducto = { prod, fecha, franja -> productoHoja = Triple(prod.codigo, prod, fecha to franja) },
+                        alBorrarProducto = vm::borrarProducto,
+                        alAlternarSuplemento = vm::alternarSuplemento,
+                        alGuardarSuplementos = vm::guardarSuplementosPerfil,
+                        alActualizarAjustesEnergia = { k, pr, mk ->
+                            vm.actualizarAjustes { it.copy(kcalManual = k, proteinaManual = pr, mostrarKcal = mk) }
+                            vm.mostrarAviso("Objetivos de energía guardados")
+                        },
+                    )
                     Pestana.PROGRESO -> PantallaProgreso(
                         estado = estado,
                         alAbrirPeso = { hojaPeso = true },
@@ -472,6 +513,19 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
             error = errorClave,
             alCancelar = vm::cancelarClaveCopia,
             alConfirmar = { clave -> vm.importarCopiaBytes(bytes, clave) },
+        )
+    }
+    productoHoja?.let { (cod, prodIni, ctx) ->
+        HojaProductoEscaneado(
+            codigo = cod,
+            productoInicial = prodIni,
+            fechaIso = ctx.first,
+            franjaInicial = ctx.second,
+            alBuscarCodigo = vm::buscarCodigoOFF,
+            alGuardarProducto = vm::guardarProducto,
+            alGuardarComida = vm::guardarComida,
+            alGuardarComoPlantilla = vm::guardarPlantillaDesdeProducto,
+            alCerrar = { productoHoja = null },
         )
     }
 }

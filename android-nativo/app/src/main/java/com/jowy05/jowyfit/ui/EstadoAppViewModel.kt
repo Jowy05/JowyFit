@@ -14,9 +14,12 @@ import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
 import com.jowy05.jowyfit.datos.copias.CifradoCopia
 import com.jowy05.jowyfit.datos.copias.GestorCopias
 import com.jowy05.jowyfit.datos.modelo.Ajustes
+import com.jowy05.jowyfit.datos.modelo.BatidoPerfil
 import com.jowy05.jowyfit.datos.modelo.BloquePlantilla
 import com.jowy05.jowyfit.datos.modelo.Comida
 import com.jowy05.jowyfit.datos.modelo.DiaRutina
+import com.jowy05.jowyfit.datos.modelo.DiaSuplementos
+import com.jowy05.jowyfit.datos.modelo.FotoProgreso
 import com.jowy05.jowyfit.datos.modelo.Gimnasio
 import com.jowy05.jowyfit.datos.modelo.IntentoReto
 import com.jowy05.jowyfit.datos.modelo.MarcaEjercicio
@@ -24,13 +27,17 @@ import com.jowy05.jowyfit.datos.modelo.Medicion
 import com.jowy05.jowyfit.datos.modelo.Meta
 import com.jowy05.jowyfit.datos.modelo.PasosDia
 import com.jowy05.jowyfit.datos.modelo.Perfil
+import com.jowy05.jowyfit.datos.modelo.Plantilla
 import com.jowy05.jowyfit.datos.modelo.PlantillaEntreno
+import com.jowy05.jowyfit.datos.modelo.Producto
 import com.jowy05.jowyfit.datos.modelo.Rutina
 import com.jowy05.jowyfit.datos.modelo.Sesion
+import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.dominio.GeneradorRutina
 import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.PesosYDiscos
 import com.jowy05.jowyfit.dominio.Progresion
+import com.jowy05.jowyfit.nativo.ClienteOpenFoodFacts
 import com.jowy05.jowyfit.nativo.ServicioDescanso
 import com.jowy05.jowyfit.widget.WidgetHoy
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +63,10 @@ data class EstadoPrincipal(
     val retos: List<IntentoReto> = emptyList(),
     val gimnasios: List<Gimnasio> = emptyList(),
     val marcas: Map<String, MarcaEjercicio> = emptyMap(),
+    val plantillas: List<Plantilla> = emptyList(),
+    val productos: List<Producto> = emptyList(),
+    val suplementos: List<DiaSuplementos> = emptyList(),
+    val fotos: List<FotoProgreso> = emptyList(),
 ) {
     val rutinaActiva: Rutina? get() = rutinas.firstOrNull { it.activa } ?: rutinas.firstOrNull()
     val sesionEnCurso: Sesion? get() = sesiones.firstOrNull { it.estado == "curso" }
@@ -90,8 +101,11 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
     private val bloqueB = combine(repo.comidas, repo.pasos, repo.metas, repo.retos, repo.gimnasios) { c, pa, me, re, g ->
         BloqueB(c, pa, me, re, g)
     }
+    private val bloqueC = combine(repo.marcas, repo.plantillas, repo.productos, repo.suplementos, repo.fotos) { mar, pl, pr, sup, fo ->
+        BloqueC(mar, pl, pr, sup, fo)
+    }
 
-    val estado: StateFlow<EstadoPrincipal> = combine(bloqueA, bloqueB, repo.marcas) { a, b, mar ->
+    val estado: StateFlow<EstadoPrincipal> = combine(bloqueA, bloqueB, bloqueC) { a, b, c ->
         EstadoPrincipal(
             cargando = false,
             perfil = a.perfil,
@@ -104,7 +118,11 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
             metas = b.metas,
             retos = b.retos,
             gimnasios = b.gimnasios,
-            marcas = mar.associateBy { it.id },
+            marcas = c.marcas.associateBy { it.id },
+            plantillas = c.plantillas,
+            productos = c.productos,
+            suplementos = c.suplementos,
+            fotos = c.fotos,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoPrincipal())
 
@@ -457,6 +475,107 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun guardarComida(comida: Comida) {
+        viewModelScope.launch {
+            repo.guardarComida(comida)
+            actualizarWidget()
+            mostrarAviso("Comida guardada")
+        }
+    }
+
+    fun borrarComida(id: Long) {
+        viewModelScope.launch {
+            repo.borrarComida(id)
+            actualizarWidget()
+            mostrarAviso("Comida borrada")
+        }
+    }
+
+    fun copiarComidasDeAyer(fechaDestino: String, franja: String? = null) {
+        viewModelScope.launch {
+            val ayer = runCatching { LocalDate.parse(fechaDestino).minusDays(1).toString() }.getOrNull() ?: return@launch
+            val n = repo.copiarComidasDia(ayer, fechaDestino, franja)
+            if (n > 0) {
+                actualizarWidget()
+                val que = if (franja == null) "día de ayer" else "${ComidaDominio.nombreFranja(franja).lowercase()} de ayer"
+                mostrarAviso("Repetido $que ($n)")
+            } else {
+                mostrarAviso("Ayer no había comidas en esa franja")
+            }
+        }
+    }
+
+    fun apuntarPlantilla(plantilla: Plantilla, racion: String, fecha: String, franja: String) {
+        viewModelScope.launch {
+            repo.apuntarPlantilla(plantilla, racion, fecha, franja)
+            actualizarWidget()
+            mostrarAviso("${plantilla.nombre} apuntado")
+        }
+    }
+
+    fun guardarPlantilla(plantilla: Plantilla) {
+        viewModelScope.launch {
+            repo.guardarPlantilla(plantilla)
+            mostrarAviso("Guardado en Mis comidas")
+        }
+    }
+
+    fun borrarPlantilla(id: Long) {
+        viewModelScope.launch {
+            repo.borrarPlantilla(id)
+            mostrarAviso("Comida eliminada de Mis comidas")
+        }
+    }
+
+    fun guardarProducto(producto: Producto) {
+        viewModelScope.launch { repo.guardarProducto(producto) }
+    }
+
+    fun borrarProducto(codigo: String) {
+        viewModelScope.launch {
+            repo.borrarProducto(codigo)
+            mostrarAviso("Producto borrado")
+        }
+    }
+
+    fun guardarPlantillaDesdeProducto(producto: Producto) {
+        viewModelScope.launch {
+            val nueva = repo.guardarPlantillaDesdeProducto(producto)
+            mostrarAviso(if (nueva) "Guardado en Mis comidas" else "Ya estaba en Mis comidas")
+        }
+    }
+
+    fun buscarCodigoOFF(codigo: String, alResultado: (ClienteOpenFoodFacts.Resultado) -> Unit) {
+        viewModelScope.launch {
+            val local = estado.value.productos.firstOrNull { it.codigo == codigo.trim() }
+            if (local != null && local.pendiente != true) {
+                alResultado(ClienteOpenFoodFacts.Resultado.Encontrado(local))
+                return@launch
+            }
+            val res = ClienteOpenFoodFacts.buscar(codigo)
+            if (res is ClienteOpenFoodFacts.Resultado.Encontrado) {
+                repo.guardarProducto(res.producto)
+            }
+            alResultado(res)
+        }
+    }
+
+    fun alternarSuplemento(fecha: String, suplemento: String) {
+        viewModelScope.launch {
+            val tomado = repo.alternarSuplemento(estado.value.perfil, fecha, suplemento)
+            actualizarWidget()
+            mostrarAviso(if (tomado) "$suplemento marcado" else "$suplemento desmarcado")
+        }
+    }
+
+    fun guardarSuplementosPerfil(lista: List<String>, batido: BatidoPerfil?) {
+        viewModelScope.launch {
+            val p = estado.value.perfil
+            repo.guardarPerfil(p.copy(suplementos = lista.distinct(), batido = batido ?: p.batido))
+            mostrarAviso("Suplementos actualizados")
+        }
+    }
+
     fun apuntarPasos(pasos: Int) {
         viewModelScope.launch {
             repo.apuntarPasos(pasos)
@@ -533,5 +652,13 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
         val metas: List<Meta>,
         val retos: List<IntentoReto>,
         val gimnasios: List<Gimnasio>,
+    )
+
+    private data class BloqueC(
+        val marcas: List<MarcaEjercicio>,
+        val plantillas: List<Plantilla>,
+        val productos: List<Producto>,
+        val suplementos: List<DiaSuplementos>,
+        val fotos: List<FotoProgreso>,
     )
 }

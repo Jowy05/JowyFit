@@ -638,7 +638,13 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun guardarMeta(meta: Meta) {
         viewModelScope.launch {
-            repo.guardarMeta(meta)
+            val st = estado.value
+            val inicioAuto = if (meta.inicio == null && meta.tipo in setOf("peso", "cintura", "grasa")) {
+                MetasDominio.valorAuto(meta, st.mediciones, st.sesiones, st.perfil, LocalDate.now().toString())
+            } else {
+                meta.inicio
+            }
+            repo.guardarMeta(meta.copy(inicio = inicioAuto))
             mostrarAviso("Meta guardada")
         }
     }
@@ -770,6 +776,7 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
                     activos = activos,
                     ejerciciosPorId = cat.porId,
                     gimnasio = st.gimnasioActivo,
+                    marcas = st.marcas,
                 )
                 if (cambiosAplicados.isNotEmpty()) {
                     repo.guardarRutina(SaludYRevisionDominio.aplicarCambios(rut, cambiosAplicados))

@@ -45,6 +45,14 @@ object TendenciasDominio {
         GrupoMuscular("Abdomen", setOf("core"), 4, 10),
     )
 
+    private fun repsEfectivas(s: Serie): Int? = when {
+        s.reps != null -> s.reps
+        s.izq != null && s.der != null -> min(s.izq, s.der)
+        s.izq != null -> s.izq
+        s.der != null -> s.der
+        else -> null
+    }
+
     private fun trabajo(series: List<Serie>): List<Serie> = series.filter { it.hecha && !it.calentamiento }
 
     fun hechasAsc(sesiones: List<Sesion>): List<Sesion> =
@@ -54,15 +62,19 @@ object TendenciasDominio {
         s.ejercicios.filter { it.ejercicio == ejId }.flatMap { it.series }
 
     fun pesoMaximo(series: List<Serie>): Double? =
-        trabajo(series).filter { it.peso != null && (it.reps ?: 0) > 0 }.maxOfOrNull { it.peso!! }
+        trabajo(series).filter { it.peso != null && (repsEfectivas(it) ?: 0) > 0 }.maxOfOrNull { it.peso!! }
 
     fun mejor1RM(series: List<Serie>): Double? =
         trabajo(series)
-            .filter { it.peso != null && it.peso > 0.0 && (it.reps ?: 0) > 0 }
-            .maxOfOrNull { CalculosDominio.epley(it.peso!!, it.reps!!) }
+            .mapNotNull { s ->
+                val p = s.peso?.takeIf { it > 0.0 } ?: return@mapNotNull null
+                val r = repsEfectivas(s)?.takeIf { it > 0 } ?: return@mapNotNull null
+                CalculosDominio.epley(p, r)
+            }
+            .maxOrNull()
 
     fun repsMaximas(series: List<Serie>): Int? =
-        trabajo(series).mapNotNull { it.reps?.takeIf { r -> r > 0 } }.maxOrNull()
+        trabajo(series).mapNotNull { repsEfectivas(it)?.takeIf { r -> r > 0 } }.maxOrNull()
 
     fun actualEjercicio(sesiones: List<Sesion>, ejId: String, que: String): Double? =
         sesiones.filter { it.estado == "hecha" }
@@ -139,14 +151,18 @@ object TendenciasDominio {
         val out = mutableListOf<Logro>()
         for (s in hechasAsc(sesiones)) {
             for (id in s.ejercicios.map { it.ejercicio }.distinct()) {
-                val validas = trabajo(seriesDe(s, id)).filter { it.peso != null && it.reps != null && it.peso > 0 && it.reps > 0 }
-                val recs = validas.filter { it.record == true }
+                val validas = trabajo(seriesDe(s, id)).mapNotNull { x ->
+                    val p = x.peso?.takeIf { it > 0.0 } ?: return@mapNotNull null
+                    val r = repsEfectivas(x)?.takeIf { it > 0 } ?: return@mapNotNull null
+                    Triple(p, r, x.record == true)
+                }
+                val recs = validas.filter { it.third }
                 val prevMax = histPeso[id]
                 val prevReps = histReps[id]
                 if (recs.isNotEmpty()) {
-                    val mejor = recs.maxBy { CalculosDominio.epley(it.peso!!, it.reps!!) }
-                    val peso = mejor.peso!!
-                    val reps = mejor.reps!!
+                    val mejor = recs.maxBy { CalculosDominio.epley(it.first, it.second) }
+                    val peso = mejor.first
+                    val reps = mejor.second
                     when {
                         prevMax == null -> out += Logro(id, s.fecha, s.id, peso, reps, "primero", 0.0)
                         peso > prevMax -> out += Logro(id, s.fecha, s.id, peso, reps, "peso", ((peso - prevMax) * 10.0).roundToInt() / 10.0)
@@ -160,8 +176,8 @@ object TendenciasDominio {
                     var mx = prevMax ?: Double.NEGATIVE_INFINITY
                     val mr = prevReps ?: HashMap()
                     for (x in validas) {
-                        val px = x.peso!!
-                        val rx = x.reps!!
+                        val px = x.first
+                        val rx = x.second
                         if (px > mx) mx = px
                         mr[px] = max(mr[px] ?: 0, rx)
                     }
@@ -249,7 +265,9 @@ object TendenciasDominio {
             .sortedWith(compareByDescending<Sesion> { it.fecha }.thenByDescending { it.inicio })
 
         val estancados = ejerciciosRutina.distinct().filter { id ->
-            val h = normales.flatMap { s -> s.ejercicios.filter { it.ejercicio == id }.map { it.series } }
+            val h = normales.flatMap { s ->
+                s.ejercicios.filter { it.ejercicio == id && it.cargaPct == null && trabajo(it.series).isNotEmpty() }.map { it.series }
+            }
             estancado(h)
         }
         if (estancados.size >= 3) {
@@ -286,7 +304,7 @@ object TendenciasDominio {
 
     fun serieMedida(ms: List<Medicion>, lector: (Medicion) -> Double?): List<PuntoFecha> {
         val porDia = LinkedHashMap<String, Double>()
-        for (m in ms.sortedBy { it.fecha }) {
+        for (m in ms.sortedWith(compareBy<Medicion> { it.fecha }.thenBy { it.id ?: 0L })) {
             val v = lector(m) ?: continue
             porDia[m.fecha.take(10)] = v
         }
@@ -298,7 +316,9 @@ object TendenciasDominio {
         for (m in ms) {
             if (lector(m) == null) continue
             if (hasta != null && m.fecha.take(10) > hasta) continue
-            if (mejor == null || m.fecha > mejor.fecha) mejor = m
+            val mId = m.id ?: 0L
+            val bId = mejor?.id ?: 0L
+            if (mejor == null || m.fecha > mejor.fecha || (m.fecha == mejor.fecha && mId >= bId)) mejor = m
         }
         return mejor?.let { PuntoFecha(it.fecha.take(10), lector(it)!!) }
     }
@@ -331,12 +351,12 @@ object TendenciasDominio {
 
     fun tendenciaPeso(ms: List<Medicion>, hoyIso: String, dias: Long = 30L): TendenciaPeso {
         val hoy = runCatching { LocalDate.parse(hoyIso.take(10)) }.getOrElse { LocalDate.now() }
-        val pts = ms.mapNotNull { m ->
+        val pts = ms.sortedWith(compareBy<Medicion> { it.fecha }.thenBy { it.id ?: 0L }).mapNotNull { m ->
             val p = m.pesoKg ?: return@mapNotNull null
             val f = runCatching { LocalDate.parse(m.fecha.take(10)) }.getOrNull() ?: return@mapNotNull null
             val d = ChronoUnit.DAYS.between(f, hoy)
             if (d in 0..dias) Triple(m.fecha, -d.toDouble(), p) else null
-        }.sortedBy { it.first }
+        }
         val ys = pts.map { it.third }
         if (pts.size < 2 || pts.last().second - pts.first().second < 5.0) return TendenciaPeso(null, ys)
         val mx = pts.map { it.second }.average()

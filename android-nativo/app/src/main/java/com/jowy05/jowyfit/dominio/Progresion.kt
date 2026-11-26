@@ -25,8 +25,16 @@ object Progresion {
 
     data class RecordDetectado(val tipo: String, val texto: String, val peso: Double, val reps: Int)
 
+    private fun repsEfectivas(s: Serie): Int? = when {
+        s.reps != null -> s.reps
+        s.izq != null && s.der != null -> min(s.izq, s.der)
+        s.izq != null -> s.izq
+        s.der != null -> s.der
+        else -> null
+    }
+
     private fun trabajo(series: List<Serie>): List<Serie> =
-        series.filter { it.hecha && !it.calentamiento && (it.reps != null || it.segundos != null) }
+        series.filter { it.hecha && !it.calentamiento && (it.reps != null || it.segundos != null || it.izq != null || it.der != null) }
 
     fun sugerir(
         ultimas: List<Serie>?,
@@ -46,8 +54,8 @@ object Progresion {
         }
         val conPeso = hechas.filter { it.peso != null }
         val top = (if (conPeso.isNotEmpty()) conPeso else hechas).maxBy { it.peso ?: Double.NEGATIVE_INFINITY }
-        val ultima = UltimaSerie(top.peso, top.reps ?: top.segundos, top.rpe)
-        val reps = hechas.map { (if (registro == "tiempo") it.segundos else it.reps) ?: 0 }
+        val ultima = UltimaSerie(top.peso, repsEfectivas(top) ?: top.segundos, top.rpe)
+        val reps = hechas.map { (if (registro == "tiempo") it.segundos else repsEfectivas(it)) ?: 0 }
         val rpes = hechas.mapNotNull { it.rpe }
         val rpeMax = rpes.maxOrNull()
         val todasArriba = reps.all { it >= objetivo.repsMax }
@@ -109,14 +117,18 @@ object Progresion {
 
     fun esRecord(s: Serie, historial: List<Serie>): RecordDetectado? {
         val peso = s.peso
-        val reps = s.reps
+        val reps = repsEfectivas(s)
         if (!s.hecha || s.calentamiento || peso == null || reps == null || peso <= 0.0 || reps <= 0) return null
-        val prev = trabajo(historial).filter { it.peso != null && it.reps != null }
+        val prev = trabajo(historial).mapNotNull { h ->
+            val hp = h.peso ?: return@mapNotNull null
+            val hr = repsEfectivas(h) ?: return@mapNotNull null
+            hp to hr
+        }
         if (prev.isEmpty()) return null
-        val maxPeso = prev.maxOf { it.peso!! }
+        val maxPeso = prev.maxOf { it.first }
         if (peso > maxPeso) return RecordDetectado("peso", "Nuevo récord de peso", peso, reps)
-        val mismas = prev.filter { it.peso == peso }
-        if (mismas.isNotEmpty() && reps > mismas.maxOf { it.reps!! }) {
+        val mismas = prev.filter { it.first == peso }
+        if (mismas.isNotEmpty() && reps > mismas.maxOf { it.second }) {
             return RecordDetectado("reps", "Récord de repeticiones", peso, reps)
         }
         return null

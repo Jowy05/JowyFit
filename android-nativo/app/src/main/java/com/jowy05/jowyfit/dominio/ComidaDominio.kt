@@ -265,8 +265,8 @@ object ComidaDominio {
         val m100 = Macros(p.hidratos100, p.grasas100, p.azucares100, p.sal100)
         val esc = escalarMacros(m100, f)
         return ValoresComida(
-            kcal = ((p.kcal100?.takeIf { it.isFinite() } ?: 0.0) * f).roundToInt().toDouble(),
-            proteina = ((p.proteina100?.takeIf { it.isFinite() } ?: 0.0) * f).roundToInt().toDouble(),
+            kcal = ((p.kcal100?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0) * f).roundToInt().toDouble(),
+            proteina = ((p.proteina100?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0) * f).roundToInt().toDouble(),
             cafeina = p.cafeina100?.takeIf { it.isFinite() && it > 0.0 }?.let { (it * f).roundToInt().toDouble() },
             hidratos = esc.hidratos,
             grasas = esc.grasas,

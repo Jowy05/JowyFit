@@ -32,8 +32,9 @@ object MetasDominio {
             prev += hito
         }
         prev.sortBy { it.fecha }
+        val inicioBase = meta.inicio ?: if (meta.tipo in setOf("peso", "cintura", "grasa")) limpio else 0.0
         return meta.copy(
-            inicio = meta.inicio ?: 0.0,
+            inicio = inicioBase,
             actual = limpio,
             historial = prev.takeLast(MAX_HISTORIAL),
         )
@@ -82,7 +83,7 @@ object MetasDominio {
             val man = meta.actual ?: return auto
             return if (auto != null) max(auto, man) else man
         }
-        return auto
+        return auto ?: meta.actual
     }
 
     fun estado(meta: Meta, actual: Double?): EstadoMeta {

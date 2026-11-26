@@ -172,6 +172,7 @@ object GeneradorRutina {
         perfil: Perfil,
         material: Set<String>,
         marcas: Map<String, MarcaEjercicio>,
+        rest: SaludYRevisionDominio.Restricciones,
     ): Boolean {
         if (e.categoria != "strength") return false
         if (e.material != null && e.material !in material) return false
@@ -179,6 +180,7 @@ object GeneradorRutina {
         if (m?.odiado == true || m?.duele == true) return false
         val novato = perfil.nivel in setOf("empiezo", "vuelvo")
         if ((novato || perfil.modoMayor?.activo == true) && e.dificultad == "advanced") return false
+        if (rest.fuera(e) != null) return false
         for (z in perfil.zonasSensibles) {
             val tag = ZONA_TAG[z]
             if (tag != null && e.zona in zonasAfectadas(z) && tag !in e.etiquetas) return false
@@ -202,6 +204,7 @@ object GeneradorRutina {
         marcas: Map<String, MarcaEjercicio>,
         usados: Set<String>,
         evitar: Set<String>,
+        rest: SaludYRevisionDominio.Restricciones,
     ): Double {
         var s = 0.0
         val m = marcas[e.id]
@@ -220,6 +223,7 @@ object GeneradorRutina {
         if (e.dificultad == "advanced") s -= 6.0
         if (e.id in usados && m?.favorito != true) s -= 15.0
         if (e.id in evitar && m?.favorito != true) s -= 12.0
+        s -= rest.penaliza(e).toDouble()
         return s
     }
 
@@ -238,16 +242,17 @@ object GeneradorRutina {
         val fijos = perfil.diasFijos.filter { it in 0..6 }.distinct().sorted()
         val nDias = if (fijos.isEmpty()) 3 else fijos.size
         val (estructura, diasPlantilla) = plantillas(nDias)
+        val rest = SaludYRevisionDominio.restricciones(perfil)
 
         val aptos = ejercicios
-            .filter { apto(it, perfil, material, marcas) }
+            .filter { apto(it, perfil, material, marcas, rest) }
             .groupBy(::patronGenerador)
 
         val juego = juegoDe(perfil.objetivo)
         val par = PARAMETROS.getValue(juego)
         val techoSueno = if (perfil.sueno == "poco") 7.5 else 10.0
         val novato = perfil.nivel in setOf("empiezo", "vuelvo") || perfil.modoMayor?.activo == true
-        val topeRpe = min(if (novato || perfil.sueno == "poco") 8.0 else 9.0, techoSueno)
+        val topeRpe = min(min(if (novato || perfil.sueno == "poco") 8.0 else 9.0, techoSueno), rest.rpeMax ?: 10.0)
 
         val vecesZona = HashMap<String, Int>()
         for (d in diasPlantilla) for (h in d.huecos) {
@@ -294,7 +299,7 @@ object GeneradorRutina {
                         val libres = lista.filter { e -> e.id !in delDia && (!respetarMov || claveMovimiento(e) !in clavesDia) }
                         if (libres.isNotEmpty()) {
                             cands = lista
-                            elegido = libres.maxBy { puntuar(it, h, perfil, marcas, usados, evitar) }
+                            elegido = libres.maxBy { puntuar(it, h, perfil, marcas, usados, evitar, rest) }
                             break@busqueda
                         }
                     }
@@ -318,7 +323,10 @@ object GeneradorRutina {
                     else max(3, r.first + mover) to max(5, r.second + mover)
 
                 val (rMin, rMax, rpeBase, descBase) = when {
-                    reg == "tiempo" -> Quad(20, 45, par.rpeAccesorio, 60)
+                    reg == "tiempo" -> {
+                        val maxIso = rest.maxIsometrico?.let { min(45, it) } ?: 45
+                        Quad(min(20, maxIso), maxIso, par.rpeAccesorio, 60)
+                    }
                     h.papel == "principal" -> {
                         val r = rango(par.repsPrincipal)
                         Quad(r.first, r.second, par.rpePrincipal, if (juego == "fuerza") 180 else 150)
@@ -335,12 +343,12 @@ object GeneradorRutina {
                 }
                 val fDesc = if (descBase >= 100) descansoCompuesto / 150.0 else descansoAislamiento / 90.0
                 val descFinal = max(15, ((descBase * fDesc) / 15.0).roundToInt() * 15).let { if (mayor) max(it, 120) else it }
-                val rpeFinal = if (calibracion) 7.0 else min(rpeBase, topeRpe)
+                val rpeFinal = if (calibracion) min(7.0, topeRpe) else min(rpeBase, topeRpe)
 
                 val alts = cands
                     .filter { it.id != ej.id && it.id !in delDia }
                     .sortedByDescending { c ->
-                        puntuar(c, h, perfil, marcas, emptySet(), emptySet()) +
+                        puntuar(c, h, perfil, marcas, emptySet(), emptySet(), rest) +
                             if (c.material != ej.material) 12.0 else 0.0
                     }
                     .take(2)
@@ -401,6 +409,8 @@ object GeneradorRutina {
         )
         if (perfil.sueno == "poco") porque += "Duermes poco → esfuerzo limitado a 7,5 para recuperar mejor."
         if (perfil.modoMayor?.activo == true) porque += "Modo mayor → máquinas/apoyo, descansos largos y margen de 2 reps."
+        val resumenSalud = SaludYRevisionDominio.resumenSalud(perfil)
+        if (resumenSalud.isNotBlank()) porque += "Salud adaptada → $resumenSalud."
 
         return Rutina(
             id = id,

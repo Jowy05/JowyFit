@@ -90,7 +90,7 @@ object ExportarLigero {
             "Fecha", "Origen", "Peso (kg)", "Grasa (%)", "Cintura (cm)", "Cuello (cm)", "Cadera (cm)",
             "Pecho (cm)", "Brazo (cm)", "Muslo (cm)", "Músculo (kg)", "Agua (%)", "Visceral", "Basal (kcal)",
         )
-        val filas = mediciones.sortedBy { it.fecha }.map { m ->
+        val filas = mediciones.sortedWith(compareBy<Medicion> { it.fecha }.thenBy { it.id ?: 0L }).map { m ->
             listOf(
                 m.fecha, m.origen, m.pesoKg ?: "", m.bascula?.grasaPct ?: "",
                 m.perimetros?.cintura ?: "", m.perimetros?.cuello ?: "", m.perimetros?.cadera ?: "",

@@ -85,6 +85,7 @@ object MotorSesion {
         calibracion: Boolean = false,
         sugerencias: Map<String, Pair<Double?, Int?>> = emptyMap(),
         ahora: Long = System.currentTimeMillis(),
+        fechaIso: String = LocalDate.now().toString(),
     ): Sesion {
         val filtrados = when (version) {
             "corta" -> dia.bloques.filterNot { it.fueraEnCorta == true }
@@ -97,7 +98,7 @@ object MotorSesion {
         }
         return Sesion(
             id = id,
-            fecha = LocalDate.now().toString(),
+            fecha = fechaIso,
             rutinaId = rutinaId,
             letra = dia.letra,
             nombre = dia.nombre,
@@ -116,6 +117,7 @@ object MotorSesion {
         gimnasioId: Long?,
         sugerencias: Map<String, Pair<Double?, Int?>> = emptyMap(),
         ahora: Long = System.currentTimeMillis(),
+        fechaIso: String = LocalDate.now().toString(),
     ): Sesion {
         val ejs = plantilla.ejercicios.mapIndexed { idx, b ->
             val sug = sugerencias[b.ejercicio]
@@ -134,7 +136,7 @@ object MotorSesion {
         }
         return Sesion(
             id = id,
-            fecha = LocalDate.now().toString(),
+            fecha = fechaIso,
             rutinaId = null,
             letra = "L",
             nombre = plantilla.nombre,
@@ -147,10 +149,16 @@ object MotorSesion {
         )
     }
 
-    fun crearSesionLibre(id: Long, nombre: String, gimnasioId: Long?, ahora: Long = System.currentTimeMillis()): Sesion =
+    fun crearSesionLibre(
+        id: Long,
+        nombre: String,
+        gimnasioId: Long?,
+        ahora: Long = System.currentTimeMillis(),
+        fechaIso: String = LocalDate.now().toString(),
+    ): Sesion =
         Sesion(
             id = id,
-            fecha = LocalDate.now().toString(),
+            fecha = fechaIso,
             rutinaId = null,
             letra = "L",
             nombre = nombre.ifBlank { "Entreno libre" },
@@ -203,6 +211,7 @@ object MotorSesion {
                 i > n && !actual.calentamiento && !x.hecha && !x.calentamiento -> x.copy(
                     peso = datos.peso,
                     reps = if (e.registro != "tiempo") x.reps ?: datos.reps else null,
+                    segundos = if (e.registro == "tiempo") x.segundos ?: datos.segundos else x.segundos,
                 )
                 else -> x
             }
@@ -215,7 +224,7 @@ object MotorSesion {
         val compIdx = e.superserie?.let { suid -> lista.indexOfFirst { it.uid == suid } } ?: -1
         var descanso = e.descanso
 
-        if (compIdx >= 0 && lista[compIdx].estado !in setOf("hecho", "saltado")) {
+        if (!actual.calentamiento && compIdx >= 0 && lista[compIdx].estado !in setOf("hecho", "saltado")) {
             val esPrimero = compIdx > idx
             if (!terminado) lista[idx] = lista[idx].copy(estado = "pendiente")
             lista[compIdx] = lista[compIdx].copy(estado = "curso")
@@ -255,11 +264,14 @@ object MotorSesion {
             calentamiento = false,
             hecha = false,
         )
-        val ejs = s.ejercicios.toMutableList()
-        ejs[idx] = e.copy(
-            series = e.series + nueva,
-            estado = if (e.estado == "hecho") "curso" else e.estado,
-        )
+        val reabrir = e.estado == "hecho"
+        val ejs = s.ejercicios.mapIndexed { i, ej ->
+            when {
+                i == idx -> ej.copy(series = ej.series + nueva, estado = if (reabrir) "curso" else ej.estado)
+                reabrir && ej.estado == "curso" -> ej.copy(estado = if (serieActual(ej) < 0) "hecho" else "pendiente")
+                else -> ej
+            }
+        }
         return s.copy(ejercicios = ejs)
     }
 

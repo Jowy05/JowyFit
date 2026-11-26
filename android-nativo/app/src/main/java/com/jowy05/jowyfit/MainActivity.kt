@@ -22,8 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,7 +55,9 @@ import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.RetosDominio
 import com.jowy05.jowyfit.nativo.ClienteHealthConnect
+import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.nativo.ServicioDescanso
+import kotlinx.coroutines.launch
 import com.jowy05.jowyfit.ui.EstadoAppViewModel
 import com.jowy05.jowyfit.ui.componentes.BarraInferiorFlotante
 import com.jowy05.jowyfit.ui.componentes.PantallaCamaraFotoProgreso
@@ -172,7 +178,25 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enRevision && enGimnasios) { enGimnasios = false }
     BackHandler(enabled = poseCamaraFoto == null && retoActivo == null && enEscaner == null && fichaEjercicioId == null && sesionTerminada == null && !enEntreno && !enRevision && !enGimnasios && enAjustes) { enAjustes = false }
 
+    val scope = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
+    var accionNotifPendiente by remember { mutableStateOf<String?>(null) }
+    var accionHcPendiente by remember { mutableStateOf<String?>(null) }
+
+    fun mostrarAvisoConAjustes(mensaje: String, alAbrirAjustes: () -> Unit) {
+        scope.launch {
+            snackbarHost.currentSnackbarData?.dismiss()
+            val res = snackbarHost.showSnackbar(
+                message = mensaje,
+                actionLabel = "Ajustes",
+                duration = SnackbarDuration.Long,
+            )
+            if (res == SnackbarResult.ActionPerformed) {
+                alAbrirAjustes()
+            }
+        }
+    }
+
     LaunchedEffect(aviso) {
         if (!aviso.isNullOrBlank()) {
             snackbarHost.showSnackbar(aviso!!)
@@ -195,11 +219,26 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     }
 
     val pedirNotificaciones = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        val pendiente = accionNotifPendiente
+        accionNotifPendiente = null
         if (ok) {
-            ServicioDescanso.iniciar(context, 45, "Descansando", "Siguiente serie · prueba interactiva")
-            vm.mostrarAviso("Descanso de 45 s activo en la barra de notificaciones")
+            when (pendiente) {
+                "prueba_descanso" -> {
+                    ServicioDescanso.iniciar(context, 45, "Descansando", "Siguiente serie · prueba interactiva")
+                    vm.mostrarAviso("Descanso de 45 s activo en la barra de notificaciones")
+                }
+                "pasos" -> {
+                    vm.actualizarAjustes { it.copy(noti = it.noti.copy(pasos = true)) }
+                    vm.mostrarAviso("Recordatorio inteligente de pasos activado")
+                }
+            }
         } else {
-            vm.mostrarAviso("Activa el permiso de notificaciones para ver la cuenta atrás")
+            val texto = if (pendiente == "pasos") {
+                "Has denegado las notificaciones; el recordatorio de pasos queda desactivado"
+            } else {
+                "No has concedido el permiso de notificaciones"
+            }
+            mostrarAvisoConAjustes(texto) { PermisosNativos.abrirAjustesNotificaciones(context) }
         }
     }
 
@@ -207,20 +246,95 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
 
     val pedirPermisosHC = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract(),
-    ) { concedidos ->
-        if (concedidos.isNotEmpty()) {
-            vm.sincronizarHealthConnect()
-        } else {
-            vm.mostrarAviso("Permisos de Health Connect no concedidos")
+    ) { resultadoHoja ->
+        val pendiente = accionHcPendiente
+        accionHcPendiente = null
+        scope.launch {
+            val concedidos = ClienteHealthConnect.permisosConcedidos(context).ifEmpty { resultadoHoja }
+            when (pendiente) {
+                "activar_escritura" -> {
+                    if (ClienteHealthConnect.PERMISOS_ESCRITURA.any { it in concedidos }) {
+                        vm.actualizarAjustes { it.copy(entrenosASalud = true) }
+                        vm.mostrarAviso("Escritura de entrenos en Health Connect activada")
+                    } else {
+                        vm.actualizarAjustes { it.copy(entrenosASalud = false) }
+                        mostrarAvisoConAjustes("No has concedido permiso de escritura en Health Connect") {
+                            PermisosNativos.abrirAjustesHealthConnect(context)
+                        }
+                    }
+                }
+                else -> {
+                    if (ClienteHealthConnect.PERMISOS_LECTURA.any { it in concedidos }) {
+                        vm.sincronizarHealthConnect()
+                    } else {
+                        mostrarAvisoConAjustes("No has concedido permisos de Health Connect") {
+                            PermisosNativos.abrirAjustesHealthConnect(context)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun pedirHealthConnect(accion: String, requeridos: Set<String>) {
+        when (ClienteHealthConnect.estadoSdk(context)) {
+            HealthConnectClient.SDK_UNAVAILABLE -> {
+                vm.mostrarAviso("Health Connect no está disponible en este teléfono")
+                return
+            }
+            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> {
+                mostrarAvisoConAjustes("Actualiza o activa Health Connect para sincronizar") {
+                    PermisosNativos.abrirAjustesHealthConnect(context)
+                }
+                return
+            }
+        }
+        scope.launch {
+            val ya = ClienteHealthConnect.permisosConcedidos(context)
+            if (requeridos.all { it in ya }) {
+                if (accion == "activar_escritura") {
+                    vm.actualizarAjustes { it.copy(entrenosASalud = true) }
+                    vm.mostrarAviso("Escritura de entrenos en Health Connect activada")
+                } else {
+                    vm.sincronizarHealthConnect()
+                }
+            } else {
+                accionHcPendiente = accion
+                runCatching { pedirPermisosHC.launch(ClienteHealthConnect.PERMISOS) }.onFailure {
+                    accionHcPendiente = null
+                    mostrarAvisoConAjustes("No se pudo abrir la solicitud de Health Connect") {
+                        PermisosNativos.abrirAjustesHealthConnect(context)
+                    }
+                }
+            }
         }
     }
 
     fun sincronizarHealthConnectConPermisos() {
-        if (!ClienteHealthConnect.estaDisponible(context)) {
-            vm.mostrarAviso("Health Connect no está disponible en este teléfono")
+        pedirHealthConnect("sync", ClienteHealthConnect.PERMISOS_LECTURA)
+    }
+
+    fun cambiarToggleEntrenosHC(activar: Boolean) {
+        if (!activar) {
+            vm.actualizarAjustes { it.copy(entrenosASalud = false) }
+        } else {
+            pedirHealthConnect("activar_escritura", ClienteHealthConnect.PERMISOS_ESCRITURA)
+        }
+    }
+
+    fun cambiarToggleRecordatorioPasos(activar: Boolean) {
+        if (!activar) {
+            vm.actualizarAjustes { it.copy(noti = it.noti.copy(pasos = false)) }
             return
         }
-        pedirPermisosHC.launch(ClienteHealthConnect.PERMISOS)
+        val necesitaPermiso = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        if (necesitaPermiso) {
+            accionNotifPendiente = "pasos"
+            pedirNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            vm.actualizarAjustes { it.copy(noti = it.noti.copy(pasos = true)) }
+        }
     }
 
     fun asegurarPermisoNotifEntreno() {
@@ -243,6 +357,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
         val necesitaPermiso = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         if (necesitaPermiso) {
+            accionNotifPendiente = "prueba_descanso"
             pedirNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             ServicioDescanso.iniciar(context, 45, "Descansando", "Siguiente serie · prueba interactiva")
@@ -379,9 +494,10 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     alCambiarLetra = vm::cambiarLetra,
                     alCambiarIdioma = vm::cambiarIdioma,
                     alToggleMostrarKcal = { v -> vm.actualizarAjustes { it.copy(mostrarKcal = v) } },
-                    alToggleRecordatorioPasos = { v -> vm.actualizarAjustes { it.copy(noti = it.noti.copy(pasos = v)) } },
+                    alToggleRecordatorioPasos = ::cambiarToggleRecordatorioPasos,
                     alToggleCopiaAuto = { v -> vm.actualizarAjustes { it.copy(copiaAuto = v) } },
-                    alToggleEntrenosHC = { v -> vm.actualizarAjustes { it.copy(entrenosASalud = v) } },
+                    alToggleEntrenosHC = ::cambiarToggleEntrenosHC,
+                    alPedirSegundoPlano = { PermisosNativos.pedirIgnorarAhorroBateria(context) },
                     alImportarCopia = { selectorImportar.launch(arrayOf("*/*")) },
                     alExportarCopia = {
                         vm.exportarCopiaBytes { bytes ->

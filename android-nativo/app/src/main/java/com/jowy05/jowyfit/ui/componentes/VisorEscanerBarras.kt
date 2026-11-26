@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -61,12 +62,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.jowy05.jowyfit.dominio.ComidaDominio
+import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.ui.tema.FuenteMono
 import com.jowy05.jowyfit.ui.tema.FuenteTitulo
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
@@ -92,11 +96,29 @@ fun PantallaEscanerBarras(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
+    var esperandoPermiso by remember { mutableStateOf(!permisoCamara) }
+    var bloqueadoEnAjustes by remember { mutableStateOf(false) }
     val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         permisoCamara = ok
+        esperandoPermiso = false
+        bloqueadoEnAjustes = !ok && !PermisosNativos.puedeVolverAPedir(context, Manifest.permission.CAMERA)
     }
     LaunchedEffect(Unit) {
         if (!permisoCamara) pedirPermiso.launch(Manifest.permission.CAMERA)
+    }
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, ev ->
+            if (ev == Lifecycle.Event.ON_RESUME) {
+                val concedido = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                if (concedido) {
+                    permisoCamara = true
+                    esperandoPermiso = false
+                    bloqueadoEnAjustes = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
     var linterna by remember { mutableStateOf(false) }
@@ -204,6 +226,8 @@ fun PantallaEscanerBarras(
                     .clip(RoundedCornerShape(16.dp))
                     .border(BorderStroke(2.5.dp, p.go), RoundedCornerShape(16.dp)),
             )
+        } else if (esperandoPermiso) {
+            CircularProgressIndicator(color = p.go, modifier = Modifier.align(Alignment.Center))
         } else {
             Column(
                 modifier = Modifier
@@ -214,12 +238,26 @@ fun PantallaEscanerBarras(
             ) {
                 Icon(Icons.Rounded.QrCodeScanner, contentDescription = null, tint = p.go, modifier = Modifier.size(56.dp))
                 Text(
-                    text = "Activa la cámara para escanear códigos de barras o escríbelo abajo.",
+                    text = if (bloqueadoEnAjustes) {
+                        "Has bloqueado el permiso de cámara. Actívalo en los ajustes de la app o escribe el código abajo."
+                    } else {
+                        "No has concedido permiso de cámara. Puedes darlo ahora para escanear o escribir el código abajo."
+                    },
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontSize = 15.sp,
                 )
-                BotonPrincipal(texto = "Dar permiso de cámara", onClick = { pedirPermiso.launch(Manifest.permission.CAMERA) })
+                BotonPrincipal(
+                    texto = if (bloqueadoEnAjustes) "Abrir ajustes de permisos" else "Dar permiso de cámara",
+                    onClick = {
+                        if (bloqueadoEnAjustes) {
+                            PermisosNativos.abrirAjustesApp(context)
+                        } else {
+                            esperandoPermiso = true
+                            pedirPermiso.launch(Manifest.permission.CAMERA)
+                        }
+                    },
+                )
             }
         }
 

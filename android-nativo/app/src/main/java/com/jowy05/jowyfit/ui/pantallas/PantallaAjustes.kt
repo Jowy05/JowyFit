@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
@@ -32,22 +33,29 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jowy05.jowyfit.BuildConfig
 import com.jowy05.jowyfit.datos.EscalaLetra
 import com.jowy05.jowyfit.datos.IdiomaApp
 import com.jowy05.jowyfit.datos.PreferenciaTema
 import com.jowy05.jowyfit.datos.PreferenciasVisuales
+import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.ui.EstadoPrincipal
 import com.jowy05.jowyfit.ui.componentes.CabeceraPantalla
 import com.jowy05.jowyfit.ui.componentes.EtiquetaSeccionGrupo
+import com.jowy05.jowyfit.ui.componentes.EtiquetaTag
 import com.jowy05.jowyfit.ui.componentes.FilaInterruptor
 import com.jowy05.jowyfit.ui.componentes.FilaLista
 import com.jowy05.jowyfit.ui.componentes.ListaAgrupada
@@ -71,6 +79,7 @@ fun PantallaAjustes(
     alToggleRecordatorioPasos: (Boolean) -> Unit,
     alToggleCopiaAuto: (Boolean) -> Unit,
     alToggleEntrenosHC: (Boolean) -> Unit,
+    alPedirSegundoPlano: () -> Unit,
     alImportarCopia: () -> Unit,
     alExportarCopia: () -> Unit,
     alExportarCsvEntrenos: () -> Unit,
@@ -83,7 +92,20 @@ fun PantallaAjustes(
     alBorrarTodo: () -> Unit,
 ) {
     val p = LocalPaleta.current
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var confirmarBorrado by remember { mutableStateOf(false) }
+    var sinRestriccionBateria by remember { mutableStateOf(PermisosNativos.estaSinRestriccionBateria(context)) }
+
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, ev ->
+            if (ev == Lifecycle.Event.ON_RESUME) {
+                sinRestriccionBateria = PermisosNativos.estaSinRestriccionBateria(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     Column(
         modifier = Modifier
@@ -166,6 +188,16 @@ fun PantallaAjustes(
                     icono = Icons.Rounded.Sync,
                     activo = estado.ajustes.entrenosASalud == true,
                     onCambio = alToggleEntrenosHC,
+                )
+                SeparadorLista()
+                FilaLista(
+                    titulo = "Avisos con el móvil bloqueado",
+                    subtitulo = if (sinRestriccionBateria) "Sin ahorro de batería: los descansos suenan a su hora" else "Toca para permitir ejecución sin ahorro de batería",
+                    icono = Icons.Rounded.BatteryChargingFull,
+                    alPulsar = if (sinRestriccionBateria) null else alPedirSegundoPlano,
+                    final = if (sinRestriccionBateria) {
+                        { EtiquetaTag("Activado", colorFondo = p.okT, colorTexto = p.ok) }
+                    } else null,
                 )
                 SeparadorLista()
                 FilaLista(

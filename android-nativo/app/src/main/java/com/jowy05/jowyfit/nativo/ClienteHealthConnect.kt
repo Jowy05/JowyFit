@@ -24,25 +24,34 @@ import kotlin.math.max
 /** Integración 100 % nativa con Health Connect SDK: lee pasos, peso y % grasa; escribe entrenos de fuerza. */
 object ClienteHealthConnect {
 
-    val PERMISOS: Set<String> = setOf(
+    val PERMISOS_LECTURA: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(WeightRecord::class),
         HealthPermission.getReadPermission(BodyFatRecord::class),
+    )
+
+    val PERMISOS_ESCRITURA: Set<String> = setOf(
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
         HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
     )
 
-    fun estaDisponible(context: Context): Boolean =
-        runCatching { HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE }.getOrDefault(false)
+    val PERMISOS: Set<String> = PERMISOS_LECTURA + PERMISOS_ESCRITURA
 
-    suspend fun tienePermisos(context: Context): Boolean = withContext(Dispatchers.IO) {
-        if (!estaDisponible(context)) return@withContext false
+    fun estadoSdk(context: Context): Int =
+        runCatching { HealthConnectClient.getSdkStatus(context) }.getOrDefault(HealthConnectClient.SDK_UNAVAILABLE)
+
+    fun estaDisponible(context: Context): Boolean =
+        estadoSdk(context) == HealthConnectClient.SDK_AVAILABLE
+
+    suspend fun permisosConcedidos(context: Context): Set<String> = withContext(Dispatchers.IO) {
+        if (!estaDisponible(context)) return@withContext emptySet()
         runCatching {
-            val client = HealthConnectClient.getOrCreate(context)
-            val concedidos = client.permissionController.getGrantedPermissions()
-            PERMISOS.all { it in concedidos }
-        }.getOrDefault(false)
+            HealthConnectClient.getOrCreate(context).permissionController.getGrantedPermissions()
+        }.getOrDefault(emptySet())
     }
+
+    suspend fun tienePermisos(context: Context): Boolean =
+        PERMISOS.all { it in permisosConcedidos(context) }
 
     data class DatosSincronizados(
         val pasosHoy: Int?,

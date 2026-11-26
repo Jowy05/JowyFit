@@ -137,9 +137,18 @@ class SeguridadAndroidNativoTest {
         assertTrue(filePaths.contains("""path="compartir/""""))
         assertTrue(filePaths.contains("""path="informes/""""))
 
-        // Componentes exportados: estrictamente solo MainActivity y WidgetHoyReceiver
+        // Componentes exportados: estrictamente MainActivity, WidgetHoyReceiver y la pantalla/alias de política Health Connect
         val exportedTrue = Regex("""android:exported="true"""").findAll(manifest).count()
-        assertEquals("Solo MainActivity y WidgetHoyReceiver deben ir exportados", 2, exportedTrue)
+        assertEquals(
+            "Solo MainActivity, WidgetHoyReceiver y política Health Connect deben ir exportados",
+            4,
+            exportedTrue,
+        )
+        assertTrue(manifest.contains("""android:name=".nativo.ActividadPoliticaSalud""""))
+        assertTrue(manifest.contains("""android:permission="android.permission.START_VIEW_PERMISSION_USAGE""""))
+        assertTrue(manifest.contains("""android.intent.action.VIEW_PERMISSION_USAGE"""))
+        assertTrue(manifest.contains("""androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"""))
+        assertTrue(manifest.contains("""com.google.android.apps.healthdata"""))
         assertTrue(manifest.contains("""android:name=".nativo.ServicioDescanso""""))
         assertTrue(manifest.contains("""android:name=".nativo.ReceptorDescanso""""))
         assertTrue(manifest.contains("""android:authorities="${'$'}{applicationId}.fileprovider""""))

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,8 +56,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
+import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.ui.tema.FuenteTitulo
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
 import java.io.ByteArrayOutputStream
@@ -86,8 +90,28 @@ fun PantallaCamaraFotoProgreso(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    val pedir = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> permiso = ok }
+    var esperandoPermiso by remember { mutableStateOf(!permiso) }
+    var bloqueadoEnAjustes by remember { mutableStateOf(false) }
+    val pedir = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        permiso = ok
+        esperandoPermiso = false
+        bloqueadoEnAjustes = !ok && !PermisosNativos.puedeVolverAPedir(context, Manifest.permission.CAMERA)
+    }
     LaunchedEffect(Unit) { if (!permiso) pedir.launch(Manifest.permission.CAMERA) }
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, ev ->
+            if (ev == Lifecycle.Event.ON_RESUME) {
+                val concedido = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                if (concedido) {
+                    permiso = true
+                    esperandoPermiso = false
+                    bloqueadoEnAjustes = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     val ejecutor = remember { Executors.newSingleThreadExecutor() }
     val captura = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
@@ -131,14 +155,34 @@ fun PantallaCamaraFotoProgreso(
                     modifier = Modifier.fillMaxSize().alpha(0.28f),
                 )
             }
+        } else if (esperandoPermiso) {
+            CircularProgressIndicator(color = p.go, modifier = Modifier.align(Alignment.Center))
         } else {
             Column(
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Activa el permiso de cámara para hacer tus fotos de progreso (solo se guardan en tu móvil).", color = Color.White, textAlign = TextAlign.Center)
-                BotonPrincipal(texto = "Activar cámara", onClick = { pedir.launch(Manifest.permission.CAMERA) })
+                Text(
+                    text = if (bloqueadoEnAjustes) {
+                        "Has bloqueado el permiso de cámara. Actívalo en los ajustes de la app para hacer tus fotos de progreso (solo se guardan en tu móvil)."
+                    } else {
+                        "Necesitamos permiso de cámara para hacer tus fotos de progreso (solo se guardan en tu móvil)."
+                    },
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                )
+                BotonPrincipal(
+                    texto = if (bloqueadoEnAjustes) "Abrir ajustes de permisos" else "Dar permiso de cámara",
+                    onClick = {
+                        if (bloqueadoEnAjustes) {
+                            PermisosNativos.abrirAjustesApp(context)
+                        } else {
+                            esperandoPermiso = true
+                            pedir.launch(Manifest.permission.CAMERA)
+                        }
+                    },
+                )
             }
         }
 

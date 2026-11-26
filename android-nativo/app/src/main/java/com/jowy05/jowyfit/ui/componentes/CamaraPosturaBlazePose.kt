@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.components.containers.Landmark
@@ -50,6 +53,7 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.jowy05.jowyfit.dominio.PosturaDominio
+import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
 import java.util.concurrent.Executors
 
@@ -79,14 +83,36 @@ fun VisorCamaraBlazePose(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    val pedir = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> permiso = ok }
+    var esperandoPermiso by remember { mutableStateOf(!permiso) }
+    var bloqueadoEnAjustes by remember { mutableStateOf(false) }
+    val pedir = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        permiso = ok
+        esperandoPermiso = false
+        bloqueadoEnAjustes = !ok && !PermisosNativos.puedeVolverAPedir(context, Manifest.permission.CAMERA)
+    }
     LaunchedEffect(Unit) { if (!permiso) pedir.launch(Manifest.permission.CAMERA) }
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, ev ->
+            if (ev == Lifecycle.Event.ON_RESUME) {
+                val concedido = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                if (concedido) {
+                    permiso = true
+                    esperandoPermiso = false
+                    bloqueadoEnAjustes = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     var esqueleto2D by remember { mutableStateOf<List<Pair<Float, Float>>>(emptyList()) }
     var errorMotor by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier.background(Color.Black)) {
-        if (!permiso) {
+        if (!permiso && esperandoPermiso) {
+            CircularProgressIndicator(color = p.go, modifier = Modifier.align(Alignment.Center))
+        } else if (!permiso) {
             Column(
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,12 +120,26 @@ fun VisorCamaraBlazePose(
             ) {
                 Icon(Icons.Rounded.Videocam, contentDescription = null, tint = p.go, modifier = Modifier.size(48.dp))
                 Text(
-                    text = "Activa la cámara para contar repeticiones en 3D automáticamente, o usa el modo manual.",
+                    text = if (bloqueadoEnAjustes) {
+                        "Has bloqueado el permiso de cámara. Actívalo en los ajustes de la app para contar repeticiones en 3D, o usa el modo manual."
+                    } else {
+                        "No has concedido permiso de cámara. Puedes darlo ahora para contar repeticiones en 3D, o usar el modo manual."
+                    },
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontSize = 14.5.sp,
                 )
-                BotonPrincipal(texto = "Activar cámara", onClick = { pedir.launch(Manifest.permission.CAMERA) })
+                BotonPrincipal(
+                    texto = if (bloqueadoEnAjustes) "Abrir ajustes de permisos" else "Dar permiso de cámara",
+                    onClick = {
+                        if (bloqueadoEnAjustes) {
+                            PermisosNativos.abrirAjustesApp(context)
+                        } else {
+                            esperandoPermiso = true
+                            pedir.launch(Manifest.permission.CAMERA)
+                        }
+                    },
+                )
             }
         } else {
             val ejecutor = remember { Executors.newSingleThreadExecutor() }

@@ -53,6 +53,7 @@ import com.jowy05.jowyfit.datos.EscalaLetra
 import com.jowy05.jowyfit.datos.IdiomaApp
 import com.jowy05.jowyfit.datos.PreferenciaTema
 import com.jowy05.jowyfit.datos.PreferenciasVisuales
+import com.jowy05.jowyfit.dominio.ActualizacionDominio
 import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.ui.EstadoPrincipal
 import com.jowy05.jowyfit.ui.componentes.CabeceraPantalla
@@ -90,6 +91,8 @@ fun PantallaAjustes(
     alExportarCsvMedidas: () -> Unit,
     alExportarJsonLigero: () -> Unit,
     alGenerarPdf: () -> Unit,
+    actualizacionDisponible: ActualizacionDominio.InfoActualizacion? = null,
+    alToggleAutoActualizaciones: (Boolean) -> Unit = {},
     alAbrirActualizaciones: () -> Unit,
     alProbarDescanso: () -> Unit,
     alBorrarTodo: () -> Unit,
@@ -271,11 +274,26 @@ fun PantallaAjustes(
 
             EtiquetaSeccionGrupo("Ayuda y actualizaciones")
             ListaAgrupada {
+                FilaInterruptor(
+                    titulo = "Comprobar actualizaciones al abrir",
+                    subtitulo = "Avisa arriba cuando haya una versión nueva verificada en GitHub",
+                    icono = Icons.Rounded.SystemUpdate,
+                    activo = prefs.comprobarActualizacionesAuto,
+                    onCambio = alToggleAutoActualizaciones,
+                )
+                SeparadorLista()
                 FilaLista(
                     titulo = t("Buscar actualizaciones"),
-                    subtitulo = "Versión ${BuildConfig.VERSION_NAME} · descarga verificada con SHA-256",
+                    subtitulo = if (actualizacionDisponible != null) {
+                        "Disponible ${actualizacionDisponible.etiquetaVersion} · toca para descargar"
+                    } else {
+                        "Versión ${BuildConfig.VERSION_NAME} · descarga verificada con SHA-256"
+                    },
                     icono = Icons.Rounded.SystemUpdate,
                     alPulsar = alAbrirActualizaciones,
+                    final = if (actualizacionDisponible != null) {
+                        { EtiquetaTag(t("Actualizar"), colorFondo = p.goT, colorTexto = p.go) }
+                    } else null,
                 )
                 SeparadorLista()
                 FilaLista(

@@ -7,15 +7,19 @@ import com.jowy05.jowyfit.datos.catalogo.TextosCatalogoJson
 import com.jowy05.jowyfit.datos.modelo.Gimnasio
 import com.jowy05.jowyfit.datos.modelo.JsonJowyFit
 import com.jowy05.jowyfit.datos.modelo.Perfil
+import com.jowy05.jowyfit.dominio.ActualizacionDominio
 import com.jowy05.jowyfit.dominio.PesosYDiscos
 import com.jowy05.jowyfit.dominio.SaludYRevisionDominio
 import com.jowy05.jowyfit.nativo.ActualizadorApp
 import com.jowy05.jowyfit.nativo.ClienteOpenFoodFacts
 import com.jowy05.jowyfit.nativo.GeneradorPdfNativo
 import com.jowy05.jowyfit.ui.i18n.traducir
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -228,5 +232,103 @@ class VerificacionIntegralNuevaTest {
             assertTrue("$ruta debe lanzar MainActivity", xml.contains("android:targetClass=\"com.jowy05.jowyfit.MainActivity\""))
             assertTrue("$ruta debe incluir ACCION_PESO y ACCION_RUTINA", xml.contains("ACCION_PESO") && xml.contains("ACCION_RUTINA"))
         }
+    }
+
+    @Test
+    fun actualizacionAutomaticaSoportaCanalOficialYCanalKotlinConAllowlistYSha() {
+        val sha = "a".repeat(64)
+        // 1. Canal paralelo Kotlin: detecta nueva revisión (Build Kotlin: 2 > 1) con mismo semver
+        val jsonKotlin = JsonJowyFit.parseToJsonElement(
+            """
+            {
+              "tag_name": "kotlin-preview",
+              "html_url": "https://github.com/Jowy05/JowyFit/releases/tag/kotlin-preview",
+              "published_at": "2026-11-26T19:00:00Z",
+              "body": "Mejoras de actualización automática.\n\nVersión Kotlin: 0.12.1\nBuild Kotlin: 2\nSHA-256 del APK: $sha",
+              "assets": [
+                {
+                  "name": "JowyFit-Kotlin.apk",
+                  "size": 65000000,
+                  "browser_download_url": "https://github.com/Jowy05/JowyFit/releases/download/kotlin-preview/JowyFit-Kotlin.apk"
+                }
+              ]
+            }
+            """.trimIndent(),
+        ).jsonObject
+
+        val infoNueva = ActualizacionDominio.parsearRelease(
+            jsonKotlin,
+            actual = "0.12.1",
+            canal = ActualizacionDominio.CANAL_KOTLIN,
+            buildActual = 1,
+        )
+        assertNotNull(infoNueva)
+        assertTrue(infoNueva!!.hayNueva)
+        assertEquals("0.12.1-r2", infoNueva.claveVersion)
+        assertEquals("0.12.1 (r2)", infoNueva.etiquetaVersion)
+        assertEquals(sha, infoNueva.sha256)
+        assertEquals("Mejoras de actualización automática.", infoNueva.notas)
+        assertNotNull(infoNueva.urlApk)
+
+        // Misma revisión (build 2 == 2) -> NO hay nueva
+        val infoIgual = ActualizacionDominio.parsearRelease(
+            jsonKotlin,
+            actual = "0.12.1",
+            canal = ActualizacionDominio.CANAL_KOTLIN,
+            buildActual = 2,
+        )
+        assertNotNull(infoIgual)
+        assertFalse(infoIgual!!.hayNueva)
+
+        // Separación de canales: un APK del canal Kotlin NO es aceptado por el canal oficial y viceversa
+        assertFalse(
+            ActualizacionDominio.urlApkSegura(
+                "https://github.com/Jowy05/JowyFit/releases/download/kotlin-preview/JowyFit-Kotlin.apk",
+                ActualizacionDominio.CANAL_OFICIAL,
+            ),
+        )
+        assertFalse(
+            ActualizacionDominio.urlApkSegura(
+                "https://github.com/Jowy05/JowyFit/releases/download/v0.13.0/JowyFit.apk",
+                ActualizacionDominio.CANAL_KOTLIN,
+            ),
+        )
+        assertNull(
+            ActualizacionDominio.parsearRelease(
+                jsonKotlin,
+                actual = "0.12.1",
+                canal = ActualizacionDominio.CANAL_OFICIAL,
+            ),
+        )
+
+        // 2. Canal oficial: v0.13.0 > 0.12.1
+        val jsonOficial = JsonJowyFit.parseToJsonElement(
+            """
+            {
+              "tag_name": "v0.13.0",
+              "html_url": "https://github.com/Jowy05/JowyFit/releases/tag/v0.13.0",
+              "published_at": "2026-11-27T10:00:00Z",
+              "body": "App nativa en Kotlin.\n\nSHA-256 del APK: $sha",
+              "assets": [
+                {
+                  "name": "JowyFit.apk",
+                  "size": 65000000,
+                  "browser_download_url": "https://github.com/Jowy05/JowyFit/releases/download/v0.13.0/JowyFit.apk"
+                }
+              ]
+            }
+            """.trimIndent(),
+        ).jsonObject
+        val infoOf = ActualizacionDominio.parsearRelease(jsonOficial, actual = "0.12.1", canal = ActualizacionDominio.CANAL_OFICIAL)
+        assertNotNull(infoOf)
+        assertTrue(infoOf!!.hayNueva)
+        assertEquals("0.13.0", infoOf.claveVersion)
+
+        // 3. Control de frecuencia de comprobación automática (6 h)
+        val t0 = 1_700_000_000_000L
+        assertTrue(ActualizacionDominio.debeComprobarAuto(t0, 0L, true))
+        assertFalse(ActualizacionDominio.debeComprobarAuto(t0, 0L, false))
+        assertFalse(ActualizacionDominio.debeComprobarAuto(t0 + 3_600_000L, t0, true))
+        assertTrue(ActualizacionDominio.debeComprobarAuto(t0 + ActualizacionDominio.INTERVALO_AUTO_MS, t0, true))
     }
 }

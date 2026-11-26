@@ -1,5 +1,7 @@
 package com.jowy05.jowyfit.ui.pantallas
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,17 +12,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,11 +40,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jowy05.jowyfit.BuildConfig
@@ -42,6 +55,7 @@ import com.jowy05.jowyfit.dominio.ActualizacionDominio
 import com.jowy05.jowyfit.dominio.CalculosDominio
 import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.nativo.ActualizadorApp
+import com.jowy05.jowyfit.ui.i18n.t
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import com.jowy05.jowyfit.ui.componentes.BotonPrincipal
@@ -300,35 +314,151 @@ fun HojaExportarCopia(
     }
 }
 
+/** Notificación superior dentro de la app cuando hay una nueva versión verificada en GitHub. */
+@Composable
+fun BannerActualizacion(
+    info: ActualizacionDominio.InfoActualizacion,
+    alActualizar: () -> Unit,
+    alCerrar: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val p = LocalPaleta.current
+    val tam = info.bytes?.let { "${ActualizacionDominio.tamanoMB(it)} · " }.orEmpty()
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = alActualizar),
+        shape = RoundedCornerShape(16.dp),
+        color = p.surface,
+        border = BorderStroke(1.5.dp, p.go),
+        shadowElevation = 10.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.SystemUpdate,
+                contentDescription = null,
+                tint = p.go,
+                modifier = Modifier.size(24.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${t("Nueva versión disponible")} · ${info.etiquetaVersion}",
+                    color = p.ink,
+                    fontFamily = FuenteTitulo,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "${tam}SHA-256 verificado · toca para descargar",
+                    color = p.muted,
+                    fontSize = 12.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = p.go,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = alActualizar),
+            ) {
+                Text(
+                    text = t("Actualizar"),
+                    color = p.onGo,
+                    fontFamily = FuenteTitulo,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.5.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                )
+            }
+            IconButton(onClick = alCerrar, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = t("Cerrar"),
+                    tint = p.muted,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HojaActualizacionNativa(
+    infoInicial: ActualizacionDominio.InfoActualizacion? = null,
+    iniciarDescarga: Boolean = false,
+    alActualizarInfo: (ActualizacionDominio.InfoActualizacion) -> Unit = {},
     alCerrar: () -> Unit,
 ) {
     val p = LocalPaleta.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var buscando by remember { mutableStateOf(true) }
-    var info by remember { mutableStateOf<ActualizacionDominio.InfoActualizacion?>(null) }
+    var buscando by remember { mutableStateOf(infoInicial == null) }
+    var info by remember { mutableStateOf(infoInicial) }
     var error by remember { mutableStateOf<String?>(null) }
     var descargando by remember { mutableStateOf(false) }
     var progreso by remember { mutableIntStateOf(0) }
     var estadoApk by remember { mutableStateOf<String?>(null) }
+
+    fun lanzarDescarga(objetivo: ActualizacionDominio.InfoActualizacion) {
+        if (descargando || objetivo.urlApk == null) return
+        scope.launch {
+            descargando = true
+            progreso = 0
+            error = null
+            estadoApk = null
+            runCatching {
+                ActualizadorApp.descargarEInstalar(context, objetivo) { pct -> progreso = pct }
+            }.onSuccess { res ->
+                estadoApk = when (res) {
+                    ActualizadorApp.ResultadoInstalacion.PermisoRequerido ->
+                        "Activa «Permitir desde esta fuente» y vuelve a tocar Descargar e instalar."
+                    ActualizadorApp.ResultadoInstalacion.Instalando ->
+                        "Descarga verificada con SHA-256. Sigue los pasos del instalador."
+                }
+            }.onFailure { e ->
+                error = e.message ?: "Error al descargar la actualización"
+            }
+            descargando = false
+        }
+    }
 
     fun comprobar() {
         scope.launch {
             buscando = true
             error = null
             estadoApk = null
-            ActualizadorApp.buscar(BuildConfig.VERSION_APP)
-                .onSuccess { info = it }
+            ActualizadorApp.buscar(BuildConfig.VERSION_APP, BuildConfig.CANAL_ACTUALIZACION, BuildConfig.KOTLIN_BUILD)
+                .onSuccess {
+                    info = it
+                    alActualizarInfo(it)
+                }
                 .onFailure { error = "No se ha podido comprobar ahora mismo. Revisa tu conexión." }
             buscando = false
         }
     }
 
-    LaunchedEffect(Unit) { comprobar() }
+    LaunchedEffect(Unit) {
+        if (infoInicial == null) {
+            comprobar()
+        } else if (iniciarDescarga && infoInicial.hayNueva && infoInicial.urlApk != null) {
+            lanzarDescarga(infoInicial)
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = alCerrar, containerColor = p.surface) {
         Column(
@@ -352,7 +482,7 @@ fun HojaActualizacionNativa(
                 }
                 info != null && !info!!.hayNueva -> {
                     NotaAviso(
-                        texto = "Tienes la última versión publicada (${info!!.ultima}).",
+                        texto = "Tienes la última versión publicada (${info!!.etiquetaVersion}).",
                         tono = TonoNota.OK,
                         icono = Icons.Rounded.CheckCircle,
                     )
@@ -363,7 +493,7 @@ fun HojaActualizacionNativa(
                     Tarjeta {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Nueva versión", color = p.muted)
-                            Text(i.ultima, color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold)
+                            Text(i.etiquetaVersion, color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold)
                         }
                         if (i.bytes != null) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -387,26 +517,7 @@ fun HojaActualizacionNativa(
                             texto = if (descargando) "Descargando…" else "Descargar e instalar",
                             icono = Icons.Rounded.Download,
                             enabled = !descargando,
-                            onClick = {
-                                scope.launch {
-                                    descargando = true
-                                    progreso = 0
-                                    estadoApk = null
-                                    runCatching {
-                                        ActualizadorApp.descargarEInstalar(context, i) { pct -> progreso = pct }
-                                    }.onSuccess { res ->
-                                        estadoApk = when (res) {
-                                            ActualizadorApp.ResultadoInstalacion.PermisoRequerido ->
-                                                "Activa «Permitir desde esta fuente» y vuelve a tocar Descargar e instalar."
-                                            ActualizadorApp.ResultadoInstalacion.Instalando ->
-                                                "Descarga verificada con SHA-256. Sigue los pasos del instalador."
-                                        }
-                                    }.onFailure { e ->
-                                        error = e.message ?: "Error al descargar la actualización"
-                                    }
-                                    descargando = false
-                                }
-                            },
+                            onClick = { lanzarDescarga(i) },
                         )
                     }
                 }

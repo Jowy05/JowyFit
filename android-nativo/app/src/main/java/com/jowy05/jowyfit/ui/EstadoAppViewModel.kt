@@ -39,6 +39,8 @@ import com.jowy05.jowyfit.datos.modelo.RespuestaRevision
 import com.jowy05.jowyfit.datos.modelo.Revision
 import com.jowy05.jowyfit.datos.modelo.Rutina
 import com.jowy05.jowyfit.datos.modelo.Sesion
+import com.jowy05.jowyfit.BuildConfig
+import com.jowy05.jowyfit.dominio.ActualizacionDominio
 import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.dominio.ExportarLigero
 import com.jowy05.jowyfit.dominio.GeneradorRutina
@@ -47,6 +49,7 @@ import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.PesosYDiscos
 import com.jowy05.jowyfit.dominio.Progresion
 import com.jowy05.jowyfit.dominio.SaludYRevisionDominio
+import com.jowy05.jowyfit.nativo.ActualizadorApp
 import com.jowy05.jowyfit.nativo.ClienteHealthConnect
 import com.jowy05.jowyfit.nativo.ClienteOpenFoodFacts
 import com.jowy05.jowyfit.nativo.GeneradorPdfNativo
@@ -108,6 +111,9 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _sesionRecienTerminada = MutableStateFlow<Sesion?>(null)
     val sesionRecienTerminada: StateFlow<Sesion?> = _sesionRecienTerminada.asStateFlow()
+
+    private val _actualizacionDisponible = MutableStateFlow<ActualizacionDominio.InfoActualizacion?>(null)
+    val actualizacionDisponible: StateFlow<ActualizacionDominio.InfoActualizacion?> = _actualizacionDisponible.asStateFlow()
 
     private val bloqueA = combine(repo.perfil, repo.ajustes, repo.rutinas, repo.sesiones, repo.mediciones) { p, a, r, s, m ->
         BloqueA(p, a, r, s, m)
@@ -174,6 +180,34 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
     fun cambiarIdioma(idioma: IdiomaApp) {
         repo.guardarIdioma(idioma)
         recargarCatalogo(idioma)
+    }
+
+    fun cambiarComprobarActualizacionesAuto(activo: Boolean) {
+        repo.guardarComprobarActualizacionesAuto(activo)
+        if (!activo) _actualizacionDisponible.value = null
+    }
+
+    fun comprobarActualizacionAutomatica(forzar: Boolean = false) {
+        val ahora = System.currentTimeMillis()
+        if (!forzar && !ActualizacionDominio.debeComprobarAuto(ahora, repo.ultimaComprobacionActualizacionMs(), preferencias.value.comprobarActualizacionesAuto)) return
+        viewModelScope.launch {
+            ActualizadorApp.buscar(BuildConfig.VERSION_APP, BuildConfig.CANAL_ACTUALIZACION, BuildConfig.KOTLIN_BUILD)
+                .onSuccess { info ->
+                    repo.marcarComprobacionActualizacion(System.currentTimeMillis())
+                    val ignorada = repo.versionActualizacionIgnorada()
+                    _actualizacionDisponible.value = if (info.hayNueva && info.urlApk != null && info.sha256 != null && (forzar || info.claveVersion != ignorada)) info else null
+                }
+        }
+    }
+
+    fun actualizarInfoActualizacion(info: ActualizacionDominio.InfoActualizacion) {
+        repo.marcarComprobacionActualizacion(System.currentTimeMillis())
+        _actualizacionDisponible.value = if (info.hayNueva && info.urlApk != null && info.sha256 != null) info else null
+    }
+
+    fun ignorarBannerActualizacion() {
+        _actualizacionDisponible.value?.let { repo.ignorarVersionActualizacion(it.claveVersion) }
+        _actualizacionDisponible.value = null
     }
 
     fun completarAltaRapida(nombre: String, sexo: String, alturaCm: Double, pesoKg: Double?, objetivo: String) {
@@ -943,27 +977,7 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { runCatching { WidgetHoy().updateAll(getApplication()) } }
     }
 
-    private data class BloqueA(
-        val perfil: Perfil,
-        val ajustes: Ajustes,
-        val rutinas: List<Rutina>,
-        val sesiones: List<Sesion>,
-        val mediciones: List<Medicion>,
-    )
-
-    private data class BloqueB(
-        val comidas: List<Comida>,
-        val pasos: List<PasosDia>,
-        val metas: List<Meta>,
-        val retos: List<IntentoReto>,
-        val gimnasios: List<Gimnasio>,
-    )
-
-    private data class BloqueC(
-        val marcas: List<MarcaEjercicio>,
-        val plantillas: List<Plantilla>,
-        val productos: List<Producto>,
-        val suplementos: List<DiaSuplementos>,
-        val fotos: List<FotoProgreso>,
-    )
+    private data class BloqueA(val perfil: Perfil, val ajustes: Ajustes, val rutinas: List<Rutina>, val sesiones: List<Sesion>, val mediciones: List<Medicion>)
+    private data class BloqueB(val comidas: List<Comida>, val pasos: List<PasosDia>, val metas: List<Meta>, val retos: List<IntentoReto>, val gimnasios: List<Gimnasio>)
+    private data class BloqueC(val marcas: List<MarcaEjercicio>, val plantillas: List<Plantilla>, val productos: List<Producto>, val suplementos: List<DiaSuplementos>, val fotos: List<FotoProgreso>)
 }

@@ -60,9 +60,13 @@ object ActualizadorApp {
         return out.toString(Charsets.UTF_8.name())
     }
 
-    suspend fun buscar(versionActual: String): Result<ActualizacionDominio.InfoActualizacion> = withContext(Dispatchers.IO) {
+    suspend fun buscar(
+        versionActual: String,
+        canal: String = ActualizacionDominio.CANAL_OFICIAL,
+        buildActual: Int = 0,
+    ): Result<ActualizacionDominio.InfoActualizacion> = withContext(Dispatchers.IO) {
         runCatching {
-            val conn = (URL(ActualizacionDominio.API_ULTIMA_RELEASE).openConnection() as HttpURLConnection).apply {
+            val conn = (URL(ActualizacionDominio.urlApiParaCanal(canal)).openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = false
                 connectTimeout = 10_000
                 readTimeout = 10_000
@@ -75,7 +79,7 @@ object ActualizadorApp {
                 }
                 val body = leerTextoConTope(conn, MAX_API_JSON_BYTES)
                 val json = JsonJowyFit.parseToJsonElement(body).jsonObject
-                ActualizacionDominio.parsearRelease(json, versionActual)
+                ActualizacionDominio.parsearRelease(json, versionActual, canal = canal, buildActual = buildActual)
                     ?: throw IOException("Respuesta de GitHub no válida")
             } finally {
                 conn.disconnect()
@@ -89,7 +93,7 @@ object ActualizadorApp {
         alProgreso: (Int) -> Unit,
     ): ResultadoInstalacion = withContext(Dispatchers.IO) {
         val url = info.urlApk
-        require(ActualizacionDominio.urlApkSegura(url)) { "Enlace de actualización no válido" }
+        require(ActualizacionDominio.urlApkSegura(url, info.canal)) { "Enlace de actualización no válido" }
         val shaEsperado = info.sha256?.trim()?.lowercase(Locale.ROOT)
         if (shaEsperado == null || !RE_SHA_HEX.matches(shaEsperado)) {
             throw SecurityException("La publicación no incluye huella SHA-256 verificable")

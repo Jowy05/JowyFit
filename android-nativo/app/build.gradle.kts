@@ -17,6 +17,13 @@ val vMenor = versionMatch?.groupValues?.get(2)?.toInt() ?: 13
 val vParche = versionMatch?.groupValues?.get(3)?.toInt() ?: 0
 val versionApp = "$vMayor.$vMenor.$vParche"
 
+val kotlinVerProps = Properties()
+val ficheroKotlinVer = rootProject.file("version-kotlin.properties")
+if (ficheroKotlinVer.exists()) {
+    FileInputStream(ficheroKotlinVer).use { kotlinVerProps.load(it) }
+}
+val kotlinBuild = kotlinVerProps.getProperty("build")?.trim()?.toIntOrNull()?.coerceIn(1, 99) ?: 1
+
 val firmaProps = Properties()
 val ficheroFirma = rootProject.file("../android/keystore.properties")
 if (ficheroFirma.exists()) {
@@ -45,11 +52,13 @@ android {
         applicationId = "com.jowy05.jowyfit"
         minSdk = 26
         targetSdk = 36
-        versionCode = vMayor * 10000 + vMenor * 100 + vParche
+        versionCode = (vMayor * 10000 + vMenor * 100 + vParche) * 100 + kotlinBuild
         versionName = versionApp
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appLabel"] = "JowyFit"
         buildConfigField("String", "VERSION_APP", "\"$versionApp\"")
+        buildConfigField("String", "CANAL_ACTUALIZACION", "\"oficial\"")
+        buildConfigField("int", "KOTLIN_BUILD", "$kotlinBuild")
         ndk {
             // Solo arquitecturas de teléfonos Android reales (ahorra ~20 MB de binarios x86 en ML Kit y MediaPipe).
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -76,8 +85,9 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            versionNameSuffix = "-debug.r$kotlinBuild"
             manifestPlaceholders["appLabel"] = "JowyFit Dev"
+            buildConfigField("String", "CANAL_ACTUALIZACION", "\"kotlin\"")
         }
         release {
             signingConfig = signingConfigs.getByName("release")
@@ -92,8 +102,9 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".nativo"
-            versionNameSuffix = "-kotlin"
+            versionNameSuffix = "-kotlin.r$kotlinBuild"
             manifestPlaceholders["appLabel"] = "JowyFit Kotlin"
+            buildConfigField("String", "CANAL_ACTUALIZACION", "\"kotlin\"")
             matchingFallbacks += listOf("release")
         }
     }

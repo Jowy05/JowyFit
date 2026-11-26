@@ -271,14 +271,24 @@ object CalculosDominio {
     }
 }
 
-/** Validación y comparación semver 1:1 con src/dominio/actualizacion.ts. */
+/** Validación y comparación semver 1:1 con src/dominio/actualizacion.ts (canal oficial y canal paralelo Kotlin). */
 object ActualizacionDominio {
+    const val CANAL_OFICIAL = "oficial"
+    const val CANAL_KOTLIN = "kotlin"
     const val API_ULTIMA_RELEASE = "https://api.github.com/repos/Jowy05/JowyFit/releases/latest"
+    const val API_RELEASE_KOTLIN = "https://api.github.com/repos/Jowy05/JowyFit/releases/tags/kotlin-preview"
     const val URL_RELEASES = "https://github.com/Jowy05/JowyFit/releases/latest"
+    const val URL_RELEASE_KOTLIN = "https://github.com/Jowy05/JowyFit/releases/tag/kotlin-preview"
+    const val INTERVALO_AUTO_MS = 6L * 60L * 60L * 1000L
 
     private val RE_VERSION = Regex("^v?(\\d+)\\.(\\d+)\\.(\\d+)$")
+    private val RE_VERSION_EN_TEXTO = Regex("Versi[oó]n Kotlin:\\s*v?(\\d+\\.\\d+\\.\\d+)", RegexOption.IGNORE_CASE)
+    private val RE_BUILD_KOTLIN = Regex("Build Kotlin:\\s*(\\d{1,4})", RegexOption.IGNORE_CASE)
     private val RE_APK = Regex(
         "^https://github\\.com/Jowy05/JowyFit/releases/(?:download/v\\d+\\.\\d+\\.\\d+|latest/download)/JowyFit(?:-\\d+\\.\\d+\\.\\d+)?\\.apk$",
+    )
+    private val RE_APK_KOTLIN = Regex(
+        "^https://github\\.com/Jowy05/JowyFit/releases/download/kotlin-preview/JowyFit-Kotlin(?:-\\d+\\.\\d+\\.\\d+-r\\d+)?\\.apk$",
     )
     private val RE_RELEASE = Regex("^https://github\\.com/Jowy05/JowyFit/releases/[A-Za-z0-9._/-]+$")
     private val RE_SHA = Regex("SHA-256 del APK:\\s*([0-9a-fA-F]{64})", RegexOption.IGNORE_CASE)
@@ -293,7 +303,21 @@ object ActualizacionDominio {
         val sha256: String?,
         val bytes: Long?,
         val fecha: String?,
-    )
+        val canal: String = CANAL_OFICIAL,
+        val buildKotlin: Int? = null,
+    ) {
+        val claveVersion: String
+            get() = if (canal == CANAL_KOTLIN && buildKotlin != null) "$ultima-r$buildKotlin" else ultima
+
+        val etiquetaVersion: String
+            get() = if (canal == CANAL_KOTLIN && buildKotlin != null) "$ultima (r$buildKotlin)" else ultima
+    }
+
+    fun urlApiParaCanal(canal: String): String =
+        if (canal == CANAL_KOTLIN) API_RELEASE_KOTLIN else API_ULTIMA_RELEASE
+
+    fun debeComprobarAuto(ahoraMs: Long, ultimaMs: Long, activado: Boolean): Boolean =
+        activado && (ultimaMs <= 0L || (ahoraMs - ultimaMs) >= INTERVALO_AUTO_MS)
 
     private fun partes(v: String): Triple<Int, Int, Int>? {
         val m = RE_VERSION.matchEntire(v.trim()) ?: return null
@@ -308,7 +332,8 @@ object ActualizacionDominio {
         return pa.third.compareTo(pb.third)
     }
 
-    fun urlApkSegura(url: String?): Boolean = url != null && RE_APK.matches(url)
+    fun urlApkSegura(url: String?, canal: String = CANAL_OFICIAL): Boolean =
+        url != null && if (canal == CANAL_KOTLIN) RE_APK_KOTLIN.matches(url) else RE_APK.matches(url)
 
     fun extraerSha256(cuerpo: String): String? = RE_SHA.find(cuerpo)?.groupValues?.get(1)?.lowercase()
 
@@ -316,41 +341,87 @@ object ActualizacionDominio {
         val limpio = cuerpo
             .replace("\r\n", "\n")
             .lines()
-            .filterNot { it.contains("SHA-256 del APK:", ignoreCase = true) }
+            .filterNot {
+                it.contains("SHA-256 del APK:", ignoreCase = true) ||
+                    RE_VERSION_EN_TEXTO.containsMatchIn(it) ||
+                    RE_BUILD_KOTLIN.containsMatchIn(it)
+            }
             .joinToString("\n")
             .trim()
         return if (limpio.length > 1200) "${limpio.take(1200).trimEnd()}…" else limpio
     }
 
-    fun parsearRelease(obj: JsonObject, actual: String): InfoActualizacion? {
+    fun parsearRelease(
+        obj: JsonObject,
+        actual: String,
+        canal: String = CANAL_OFICIAL,
+        buildActual: Int = 0,
+    ): InfoActualizacion? {
         val tag = obj["tag_name"]?.jsonPrimitive?.contentOrNull ?: return null
-        val p = partes(tag) ?: return null
-        val ultima = "${p.first}.${p.second}.${p.third}"
         val cuerpo = obj["body"]?.jsonPrimitive?.contentOrNull ?: ""
         val assets = (obj["assets"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
 
-        val elegido = assets.firstOrNull {
-            it["name"]?.jsonPrimitive?.contentOrNull == "JowyFit.apk" &&
-                urlApkSegura(it["browser_download_url"]?.jsonPrimitive?.contentOrNull)
-        } ?: assets.firstOrNull {
-            urlApkSegura(it["browser_download_url"]?.jsonPrimitive?.contentOrNull)
-        }
-
-        val urlApk = elegido?.get("browser_download_url")?.jsonPrimitive?.contentOrNull?.takeIf(::urlApkSegura)
-        val bytes = elegido?.get("size")?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
-        val urlRel = obj["html_url"]?.jsonPrimitive?.contentOrNull?.takeIf { RE_RELEASE.matches(it) } ?: URL_RELEASES
+        val actualLimpia = partes(actual)?.let { "${it.first}.${it.second}.${it.third}" } ?: actual
+        val urlDefecto = if (canal == CANAL_KOTLIN) URL_RELEASE_KOTLIN else URL_RELEASES
+        val urlRel = obj["html_url"]?.jsonPrimitive?.contentOrNull?.takeIf { RE_RELEASE.matches(it) } ?: urlDefecto
         val fecha = obj["published_at"]?.jsonPrimitive?.contentOrNull?.take(10)?.takeIf { it.length == 10 }
 
+        if (canal == CANAL_KOTLIN) {
+            if (tag != "kotlin-preview") return null
+            val verTexto = RE_VERSION_EN_TEXTO.find(cuerpo)?.groupValues?.get(1) ?: return null
+            val p = partes(verTexto) ?: return null
+            val ultima = "${p.first}.${p.second}.${p.third}"
+            val buildRemoto = RE_BUILD_KOTLIN.find(cuerpo)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+
+            val elegido = assets.firstOrNull {
+                it["name"]?.jsonPrimitive?.contentOrNull == "JowyFit-Kotlin.apk" &&
+                    urlApkSegura(it["browser_download_url"]?.jsonPrimitive?.contentOrNull, CANAL_KOTLIN)
+            } ?: assets.firstOrNull {
+                urlApkSegura(it["browser_download_url"]?.jsonPrimitive?.contentOrNull, CANAL_KOTLIN)
+            }
+            val urlApk = elegido?.get("browser_download_url")?.jsonPrimitive?.contentOrNull?.takeIf { urlApkSegura(it, CANAL_KOTLIN) }
+            val bytes = elegido?.get("size")?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
+            val cmp = compararVersion(ultima, actualLimpia)
+            val hayNueva = cmp > 0 || (cmp == 0 && buildRemoto > buildActual)
+
+            return InfoActualizacion(
+                actual = actualLimpia,
+                ultima = ultima,
+                hayNueva = hayNueva,
+                notas = limpiarNotas(cuerpo),
+                urlApk = urlApk,
+                urlRelease = urlRel,
+                sha256 = extraerSha256(cuerpo),
+                bytes = bytes,
+                fecha = fecha,
+                canal = CANAL_KOTLIN,
+                buildKotlin = buildRemoto,
+            )
+        }
+
+        val p = partes(tag) ?: return null
+        val ultima = "${p.first}.${p.second}.${p.third}"
+        val elegido = assets.firstOrNull {
+            it["name"]?.jsonPrimitive?.contentOrNull == "JowyFit.apk" &&
+                urlApkSegura(it["browser_download_url"]?.jsonPrimitive?.contentOrNull, CANAL_OFICIAL)
+        } ?: assets.firstOrNull {
+            urlApkSegura(it["browser_download_url"]?.jsonPrimitive?.contentOrNull, CANAL_OFICIAL)
+        }
+
+        val urlApk = elegido?.get("browser_download_url")?.jsonPrimitive?.contentOrNull?.takeIf { urlApkSegura(it, CANAL_OFICIAL) }
+        val bytes = elegido?.get("size")?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
+
         return InfoActualizacion(
-            actual = partes(actual)?.let { "${it.first}.${it.second}.${it.third}" } ?: actual,
+            actual = actualLimpia,
             ultima = ultima,
-            hayNueva = compararVersion(ultima, actual) > 0,
+            hayNueva = compararVersion(ultima, actualLimpia) > 0,
             notas = limpiarNotas(cuerpo),
             urlApk = urlApk,
             urlRelease = urlRel,
             sha256 = extraerSha256(cuerpo),
             bytes = bytes,
             fecha = fecha,
+            canal = CANAL_OFICIAL,
         )
     }
 

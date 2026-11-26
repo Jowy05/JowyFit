@@ -12,6 +12,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,6 +72,7 @@ import com.jowy05.jowyfit.ui.componentes.PantallaCamaraFotoProgreso
 import com.jowy05.jowyfit.ui.componentes.PantallaEscanerBarras
 import com.jowy05.jowyfit.ui.componentes.Pestana
 import com.jowy05.jowyfit.ui.i18n.LocalIdioma
+import com.jowy05.jowyfit.ui.pantallas.BannerActualizacion
 import com.jowy05.jowyfit.ui.pantallas.HojaActualizacionNativa
 import com.jowy05.jowyfit.ui.pantallas.HojaComidaRapida
 import com.jowy05.jowyfit.ui.pantallas.HojaContrasenaCopia
@@ -164,6 +172,7 @@ private fun AppRaiz(
     val bytesPendientesClave by vm.bytesPendientesClave.collectAsStateWithLifecycle()
     val errorClave by vm.errorClave.collectAsStateWithLifecycle()
     val sesionTerminada by vm.sesionRecienTerminada.collectAsStateWithLifecycle()
+    val actualizacionDisponible by vm.actualizacionDisponible.collectAsStateWithLifecycle()
 
     var pestana by remember { mutableStateOf(Pestana.INICIO) }
     var subtabComidaPendiente by remember { mutableStateOf<String?>(null) }
@@ -185,8 +194,15 @@ private fun AppRaiz(
     var hojaComida by remember { mutableStateOf(false) }
     var hojaDia by remember { mutableStateOf<CalculosDominio.EstadoDia?>(null) }
     var hojaActualizacion by remember { mutableStateOf(false) }
+    var descargarAlAbrirActualizacion by remember { mutableStateOf(false) }
     var hojaExportarCopia by remember { mutableStateOf(false) }
     var bytesExportar by remember { mutableStateOf<ByteArray?>(null) }
+
+    LaunchedEffect(estado.perfil.altaCompleta, prefs.comprobarActualizacionesAuto) {
+        if (estado.perfil.altaCompleta && prefs.comprobarActualizacionesAuto) {
+            vm.comprobarActualizacionAutomatica()
+        }
+    }
 
     LaunchedEffect(accionPendiente) {
         val acc = accionPendiente?.first ?: return@LaunchedEffect
@@ -578,7 +594,12 @@ private fun AppRaiz(
                         selectorExportarJson.launch("jowyfit-ligero-${LocalDate.now()}.json")
                     },
                     alGenerarPdf = vm::generarYCompartirPdf,
-                    alAbrirActualizaciones = { hojaActualizacion = true },
+                    actualizacionDisponible = actualizacionDisponible,
+                    alToggleAutoActualizaciones = vm::cambiarComprobarActualizacionesAuto,
+                    alAbrirActualizaciones = {
+                        descargarAlAbrirActualizacion = false
+                        hojaActualizacion = true
+                    },
                     alProbarDescanso = ::lanzarPruebaDescanso,
                     alBorrarTodo = {
                         enAjustes = false
@@ -723,6 +744,26 @@ private fun AppRaiz(
                         alCambiar = { pestana = it },
                     )
                 }
+
+                AnimatedVisibility(
+                    visible = actualizacionDisponible != null,
+                    enter = fadeIn(tween(240, easing = FastOutSlowInEasing)) +
+                        slideInVertically(tween(240, easing = FastOutSlowInEasing)) { -it },
+                    exit = fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                        slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { -it },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                ) {
+                    actualizacionDisponible?.let { infoAct ->
+                        BannerActualizacion(
+                            info = infoAct,
+                            alActualizar = {
+                                descargarAlAbrirActualizacion = true
+                                hojaActualizacion = true
+                            },
+                            alCerrar = vm::ignorarBannerActualizacion,
+                        )
+                    }
+                }
             }
         }
 
@@ -801,7 +842,15 @@ private fun AppRaiz(
         HojaDia(dia = dia, alCerrar = { hojaDia = null })
     }
     if (hojaActualizacion) {
-        HojaActualizacionNativa(alCerrar = { hojaActualizacion = false })
+        HojaActualizacionNativa(
+            infoInicial = if (descargarAlAbrirActualizacion) actualizacionDisponible else null,
+            iniciarDescarga = descargarAlAbrirActualizacion,
+            alActualizarInfo = vm::actualizarInfoActualizacion,
+            alCerrar = {
+                hojaActualizacion = false
+                descargarAlAbrirActualizacion = false
+            },
+        )
     }
     if (hojaExportarCopia) {
         HojaExportarCopia(

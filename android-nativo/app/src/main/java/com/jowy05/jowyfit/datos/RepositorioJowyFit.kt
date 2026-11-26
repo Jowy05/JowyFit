@@ -48,6 +48,7 @@ data class PreferenciasVisuales(
     val tema: PreferenciaTema = PreferenciaTema.SISTEMA,
     val letra: EscalaLetra = EscalaLetra.NORMAL,
     val idioma: IdiomaApp = IdiomaApp.ES,
+    val comprobarActualizacionesAuto: Boolean = true,
 )
 
 class RepositorioJowyFit(private val context: Context) {
@@ -139,7 +140,8 @@ class RepositorioJowyFit(private val context: Context) {
         }.getOrDefault(EscalaLetra.NORMAL)
         val codIdioma = prefs.getString("idioma", "es") ?: "es"
         val idioma = IdiomaApp.entries.firstOrNull { it.codigo == codIdioma } ?: IdiomaApp.ES
-        return PreferenciasVisuales(tema = tema, letra = letra, idioma = idioma)
+        val autoAct = prefs.getBoolean("comprobar_actualizaciones_auto", true)
+        return PreferenciasVisuales(tema = tema, letra = letra, idioma = idioma, comprobarActualizacionesAuto = autoAct)
     }
 
     fun guardarTema(tema: PreferenciaTema) {
@@ -155,6 +157,23 @@ class RepositorioJowyFit(private val context: Context) {
     fun guardarIdioma(idioma: IdiomaApp) {
         prefs.edit().putString("idioma", idioma.codigo).apply()
         _preferencias.value = _preferencias.value.copy(idioma = idioma)
+    }
+
+    fun guardarComprobarActualizacionesAuto(activo: Boolean) {
+        prefs.edit().putBoolean("comprobar_actualizaciones_auto", activo).apply()
+        _preferencias.value = _preferencias.value.copy(comprobarActualizacionesAuto = activo)
+    }
+
+    fun ultimaComprobacionActualizacionMs(): Long = prefs.getLong("ultima_comprobacion_act_ms", 0L)
+
+    fun marcarComprobacionActualizacion(ahoraMs: Long) {
+        prefs.edit().putLong("ultima_comprobacion_act_ms", ahoraMs).apply()
+    }
+
+    fun versionActualizacionIgnorada(): String? = prefs.getString("version_act_ignorada", null)
+
+    fun ignorarVersionActualizacion(claveVersion: String) {
+        prefs.edit().putString("version_act_ignorada", claveVersion).apply()
     }
 
     suspend fun guardarPerfil(perfil: Perfil) = withContext(Dispatchers.IO) {

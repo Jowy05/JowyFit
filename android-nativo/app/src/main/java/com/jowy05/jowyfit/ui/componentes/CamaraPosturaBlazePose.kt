@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,6 +109,9 @@ fun VisorCamaraBlazePose(
 
     var esqueleto2D by remember { mutableStateOf<List<Pair<Float, Float>>>(emptyList()) }
     var errorMotor by remember { mutableStateOf<String?>(null) }
+    val activoActual by rememberUpdatedState(activo)
+    val frontalActual by rememberUpdatedState(camaraFrontal)
+    val alPuntosActual by rememberUpdatedState(alPuntos)
 
     Box(modifier = modifier.background(Color.Black)) {
         if (!permiso && esperandoPermiso) {
@@ -169,7 +173,7 @@ fun VisorCamaraBlazePose(
                             }
                             ContextCompat.getMainExecutor(context).execute {
                                 esqueleto2D = pts2D
-                                alPuntos(puntos3D, System.currentTimeMillis())
+                                alPuntosActual(puntos3D, System.currentTimeMillis())
                             }
                         }
                         .setErrorListener { e ->
@@ -189,6 +193,7 @@ fun VisorCamaraBlazePose(
             }
 
             var proveedor by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+            var vistaPreview by remember { mutableStateOf<PreviewView?>(null) }
 
             DisposableEffect(Unit) {
                 onDispose {
@@ -198,46 +203,57 @@ fun VisorCamaraBlazePose(
                 }
             }
 
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } },
-                update = { vista ->
-                    val futuro = ProcessCameraProvider.getInstance(context)
-                    futuro.addListener(
-                        {
-                            runCatching {
-                                val prov = futuro.get()
-                                proveedor = prov
-                                val preview = Preview.Builder().build().also { it.surfaceProvider = vista.surfaceProvider }
-                                val selector = if (camaraFrontal) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
-                                val analisis = ImageAnalysis.Builder()
-                                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                                    .build()
-                                    .also { ia ->
-                                        ia.setAnalyzer(ejecutor) { proxy ->
-                                            try {
-                                                val det = detector
-                                                if (!activo || det == null) return@setAnalyzer
-                                                val bmpRaw = proxy.toBitmap()
-                                                val rot = proxy.imageInfo.rotationDegrees
-                                                val bmp = rotarYEspejar(bmpRaw, rot, camaraFrontal)
-                                                if (bmp !== bmpRaw) bmpRaw.recycle()
-                                                val mpImg = BitmapImageBuilder(bmp).build()
-                                                det.detectAsync(mpImg, SystemClock.uptimeMillis())
-                                            } catch (_: Exception) {
-                                                // Ignora fotogramas sueltos durante cambio de cámara
-                                            } finally {
-                                                proxy.close()
-                                            }
+            LaunchedEffect(vistaPreview, camaraFrontal) {
+                val vista = vistaPreview ?: return@LaunchedEffect
+                val futuro = ProcessCameraProvider.getInstance(context)
+                futuro.addListener(
+                    {
+                        runCatching {
+                            val prov = futuro.get()
+                            proveedor = prov
+                            val deseado = if (camaraFrontal) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+                            val selector = when {
+                                prov.hasCamera(deseado) -> deseado
+                                prov.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) -> CameraSelector.DEFAULT_FRONT_CAMERA
+                                else -> CameraSelector.DEFAULT_BACK_CAMERA
+                            }
+                            val preview = Preview.Builder().build().also { it.surfaceProvider = vista.surfaceProvider }
+                            val analisis = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                                .build()
+                                .also { ia ->
+                                    ia.setAnalyzer(ejecutor) { proxy ->
+                                        try {
+                                            val det = detector
+                                            if (!activoActual || det == null) return@setAnalyzer
+                                            val bmpRaw = proxy.toBitmap()
+                                            val rot = proxy.imageInfo.rotationDegrees
+                                            val bmp = rotarYEspejar(bmpRaw, rot, frontalActual)
+                                            if (bmp !== bmpRaw) bmpRaw.recycle()
+                                            val mpImg = BitmapImageBuilder(bmp).build()
+                                            det.detectAsync(mpImg, SystemClock.uptimeMillis())
+                                        } catch (_: Exception) {
+                                            // Ignora fotogramas sueltos durante cambio de cámara
+                                        } finally {
+                                            proxy.close()
                                         }
                                     }
-                                prov.unbindAll()
-                                prov.bindToLifecycle(lifecycleOwner, selector, preview, analisis)
-                            }
-                        },
-                        ContextCompat.getMainExecutor(context),
-                    )
+                                }
+                            prov.unbindAll()
+                            prov.bindToLifecycle(lifecycleOwner, selector, preview, analisis)
+                        }
+                    },
+                    ContextCompat.getMainExecutor(context),
+                )
+            }
+
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    PreviewView(ctx).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                    }.also { vistaPreview = it }
                 },
             )
 

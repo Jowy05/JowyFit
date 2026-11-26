@@ -116,6 +116,7 @@ fun PantallaCamaraFotoProgreso(
     val ejecutor = remember { Executors.newSingleThreadExecutor() }
     val captura = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
     var proveedor by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    var vistaPreview by remember { mutableStateOf<PreviewView?>(null) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -124,26 +125,38 @@ fun PantallaCamaraFotoProgreso(
         }
     }
 
+    LaunchedEffect(permiso, vistaPreview, frontal) {
+        val vista = vistaPreview ?: return@LaunchedEffect
+        if (!permiso) return@LaunchedEffect
+        val futuro = ProcessCameraProvider.getInstance(context)
+        futuro.addListener(
+            {
+                runCatching {
+                    val prov = futuro.get()
+                    proveedor = prov
+                    val deseado = if (frontal) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+                    val sel = when {
+                        prov.hasCamera(deseado) -> deseado
+                        prov.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) -> CameraSelector.DEFAULT_BACK_CAMERA
+                        else -> CameraSelector.DEFAULT_FRONT_CAMERA
+                    }
+                    val prev = Preview.Builder().build().also { it.surfaceProvider = vista.surfaceProvider }
+                    prov.unbindAll()
+                    prov.bindToLifecycle(lifecycleOwner, sel, prev, captura)
+                }
+            },
+            ContextCompat.getMainExecutor(context),
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (permiso) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } },
-                update = { vista ->
-                    val futuro = ProcessCameraProvider.getInstance(context)
-                    futuro.addListener(
-                        {
-                            runCatching {
-                                val prov = futuro.get()
-                                proveedor = prov
-                                val prev = Preview.Builder().build().also { it.surfaceProvider = vista.surfaceProvider }
-                                val sel = if (frontal) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
-                                prov.unbindAll()
-                                prov.bindToLifecycle(lifecycleOwner, sel, prev, captura)
-                            }
-                        },
-                        ContextCompat.getMainExecutor(context),
-                    )
+                factory = { ctx ->
+                    PreviewView(ctx).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                    }.also { vistaPreview = it }
                 },
             )
 

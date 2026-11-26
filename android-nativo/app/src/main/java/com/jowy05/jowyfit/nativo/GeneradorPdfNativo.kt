@@ -1,5 +1,6 @@
 package com.jowy05.jowyfit.nativo
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
@@ -32,9 +33,29 @@ object GeneradorPdfNativo {
     private const val ALTO = 842
     private const val MARGEN = 36f
     private const val LIMITE_Y = 790f
+    private const val MAX_PAGINAS = 60
+
+    fun sanearTextoPdf(texto: String, maxChars: Int = 96): String =
+        texto.map { if (it.code < 0x20 || it.code == 0x7F) ' ' else it }
+            .joinToString("")
+            .trim()
+            .take(maxChars)
 
     fun generarArchivo(context: Context, estado: EstadoPrincipal, catalogo: CatalogoCargado?): File {
         val doc = PdfDocument()
+        try {
+            return construirYGuardar(doc, context, estado, catalogo)
+        } finally {
+            runCatching { doc.close() }
+        }
+    }
+
+    private fun construirYGuardar(
+        doc: PdfDocument,
+        context: Context,
+        estado: EstadoPrincipal,
+        catalogo: CatalogoCargado?,
+    ): File {
         val hoy = LocalDate.now()
         val hoyIso = hoy.toString()
         val hace28 = hoy.minusDays(27).toString()
@@ -66,6 +87,7 @@ object GeneradorPdfNativo {
         var y = 0f
 
         fun abrirPagina(portada: Boolean = false) {
+            if (numPagina >= MAX_PAGINAS) return
             page?.let { doc.finishPage(it) }
             numPagina++
             page = doc.startPage(PdfDocument.PageInfo.Builder(ANCHO, ALTO, numPagina).create())
@@ -73,7 +95,7 @@ object GeneradorPdfNativo {
             if (portada) {
                 canvas!!.drawRect(0f, 0f, ANCHO.toFloat(), 86f, pBanda)
                 canvas!!.drawText("JowyFit · Informe de progreso", MARGEN, 40f, pTitulo)
-                val usuario = estado.perfil.nombre.ifBlank { "Usuario" }
+                val usuario = sanearTextoPdf(estado.perfil.nombre.ifBlank { "Usuario" }, 48)
                 canvas!!.drawText("$usuario · Generado el $hoyIso (últimos 28 días)", MARGEN, 64f, pSubBlanco)
                 y = 110f
             } else {
@@ -83,22 +105,26 @@ object GeneradorPdfNativo {
             }
         }
 
-        fun asegurarEspacio(altura: Float) {
-            if (y + altura > LIMITE_Y) abrirPagina(portada = false)
+        fun asegurarEspacio(altura: Float): Boolean {
+            if (y + altura > LIMITE_Y) {
+                if (numPagina >= MAX_PAGINAS) return false
+                abrirPagina(portada = false)
+            }
+            return true
         }
 
         fun seccion(titulo: String) {
-            asegurarEspacio(32f)
+            if (!asegurarEspacio(32f)) return
             y += 8f
-            canvas!!.drawText(titulo, MARGEN, y, pSeccion)
+            canvas!!.drawText(sanearTextoPdf(titulo, 70), MARGEN, y, pSeccion)
             y += 6f
             canvas!!.drawLine(MARGEN, y, ANCHO - MARGEN, y, pLinea)
             y += 16f
         }
 
         fun linea(texto: String, negrita: Boolean = false, sangria: Float = 0f) {
-            asegurarEspacio(16f)
-            canvas!!.drawText(texto.take(96), MARGEN + sangria, y, if (negrita) pNegrita else pCuerpo)
+            if (!asegurarEspacio(16f)) return
+            canvas!!.drawText(sanearTextoPdf(texto, 96), MARGEN + sangria, y, if (negrita) pNegrita else pCuerpo)
             y += 15f
         }
 
@@ -203,7 +229,6 @@ object GeneradorPdfNativo {
         val dir = File(context.cacheDir, "informes").apply { mkdirs() }
         val salida = File(dir, "JowyFit-Informe-$hoyIso.pdf")
         FileOutputStream(salida).use { doc.writeTo(it) }
-        doc.close()
         return salida
     }
 
@@ -213,6 +238,7 @@ object GeneradorPdfNativo {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_SUBJECT, archivo.nameWithoutExtension)
+            clipData = ClipData.newRawUri("", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, "Compartir informe PDF").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

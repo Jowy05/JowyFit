@@ -23,16 +23,47 @@ import java.util.Locale
 object ActualizadorApp {
 
     private const val MAX_BYTES = 150L * 1024L * 1024L
+    private const val MAX_API_JSON_BYTES = 256 * 1024
     private const val MAX_REDIRECCIONES = 5
+    private val RE_SHA_HEX = Regex("^[0-9a-f]{64}$")
 
     sealed interface ResultadoInstalacion {
         data object PermisoRequerido : ResultadoInstalacion
         data object Instalando : ResultadoInstalacion
     }
 
+    /** Solo HTTPS sin credenciales embebidas ni puertos raros hacia github.com o *.githubusercontent.com. */
+    fun esUrlDescargaPermitida(url: String): Boolean = runCatching {
+        val u = URL(url.trim())
+        val host = u.host.lowercase(Locale.ROOT)
+        val puertoOk = u.port == -1 || u.port == 443
+        val sinCredenciales = u.userInfo == null
+        u.protocol.equals("https", true) &&
+            puertoOk &&
+            sinCredenciales &&
+            (host == "github.com" || host.endsWith(".githubusercontent.com"))
+    }.getOrDefault(false)
+
+    private fun leerTextoConTope(conn: HttpURLConnection, maxBytes: Int): String {
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(8 * 1024)
+        var total = 0
+        conn.inputStream.use { input ->
+            while (true) {
+                val n = input.read(buf)
+                if (n == -1) break
+                total += n
+                if (total > maxBytes) throw IOException("Respuesta del servidor demasiado grande")
+                out.write(buf, 0, n)
+            }
+        }
+        return out.toString(Charsets.UTF_8.name())
+    }
+
     suspend fun buscar(versionActual: String): Result<ActualizacionDominio.InfoActualizacion> = withContext(Dispatchers.IO) {
         runCatching {
             val conn = (URL(ActualizacionDominio.API_ULTIMA_RELEASE).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = false
                 connectTimeout = 10_000
                 readTimeout = 10_000
                 setRequestProperty("Accept", "application/vnd.github+json")
@@ -42,7 +73,7 @@ object ActualizadorApp {
                 if (conn.responseCode !in 200..299) {
                     throw IOException("HTTP ${conn.responseCode}")
                 }
-                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                val body = leerTextoConTope(conn, MAX_API_JSON_BYTES)
                 val json = JsonJowyFit.parseToJsonElement(body).jsonObject
                 ActualizacionDominio.parsearRelease(json, versionActual)
                     ?: throw IOException("Respuesta de GitHub no válida")
@@ -59,6 +90,10 @@ object ActualizadorApp {
     ): ResultadoInstalacion = withContext(Dispatchers.IO) {
         val url = info.urlApk
         require(ActualizacionDominio.urlApkSegura(url)) { "Enlace de actualización no válido" }
+        val shaEsperado = info.sha256?.trim()?.lowercase(Locale.ROOT)
+        if (shaEsperado == null || !RE_SHA_HEX.matches(shaEsperado)) {
+            throw SecurityException("La publicación no incluye huella SHA-256 verificable")
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
             val i = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
@@ -104,11 +139,9 @@ object ActualizadorApp {
             }
 
             if (descargado == 0L) throw IOException("Archivo vacío")
-            if (!info.sha256.isNullOrBlank()) {
-                val calculado = sha.digest().joinToString("") { "%02x".format(it) }
-                if (calculado != info.sha256.lowercase(Locale.ROOT)) {
-                    throw SecurityException("La huella SHA-256 no coincide con la versión publicada")
-                }
+            val calculado = sha.digest().joinToString("") { "%02x".format(it) }
+            if (calculado != shaEsperado) {
+                throw SecurityException("La huella SHA-256 no coincide con la versión publicada")
             }
 
             if (destino.exists()) destino.delete()
@@ -132,11 +165,8 @@ object ActualizadorApp {
     private fun abrirConexionSegura(inicial: String): HttpURLConnection {
         var actual = inicial
         repeat(MAX_REDIRECCIONES + 1) {
+            if (!esUrlDescargaPermitida(actual)) throw SecurityException("Destino de descarga no permitido")
             val u = URL(actual)
-            val host = u.host.lowercase(Locale.ROOT)
-            val permitido = u.protocol.equals("https", true) &&
-                (host == "github.com" || host.endsWith(".githubusercontent.com"))
-            if (!permitido) throw SecurityException("Destino de descarga no permitido")
 
             val conn = (u.openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = false

@@ -87,6 +87,9 @@ object PosturaDominio {
     }
 
     fun angulo(a: Punto3D, b: Punto3D, c: Punto3D): Double {
+        if (!a.x.isFinite() || !a.y.isFinite() || !b.x.isFinite() || !b.y.isFinite() || !c.x.isFinite() || !c.y.isFinite()) {
+            return 180.0
+        }
         val z = conZ(a, b, c)
         val ux = a.x - b.x
         val uy = a.y - b.y
@@ -95,9 +98,10 @@ object PosturaDominio {
         val vy = c.y - b.y
         val vz = if (z) c.z!! - b.z!! else 0.0
         val mag = hypot3(ux, uy, uz) * hypot3(vx, vy, vz)
-        if (mag < 1e-6) return 180.0
-        val cos = ((ux * vx + uy * vy + uz * vz) / mag).coerceIn(-1.0, 1.0)
-        return Math.toDegrees(acos(cos))
+        if (!mag.isFinite() || mag < 1e-6) return 180.0
+        val cosRaw = (ux * vx + uy * vy + uz * vz) / mag
+        if (!cosRaw.isFinite()) return 180.0
+        return Math.toDegrees(acos(cosRaw.coerceIn(-1.0, 1.0)))
     }
 
     private fun anguloMejorLado(
@@ -121,10 +125,12 @@ object PosturaDominio {
     }
 
     fun inclinacionVertical(hombro: Punto3D, cadera: Punto3D): Double {
+        if (!hombro.x.isFinite() || !hombro.y.isFinite() || !cadera.x.isFinite() || !cadera.y.isFinite()) return 0.0
         val dx = hombro.x - cadera.x
         val dz = if (conZ(hombro, cadera)) hombro.z!! - cadera.z!! else 0.0
         val horiz = hypot3(dx, dz)
         val dy = abs(cadera.y - hombro.y)
+        if (!horiz.isFinite() || !dy.isFinite()) return 0.0
         return Math.toDegrees(atan2(horiz, max(1e-6, dy)))
     }
 

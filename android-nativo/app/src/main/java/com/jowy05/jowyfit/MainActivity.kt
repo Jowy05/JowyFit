@@ -182,9 +182,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
 
     val selectorImportar = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
-                .onSuccess { bytes -> if (bytes != null) vm.importarCopiaBytes(bytes) }
-                .onFailure { vm.mostrarAviso("No se pudo abrir el archivo seleccionado") }
+            vm.importarCopiaDesdeUri(uri)
         }
     }
 
@@ -192,13 +190,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
         val data = bytesExportar
         bytesExportar = null
         if (uri != null && data != null) {
-            runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { it.write(data) }
-            }.onSuccess {
-                vm.mostrarAviso("Copia guardada correctamente")
-            }.onFailure {
-                vm.mostrarAviso("No se pudo guardar el archivo")
-            }
+            vm.guardarBytesEnUri(uri, data)
         }
     }
 

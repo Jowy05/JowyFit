@@ -140,8 +140,9 @@ object PesosYDiscos {
     fun mancuernasDisponibles(g: Gimnasio): List<Double> {
         val set = LinkedHashSet<Double>()
         for (t in g.mancuernas) {
-            if (t.paso <= 0.0) continue
-            val n = floor((t.hasta - t.desde) / t.paso + 1e-9).toInt().coerceAtMost(2000)
+            if (!t.desde.isFinite() || !t.hasta.isFinite() || !t.paso.isFinite()) continue
+            if (t.paso <= 0.0 || t.hasta < t.desde) continue
+            val n = floor((t.hasta - t.desde) / t.paso + 1e-9).toInt().coerceIn(0, 2000)
             for (i in 0..n) {
                 set += ((t.desde + i * t.paso) * 100.0).roundToInt() / 100.0
             }
@@ -150,18 +151,24 @@ object PesosYDiscos {
     }
 
     fun pesosBarra(barra: Double, discos: List<Double>, maxPeso: Double = 300.0): List<Double> {
+        if (!barra.isFinite() || !maxPeso.isFinite() || barra < 0.0) return emptyList()
+        if (maxPeso < barra) return listOf(((barra * 100.0).roundToInt() / 100.0))
         val lados = HashSet<Double>().apply { add(0.0) }
-        val pares = discos.filter { it > 0.0 && it.isFinite() }.distinct().sortedDescending()
+        val pares = discos.filter { it > 0.0 && it.isFinite() }.distinct().sortedDescending().take(24)
         val limite = (maxPeso - barra) / 2.0
         var frontera = listOf(0.0)
         repeat(40) {
-            if (frontera.isEmpty()) return@repeat
+            if (frontera.isEmpty() || lados.size >= 4000) return@repeat
             val nueva = mutableListOf<Double>()
             for (f in frontera) {
                 for (d in pares) {
                     val v = ((f + d) * 100.0).roundToInt() / 100.0
-                    if (v <= limite && lados.add(v)) nueva += v
+                    if (v <= limite && lados.add(v)) {
+                        nueva += v
+                        if (lados.size >= 4000) break
+                    }
                 }
+                if (lados.size >= 4000) break
             }
             frontera = nueva
         }
@@ -217,6 +224,7 @@ object PesosYDiscos {
             .filter { it > 0 }
             .distinct()
             .sortedDescending()
+            .take(24)
         if (tipos.isEmpty()) return null
 
         val inf = Int.MAX_VALUE / 4

@@ -1,9 +1,13 @@
 package com.jowy05.jowyfit.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import com.jowy05.jowyfit.datos.EscalaLetra
 import com.jowy05.jowyfit.datos.IdiomaApp
 import com.jowy05.jowyfit.datos.PreferenciaTema
@@ -802,13 +806,60 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
     fun generarYCompartirPdf() {
         viewModelScope.launch {
             runCatching {
-                val f = GeneradorPdfNativo.generarArchivo(getApplication(), estado.value, _catalogo.value)
+                val st = estado.value
+                val cat = _catalogo.value
+                val f = withContext(Dispatchers.IO) {
+                    GeneradorPdfNativo.generarArchivo(getApplication(), st, cat)
+                }
                 GeneradorPdfNativo.compartirPdf(getApplication(), f)
             }.onSuccess {
                 mostrarAviso("Informe PDF generado")
             }.onFailure {
                 mostrarAviso("No se pudo generar el PDF: ${it.message}")
             }
+        }
+    }
+
+    /** Lee el URI elegido en hilo IO con tope estricto para evitar OOM si se selecciona un archivo gigante. */
+    fun importarCopiaDesdeUri(uri: Uri) {
+        viewModelScope.launch {
+            val maxBytes = GestorCopias.MAX_ARCHIVO + CifradoCopia.EXTRA_CIFRADO
+            val lectura = withContext(Dispatchers.IO) {
+                runCatching {
+                    val cr = getApplication<Application>().contentResolver
+                    val out = ByteArrayOutputStream()
+                    val buf = ByteArray(32 * 1024)
+                    var total = 0L
+                    cr.openInputStream(uri)?.use { input ->
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n == -1) break
+                            total += n
+                            if (total > maxBytes) throw IllegalArgumentException("El archivo es demasiado grande para ser una copia de JowyFit")
+                            out.write(buf, 0, n)
+                        }
+                    } ?: throw IllegalArgumentException("No se pudo abrir el archivo seleccionado")
+                    out.toByteArray()
+                }
+            }
+            lectura
+                .onSuccess { bytes -> importarCopiaBytes(bytes) }
+                .onFailure { mostrarAviso(it.message ?: "No se pudo abrir el archivo seleccionado") }
+        }
+    }
+
+    fun guardarBytesEnUri(uri: Uri, data: ByteArray) {
+        viewModelScope.launch {
+            val res = withContext(Dispatchers.IO) {
+                runCatching {
+                    getApplication<Application>().contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(data)
+                        it.flush()
+                    } ?: throw IllegalStateException("No se pudo abrir el destino")
+                }
+            }
+            res.onSuccess { mostrarAviso("Archivo guardado correctamente") }
+                .onFailure { mostrarAviso("No se pudo guardar el archivo") }
         }
     }
 

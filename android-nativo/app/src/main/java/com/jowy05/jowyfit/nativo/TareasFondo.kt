@@ -88,11 +88,23 @@ class WorkerCopiaAuto(ctx: Context, params: WorkerParameters) : CoroutineWorker(
 
         runCatching {
             val bytes = repo.exportarCopia()
+            if (bytes.size < 100) return@runCatching
             val dir = File(applicationContext.filesDir, "copias_auto").apply { mkdirs() }
+            val existentes = dir.listFiles()?.filter { it.name.endsWith(".jowyfit") }?.sortedByDescending { it.name }.orEmpty()
+            val tamUltima = existentes.firstOrNull()?.length() ?: 0L
+            val tmp = File(dir, "jowyfit-auto-${LocalDate.now()}.tmp")
             val fichero = File(dir, "jowyfit-auto-${LocalDate.now()}.jowyfit")
-            fichero.writeBytes(bytes)
-            val maxCopias = ajustes.copiasAuto.coerceIn(1, 20)
-            dir.listFiles()?.sortedByDescending { it.name }?.drop(maxCopias)?.forEach { it.delete() }
+            tmp.writeBytes(bytes)
+            if (fichero.exists()) fichero.delete()
+            if (!tmp.renameTo(fichero)) {
+                tmp.copyTo(fichero, overwrite = true)
+                tmp.delete()
+            }
+            // No borrar automáticas previas si la nueva ocupa menos de la mitad (protege contra pérdida accidental).
+            if (bytes.size >= tamUltima / 2L) {
+                val maxCopias = ajustes.copiasAuto.coerceIn(1, 20)
+                dir.listFiles()?.filter { it.name.endsWith(".jowyfit") }?.sortedByDescending { it.name }?.drop(maxCopias)?.forEach { it.delete() }
+            }
         }
         return Result.success()
     }

@@ -121,10 +121,12 @@ object ComidaDominio {
     ): ValoresComida {
         val f = factorRacion(racion, tipo)
         val esc = escalarMacros(macros, f)
+        val k = if (kcal.isFinite() && kcal > 0.0) (kcal * f).roundToInt().toDouble() else 0.0
+        val pr = if (proteina.isFinite() && proteina > 0.0) (proteina * f).roundToInt().toDouble() else 0.0
         return ValoresComida(
-            kcal = (kcal * f).roundToInt().toDouble(),
-            proteina = (proteina * f).roundToInt().toDouble(),
-            cafeina = cafeina?.takeIf { it > 0 }?.let { (it * f).roundToInt().toDouble() },
+            kcal = k,
+            proteina = pr,
+            cafeina = cafeina?.takeIf { it.isFinite() && it > 0.0 }?.let { (it * f).roundToInt().toDouble() },
             hidratos = esc.hidratos,
             grasas = esc.grasas,
             azucares = esc.azucares,
@@ -150,15 +152,17 @@ object ComidaDominio {
     /** Código de barras válido (EAN-8, EAN-13, UPC-A/E, ITF-14). */
     fun codigoValido(codigo: String): Boolean = Regex("^\\d{8,14}$").matches(codigo.trim())
 
-    /** Solo permite imágenes HTTPS de Open Food Facts (bloquea píxeles espía externos). */
+    /** Solo permite imágenes HTTPS de Open Food Facts (bloquea píxeles espía externos y caracteres de control). */
     fun imagenOFF(url: String?): String? {
         if (url.isNullOrBlank() || url.length > 2000) return null
+        val limpia = url.trim()
+        if (limpia.any { it.code < 0x20 || it.isWhitespace() }) return null
         return runCatching {
-            val u = URI(url.trim())
+            val u = URI(limpia)
             val host = u.host?.lowercase() ?: return null
             val okScheme = u.scheme.equals("https", ignoreCase = true)
-            val okUserPort = u.userInfo == null && u.port == -1
-            val okHost = Regex("(^|\\.)openfoodfacts\\.(org|net)$").containsMatchIn(host)
+            val okUserPort = u.userInfo == null && (u.port == -1 || u.port == 443)
+            val okHost = Regex("^(?:[a-z0-9-]+\\.)*openfoodfacts\\.(org|net)$").matches(host)
             if (okScheme && okUserPort && okHost) u.toString() else null
         }.getOrNull()
     }
@@ -256,13 +260,14 @@ object ComidaDominio {
     }
 
     fun porGramos(p: Producto, gramos: Double): ValoresComida {
-        val f = (gramos / 100.0).coerceAtLeast(0.0)
+        val g = if (gramos.isFinite() && gramos > 0.0) gramos.coerceAtMost(50_000.0) else 0.0
+        val f = g / 100.0
         val m100 = Macros(p.hidratos100, p.grasas100, p.azucares100, p.sal100)
         val esc = escalarMacros(m100, f)
         return ValoresComida(
-            kcal = ((p.kcal100 ?: 0.0) * f).roundToInt().toDouble(),
-            proteina = ((p.proteina100 ?: 0.0) * f).roundToInt().toDouble(),
-            cafeina = p.cafeina100?.takeIf { it > 0 }?.let { (it * f).roundToInt().toDouble() },
+            kcal = ((p.kcal100?.takeIf { it.isFinite() } ?: 0.0) * f).roundToInt().toDouble(),
+            proteina = ((p.proteina100?.takeIf { it.isFinite() } ?: 0.0) * f).roundToInt().toDouble(),
+            cafeina = p.cafeina100?.takeIf { it.isFinite() && it > 0.0 }?.let { (it * f).roundToInt().toDouble() },
             hidratos = esc.hidratos,
             grasas = esc.grasas,
             azucares = esc.azucares,

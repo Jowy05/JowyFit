@@ -423,10 +423,17 @@ class RepositorioJowyFit(private val context: Context) {
         marcado
     }
 
-    fun archivoMedia(rutaRelativa: String): File = File(dirMedia, rutaRelativa)
+    /** Resuelve una ruta multimedia bloqueando cualquier intento de salir de `dirMedia` (path traversal). */
+    fun archivoMedia(rutaRelativa: String): File {
+        require(GestorCopias.esRutaMediaSegura(rutaRelativa)) { "Ruta multimedia no válida" }
+        val base = dirMedia.canonicalFile
+        val candidato = File(base, rutaRelativa).canonicalFile
+        require(candidato.path.startsWith(base.path + File.separator)) { "Ruta multimedia fuera de la carpeta permitida" }
+        return candidato
+    }
 
     suspend fun guardarMediaBytes(rutaRelativa: String, bytes: ByteArray): File = withContext(Dispatchers.IO) {
-        val f = File(dirMedia, rutaRelativa)
+        val f = archivoMedia(rutaRelativa)
         f.parentFile?.mkdirs()
         f.writeBytes(bytes)
         f
@@ -497,16 +504,30 @@ class RepositorioJowyFit(private val context: Context) {
 
     suspend fun importarCopia(bytes: ByteArray, contrasena: String? = null): Int = withContext(Dispatchers.IO) {
         val leida = GestorCopias.leerCopia(bytes, contrasena)
-        if (dirMedia.exists()) dirMedia.deleteRecursively()
-        if (leida.archivosMedia.isNotEmpty()) {
-            for ((ruta, contenido) in leida.archivosMedia) {
-                val destino = File(dirMedia, ruta)
-                destino.parentFile?.mkdirs()
-                destino.writeBytes(contenido)
+        val dirTmp = File(context.filesDir, "jowyfit_media_tmp_${System.nanoTime()}")
+        try {
+            if (leida.archivosMedia.isNotEmpty()) {
+                val baseTmp = dirTmp.canonicalFile
+                for ((ruta, contenido) in leida.archivosMedia) {
+                    if (!GestorCopias.esRutaMediaSegura(ruta)) continue
+                    val destino = File(baseTmp, ruta).canonicalFile
+                    if (!destino.path.startsWith(baseTmp.path + File.separator)) continue
+                    destino.parentFile?.mkdirs()
+                    destino.writeBytes(contenido)
+                }
             }
+            // Primero la transacción atómica en SQLite; solo si tiene éxito se sustituyen las fotos.
+            dao.reemplazarTodo(leida.registros)
+            if (dirMedia.exists()) dirMedia.deleteRecursively()
+            if (dirTmp.exists() && !dirTmp.renameTo(dirMedia)) {
+                dirTmp.copyRecursively(dirMedia, overwrite = true)
+                dirTmp.deleteRecursively()
+            }
+            leida.registros.size
+        } catch (e: Exception) {
+            if (dirTmp.exists()) dirTmp.deleteRecursively()
+            throw e
         }
-        dao.reemplazarTodo(leida.registros)
-        leida.registros.size
     }
 
     suspend fun exportarCopia(contrasena: String? = null): ByteArray = withContext(Dispatchers.IO) {

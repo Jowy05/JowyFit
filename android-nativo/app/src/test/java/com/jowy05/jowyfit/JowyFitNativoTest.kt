@@ -109,12 +109,13 @@ class JowyFitNativoTest {
     fun idaYVueltaCopiaZipYCopiaRealDelRepo() {
         val perfil = Perfil(altaCompleta = true, nombre = "Joel", alturaCm = 178.0)
         val reg = RegistroTablaEntity("perfil", "yo", "2026-11-26", JsonJowyFit.encodeToString(perfil))
-        val zip = GestorCopias.crearCopia(listOf(reg), mapOf("archivos/foto-0.jpg" to byteArrayOf(1, 2, 3, 4)))
+        val jpegMinimo = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 0x00, 0x10)
+        val zip = GestorCopias.crearCopia(listOf(reg), mapOf("archivos/foto-0.jpg" to jpegMinimo))
 
         val leida = GestorCopias.leerCopia(zip)
         assertEquals(GestorCopias.VERSION_MAX_SOPORTADA, leida.version)
         assertEquals(1, leida.registros.size)
-        assertEquals(4, leida.archivosMedia["archivos/foto-0.jpg"]?.size)
+        assertEquals(jpegMinimo.size, leida.archivosMedia["archivos/foto-0.jpg"]?.size)
 
         // Prueba con la copia real del repositorio si está disponible en .cache/
         val copiaReal = File("../../.cache/JowyFit-mis-datos.jowyfit")

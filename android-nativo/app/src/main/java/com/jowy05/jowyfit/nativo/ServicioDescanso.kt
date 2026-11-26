@@ -36,22 +36,25 @@ class ServicioDescanso : Service() {
                 return START_NOT_STICKY
             }
             ACCION_MAS_30 -> {
-                val actual = hastaActualMs.coerceAtLeast(System.currentTimeMillis())
-                val nuevo = actual + 30_000L
+                val ahora = System.currentTimeMillis()
+                val actual = hastaActualMs.coerceAtLeast(ahora)
+                val nuevo = (actual + 30_000L).coerceAtMost(ahora + MAX_DESCANSO_MS)
                 val titulo = tituloActual.ifBlank { "Descansando" }
                 val texto = textoActual.ifBlank { "Siguiente serie" }
                 iniciarOActualizar(nuevo, titulo, texto)
                 return START_NOT_STICKY
             }
             else -> {
-                val hasta = intent?.getLongExtra(EXTRA_HASTA, 0L) ?: 0L
-                if (hasta <= System.currentTimeMillis()) {
+                val ahora = System.currentTimeMillis()
+                val hastaRaw = intent?.getLongExtra(EXTRA_HASTA, 0L) ?: 0L
+                if (hastaRaw <= ahora) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                val titulo = intent?.getStringExtra(EXTRA_TITULO).orEmpty().ifBlank { "Descansando" }
-                val texto = intent?.getStringExtra(EXTRA_TEXTO).orEmpty().ifBlank { "Siguiente serie" }
+                val hasta = hastaRaw.coerceAtMost(ahora + MAX_DESCANSO_MS)
+                val titulo = intent?.getStringExtra(EXTRA_TITULO).orEmpty().take(80).ifBlank { "Descansando" }
+                val texto = intent?.getStringExtra(EXTRA_TEXTO).orEmpty().take(120).ifBlank { "Siguiente serie" }
                 iniciarOActualizar(hasta, titulo, texto)
                 return START_NOT_STICKY
             }
@@ -80,6 +83,8 @@ class ServicioDescanso : Service() {
         const val ID_CURSO = 9101
         const val ID_FIN = 9102
         const val COLOR_MORADO = 0xFF7F26FB.toInt()
+        private const val MAX_DESCANSO_SEG = 3600
+        private const val MAX_DESCANSO_MS = MAX_DESCANSO_SEG * 1000L
 
         const val ACCION_INICIAR = "com.jowy05.jowyfit.DESCANSO_INICIAR"
         const val ACCION_MAS_30 = "com.jowy05.jowyfit.DESCANSO_MAS_30"
@@ -95,12 +100,13 @@ class ServicioDescanso : Service() {
         @Volatile var textoActual: String = ""
 
         fun iniciar(context: Context, segundos: Int, titulo: String = "Descansando", texto: String = "Siguiente serie") {
-            val hasta = System.currentTimeMillis() + segundos * 1000L
+            val seg = segundos.coerceIn(1, MAX_DESCANSO_SEG)
+            val hasta = System.currentTimeMillis() + seg * 1000L
             val i = Intent(context, ServicioDescanso::class.java).apply {
                 action = ACCION_INICIAR
                 putExtra(EXTRA_HASTA, hasta)
-                putExtra(EXTRA_TITULO, titulo)
-                putExtra(EXTRA_TEXTO, texto)
+                putExtra(EXTRA_TITULO, titulo.take(80))
+                putExtra(EXTRA_TEXTO, texto.take(120))
             }
             context.startForegroundService(i)
         }

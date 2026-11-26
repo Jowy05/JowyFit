@@ -34,7 +34,7 @@ object CalculosDominio {
     fun lunesDe(fecha: LocalDate): LocalDate = fecha.with(DayOfWeek.MONDAY)
 
     fun semanaDe(fechaIso: String): List<String> {
-        val d = LocalDate.parse(fechaIso.take(10))
+        val d = runCatching { LocalDate.parse(fechaIso.take(10)) }.getOrElse { LocalDate.now() }
         val lunes = d.with(DayOfWeek.MONDAY)
         return (0L..6L).map { lunes.plusDays(it).toString() }
     }
@@ -77,14 +77,15 @@ object CalculosDominio {
         cuelloCm: Double?,
         caderaCm: Double?,
     ): Double? {
-        if (cinturaCm == null || cuelloCm == null || alturaCm <= 0) return null
-        return if (sexo == "hombre") {
+        if (cinturaCm == null || cuelloCm == null || !alturaCm.isFinite() || !cinturaCm.isFinite() || !cuelloCm.isFinite() || alturaCm <= 0) return null
+        val res = if (sexo == "hombre") {
             if (cinturaCm <= cuelloCm) null
             else 495.0 / (1.0324 - 0.19077 * log10(cinturaCm - cuelloCm) + 0.15456 * log10(alturaCm)) - 450.0
         } else {
-            if (caderaCm == null || cinturaCm + caderaCm <= cuelloCm) null
+            if (caderaCm == null || !caderaCm.isFinite() || cinturaCm + caderaCm <= cuelloCm) null
             else 495.0 / (1.29579 - 0.35004 * log10(cinturaCm + caderaCm - cuelloCm) + 0.221 * log10(alturaCm)) - 450.0
         }
+        return res?.takeIf { it.isFinite() }
     }
 
     fun epley(peso: Double, reps: Int): Double = when {
@@ -163,9 +164,12 @@ object CalculosDominio {
         ((basal.toDouble() * minutosDelDia.coerceIn(0, 1440)) / 1440.0).roundToInt()
 
     fun kcalPasos(pasos: Int, pesoKg: Double, alturaCm: Double, troteKm: Double = 0.0, porKm: Int = 1300): Int {
-        val pasosTrote = minOf(pasos.toDouble(), troteKm * porKm)
+        if (pasos <= 0 || !pesoKg.isFinite() || !alturaCm.isFinite() || pesoKg <= 0.0 || alturaCm <= 0.0) return 0
+        val porKmSeguro = porKm.coerceAtLeast(100)
+        val troteSeguro = if (troteKm.isFinite() && troteKm > 0.0) troteKm else 0.0
+        val pasosTrote = minOf(pasos.toDouble(), troteSeguro * porKmSeguro)
         val kmAndando = ((pasos - pasosTrote) * (alturaCm / 100.0) * 0.415) / 1000.0
-        return (0.5 * pesoKg * kmAndando + 1.0 * pesoKg * (pasosTrote / porKm)).roundToInt()
+        return (0.5 * pesoKg * kmAndando + 1.0 * pesoKg * (pasosTrote / porKmSeguro)).roundToInt().coerceAtLeast(0)
     }
 
     data class TotalesDiaComida(val kcal: Int, val proteina: Int, val cafeina: Int)
@@ -232,7 +236,7 @@ object CalculosDominio {
         recolocadas.firstOrNull { it.fecha == fecha }?.let { rc ->
             return rutina.dias.firstOrNull { it.letra == rc.letra } to false
         }
-        val ds = diaSemana(LocalDate.parse(fecha.take(10)))
+        val ds = diaSemana(runCatching { LocalDate.parse(fecha.take(10)) }.getOrElse { LocalDate.now() })
         rutina.dias.firstOrNull { !it.opcional && it.dia == ds }?.let { return it to false }
         rutina.dias.firstOrNull { it.opcional && it.dia == ds }?.let { return it to true }
         return null to false

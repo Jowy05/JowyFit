@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
 object ExportarLigero {
 
     private val NUMERO_PURO = Regex("^-?\\d+(\\.\\d+)?$")
-    private val PELIGRO_FORMULA = Regex("^[=+\\-@\\t\\r]")
+    private val PELIGRO_FORMULA = Regex("^\\s*[=+\\-@]|^[\\t\\r\\n]")
     private val JSON_BONITO = Json(JsonJowyFit) { prettyPrint = true }
 
     fun escaparCsv(valor: Any?): String {
@@ -29,7 +29,7 @@ object ExportarLigero {
             is Boolean -> if (valor) "1" else "0"
             else -> valor.toString()
         }
-        if (s.isNotEmpty() && PELIGRO_FORMULA.containsMatchIn(s) && !NUMERO_PURO.matches(s)) {
+        if (s.isNotEmpty() && PELIGRO_FORMULA.containsMatchIn(s) && !NUMERO_PURO.matches(s.trim())) {
             s = "'$s"
         }
         return if (Regex("[,;\"\\n\\r]").containsMatchIn(s)) {

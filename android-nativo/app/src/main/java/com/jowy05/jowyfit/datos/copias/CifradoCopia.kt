@@ -3,6 +3,7 @@ package com.jowy05.jowyfit.datos.copias
 import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.text.Normalizer
+import java.util.Arrays
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
@@ -24,8 +25,9 @@ object CifradoCopia {
     const val EXTRA_CIFRADO = 17 + 4 + 16 + 12 + 16
 
     const val VUELTAS = 600_000
-    private const val VUELTAS_MIN = 600_000
-    private const val VUELTAS_MAX = 2_000_000
+    const val VUELTAS_MIN = 600_000
+    const val VUELTAS_MAX = 2_000_000
+    const val MAX_LARGO_CONTRASENA = 1024
 
     class ContrasenaMala : Exception("No es esta contraseña. Prueba otra vez.")
 
@@ -40,6 +42,12 @@ object CifradoCopia {
     }
 
     fun cifrar(zip: ByteArray, contrasena: String, vueltas: Int = VUELTAS): ByteArray {
+        require(contrasena.isNotEmpty() && contrasena.length <= MAX_LARGO_CONTRASENA) {
+            "Contraseña no válida"
+        }
+        require(vueltas in VUELTAS_MIN..VUELTAS_MAX) {
+            "Número de iteraciones fuera de rango seguro"
+        }
         val sal = ByteArray(TAM_SAL).also { rng.nextBytes(it) }
         val iv = ByteArray(TAM_IV).also { rng.nextBytes(it) }
         val clave = derivarClave(contrasena, sal, vueltas)
@@ -60,6 +68,9 @@ object CifradoCopia {
         if (!esCifrada(bytes) || bytes.size < EXTRA_CIFRADO) {
             throw IllegalArgumentException("El archivo está dañado o no es una copia de JowyFit")
         }
+        if (contrasena.isEmpty() || contrasena.length > MAX_LARGO_CONTRASENA) {
+            throw ContrasenaMala()
+        }
         val vueltas = ByteBuffer.wrap(bytes, MAGIA.size, 4).int
         if (vueltas < VUELTAS_MIN || vueltas > VUELTAS_MAX) {
             throw IllegalArgumentException("El archivo está dañado o no es una copia de JowyFit")
@@ -77,17 +88,25 @@ object CifradoCopia {
             cipher.doFinal(cuerpo)
         } catch (_: AEADBadTagException) {
             throw ContrasenaMala()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             throw ContrasenaMala()
         }
     }
 
     private fun derivarClave(contrasena: String, sal: ByteArray, vueltas: Int): SecretKeySpec {
         val normalizada = Normalizer.normalize(contrasena, Normalizer.Form.NFC)
-        val spec = PBEKeySpec(normalizada.toCharArray(), sal, vueltas, 256)
-        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val keyBytes = factory.generateSecret(spec).encoded
-        return SecretKeySpec(keyBytes, "AES")
+        val chars = normalizada.toCharArray()
+        val spec = PBEKeySpec(chars, sal, vueltas, 256)
+        var keyBytes: ByteArray? = null
+        return try {
+            val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            keyBytes = factory.generateSecret(spec).encoded
+            SecretKeySpec(keyBytes, "AES")
+        } finally {
+            Arrays.fill(chars, '\u0000')
+            spec.clearPassword()
+            if (keyBytes != null) Arrays.fill(keyBytes, 0.toByte())
+        }
     }
 
     private fun construirCabecera(vueltas: Int, sal: ByteArray, iv: ByteArray): ByteArray {

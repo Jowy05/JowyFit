@@ -303,7 +303,7 @@ fun PantallaRutina(
                             if (editando) {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     BotonSecundario(
-                                        texto = "+ Ejercicio",
+                                        texto = "Ejercicio",
                                         icono = Icons.Rounded.Add,
                                         onClick = { anadirADia = dia.letra },
                                         modifier = Modifier.weight(1f),

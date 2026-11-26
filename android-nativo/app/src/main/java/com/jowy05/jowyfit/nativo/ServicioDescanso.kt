@@ -19,6 +19,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.jowy05.jowyfit.MainActivity
 import com.jowy05.jowyfit.R
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Servicio interactivo nativo del descanso entre series:
@@ -30,6 +33,7 @@ class ServicioDescanso : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACCION_SALTAR -> {
+                _eventoNotificacion.value = System.currentTimeMillis() to 0L
                 cancelarTodo(this)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -41,6 +45,7 @@ class ServicioDescanso : Service() {
                 val nuevo = (actual + 30_000L).coerceAtMost(ahora + MAX_DESCANSO_MS)
                 val titulo = tituloActual.ifBlank { "Descansando" }
                 val texto = textoActual.ifBlank { "Siguiente serie" }
+                _eventoNotificacion.value = ahora to nuevo
                 iniciarOActualizar(nuevo, titulo, texto)
                 return START_NOT_STICKY
             }
@@ -98,6 +103,10 @@ class ServicioDescanso : Service() {
         @Volatile var hastaActualMs: Long = 0L
         @Volatile var tituloActual: String = ""
         @Volatile var textoActual: String = ""
+
+        /** Emite (timestampEvento, nuevoHastaMs) cuando el usuario pulsa +30 s o Saltar desde la notificación. */
+        private val _eventoNotificacion = MutableStateFlow<Pair<Long, Long>?>(null)
+        val eventoNotificacion: StateFlow<Pair<Long, Long>?> = _eventoNotificacion.asStateFlow()
 
         fun iniciar(context: Context, segundos: Int, titulo: String = "Descansando", texto: String = "Siguiente serie") {
             val seg = segundos.coerceIn(1, MAX_DESCANSO_SEG)

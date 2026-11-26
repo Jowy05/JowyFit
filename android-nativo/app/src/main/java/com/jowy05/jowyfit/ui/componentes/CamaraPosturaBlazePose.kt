@@ -56,6 +56,8 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.jowy05.jowyfit.dominio.PosturaDominio
 import com.jowy05.jowyfit.nativo.PermisosNativos
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
 private val CONEXIONES_ESQUELETO = listOf(
@@ -147,49 +149,57 @@ fun VisorCamaraBlazePose(
             }
         } else {
             val ejecutor = remember { Executors.newSingleThreadExecutor() }
-            val detector = remember(context) {
-                fun crear(delegado: Delegate): PoseLandmarker {
-                    val base = BaseOptions.builder()
-                        .setModelAssetPath("postura/pose_landmarker_lite.task")
-                        .setDelegate(delegado)
-                        .build()
-                    val opts = PoseLandmarker.PoseLandmarkerOptions.builder()
-                        .setBaseOptions(base)
-                        .setRunningMode(RunningMode.LIVE_STREAM)
-                        .setNumPoses(1)
-                        .setMinPoseDetectionConfidence(0.45f)
-                        .setMinPosePresenceConfidence(0.45f)
-                        .setMinTrackingConfidence(0.45f)
-                        .setResultListener { res, _ ->
-                            val norm = res.landmarks().firstOrNull()
-                            val world = res.worldLandmarks().firstOrNull()
-                            val pts2D = norm?.map { it.x() to it.y() }.orEmpty()
-                            val puntos3D = if (world != null && world.size >= 29) {
-                                extraerPuntos3D(world)
-                            } else if (norm != null && norm.size >= 29) {
-                                extraerPuntos2D(norm)
-                            } else {
-                                PosturaDominio.PuntosPostura()
+            var detector by remember { mutableStateOf<PoseLandmarker?>(null) }
+            val detectorActual by rememberUpdatedState(detector)
+
+            LaunchedEffect(context) {
+                val creado = withContext(Dispatchers.Default) {
+                    fun crear(delegado: Delegate): PoseLandmarker {
+                        val base = BaseOptions.builder()
+                            .setModelAssetPath("postura/pose_landmarker_lite.task")
+                            .setDelegate(delegado)
+                            .build()
+                        val opts = PoseLandmarker.PoseLandmarkerOptions.builder()
+                            .setBaseOptions(base)
+                            .setRunningMode(RunningMode.LIVE_STREAM)
+                            .setNumPoses(1)
+                            .setMinPoseDetectionConfidence(0.45f)
+                            .setMinPosePresenceConfidence(0.45f)
+                            .setMinTrackingConfidence(0.45f)
+                            .setResultListener { res, _ ->
+                                val norm = res.landmarks().firstOrNull()
+                                val world = res.worldLandmarks().firstOrNull()
+                                val pts2D = norm?.map { it.x() to it.y() }.orEmpty()
+                                val puntos3D = if (world != null && world.size >= 29) {
+                                    extraerPuntos3D(world)
+                                } else if (norm != null && norm.size >= 29) {
+                                    extraerPuntos2D(norm)
+                                } else {
+                                    PosturaDominio.PuntosPostura()
+                                }
+                                ContextCompat.getMainExecutor(context).execute {
+                                    esqueleto2D = pts2D
+                                    alPuntosActual(puntos3D, System.currentTimeMillis())
+                                }
                             }
+                            .setErrorListener { e ->
+                                ContextCompat.getMainExecutor(context).execute {
+                                    errorMotor = e.message
+                                }
+                            }
+                            .build()
+                        return PoseLandmarker.createFromOptions(context, opts)
+                    }
+                    runCatching { crear(Delegate.GPU) }.getOrElse {
+                        runCatching { crear(Delegate.CPU) }.getOrElse { e ->
                             ContextCompat.getMainExecutor(context).execute {
-                                esqueleto2D = pts2D
-                                alPuntosActual(puntos3D, System.currentTimeMillis())
+                                errorMotor = e.message ?: "No se pudo iniciar BlazePose"
                             }
+                            null
                         }
-                        .setErrorListener { e ->
-                            ContextCompat.getMainExecutor(context).execute {
-                                errorMotor = e.message
-                            }
-                        }
-                        .build()
-                    return PoseLandmarker.createFromOptions(context, opts)
-                }
-                runCatching { crear(Delegate.GPU) }.getOrElse {
-                    runCatching { crear(Delegate.CPU) }.getOrElse { e ->
-                        errorMotor = e.message ?: "No se pudo iniciar BlazePose"
-                        null
                     }
                 }
+                detector = creado
             }
 
             var proveedor by remember { mutableStateOf<ProcessCameraProvider?>(null) }
@@ -198,7 +208,7 @@ fun VisorCamaraBlazePose(
             DisposableEffect(Unit) {
                 onDispose {
                     runCatching { proveedor?.unbindAll() }
-                    runCatching { detector?.close() }
+                    runCatching { detectorActual?.close() }
                     runCatching { ejecutor.shutdown() }
                 }
             }
@@ -225,7 +235,7 @@ fun VisorCamaraBlazePose(
                                 .also { ia ->
                                     ia.setAnalyzer(ejecutor) { proxy ->
                                         try {
-                                            val det = detector
+                                            val det = detectorActual
                                             if (!activoActual || det == null) return@setAnalyzer
                                             val bmpRaw = proxy.toBitmap()
                                             val rot = proxy.imageInfo.rotationDegrees

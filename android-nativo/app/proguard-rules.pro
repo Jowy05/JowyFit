@@ -13,8 +13,12 @@
 -keep class com.jowy05.jowyfit.datos.catalogo.** { *; }
 -keep class com.jowy05.jowyfit.widget.** { *; }
 
-# MediaPipe Tasks Vision (JNI y callbacks nativos de BlazePose)
+# MediaPipe Tasks Vision + Flogger + Protobuf (JNI, stack-walking de FluentLogger y callbacks nativos de BlazePose)
 -keep class com.google.mediapipe.** { *; }
+-keep class com.google.common.flogger.** { *; }
+-keep class com.google.protobuf.** { *; }
 -dontwarn com.google.mediapipe.proto.**
+-dontwarn com.google.common.flogger.**
+-dontwarn com.google.protobuf.**
 -dontwarn javax.lang.model.**
 -dontwarn com.google.auto.value.**

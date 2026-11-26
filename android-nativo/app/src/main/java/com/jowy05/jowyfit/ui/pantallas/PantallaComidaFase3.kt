@@ -96,6 +96,8 @@ import kotlin.math.roundToInt
 @Composable
 fun PantallaComidaCompleta(
     estado: EstadoPrincipal,
+    subtabInicial: String? = null,
+    alConsumirSubtab: () -> Unit = {},
     alAbrirEscaner: (String, String) -> Unit,
     alGuardarComida: (Comida) -> Unit,
     alBorrarComida: (Long) -> Unit,
@@ -112,6 +114,12 @@ fun PantallaComidaCompleta(
     val p = LocalPaleta.current
     val hoy = remember { LocalDate.now() }
     var subtab by remember { mutableStateOf("dia") }
+    LaunchedEffect(subtabInicial) {
+        if (subtabInicial != null) {
+            subtab = subtabInicial
+            alConsumirSubtab()
+        }
+    }
     var fechaSel by remember { mutableStateOf(hoy) }
     val fechaIso = fechaSel.toString()
     val ayerIso = fechaSel.minusDays(1).toString()
@@ -262,7 +270,7 @@ fun PantallaComidaCompleta(
                     // Acciones principales: Añadir + Escanear
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BotonPrincipal(
-                            texto = "+ Añadir",
+                            texto = "Añadir",
                             icono = Icons.Rounded.Add,
                             onClick = { hojaAnadirFranja = franjaActual },
                             modifier = Modifier.weight(1.2f),
@@ -435,7 +443,7 @@ fun PantallaComidaCompleta(
                     )
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BotonPrincipal(
-                            texto = "+ Nueva comida",
+                            texto = "Nueva comida",
                             icono = Icons.Rounded.Add,
                             onClick = { hojaNuevaPlantilla = true },
                             modifier = Modifier.weight(1f),
@@ -554,7 +562,11 @@ fun PantallaComidaCompleta(
                                 checked = mostrarKcal,
                                 onCheckedChange = { v ->
                                     mostrarKcal = v
-                                    alActualizarAjustesEnergia(kcalManTxt.toIntOrNull(), protManTxt.toIntOrNull(), v)
+                                    alActualizarAjustesEnergia(
+                                        kcalManTxt.toIntOrNull()?.takeIf { it in 800..8000 } ?: estado.ajustes.kcalManual,
+                                        protManTxt.toIntOrNull()?.takeIf { it in 30..400 } ?: estado.ajustes.proteinaManual,
+                                        v,
+                                    )
                                 },
                             )
                         }

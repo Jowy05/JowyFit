@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -69,10 +72,11 @@ import java.util.concurrent.Executors
 import kotlin.math.min
 
 /** Cámara nativa CameraX para fotos de progreso con referencia semitransparente de la foto anterior. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PantallaCamaraFotoProgreso(
     poseInicial: String,
-    fotoReferencia: File?,
+    fotoReferenciaPorPose: (String) -> File?,
     alCerrar: () -> Unit,
     alCapturar: (String, ByteArray) -> Unit,
 ) {
@@ -81,9 +85,11 @@ fun PantallaCamaraFotoProgreso(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var pose by remember { mutableStateOf(poseInicial) }
+    val fotoReferencia = remember(pose, fotoReferenciaPorPose) { fotoReferenciaPorPose(pose) }
     var frontal by remember { mutableStateOf(true) }
-    var mostrarGuia by remember { mutableStateOf(fotoReferencia?.exists() == true) }
+    var mostrarGuia by remember(pose) { mutableStateOf(fotoReferencia?.exists() == true) }
     var capturando by remember { mutableStateOf(false) }
+    var errorCaptura by remember { mutableStateOf<String?>(null) }
 
     var permiso by remember {
         mutableStateOf(
@@ -114,7 +120,7 @@ fun PantallaCamaraFotoProgreso(
     }
 
     val ejecutor = remember { Executors.newSingleThreadExecutor() }
-    val captura = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
+    var capturaActual by remember { mutableStateOf<ImageCapture?>(null) }
     var proveedor by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var vistaPreview by remember { mutableStateOf<PreviewView?>(null) }
 
@@ -128,6 +134,7 @@ fun PantallaCamaraFotoProgreso(
     LaunchedEffect(permiso, vistaPreview, frontal) {
         val vista = vistaPreview ?: return@LaunchedEffect
         if (!permiso) return@LaunchedEffect
+        errorCaptura = null
         val futuro = ProcessCameraProvider.getInstance(context)
         futuro.addListener(
             {
@@ -141,8 +148,14 @@ fun PantallaCamaraFotoProgreso(
                         else -> CameraSelector.DEFAULT_FRONT_CAMERA
                     }
                     val prev = Preview.Builder().build().also { it.surfaceProvider = vista.surfaceProvider }
+                    val nuevaCaptura = ImageCapture.Builder()
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .build()
                     prov.unbindAll()
-                    prov.bindToLifecycle(lifecycleOwner, sel, prev, captura)
+                    prov.bindToLifecycle(lifecycleOwner, sel, prev, nuevaCaptura)
+                    capturaActual = nuevaCaptura
+                }.onFailure { e ->
+                    errorCaptura = e.message ?: "No se pudo abrir la cámara"
                 }
             },
             ContextCompat.getMainExecutor(context),
@@ -211,7 +224,16 @@ fun PantallaCamaraFotoProgreso(
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.55f)) {
                 IconButton(onClick = alCerrar) { Icon(Icons.Rounded.Close, contentDescription = "Cerrar", tint = Color.White) }
             }
-            Text("Foto de progreso", color = Color.White, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+            Surface(shape = RoundedCornerShape(20.dp), color = Color.Black.copy(alpha = 0.55f)) {
+                Text(
+                    text = "Foto de progreso",
+                    color = Color.White,
+                    fontFamily = FuenteTitulo,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                )
+            }
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.55f)) {
                 IconButton(onClick = { frontal = !frontal }) {
                     Icon(Icons.Rounded.Cameraswitch, contentDescription = "Cambiar cámara", tint = Color.White)
@@ -220,29 +242,53 @@ fun PantallaCamaraFotoProgreso(
         }
 
         // Controles inferiores
+        val coloresChip = FilterChipDefaults.filterChipColors(
+            containerColor = Color.White.copy(alpha = 0.16f),
+            labelColor = Color.White,
+            selectedContainerColor = p.go,
+            selectedLabelColor = p.onGo,
+        )
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.55f))
+                .background(Color.Black.copy(alpha = 0.62f))
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            errorCaptura?.let { msg ->
+                Text(msg, color = Color(0xFFFCA5A5), fontSize = 12.5.sp, textAlign = TextAlign.Center)
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 listOf("frente" to "Frente", "perfil" to "Perfil", "espalda" to "Espalda").forEach { (k, lbl) ->
-                    FilterChip(selected = pose == k, onClick = { pose = k }, label = { Text(lbl) })
+                    FilterChip(
+                        selected = pose == k,
+                        onClick = { pose = k },
+                        label = { Text(lbl) },
+                        colors = coloresChip,
+                    )
                 }
                 if (fotoReferencia?.exists() == true) {
-                    FilterChip(selected = mostrarGuia, onClick = { mostrarGuia = !mostrarGuia }, label = { Text("Guía") })
+                    FilterChip(
+                        selected = mostrarGuia,
+                        onClick = { mostrarGuia = !mostrarGuia },
+                        label = { Text("Guía") },
+                        colors = coloresChip,
+                    )
                 }
             }
             Surface(
                 onClick = {
+                    val cap = capturaActual ?: return@Surface
                     if (!permiso || capturando) return@Surface
                     capturando = true
-                    captura.takePicture(
+                    errorCaptura = null
+                    cap.takePicture(
                         ejecutor,
                         object : ImageCapture.OnImageCapturedCallback() {
                             override fun onCaptureSuccess(image: ImageProxy) {
@@ -250,11 +296,18 @@ fun PantallaCamaraFotoProgreso(
                                 image.close()
                                 ContextCompat.getMainExecutor(context).execute {
                                     capturando = false
-                                    if (bytes != null) alCapturar(pose, bytes)
+                                    if (bytes != null) {
+                                        alCapturar(pose, bytes)
+                                    } else {
+                                        errorCaptura = "No se pudo procesar la foto. Inténtalo de nuevo."
+                                    }
                                 }
                             }
                             override fun onError(exception: ImageCaptureException) {
-                                ContextCompat.getMainExecutor(context).execute { capturando = false }
+                                ContextCompat.getMainExecutor(context).execute {
+                                    capturando = false
+                                    errorCaptura = "No se pudo hacer la foto (${exception.message ?: "error de cámara"})."
+                                }
                             }
                         },
                     )

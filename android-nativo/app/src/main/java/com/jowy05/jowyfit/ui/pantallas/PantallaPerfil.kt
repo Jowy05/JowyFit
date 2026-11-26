@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FactCheck
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Person
@@ -53,6 +52,7 @@ import com.jowy05.jowyfit.ui.componentes.ListaAgrupada
 import com.jowy05.jowyfit.ui.componentes.SeccionTitulo
 import com.jowy05.jowyfit.ui.componentes.SeparadorLista
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
+import com.jowy05.jowyfit.ui.componentes.iconoBarbell
 import com.jowy05.jowyfit.ui.i18n.t
 import com.jowy05.jowyfit.ui.tema.FuenteCuerpo
 import com.jowy05.jowyfit.ui.tema.FuenteMono
@@ -63,10 +63,11 @@ import com.jowy05.jowyfit.ui.tema.LocalPaleta
 fun PantallaPerfil(
     estado: EstadoPrincipal,
     alAbrirAjustes: () -> Unit,
-    alAbrirPeso: () -> Unit,
+    alAbrirMedidas: () -> Unit,
     alEditarPerfil: () -> Unit,
     alAbrirRevision: () -> Unit,
     alGenerarPdf: () -> Unit,
+    alAbrirRutina: () -> Unit,
 ) {
     val p = LocalPaleta.current
     val perfil = estado.perfil
@@ -208,7 +209,7 @@ fun PantallaPerfil(
                         cintura?.let { "cintura ${String.format("%.1f", it).replace('.', ',')} cm" },
                     ).joinToString(" · ").ifEmpty { "Sin medidas todavía" },
                     icono = Icons.Rounded.MonitorWeight,
-                    alPulsar = alAbrirPeso,
+                    alPulsar = alAbrirMedidas,
                 )
                 SeparadorLista()
                 val resSalud = SaludYRevisionDominio.resumenSalud(perfil)
@@ -236,7 +237,8 @@ fun PantallaPerfil(
                 FilaLista(
                     titulo = "Rutina y experiencia",
                     subtitulo = "${estado.rutinaActiva?.estructura?.ifBlank { "Sin rutina" } ?: "Sin rutina"} · ${estado.sesiones.count { it.estado == "hecha" }} entrenos",
-                    icono = Icons.Rounded.FitnessCenter,
+                    icono = iconoBarbell(bold = true),
+                    alPulsar = alAbrirRutina,
                 )
             }
 

@@ -192,7 +192,7 @@ fun PantallaRetoActivo(
     val valorFinal = when (reto.modo) {
         RetosDominio.ModoReto.MAS_REPS -> repsActuales
         RetosDominio.ModoReto.MAS_TIEMPO -> if (usarCamara) postura.segundosValidos.roundToInt() else segTranscurridos
-        RetosDominio.ModoReto.MENOS_TIEMPO -> segTranscurridos
+        RetosDominio.ModoReto.MENOS_TIEMPO -> if (reto.objetivoReps != null && repsActuales >= reto.objetivoReps) max(1, segTranscurridos) else segTranscurridos
     }
 
     fun vibrar(ms: Long = 80L) {
@@ -315,6 +315,11 @@ fun PantallaRetoActivo(
                                     )
                                     alCerrar()
                                 },
+                            )
+                        } else {
+                            NotaAviso(
+                                texto = "Completa al menos 1 repetición o 1 segundo para guardar el intento.",
+                                tono = TonoNota.INFO,
                             )
                         }
                         BotonSecundario(texto = "Repetir", onClick = {

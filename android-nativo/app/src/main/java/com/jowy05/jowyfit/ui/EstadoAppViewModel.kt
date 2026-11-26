@@ -143,6 +143,19 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         recargarCatalogo(preferencias.value.idioma)
+        viewModelScope.launch {
+            ServicioDescanso.eventoNotificacion.collect { ev ->
+                if (ev == null) return@collect
+                val (_, nuevoHasta) = ev
+                val sesion = estado.value.sesionEnCurso ?: return@collect
+                val actualizada = if (nuevoHasta <= 0L) {
+                    sesion.copy(descansoHasta = null)
+                } else {
+                    sesion.copy(descansoHasta = nuevoHasta)
+                }
+                repo.guardarSesion(actualizada)
+            }
+        }
     }
 
     private fun recargarCatalogo(idioma: IdiomaApp) {
@@ -359,6 +372,11 @@ class EstadoAppViewModel(app: Application) : AndroidViewModel(app) {
     fun modificarSesionEnCurso(transformar: (Sesion) -> Sesion) {
         val sesion = estado.value.sesionEnCurso ?: return
         viewModelScope.launch { repo.guardarSesion(transformar(sesion)) }
+    }
+
+    fun editarSerieHechaEnCurso(idx: Int, serieIdx: Int, peso: Double?, reps: Int?, segundos: Int?) {
+        modificarSesionEnCurso { MotorSesion.editarSerieHecha(it, idx, serieIdx, peso, reps, segundos) }
+        mostrarAviso("Serie corregida")
     }
 
     fun anadirCalentamientoEnCurso(idx: Int) {

@@ -3,6 +3,8 @@ package com.jowy05.jowyfit.ui.pantallas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,7 +68,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HojaAnadirComidaCompleta(
     estado: EstadoPrincipal,
@@ -111,7 +113,10 @@ fun HojaAnadirComidaCompleta(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 ComidaDominio.FRANJAS.forEach { f ->
                     FilterChip(
                         selected = franja == f,
@@ -126,7 +131,10 @@ fun HojaAnadirComidaCompleta(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 FilterChip(selected = modo == "nota", onClick = { modo = "nota" }, label = { Text("Nota") })
                 FilterChip(selected = modo == "plantillas", onClick = { modo = "plantillas" }, label = { Text("Mis comidas (${plantillas.size})") })
                 FilterChip(selected = modo == "recientes", onClick = { modo = "recientes" }, label = { Text("Recientes") })
@@ -268,7 +276,7 @@ fun HojaAnadirComidaCompleta(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun HojaEditarComida(
     comida: Comida,
@@ -290,15 +298,18 @@ internal fun HojaEditarComida(
         ) {
             Text("Editar comida", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
             OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 ComidaDominio.FRANJAS.forEach { f ->
                     FilterChip(selected = franja == f, onClick = { franja = f }, label = { Text(ComidaDominio.nombreFranja(f), fontSize = 12.5.sp) })
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = protTxt, onValueChange = { protTxt = it.filter(Char::isDigit) }, label = { Text("Proteína (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = kcalTxt, onValueChange = { kcalTxt = it.filter(Char::isDigit) }, label = { Text("kcal") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = cafTxt, onValueChange = { cafTxt = it.filter(Char::isDigit) }, label = { Text("Cafeína mg") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = protTxt, onValueChange = { protTxt = it.filter { c -> c.isDigit() || c == '.' || c == ',' } }, label = { Text("Proteína (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = kcalTxt, onValueChange = { kcalTxt = it.filter { c -> c.isDigit() || c == '.' || c == ',' } }, label = { Text("kcal") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = cafTxt, onValueChange = { cafTxt = it.filter(Char::isDigit).take(4) }, label = { Text("Cafeína mg") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
             }
             BotonPrincipal(
                 texto = "Guardar cambios",
@@ -308,8 +319,8 @@ internal fun HojaEditarComida(
                         comida.copy(
                             nombre = nombre.trim(),
                             franja = franja,
-                            kcal = kcalTxt.toDoubleOrNull() ?: comida.kcal,
-                            proteina = protTxt.toDoubleOrNull() ?: comida.proteina,
+                            kcal = kcalTxt.replace(',', '.').toDoubleOrNull() ?: comida.kcal,
+                            proteina = protTxt.replace(',', '.').toDoubleOrNull() ?: comida.proteina,
                             cafeina = cafTxt.toDoubleOrNull()?.takeIf { it > 0 },
                         ),
                     )
@@ -321,7 +332,7 @@ internal fun HojaEditarComida(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun HojaNuevaPlantillaComida(
     alCerrar: () -> Unit,
@@ -341,15 +352,15 @@ internal fun HojaNuevaPlantillaComida(
         ) {
             Text("Nueva comida habitual", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
             OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre del plato o bebida") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("comida" to "Plato", "bebida" to "Bebida", "picoteo" to "Picoteo").forEach { (k, lbl) ->
                     FilterChip(selected = tipo == k, onClick = { tipo = k }, label = { Text(lbl) })
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = protTxt, onValueChange = { protTxt = it.filter(Char::isDigit) }, label = { Text("Proteína (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = kcalTxt, onValueChange = { kcalTxt = it.filter(Char::isDigit) }, label = { Text("kcal") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = cafTxt, onValueChange = { cafTxt = it.filter(Char::isDigit) }, label = { Text("Cafeína mg") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = protTxt, onValueChange = { protTxt = it.filter { c -> c.isDigit() || c == '.' || c == ',' } }, label = { Text("Proteína (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = kcalTxt, onValueChange = { kcalTxt = it.filter { c -> c.isDigit() || c == '.' || c == ',' } }, label = { Text("kcal") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = cafTxt, onValueChange = { cafTxt = it.filter(Char::isDigit).take(4) }, label = { Text("Cafeína mg") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
             }
             BotonPrincipal(
                 texto = "Guardar en Mis comidas",
@@ -358,8 +369,8 @@ internal fun HojaNuevaPlantillaComida(
                     alGuardar(
                         Plantilla(
                             nombre = nombre.trim(),
-                            kcal = kcalTxt.toDoubleOrNull() ?: 0.0,
-                            proteina = protTxt.toDoubleOrNull() ?: 0.0,
+                            kcal = kcalTxt.replace(',', '.').toDoubleOrNull() ?: 0.0,
+                            proteina = protTxt.replace(',', '.').toDoubleOrNull() ?: 0.0,
                             cafeina = cafTxt.toDoubleOrNull()?.takeIf { it > 0 },
                             tipo = tipo,
                         ),
@@ -372,7 +383,7 @@ internal fun HojaNuevaPlantillaComida(
 }
 
 /** Hoja de producto escaneado (Open Food Facts o creación manual) con selector de ración / gramos. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HojaProductoEscaneado(
     codigo: String,
@@ -505,7 +516,10 @@ fun HojaProductoEscaneado(
                         }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         ComidaDominio.FRANJAS.forEach { f ->
                             FilterChip(selected = franja == f, onClick = { franja = f }, label = { Text(ComidaDominio.nombreFranja(f), fontSize = 12.5.sp) })
                         }

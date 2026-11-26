@@ -305,7 +305,7 @@ fun PantallaFichaEjercicio(
             if (ej != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        text = "${ej.zona.uppercase()} · ${catalogo.nombreMaterial(ej.material).uppercase()}",
+                        text = "${catalogo.nombreZona(ej.zona).uppercase()} · ${catalogo.nombreMaterial(ej.material).uppercase()}",
                         color = p.muted,
                         fontFamily = FuenteTitulo,
                         fontWeight = FontWeight.SemiBold,
@@ -327,7 +327,10 @@ fun PantallaFichaEjercicio(
             }
 
             // Marcas rápidas: favorito / duele / no me gusta
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 FilterChip(
                     selected = favorito,
                     onClick = { favorito = !favorito; if (favorito) { duele = false; odiado = false }; persistir() },
@@ -499,9 +502,10 @@ fun ContenidoGimnasios(
                 ListaAgrupada {
                     estado.gimnasios.forEachIndexed { i, g ->
                         val activo = g.id == estado.gimnasioActivo?.id
+                        val barraTxt = if (g.barraKg % 1.0 == 0.0) "${g.barraKg.toInt()}" else String.format("%.1f", g.barraKg).replace('.', ',')
                         FilaLista(
                             titulo = g.nombre,
-                            subtitulo = "${g.material.size} máquinas/material · barra ${g.barraKg.toInt()} kg",
+                            subtitulo = "${g.material.size} máquinas/material · barra $barraTxt kg",
                             icono = iconoBarbell(bold = true),
                             alPulsar = { editando = g },
                             final = {
@@ -517,7 +521,7 @@ fun ContenidoGimnasios(
                 }
             }
             BotonPrincipal(
-                texto = "+ Nuevo gimnasio",
+                texto = "Nuevo gimnasio",
                 icono = Icons.Rounded.Add,
                 onClick = {
                     editando = Gimnasio(
@@ -532,12 +536,26 @@ fun ContenidoGimnasios(
             var nombre by remember(gym) { mutableStateOf(gym.nombre) }
             var seleccionados by remember(gym) { mutableStateOf(gym.material.toSet()) }
             var barraKg by remember(gym) { mutableStateOf(gym.barraKg) }
+            val barraTxt = if (barraKg % 1.0 == 0.0) "${barraKg.toInt()}" else String.format("%.1f", barraKg).replace('.', ',')
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 IconButton(onClick = { editando = null }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = p.ink)
                 }
-                Text("Editar gimnasio", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 21.sp)
+                Text("Editar gimnasio", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 21.sp, modifier = Modifier.weight(1f))
+                FilterChip(
+                    selected = true,
+                    enabled = nombre.isNotBlank(),
+                    onClick = {
+                        alGuardarGimnasio(gym.copy(nombre = nombre.trim(), material = seleccionados.toList(), barraKg = barraKg), true)
+                        editando = null
+                    },
+                    label = { Text("Guardar gimnasio") },
+                )
             }
 
             OutlinedTextField(
@@ -553,7 +571,7 @@ fun ContenidoGimnasios(
                     Text("Peso de la barra principal", color = p.ink, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { barraKg = (barraKg - 2.5).coerceAtLeast(10.0) }) { Icon(Icons.Rounded.Remove, null, tint = p.blue) }
-                        Text("${barraKg.toInt()} kg", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold)
+                        Text("$barraTxt kg", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold)
                         IconButton(onClick = { barraKg = (barraKg + 2.5).coerceAtMost(30.0) }) { Icon(Icons.Rounded.Add, null, tint = p.blue) }
                     }
                 }

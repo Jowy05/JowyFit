@@ -252,7 +252,7 @@ fun HojaEditarPerfilYSalud(
             }
 
             Text("¿Cómo duermes normalmente?", color = p.muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("bien" to "Bien (7-8 h)", "regular" to "Regular", "poco" to "Poco (<6 h)").forEach { (k, lbl) ->
                     FilterChip(selected = sueno == k, onClick = { sueno = k }, label = { Text(lbl) })
                 }

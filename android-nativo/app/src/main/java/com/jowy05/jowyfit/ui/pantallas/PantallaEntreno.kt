@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,7 +33,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Pause
@@ -76,6 +77,7 @@ import coil.compose.AsyncImage
 import com.jowy05.jowyfit.datos.catalogo.CatalogoCargado
 import com.jowy05.jowyfit.datos.modelo.EjercicioSesion
 import com.jowy05.jowyfit.datos.modelo.Gimnasio
+import com.jowy05.jowyfit.datos.modelo.Serie
 import com.jowy05.jowyfit.datos.modelo.Sesion
 import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.PesosYDiscos
@@ -100,7 +102,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.max
 
 /** Pantalla completa de Entreno en vivo 1:1 con Entreno.tsx + Panel.tsx (panel fijo abajo). */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PantallaEntrenoEnVivo(
     sesion: Sesion,
@@ -110,6 +112,7 @@ fun PantallaEntrenoEnVivo(
     sugerenciaPara: (EjercicioSesion) -> Progresion.Sugerencia,
     alMinimizar: () -> Unit,
     alApuntarSerie: (Int, MotorSesion.DatosSerie) -> Unit,
+    alEditarSerieHecha: (Int, Int, Double?, Int?, Int?) -> Unit,
     alAjustarDescanso: (Int?) -> Unit,
     alAnadirSerie: (Int) -> Unit,
     alQuitarSerie: (Int) -> Unit,
@@ -145,6 +148,7 @@ fun PantallaEntrenoEnVivo(
     var hojaInstrucciones by remember { mutableStateOf(false) }
     var hojaAnadirEj by remember { mutableStateOf(false) }
     var dialogoSalir by remember { mutableStateOf(false) }
+    var serieEditando by remember { mutableStateOf<Pair<Int, Serie>?>(null) }
 
     val serieIdx = ejActual?.let { MotorSesion.serieActual(it) } ?: -1
     val serieActual = if (ejActual != null && serieIdx >= 0) ejActual.series.getOrNull(serieIdx) else null
@@ -152,21 +156,30 @@ fun PantallaEntrenoEnVivo(
         if (ejActual == null) emptyList() else PesosYDiscos.pesosPara(ejCat?.material, ejActual.registro, gimnasio)
     }
 
-    var pesoCampo by remember(ejActual?.uid, serieIdx) {
+    val claveSerie = listOf(
+        ejActual?.uid,
+        ejActual?.ejercicio,
+        serieIdx,
+        serieActual?.calentamiento,
+        serieActual?.peso,
+        serieActual?.reps,
+        serieActual?.segundos,
+    )
+    var pesoCampo by remember(claveSerie) {
         mutableDoubleStateOf(serieActual?.peso ?: listaPesos.firstOrNull { it > 0 } ?: 20.0)
     }
-    var repsCampo by remember(ejActual?.uid, serieIdx) {
+    var repsCampo by remember(claveSerie) {
         mutableIntStateOf(
             if (ejActual?.registro == "tiempo") serieActual?.segundos ?: ejActual.repsMin
             else serieActual?.reps ?: ejActual?.repsMin ?: 10,
         )
     }
-    var rpeCampo by remember(ejActual?.uid, serieIdx) { mutableStateOf<Double?>(null) }
+    var rpeCampo by remember(claveSerie) { mutableStateOf<Double?>(null) }
 
     // Temporizador integrado para ejercicios por tiempo o cardio (Cronómetro / Cuenta atrás).
-    var modoCuentaAtras by remember(ejActual?.uid) { mutableStateOf(true) }
-    var cronoActivo by remember(ejActual?.uid, serieIdx) { mutableStateOf(false) }
-    var cronoSeg by remember(ejActual?.uid, serieIdx) {
+    var modoCuentaAtras by remember(ejActual?.uid, ejActual?.ejercicio) { mutableStateOf(true) }
+    var cronoActivo by remember(claveSerie) { mutableStateOf(false) }
+    var cronoSeg by remember(claveSerie) {
         mutableIntStateOf(if (ejActual?.registro == "tiempo") repsCampo else 0)
     }
     LaunchedEffect(cronoActivo, modoCuentaAtras) {
@@ -246,7 +259,7 @@ fun PantallaEntrenoEnVivo(
                             fontSize = 22.sp,
                         )
                         Spacer(Modifier.height(12.dp))
-                        BotonPrincipal(texto = "+ Añadir ejercicio", icono = Icons.Rounded.Add, onClick = { hojaAnadirEj = true })
+                        BotonPrincipal(texto = "Añadir ejercicio", icono = Icons.Rounded.Add, onClick = { hojaAnadirEj = true })
                         if (sesion.ejercicios.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
                             BotonPrincipal(texto = "Terminar entreno", icono = Icons.Rounded.Check, grande = true, onClick = alFinalizar)
@@ -274,8 +287,13 @@ fun PantallaEntrenoEnVivo(
                                 fontSize = 23.sp,
                                 lineHeight = 25.sp,
                             )
+                            val unidadObj = when (ejActual.registro) {
+                                "tiempo" -> "s"
+                                "cardio" -> "min"
+                                else -> "reps"
+                            }
                             Text(
-                                text = "Objetivo: ${ejActual.repsMin}-${ejActual.repsMax} ${if (ejActual.registro == "tiempo") "s" else "reps"} · RPE ${ejActual.rpe.toInt()}",
+                                text = "Objetivo: ${ejActual.repsMin}-${ejActual.repsMax} $unidadObj · RPE ${ejActual.rpe.toInt()}",
                                 color = p.muted,
                                 fontSize = 13.5.sp,
                             )
@@ -296,16 +314,21 @@ fun PantallaEntrenoEnVivo(
                     icono = iconoBarbell(bold = true),
                 )
 
-                // Lista de series del ejercicio actual
+                // Lista de series del ejercicio actual (las hechas se pueden tocar para corregir)
                 ListaAgrupada {
                     ejActual.series.forEachIndexed { sIdx, s ->
                         val actual = sIdx == serieIdx
                         val pesoTxt = s.peso?.let { "${formatoKg(it)} kg" } ?: ""
-                        val repsTxt = if (ejActual.registro == "tiempo") "${s.segundos ?: 0} s" else "${s.reps ?: 0} reps"
+                        val repsTxt = when (ejActual.registro) {
+                            "tiempo" -> "${s.segundos ?: 0} s"
+                            "cardio" -> "${s.reps ?: 0} min"
+                            else -> "${s.reps ?: 0} reps"
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(if (actual) p.goT else Color.Transparent)
+                                .then(if (s.hecha) Modifier.clickable { serieEditando = sIdx to s } else Modifier)
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -336,8 +359,14 @@ fun PantallaEntrenoEnVivo(
                     }
                 }
 
-                // Herramientas rápidas del ejercicio
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Herramientas rápidas del ejercicio (FlowRow para que nunca se recorten chips)
+                val puedeQuitarSerie = ejActual.series.count { !it.calentamiento } > 1 &&
+                    ejActual.series.any { !it.hecha && !it.calentamiento }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     FilterChip(selected = false, onClick = { hojaOcupado = true }, label = { Text("Ocupado") }, leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(16.dp)) })
                     FilterChip(selected = false, onClick = { alAnadirSerie(idx) }, label = { Text("+ Serie") })
                     if (ejActual.series.none { it.calentamiento } && ejActual.registro in setOf("peso", "mancuerna")) {
@@ -346,9 +375,7 @@ fun PantallaEntrenoEnVivo(
                     if (ejCat?.material in PesosYDiscos.BARRAS) {
                         FilterChip(selected = false, onClick = { hojaDiscos = true }, label = { Text("Discos") })
                     }
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = false, onClick = { alQuitarSerie(idx) }, label = { Text("− Serie") })
+                    FilterChip(selected = false, enabled = puedeQuitarSerie, onClick = { alQuitarSerie(idx) }, label = { Text("− Serie") })
                     FilterChip(selected = false, onClick = { alSaltarEjercicio(idx) }, label = { Text("Saltar") }, leadingIcon = { Icon(Icons.Rounded.SkipNext, null, Modifier.size(16.dp)) })
                     FilterChip(selected = false, onClick = { hojaAnadirEj = true }, label = { Text("+ Ejercicio") })
                 }
@@ -458,10 +485,11 @@ fun PantallaEntrenoEnVivo(
                     }
 
                     // Selector compacto de esfuerzo RPE (opcional)
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("RPE", color = p.muted, fontFamily = FuenteTitulo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         listOf(6.0, 7.0, 8.0, 9.0, 10.0).forEach { v ->
@@ -500,7 +528,13 @@ fun PantallaEntrenoEnVivo(
     // Hoja lista de ejercicios de la sesión
     if (hojaLista) {
         ModalBottomSheet(onDismissRequest = { hojaLista = false }, containerColor = p.surface) {
-            Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+            ) {
                 Text("Ejercicios de hoy", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 22.sp)
                 Spacer(Modifier.height(10.dp))
                 ListaAgrupada {
@@ -517,7 +551,7 @@ fun PantallaEntrenoEnVivo(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                BotonSecundario(texto = "+ Añadir ejercicio", icono = Icons.Rounded.Add, onClick = { hojaLista = false; hojaAnadirEj = true })
+                BotonSecundario(texto = "Añadir ejercicio", icono = Icons.Rounded.Add, onClick = { hojaLista = false; hojaAnadirEj = true })
                 Spacer(Modifier.height(16.dp))
             }
         }
@@ -569,7 +603,7 @@ fun PantallaEntrenoEnVivo(
                     porLado == null -> NotaAviso("No se puede montar exacto con los discos de tu gimnasio.", tono = TonoNota.WARN)
                     porLado.isEmpty() -> NotaAviso("Solo la barra vacía (${formatoKg(barra)} kg).", tono = TonoNota.OK)
                     else -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             porLado.forEach { d ->
                                 EtiquetaTag("${formatoKg(d)} kg", colorFondo = p.goT, colorTexto = p.go)
                             }
@@ -654,6 +688,64 @@ fun PantallaEntrenoEnVivo(
                 hojaAnadirEj = false
             },
         )
+    }
+
+    serieEditando?.let { (sIdxEdit, serieOrig) ->
+        if (ejActual != null) {
+            val esTiempo = ejActual.registro == "tiempo"
+            val conPeso = ejActual.registro in setOf("peso", "mancuerna", "asistido")
+            var pesoEd by remember(sIdxEdit, serieOrig) { mutableDoubleStateOf(serieOrig.peso ?: listaPesos.firstOrNull { it > 0 } ?: 20.0) }
+            var repsEd by remember(sIdxEdit, serieOrig) {
+                mutableIntStateOf(if (esTiempo) serieOrig.segundos ?: ejActual.repsMin else serieOrig.reps ?: ejActual.repsMin)
+            }
+            ModalBottomSheet(onDismissRequest = { serieEditando = null }, containerColor = p.surface) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "Corregir ${if (serieOrig.calentamiento) "calentamiento" else "serie S${serieOrig.n}"}",
+                        color = p.ink,
+                        fontFamily = FuenteTitulo,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (conPeso) {
+                            StepperValor(
+                                etiqueta = if (ejActual.registro == "asistido") "Ayuda (kg)" else if (ejActual.registro == "mancuerna") "Cada manc." else "Peso (kg)",
+                                valorTexto = formatoKg(pesoEd),
+                                alMenos = { pesoEd = PesosYDiscos.siguiente(listaPesos, pesoEd, -1) },
+                                alMas = { pesoEd = PesosYDiscos.siguiente(listaPesos, pesoEd, 1) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        StepperValor(
+                            etiqueta = if (esTiempo) "Segundos" else if (ejActual.registro == "cardio") "Minutos" else "Repeticiones",
+                            valorTexto = "$repsEd",
+                            alMenos = { repsEd = (repsEd - if (esTiempo) 5 else 1).coerceAtLeast(1) },
+                            alMas = { repsEd = (repsEd + if (esTiempo) 5 else 1).coerceAtMost(999) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    BotonPrincipal(
+                        texto = "Guardar corrección",
+                        icono = Icons.Rounded.Check,
+                        onClick = {
+                            alEditarSerieHecha(
+                                idx,
+                                sIdxEdit,
+                                if (conPeso) pesoEd else null,
+                                if (esTiempo) null else repsEd,
+                                if (esTiempo) repsEd else null,
+                            )
+                            serieEditando = null
+                        },
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+            }
+        }
     }
 
     if (dialogoSalir) {

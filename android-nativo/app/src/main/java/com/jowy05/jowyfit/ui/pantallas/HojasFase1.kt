@@ -2,6 +2,8 @@ package com.jowy05.jowyfit.ui.pantallas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,7 +40,10 @@ import androidx.compose.ui.unit.sp
 import com.jowy05.jowyfit.BuildConfig
 import com.jowy05.jowyfit.dominio.ActualizacionDominio
 import com.jowy05.jowyfit.dominio.CalculosDominio
+import com.jowy05.jowyfit.dominio.ComidaDominio
 import com.jowy05.jowyfit.nativo.ActualizadorApp
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import com.jowy05.jowyfit.ui.componentes.BotonPrincipal
 import com.jowy05.jowyfit.ui.componentes.BotonSecundario
 import com.jowy05.jowyfit.ui.componentes.NotaAviso
@@ -68,20 +73,24 @@ fun HojaPeso(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Apuntar peso", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
+            val pesoVal = texto.replace(',', '.').toDoubleOrNull()
+            val valido = pesoVal != null && pesoVal in 20.0..350.0
             OutlinedTextField(
                 value = texto,
                 onValueChange = { texto = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
                 label = { Text("Peso (kg)") },
+                supportingText = if (!valido && texto.isNotBlank()) ({ Text("Introduce un peso entre 20 y 350 kg", color = p.bad) }) else null,
+                isError = !valido && texto.isNotBlank(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             BotonPrincipal(
                 texto = "Guardar peso",
+                enabled = valido,
                 onClick = {
-                    val v = texto.replace(',', '.').toDoubleOrNull()
-                    if (v != null && v in 20.0..350.0) {
-                        alGuardar(v)
+                    if (valido) {
+                        alGuardar(pesoVal!!)
                         alCerrar()
                     }
                 },
@@ -91,17 +100,20 @@ fun HojaPeso(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HojaComidaRapida(
     alCerrar: () -> Unit,
     alGuardar: (nombre: String, kcal: Double, proteina: Double, franja: String) -> Unit,
 ) {
     val p = LocalPaleta.current
+    val franjaInicial = remember {
+        ComidaDominio.franjaPorHora(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+    }
     var nombre by remember { mutableStateOf("") }
     var proteina by remember { mutableStateOf("25") }
     var kcal by remember { mutableStateOf("350") }
-    var franja by remember { mutableStateOf("comida") }
+    var franja by remember { mutableStateOf(franjaInicial) }
 
     ModalBottomSheet(onDismissRequest = alCerrar, containerColor = p.surface) {
         Column(
@@ -112,7 +124,10 @@ fun HojaComidaRapida(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text("Apuntar comida o bebida", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 listOf("desayuno" to "Desayuno", "comida" to "Comida", "merienda" to "Merienda", "cena" to "Cena").forEach { (k, lbl) ->
                     FilterChip(selected = franja == k, onClick = { franja = k }, label = { Text(lbl) })
                 }
@@ -127,17 +142,17 @@ fun HojaComidaRapida(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = proteina,
-                    onValueChange = { proteina = it.filter { c -> c.isDigit() } },
+                    onValueChange = { proteina = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
                     label = { Text("Proteína (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
                     value = kcal,
-                    onValueChange = { kcal = it.filter { c -> c.isDigit() } },
+                    onValueChange = { kcal = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
                     label = { Text("Calorías (kcal)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
@@ -146,7 +161,12 @@ fun HojaComidaRapida(
                 texto = "Guardar comida",
                 enabled = nombre.isNotBlank(),
                 onClick = {
-                    alGuardar(nombre, kcal.toDoubleOrNull() ?: 0.0, proteina.toDoubleOrNull() ?: 0.0, franja)
+                    alGuardar(
+                        nombre,
+                        kcal.replace(',', '.').toDoubleOrNull() ?: 0.0,
+                        proteina.replace(',', '.').toDoubleOrNull() ?: 0.0,
+                        franja,
+                    )
                     alCerrar()
                 },
             )

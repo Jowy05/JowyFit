@@ -3,6 +3,8 @@ package com.jowy05.jowyfit.ui.pantallas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,6 +68,7 @@ import com.jowy05.jowyfit.ui.componentes.TonoNota
 import com.jowy05.jowyfit.ui.i18n.t
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PantallaAjustes(
     estado: EstadoPrincipal,
@@ -124,7 +127,7 @@ fun PantallaAjustes(
             Tarjeta {
                 Text(t("Tema"), color = p.ink, fontSize = 15.5.sp)
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(
                         PreferenciaTema.SISTEMA to t("Sistema"),
                         PreferenciaTema.CLARO to t("Claro"),
@@ -137,7 +140,7 @@ fun PantallaAjustes(
                 Spacer(Modifier.height(12.dp))
                 Text(t("Tamaño de letra"), color = p.ink, fontSize = 15.5.sp)
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(selected = prefs.letra == EscalaLetra.NORMAL, onClick = { alCambiarLetra(EscalaLetra.NORMAL) }, label = { Text(t("Normal")) })
                     FilterChip(selected = prefs.letra == EscalaLetra.GRANDE, onClick = { alCambiarLetra(EscalaLetra.GRANDE) }, label = { Text("Aa ${t("Grande")}") })
                 }
@@ -145,7 +148,7 @@ fun PantallaAjustes(
                 Spacer(Modifier.height(12.dp))
                 Text(t("Idioma"), color = p.ink, fontSize = 15.5.sp)
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     IdiomaApp.entries.forEach { lang ->
                         FilterChip(
                             selected = prefs.idioma == lang,

@@ -182,9 +182,10 @@ object PesosYDiscos {
             val m = mancuernasDisponibles(g)
             if (m.isNotEmpty()) return m
         }
-        if (material != null && material in BARRAS && g != null) {
-            val barra = if (material == "barbell") g.barraKg else BARRAS.getValue(material)
-            val todos = pesosBarra(barra, g.discos)
+        if (material != null && material in BARRAS) {
+            val barra = if (material == "barbell") (g?.barraKg ?: BARRAS.getValue(material)) else BARRAS.getValue(material)
+            val discos = g?.discos?.takeIf { it.isNotEmpty() } ?: listOf(1.25, 2.5, 5.0, 10.0, 15.0, 20.0)
+            val todos = pesosBarra(barra, discos)
             val gruesos = todos.filter { abs(it / 2.5 - (it / 2.5).roundToInt()) < 1e-6 }
             return if (gruesos.size >= 10) gruesos else todos
         }

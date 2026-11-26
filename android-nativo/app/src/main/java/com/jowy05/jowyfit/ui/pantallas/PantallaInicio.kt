@@ -23,7 +23,6 @@ import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Coffee
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Place
@@ -65,6 +64,7 @@ import com.jowy05.jowyfit.ui.componentes.Pestana
 import com.jowy05.jowyfit.ui.componentes.SeccionTitulo
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
 import com.jowy05.jowyfit.ui.componentes.TiraSemanaCapsula
+import com.jowy05.jowyfit.ui.componentes.iconoBarbell
 import com.jowy05.jowyfit.ui.i18n.LocalIdioma
 import com.jowy05.jowyfit.ui.i18n.diasAbrev
 import com.jowy05.jowyfit.ui.i18n.mesesCortos
@@ -84,6 +84,7 @@ fun PantallaInicio(
     sugerenciaPara: (Bloque) -> Progresion.Sugerencia,
     alAbrirAjustes: () -> Unit,
     alCambiarPestana: (Pestana) -> Unit,
+    alIrASubtab: (Pestana, String) -> Unit = { tab, _ -> alCambiarPestana(tab) },
     alPulsarDia: (CalculosDominio.EstadoDia) -> Unit,
     alEmpezarDia: (DiaRutina) -> Unit,
     alContinuarEntreno: () -> Unit,
@@ -164,9 +165,9 @@ fun PantallaInicio(
 
             // 3 accesos rápidos 1:1 con .ux-qa3
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AccesoRapido("+ Comer o beber", Icons.Rounded.Restaurant, Modifier.weight(1f), alAbrirComidaRapida)
-                AccesoRapido("Escanear", Icons.Rounded.QrCodeScanner, Modifier.weight(1f), alAbrirEscaner)
-                AccesoRapido("+ Peso", Icons.Rounded.MonitorWeight, Modifier.weight(1f), alAbrirPeso)
+                AccesoRapido(t("+ Comer o beber"), Icons.Rounded.Restaurant, Modifier.weight(1f), alAbrirComidaRapida)
+                AccesoRapido(t("Escanear"), Icons.Rounded.QrCodeScanner, Modifier.weight(1f), alAbrirEscaner)
+                AccesoRapido(t("+ Peso"), Icons.Rounded.MonitorWeight, Modifier.weight(1f), alAbrirPeso)
             }
 
             SeccionTitulo(
@@ -254,7 +255,7 @@ fun PantallaInicio(
 
                 Tarjeta(
                     modifier = Modifier.weight(1f),
-                    onClick = { alCambiarPestana(Pestana.PROGRESO) },
+                    onClick = { alIrASubtab(Pestana.PROGRESO, "fotos") },
                     padding = PaddingValues(12.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -278,14 +279,14 @@ fun PantallaInicio(
             if (estado.ajustes.mostrarKcal) {
                 Spacer(Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Tarjeta(modifier = Modifier.weight(1f), padding = PaddingValues(12.dp)) {
+                    Tarjeta(modifier = Modifier.weight(1f), onClick = { alIrASubtab(Pestana.COMIDA, "energia") }, padding = PaddingValues(12.dp)) {
                         Text(t("En reposo").uppercase(), color = p.muted, fontFamily = FuenteTitulo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 1.sp)
                         Spacer(Modifier.height(4.dp))
                         Text("${energia.basal} kcal", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                         Spacer(Modifier.height(3.dp))
                         Text("llevas ~$basalAhora", color = p.muted, fontSize = 12.5.sp)
                     }
-                    Tarjeta(modifier = Modifier.weight(1f), padding = PaddingValues(12.dp)) {
+                    Tarjeta(modifier = Modifier.weight(1f), onClick = { alIrASubtab(Pestana.COMIDA, "energia") }, padding = PaddingValues(12.dp)) {
                         Text(t("Por ejercicio").uppercase(), color = p.muted, fontFamily = FuenteTitulo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 1.sp)
                         Spacer(Modifier.height(4.dp))
                         Text("$kcalPasos kcal", color = p.ink, fontFamily = FuenteMono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
@@ -436,7 +437,7 @@ private fun TarjetaHoyCompose(
                             .background(p.blueT),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = p.blue, modifier = Modifier.size(28.dp))
+                        Icon(iconoBarbell(bold = true), contentDescription = null, tint = p.blue, modifier = Modifier.size(28.dp))
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(t("Aún no tienes rutina"), color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 21.sp)

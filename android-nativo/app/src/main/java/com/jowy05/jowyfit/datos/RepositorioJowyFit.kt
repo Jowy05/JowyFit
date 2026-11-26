@@ -74,14 +74,17 @@ class RepositorioJowyFit(private val context: Context) {
 
     val sesiones: Flow<List<Sesion>> = dao.observarTabla("sesiones").map { lista ->
         lista.mapNotNull { decodificar<Sesion>(it.payloadJson) }
+            .sortedWith(compareByDescending<Sesion> { it.fecha }.thenByDescending { it.inicio }.thenByDescending { it.id ?: 0L })
     }
 
     val mediciones: Flow<List<Medicion>> = dao.observarTabla("mediciones").map { lista ->
         lista.mapNotNull { decodificar<Medicion>(it.payloadJson) }
+            .sortedWith(compareByDescending<Medicion> { it.fecha }.thenByDescending { it.id ?: 0L })
     }
 
     val comidas: Flow<List<Comida>> = dao.observarTabla("comidas").map { lista ->
         lista.mapNotNull { decodificar<Comida>(it.payloadJson) }
+            .sortedWith(compareByDescending<Comida> { it.fecha }.thenByDescending { it.hora }.thenByDescending { it.id ?: 0L })
     }
 
     val pasos: Flow<List<PasosDia>> = dao.observarTabla("pasos").map { lista ->
@@ -94,6 +97,7 @@ class RepositorioJowyFit(private val context: Context) {
 
     val retos: Flow<List<IntentoReto>> = dao.observarTabla("retos").map { lista ->
         lista.mapNotNull { decodificar<IntentoReto>(it.payloadJson) }
+            .sortedWith(compareByDescending<IntentoReto> { it.fecha }.thenByDescending { it.id ?: 0L })
     }
 
     val gimnasios: Flow<List<Gimnasio>> = dao.observarTabla("gimnasios").map { lista ->
@@ -118,10 +122,12 @@ class RepositorioJowyFit(private val context: Context) {
 
     val fotos: Flow<List<FotoProgreso>> = dao.observarTabla("fotos").map { lista ->
         lista.mapNotNull { decodificar<FotoProgreso>(it.payloadJson) }
+            .sortedWith(compareByDescending<FotoProgreso> { it.fecha }.thenByDescending { it.id ?: 0L })
     }
 
     val revisiones: Flow<List<Revision>> = dao.observarTabla("revisiones").map { lista ->
         lista.mapNotNull { decodificar<Revision>(it.payloadJson) }
+            .sortedWith(compareByDescending<Revision> { it.fecha }.thenByDescending { it.id ?: 0L })
     }
 
     private fun cargarPreferencias(): PreferenciasVisuales {
@@ -224,7 +230,8 @@ class RepositorioJowyFit(private val context: Context) {
     }
 
     suspend fun apuntarPasos(pasos: Int, fecha: String = LocalDate.now().toString()) = withContext(Dispatchers.IO) {
-        val p = PasosDia(fecha = fecha, pasos = pasos.coerceAtLeast(0), fuente = "manual")
+        val existente = dao.leerUno("pasos", fecha)?.let { decodificar<PasosDia>(it.payloadJson) }
+        val p = (existente ?: PasosDia(fecha = fecha)).copy(pasos = pasos.coerceAtLeast(0), fuente = "manual")
         dao.guardar(
             RegistroTablaEntity(
                 tabla = "pasos",
@@ -577,6 +584,7 @@ class RepositorioJowyFit(private val context: Context) {
         val protHoy = comidasHoy.sumOf { it.proteina }.toInt()
         val medPeso = dao.leerTabla("mediciones")
             .mapNotNull { decodificar<Medicion>(it.payloadJson) }
+            .sortedWith(compareByDescending<Medicion> { it.fecha }.thenByDescending { it.id ?: 0L })
             .firstOrNull { it.pesoKg != null }?.pesoKg
         val obj = com.jowy05.jowyfit.dominio.CalculosDominio.calcularObjetivos(p, medPeso)
         Triple(tituloEntreno, "$protHoy / ${obj.proteina} g", "$pasosHoy / ${p.pasosObjetivo}")

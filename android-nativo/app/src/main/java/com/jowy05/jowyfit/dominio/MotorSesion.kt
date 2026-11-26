@@ -338,6 +338,28 @@ object MotorSesion {
         return s.copy(ejercicios = ejs)
     }
 
+    fun editarSerieHecha(
+        s: Sesion,
+        idx: Int,
+        serieIdx: Int,
+        peso: Double?,
+        reps: Int?,
+        segundos: Int?,
+    ): Sesion {
+        val e = s.ejercicios.getOrNull(idx) ?: return s
+        if (serieIdx !in e.series.indices) return s
+        val series = e.series.mapIndexed { i, x ->
+            if (i == serieIdx && x.hecha) {
+                x.copy(peso = peso, reps = reps, segundos = segundos)
+            } else {
+                x
+            }
+        }
+        val ejs = s.ejercicios.toMutableList()
+        ejs[idx] = e.copy(series = series)
+        return s.copy(ejercicios = ejs)
+    }
+
     fun anadirEjercicioASesion(s: Sesion, bloque: Bloque, pesoSug: Double? = null, repsSug: Int? = null): Sesion {
         val nuevo = desdeBloque(bloque, pesoSug, repsSug)
         val sinCurso = s.ejercicios.none { it.estado == "curso" }

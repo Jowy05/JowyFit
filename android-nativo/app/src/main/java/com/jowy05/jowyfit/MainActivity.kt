@@ -150,6 +150,9 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
     var pestana by remember {
         mutableStateOf(if (accionInicial == "com.jowy05.jowyfit.ACCION_RUTINA") Pestana.RUTINA else Pestana.INICIO)
     }
+    var subtabComidaPendiente by remember { mutableStateOf<String?>(null) }
+    var subtabProgresoPendiente by remember { mutableStateOf<String?>(null) }
+    var poseProgresoPendiente by remember { mutableStateOf<String?>(null) }
     var enAjustes by remember { mutableStateOf(false) }
     var enGimnasios by remember { mutableStateOf(false) }
     var enRevision by remember { mutableStateOf(false) }
@@ -390,17 +393,19 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
             }
             poseCamaraFoto != null -> {
                 val pose = poseCamaraFoto!!
-                val ref = estado.fotos
-                    .filter { it.pose == pose }
-                    .maxByOrNull { it.fecha }
-                    ?.imagen?.archivo
-                    ?.let { vm.repo.archivoMedia(it) }
                 PantallaCamaraFotoProgreso(
                     poseInicial = pose,
-                    fotoReferencia = ref,
+                    fotoReferenciaPorPose = { pBuscada ->
+                        estado.fotos
+                            .filter { it.pose == pBuscada }
+                            .maxByOrNull { it.fecha }
+                            ?.imagen?.archivo
+                            ?.let { vm.repo.archivoMedia(it) }
+                    },
                     alCerrar = { poseCamaraFoto = null },
                     alCapturar = { pElegida, bytes ->
                         poseCamaraFoto = null
+                        poseProgresoPendiente = pElegida
                         vm.guardarFotoProgreso(pElegida, bytes)
                     },
                 )
@@ -446,6 +451,7 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     sugerenciaPara = { e -> vm.sugerenciaPara(e.ejercicio, e.repsMin, e.repsMax, e.rpe, e.registro) },
                     alMinimizar = { enEntreno = false },
                     alApuntarSerie = vm::apuntarSerieEnCurso,
+                    alEditarSerieHecha = vm::editarSerieHechaEnCurso,
                     alAjustarDescanso = vm::ajustarDescansoEnCurso,
                     alAnadirSerie = { idx -> vm.modificarSesionEnCurso { MotorSesion.anadirSerie(it, idx) } },
                     alQuitarSerie = { idx -> vm.modificarSesionEnCurso { MotorSesion.quitarSerie(it, idx) } },
@@ -542,6 +548,14 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         sugerenciaPara = { b -> vm.sugerenciaPara(b.ejercicio, b.repsMin, b.repsMax, b.rpe, b.registro) },
                         alAbrirAjustes = { enAjustes = true },
                         alCambiarPestana = { pestana = it },
+                        alIrASubtab = { tab, sub ->
+                            when (tab) {
+                                Pestana.COMIDA -> subtabComidaPendiente = sub
+                                Pestana.PROGRESO -> subtabProgresoPendiente = sub
+                                else -> Unit
+                            }
+                            pestana = tab
+                        },
                         alPulsarDia = { hojaDia = it },
                         alEmpezarDia = ::pedirEmpezarDia,
                         alContinuarEntreno = { enEntreno = true },
@@ -592,6 +606,8 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     )
                     Pestana.COMIDA -> PantallaComidaCompleta(
                         estado = estado,
+                        subtabInicial = subtabComidaPendiente,
+                        alConsumirSubtab = { subtabComidaPendiente = null },
                         alAbrirEscaner = { fecha, franja -> enEscaner = fecha to franja },
                         alGuardarComida = vm::guardarComida,
                         alBorrarComida = vm::borrarComida,
@@ -612,6 +628,10 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                         estado = estado,
                         catalogo = catalogo,
                         archivoMedia = vm.repo::archivoMedia,
+                        subtabInicial = subtabProgresoPendiente,
+                        poseInicial = poseProgresoPendiente,
+                        alConsumirSubtab = { subtabProgresoPendiente = null },
+                        alConsumirPose = { poseProgresoPendiente = null },
                         alAbrirFicha = { ejId -> fichaEjercicioId = ejId },
                         alGuardarMedicion = vm::guardarMedicionCompleta,
                         alGuardarMeta = vm::guardarMeta,
@@ -627,10 +647,14 @@ private fun AppRaiz(vm: EstadoAppViewModel, accionInicial: String?) {
                     Pestana.PERFIL -> PantallaPerfil(
                         estado = estado,
                         alAbrirAjustes = { enAjustes = true },
-                        alAbrirPeso = { hojaPeso = true },
+                        alAbrirMedidas = {
+                            subtabProgresoPendiente = "cuerpo"
+                            pestana = Pestana.PROGRESO
+                        },
                         alEditarPerfil = { hojaEditarPerfil = true },
                         alAbrirRevision = { enRevision = true },
                         alGenerarPdf = vm::generarYCompartirPdf,
+                        alAbrirRutina = { pestana = Pestana.RUTINA },
                     )
                 }
 

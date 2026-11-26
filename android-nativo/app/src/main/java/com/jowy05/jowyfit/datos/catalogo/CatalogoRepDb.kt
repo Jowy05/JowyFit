@@ -80,10 +80,14 @@ data class CatalogoCargado(
     val porId: Map<String, EjercicioCatalogo>,
     val musculos: Map<String, MusculoCatalogo>,
     val material: Map<String, MaterialCatalogo>,
+    val etiquetas: Map<String, Map<String, String>> = emptyMap(),
 ) {
     fun nombreEjercicio(id: String?): String = if (id == null) "Ejercicio" else porId[id]?.nombre ?: id
 
     fun nombreMusculo(clave: String): String = musculos[clave]?.nombre ?: clave
+
+    fun nombreZona(clave: String): String =
+        etiquetas["body_part"]?.get(clave) ?: clave.replace('_', ' ')
 
     fun nombreMaterial(clave: String?): String =
         if (clave == null) "Peso corporal" else material[clave]?.nombre ?: clave
@@ -184,6 +188,7 @@ object CargadorCatalogo {
                 porId = ejercicios.associateBy { it.id },
                 musculos = musculos,
                 material = material,
+                etiquetas = base.etiquetas,
             ).also { cachePorIdioma[idioma] = it }
         }
     }

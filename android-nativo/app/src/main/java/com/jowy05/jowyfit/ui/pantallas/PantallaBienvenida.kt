@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +50,7 @@ import com.jowy05.jowyfit.ui.tema.FuenteCuerpo
 import com.jowy05.jowyfit.ui.tema.FuenteTitulo
 import com.jowy05.jowyfit.ui.tema.LocalPaleta
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PantallaBienvenida(
     alImportarCopia: () -> Unit,
@@ -170,7 +173,10 @@ fun PantallaBienvenida(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     listOf("recomposicion" to "Recomp.", "perder" to "Perder grasa", "musculo" to "Músculo", "fuerza" to "Fuerza").forEach { (k, lbl) ->
                         FilterChip(selected = objetivo == k, onClick = { objetivo = k }, label = { Text(lbl) })
                     }

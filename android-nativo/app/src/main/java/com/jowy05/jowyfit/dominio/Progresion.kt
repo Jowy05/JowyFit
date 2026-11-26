@@ -132,8 +132,10 @@ object Progresion {
         if (registro != "peso" && registro != "mancuerna") return null
         val positivos = lista.filter { it.isFinite() && it > 0.0 }
         val minimo = when {
-            material != null && material in PesosYDiscos.BARRAS ->
-                if (positivos.isNotEmpty()) positivos.first() else PesosYDiscos.BARRAS.getValue(material)
+            material != null && material in PesosYDiscos.BARRAS -> {
+                val barraBase = PesosYDiscos.BARRAS.getValue(material)
+                positivos.firstOrNull { it >= barraBase - 1e-9 } ?: barraBase
+            }
             registro == "mancuerna" -> 4.0
             material in setOf("plates", "loop_band", "resistance_band") -> 5.0
             else -> 10.0

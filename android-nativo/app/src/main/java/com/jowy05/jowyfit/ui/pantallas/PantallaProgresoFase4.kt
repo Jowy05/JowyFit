@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +30,6 @@ import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Sync
@@ -42,6 +43,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +74,7 @@ import com.jowy05.jowyfit.datos.modelo.Perimetros
 import com.jowy05.jowyfit.datos.modelo.Sesion
 import com.jowy05.jowyfit.dominio.CalculosDominio
 import com.jowy05.jowyfit.dominio.MetasDominio
+import com.jowy05.jowyfit.dominio.MotorSesion
 import com.jowy05.jowyfit.dominio.PesosYDiscos
 import com.jowy05.jowyfit.dominio.Progresion
 import com.jowy05.jowyfit.dominio.TendenciasDominio
@@ -89,6 +92,7 @@ import com.jowy05.jowyfit.ui.componentes.SeccionTitulo
 import com.jowy05.jowyfit.ui.componentes.SeparadorLista
 import com.jowy05.jowyfit.ui.componentes.Tarjeta
 import com.jowy05.jowyfit.ui.componentes.TonoNota
+import com.jowy05.jowyfit.ui.componentes.iconoBarbell
 import com.jowy05.jowyfit.ui.i18n.t
 import com.jowy05.jowyfit.ui.tema.FuenteMono
 import com.jowy05.jowyfit.ui.tema.FuenteTitulo
@@ -101,11 +105,16 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /** Pestaña Progreso completa (Fase 4): Semana, Fuerza, Cuerpo, Metas y Fotos/Pasos + Health Connect. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PantallaProgresoCompleta(
     estado: EstadoPrincipal,
     catalogo: CatalogoCargado?,
     archivoMedia: (String) -> File,
+    subtabInicial: String? = null,
+    poseInicial: String? = null,
+    alConsumirSubtab: () -> Unit = {},
+    alConsumirPose: () -> Unit = {},
     alAbrirFicha: (String) -> Unit,
     alGuardarMedicion: (Medicion) -> Unit,
     alGuardarMeta: (Meta) -> Unit,
@@ -122,6 +131,20 @@ fun PantallaProgresoCompleta(
     val hoy = remember { LocalDate.now() }
     val hoyIso = hoy.toString()
     var subtab by remember { mutableStateOf("semana") }
+    var poseFiltro by remember { mutableStateOf("frente") }
+    LaunchedEffect(subtabInicial) {
+        if (subtabInicial != null) {
+            subtab = subtabInicial
+            alConsumirSubtab()
+        }
+    }
+    LaunchedEffect(poseInicial) {
+        if (poseInicial != null) {
+            poseFiltro = poseInicial
+            subtab = "fotos"
+            alConsumirPose()
+        }
+    }
     var hojaMedicion by remember { mutableStateOf(false) }
     var hojaNuevaMeta by remember { mutableStateOf(false) }
     var metaAvance by remember { mutableStateOf<Meta?>(null) }
@@ -208,12 +231,14 @@ fun PantallaProgresoCompleta(
 
                     if (hechas.isNotEmpty()) {
                         SeccionTitulo(titulo = "Últimos entrenos")
+                        val iconoBarra = iconoBarbell(bold = true)
                         ListaAgrupada {
                             hechas.take(8).forEachIndexed { idx, s ->
+                                val resSes = MotorSesion.resumen(s)
                                 FilaLista(
                                     titulo = s.nombre.ifBlank { "Entreno ${s.letra}" },
-                                    subtitulo = "${s.fecha} · ${s.ejercicios.count { it.estado == "hecho" }} ej.",
-                                    icono = Icons.Rounded.FitnessCenter,
+                                    subtitulo = "${s.fecha} · ${resSes.hechos} ej. · ${resSes.series} series",
+                                    icono = iconoBarra,
                                     alPulsar = { sesionDetalle = s },
                                 )
                                 if (idx < minOf(hechas.size, 8) - 1) SeparadorLista()
@@ -342,7 +367,7 @@ fun PantallaProgresoCompleta(
                 ) {
                     Spacer(Modifier.height(2.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BotonPrincipal(texto = "+ Medida", icono = Icons.Rounded.Add, onClick = { hojaMedicion = true }, modifier = Modifier.weight(1f))
+                        BotonPrincipal(texto = "Medida", icono = Icons.Rounded.Add, onClick = { hojaMedicion = true }, modifier = Modifier.weight(1f))
                         BotonSecundario(texto = "Health Connect", icono = Icons.Rounded.Sync, onClick = alSincronizarHC, modifier = Modifier.weight(1f))
                     }
 
@@ -404,7 +429,7 @@ fun PantallaProgresoCompleta(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Spacer(Modifier.height(2.dp))
-                    BotonPrincipal(texto = "+ Nueva meta", icono = Icons.Rounded.Add, onClick = { hojaNuevaMeta = true })
+                    BotonPrincipal(texto = "Nueva meta", icono = Icons.Rounded.Add, onClick = { hojaNuevaMeta = true })
 
                     if (estado.metas.isEmpty()) {
                         NotaAviso("Crea una meta de peso, cintura, dominadas, ejercicio o libre y sigue tu avance con histórico y notas.", tono = TonoNota.INFO, icono = Icons.Rounded.Flag)
@@ -466,7 +491,6 @@ fun PantallaProgresoCompleta(
 
             else -> {
                 val pasosHoy = estado.pasos.firstOrNull { it.fecha == hoyIso }
-                var poseFiltro by remember { mutableStateOf("frente") }
                 val fotosPose = remember(estado.fotos, poseFiltro) {
                     estado.fotos.filter { it.pose == poseFiltro }.sortedByDescending { it.fecha }
                 }
@@ -488,7 +512,7 @@ fun PantallaProgresoCompleta(
                         Spacer(Modifier.height(8.dp))
                         BarraProgreso(valor = (pasosHoy?.pasos ?: 0).toDouble(), total = estado.perfil.pasosObjetivo.toDouble(), color = p.go, gruesa = true)
                         Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             FilterChip(selected = false, onClick = { alSumarPasos((pasosHoy?.pasos ?: 0) + 1000) }, label = { Text("+1.000") })
                             FilterChip(selected = false, onClick = { hojaCardio = true }, label = { Text("+ Cardio") })
                             FilterChip(selected = false, onClick = alSincronizarHC, label = { Text("Sync HC") }, leadingIcon = { Icon(Icons.Rounded.Sync, null, Modifier.size(16.dp)) })
@@ -653,20 +677,21 @@ private fun HojaMedicionCompleta(alCerrar: () -> Unit, alGuardar: (Medicion) -> 
     ModalBottomSheet(onDismissRequest = alCerrar, containerColor = p.surface) {
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Registrar medidas", color = p.ink, fontFamily = FuenteTitulo, fontWeight = FontWeight.Bold, fontSize = 23.sp)
+            val limpiarDecimal = { s: String -> s.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(6) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = peso, onValueChange = { peso = it }, label = { Text("Peso (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = grasa, onValueChange = { grasa = it }, label = { Text("% Grasa") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = peso, onValueChange = { peso = limpiarDecimal(it) }, label = { Text("Peso (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = grasa, onValueChange = { grasa = limpiarDecimal(it) }, label = { Text("% Grasa") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = cintura, onValueChange = { cintura = it }, label = { Text("Cintura (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = cuello, onValueChange = { cuello = it }, label = { Text("Cuello (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = cadera, onValueChange = { cadera = it }, label = { Text("Cadera (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = cintura, onValueChange = { cintura = limpiarDecimal(it) }, label = { Text("Cintura (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = cuello, onValueChange = { cuello = limpiarDecimal(it) }, label = { Text("Cuello (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = cadera, onValueChange = { cadera = limpiarDecimal(it) }, label = { Text("Cadera (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
             }
-            val pNum = peso.replace(',', '.').toDoubleOrNull()
-            val cNum = cintura.replace(',', '.').toDoubleOrNull()
-            val cuNum = cuello.replace(',', '.').toDoubleOrNull()
-            val caNum = cadera.replace(',', '.').toDoubleOrNull()
-            val gNum = grasa.replace(',', '.').toDoubleOrNull()
+            val pNum = peso.replace(',', '.').toDoubleOrNull()?.takeIf { it in 20.0..350.0 }
+            val cNum = cintura.replace(',', '.').toDoubleOrNull()?.takeIf { it in 30.0..250.0 }
+            val cuNum = cuello.replace(',', '.').toDoubleOrNull()?.takeIf { it in 15.0..90.0 }
+            val caNum = cadera.replace(',', '.').toDoubleOrNull()?.takeIf { it in 35.0..250.0 }
+            val gNum = grasa.replace(',', '.').toDoubleOrNull()?.takeIf { it in 3.0..70.0 }
             BotonPrincipal(
                 texto = "Guardar medidas",
                 enabled = pNum != null || cNum != null || cuNum != null || caNum != null || gNum != null,
@@ -799,7 +824,11 @@ private fun HojaDetalleSesion(sesion: Sesion, catalogo: CatalogoCargado?, alCerr
                     Spacer(Modifier.height(4.dp))
                     e.series.filter { it.hecha }.forEach { s ->
                         val kgTxt = s.peso?.let { "$it kg × " } ?: ""
-                        val repTxt = if (e.registro == "tiempo") "${s.segundos ?: 0} s" else "${s.reps ?: 0} reps"
+                        val repTxt = when (e.registro) {
+                            "tiempo" -> "${s.segundos ?: 0} s"
+                            "cardio" -> "${s.reps ?: 0} min"
+                            else -> "${s.reps ?: 0} reps"
+                        }
                         Text(
                             text = "${if (s.calentamiento) "CAL" else "S${s.n}"}: $kgTxt$repTxt" + (if (s.record == true) " 🏆" else ""),
                             color = p.muted, fontFamily = FuenteMono, fontSize = 13.sp,
